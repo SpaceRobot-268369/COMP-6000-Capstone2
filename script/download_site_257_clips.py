@@ -8,6 +8,7 @@
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
+from collections import defaultdict
 from pathlib import Path
 from typing import Iterable
 
@@ -16,7 +17,7 @@ import requests
 BASE_MEDIA_URL = "https://api.acousticobservatory.org/audio_recordings/{recording_id}/media.webm"
 MAX_CLIP_SECONDS = 300.0
 REQUEST_TIMEOUT_SECONDS = 120
-MAX_DOWNLOAD_ATTEMPTS = 3
+MAX_DOWNLOAD_ATTEMPTS = 10
 DEFAULT_WORKERS = 10
 
 
@@ -149,7 +150,7 @@ def download_segment(
     return False, MAX_DOWNLOAD_ATTEMPTS, last_error
 
 
-def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[bool, str]:
+def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[bool, int, str, int, str]:
     item_count, item_id, clip_num, start_offset, end_offset, clip_name, output_path_str = job
     output_path = Path(output_path_str)
     ok, attempts, err = download_segment(
@@ -162,6 +163,9 @@ def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[boo
     if ok:
         return (
             True,
+            item_count,
+            item_id,
+            clip_num,
             (
                 f"[OK] count {item_count} item {item_id} clip {clip_num:03d}: "
                 f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts})"
@@ -170,6 +174,9 @@ def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[boo
 
     return (
         False,
+        item_count,
+        item_id,
+        clip_num,
         (
             f"[FAIL] count {item_count} item {item_id} clip {clip_num:03d}: "
             f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts}) error={err}"
@@ -249,13 +256,16 @@ def main() -> None:
 
     success_count = 0
     failure_count = 0
+    failed_items: dict[tuple[int, str], set[int]] = defaultdict(set)
+    worker_exception_count = 0
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         futures = [pool.submit(download_job, job) for job in jobs]
         for future in as_completed(futures):
             try:
-                ok, message = future.result()
+                ok, item_count, item_id, clip_num, message = future.result()
             except Exception as exc:
                 failure_count += 1
+                worker_exception_count += 1
                 print(f"[FAIL] worker exception: {exc}")
                 continue
 
@@ -264,10 +274,28 @@ def main() -> None:
                 success_count += 1
             else:
                 failure_count += 1
+                failed_items[(item_count, item_id)].add(clip_num)
 
     print(
         f"[DONE] completed downloads: success={success_count} failed={failure_count} total={len(jobs)}"
     )
+
+    if failed_items or worker_exception_count:
+        print("[REPORT] Failed items:")
+        for item_count, item_id in sorted(failed_items):
+            clip_nums = sorted(failed_items[(item_count, item_id)])
+            clip_nums_text = ", ".join(f"{clip_num:03d}" for clip_num in clip_nums)
+            print(
+                f"[REPORT] count {item_count} item {item_id}: "
+                f"failed_clips={len(clip_nums)} ({clip_nums_text})"
+            )
+        if worker_exception_count:
+            print(
+                f"[REPORT] worker exceptions={worker_exception_count} "
+                "(clip details unavailable for these failures)"
+            )
+    else:
+        print("[REPORT] No failed items.")
 
 
 if __name__ == "__main__":
