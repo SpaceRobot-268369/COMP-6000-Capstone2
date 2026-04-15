@@ -10,9 +10,10 @@ package-lock.json
 **/package-lock.json
 
 # Environment
-.env
-**/.env
-!.env.example
+# temporary ignored
+# .env
+# **/.env
+# !.env.example
 
 # Logs and caches
 *.log
