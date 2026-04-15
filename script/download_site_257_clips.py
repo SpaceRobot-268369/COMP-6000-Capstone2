@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-"""Download site 257 audio clips from CSV with 300-second chunking."""
+"""Download site 257 audio clips from CSV with chunking and retries."""
+# Run from repository root:
+# python3 script/download_site_257_clips.py --start-item 1 --end-item 200
+# Optional concurrency override:
+# python3 script/download_site_257_clips.py --start-item 1 --end-item 200 --workers 10
 
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
 from pathlib import Path
 from typing import Iterable
@@ -11,6 +16,8 @@ import requests
 BASE_MEDIA_URL = "https://api.acousticobservatory.org/audio_recordings/{recording_id}/media.webm"
 MAX_CLIP_SECONDS = 300.0
 REQUEST_TIMEOUT_SECONDS = 120
+MAX_DOWNLOAD_ATTEMPTS = 3
+DEFAULT_WORKERS = 10
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,6 +64,12 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="1-based end item index in the CSV (inclusive, data rows only).",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help="Number of parallel worker processes for clip downloads (default: 10).",
+    )
     return parser.parse_args()
 
 
@@ -85,17 +98,70 @@ def iter_selected_rows(csv_path: Path, start_item: int, end_item: int) -> Iterab
 
 
 def download_segment(
-    session: requests.Session,
     recording_id: str,
     start_offset: float,
     end_offset: float,
     output_path: Path,
-) -> None:
+) -> tuple[bool, int, str]:
     url = BASE_MEDIA_URL.format(recording_id=recording_id)
     params = {"start_offset": f"{start_offset:.3f}", "end_offset": f"{end_offset:.3f}"}
-    response = session.get(url, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
-    response.raise_for_status()
-    output_path.write_bytes(response.content)
+    tmp_path = output_path.with_suffix(output_path.suffix + ".part")
+    last_error = ""
+
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        try:
+            response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+            response.raise_for_status()
+
+            if not response.content:
+                raise ValueError("response content is empty")
+
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path.write_bytes(response.content)
+            if tmp_path.stat().st_size == 0:
+                raise ValueError("written file is zero-byte")
+
+            tmp_path.replace(output_path)
+            if output_path.stat().st_size == 0:
+                raise ValueError("final file is zero-byte")
+
+            return True, attempt, ""
+        except Exception as exc:
+            last_error = str(exc)
+            if tmp_path.exists():
+                tmp_path.unlink()
+            if output_path.exists() and output_path.stat().st_size == 0:
+                output_path.unlink()
+
+    return False, MAX_DOWNLOAD_ATTEMPTS, last_error
+
+
+def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[bool, str]:
+    csv_index, item_id, clip_num, start_offset, end_offset, clip_name, output_path_str = job
+    output_path = Path(output_path_str)
+    ok, attempts, err = download_segment(
+        recording_id=item_id,
+        start_offset=start_offset,
+        end_offset=end_offset,
+        output_path=output_path,
+    )
+
+    if ok:
+        return (
+            True,
+            (
+                f"[OK] row {csv_index} item {item_id} clip {clip_num:03d}: "
+                f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts})"
+            ),
+        )
+
+    return (
+        False,
+        (
+            f"[FAIL] row {csv_index} item {item_id} clip {clip_num:03d}: "
+            f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts}) error={err}"
+        ),
+    )
 
 
 def main() -> None:
@@ -105,65 +171,90 @@ def main() -> None:
         raise ValueError("--start-item must be >= 1")
     if args.end_item < args.start_item:
         raise ValueError("--end-item must be >= --start-item")
+    if args.workers < 1:
+        raise ValueError("--workers must be >= 1")
     if not args.csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {args.csv_path}")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    with requests.Session() as session:
-        for csv_index, row in iter_selected_rows(args.csv_path, args.start_item, args.end_item):
-            item_id = (row.get("id") or "").strip()
-            duration_raw = (row.get("duration_seconds") or "").strip()
+    jobs: list[tuple[int, str, int, float, float, str, str]] = []
+    for csv_index, row in iter_selected_rows(args.csv_path, args.start_item, args.end_item):
+        item_id = (row.get("id") or "").strip()
+        duration_raw = (row.get("duration_seconds") or "").strip()
 
-            if not item_id:
-                print(f"[SKIP] row {csv_index}: missing id")
-                continue
-            if not duration_raw:
-                print(f"[SKIP] row {csv_index} item {item_id}: missing duration_seconds")
-                continue
+        if not item_id:
+            print(f"[SKIP] row {csv_index}: missing id")
+            continue
+        if not duration_raw:
+            print(f"[SKIP] row {csv_index} item {item_id}: missing duration_seconds")
+            continue
 
-            try:
-                duration_seconds = float(duration_raw)
-            except ValueError:
-                print(
-                    f"[SKIP] row {csv_index} item {item_id}: invalid duration_seconds={duration_raw!r}"
-                )
-                continue
-
-            item_folder = args.output_dir / f"site_257_item_{item_id}"
-            if item_folder.exists():
-                print(f"[SKIP] row {csv_index} item {item_id}: folder exists ({item_folder})")
-                continue
-
-            item_folder.mkdir(parents=True, exist_ok=False)
-            segments = build_segments(duration_seconds, MAX_CLIP_SECONDS)
-            if not segments:
-                print(f"[SKIP] row {csv_index} item {item_id}: non-positive duration")
-                continue
-
+        try:
+            duration_seconds = float(duration_raw)
+        except ValueError:
             print(
-                f"[ITEM] row {csv_index} item {item_id}: duration={duration_seconds:.3f}s clips={len(segments)}"
+                f"[SKIP] row {csv_index} item {item_id}: invalid duration_seconds={duration_raw!r}"
+            )
+            continue
+
+        item_folder = args.output_dir / f"site_257_item_{item_id}"
+        if item_folder.exists():
+            print(f"[SKIP] row {csv_index} item {item_id}: folder exists ({item_folder})")
+            continue
+
+        segments = build_segments(duration_seconds, MAX_CLIP_SECONDS)
+        if not segments:
+            print(f"[SKIP] row {csv_index} item {item_id}: non-positive duration")
+            continue
+
+        item_folder.mkdir(parents=True, exist_ok=False)
+        print(
+            f"[ITEM] row {csv_index} item {item_id}: duration={duration_seconds:.3f}s clips={len(segments)}"
+        )
+
+        for clip_num, (start_offset, end_offset) in enumerate(segments, start=1):
+            clip_name = f"site_257_item_{item_id}_clip_{clip_num:03d}.webm"
+            clip_path = item_folder / clip_name
+            jobs.append(
+                (
+                    csv_index,
+                    item_id,
+                    clip_num,
+                    start_offset,
+                    end_offset,
+                    clip_name,
+                    str(clip_path),
+                )
             )
 
+    if not jobs:
+        print("[DONE] No clips scheduled for download.")
+        return
+
+    print(f"[START] Downloading {len(jobs)} clips with {args.workers} workers...")
+
+    success_count = 0
+    failure_count = 0
+    with ProcessPoolExecutor(max_workers=args.workers) as pool:
+        futures = [pool.submit(download_job, job) for job in jobs]
+        for future in as_completed(futures):
             try:
-                for clip_num, (start_offset, end_offset) in enumerate(segments, start=1):
-                    clip_name = f"site_257_item_{item_id}_clip_{clip_num:03d}.webm"
-                    clip_path = item_folder / clip_name
-                    download_segment(
-                        session=session,
-                        recording_id=item_id,
-                        start_offset=start_offset,
-                        end_offset=end_offset,
-                        output_path=clip_path,
-                    )
-                    print(
-                        "  "
-                        f"downloaded {clip_name} "
-                        f"(start={start_offset:.3f}, end={end_offset:.3f})"
-                    )
+                ok, message = future.result()
             except Exception as exc:
-                print(f"[ERROR] row {csv_index} item {item_id}: {exc}")
-                print("        keeping partial downloads in place for inspection")
+                failure_count += 1
+                print(f"[FAIL] worker exception: {exc}")
+                continue
+
+            print(message)
+            if ok:
+                success_count += 1
+            else:
+                failure_count += 1
+
+    print(
+        f"[DONE] completed downloads: success={success_count} failed={failure_count} total={len(jobs)}"
+    )
 
 
 if __name__ == "__main__":
