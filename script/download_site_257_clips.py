@@ -56,13 +56,13 @@ def parse_args() -> argparse.Namespace:
         "--start-item",
         type=int,
         required=True,
-        help="1-based start item index in the CSV (data rows only).",
+        help="Start item count in the CSV (inclusive).",
     )
     parser.add_argument(
         "--end-item",
         type=int,
         required=True,
-        help="1-based end item index in the CSV (inclusive, data rows only).",
+        help="End item count in the CSV (inclusive).",
     )
     parser.add_argument(
         "--workers",
@@ -86,15 +86,28 @@ def build_segments(duration: float, max_clip_seconds: float = MAX_CLIP_SECONDS) 
     return segments
 
 
-def iter_selected_rows(csv_path: Path, start_item: int, end_item: int) -> Iterable[tuple[int, dict[str, str]]]:
+def iter_selected_rows(
+    csv_path: Path, start_item: int, end_item: int
+) -> Iterable[tuple[int, dict[str, str]]]:
     with csv_path.open("r", encoding="utf-8", newline="") as csv_file:
         reader = csv.DictReader(csv_file)
-        for idx, row in enumerate(reader, start=1):
-            if idx < start_item:
+        if "count" not in (reader.fieldnames or []):
+            raise ValueError("CSV must include a 'count' column")
+
+        for row in reader:
+            count_raw = (row.get("count") or "").strip()
+            if not count_raw:
+                raise ValueError("CSV row has missing count value")
+            try:
+                count = int(count_raw)
+            except ValueError as exc:
+                raise ValueError(f"CSV row has invalid count value: {count_raw!r}") from exc
+
+            if count < start_item:
                 continue
-            if idx > end_item:
+            if count > end_item:
                 break
-            yield idx, row
+            yield count, row
 
 
 def download_segment(
@@ -137,7 +150,7 @@ def download_segment(
 
 
 def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[bool, str]:
-    csv_index, item_id, clip_num, start_offset, end_offset, clip_name, output_path_str = job
+    item_count, item_id, clip_num, start_offset, end_offset, clip_name, output_path_str = job
     output_path = Path(output_path_str)
     ok, attempts, err = download_segment(
         recording_id=item_id,
@@ -150,7 +163,7 @@ def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[boo
         return (
             True,
             (
-                f"[OK] row {csv_index} item {item_id} clip {clip_num:03d}: "
+                f"[OK] count {item_count} item {item_id} clip {clip_num:03d}: "
                 f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts})"
             ),
         )
@@ -158,7 +171,7 @@ def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[boo
     return (
         False,
         (
-            f"[FAIL] row {csv_index} item {item_id} clip {clip_num:03d}: "
+            f"[FAIL] count {item_count} item {item_id} clip {clip_num:03d}: "
             f"{clip_name} (start={start_offset:.3f}, end={end_offset:.3f}, tries={attempts}) error={err}"
         ),
     )
@@ -179,38 +192,38 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     jobs: list[tuple[int, str, int, float, float, str, str]] = []
-    for csv_index, row in iter_selected_rows(args.csv_path, args.start_item, args.end_item):
+    for item_count, row in iter_selected_rows(args.csv_path, args.start_item, args.end_item):
         item_id = (row.get("id") or "").strip()
         duration_raw = (row.get("duration_seconds") or "").strip()
 
         if not item_id:
-            print(f"[SKIP] row {csv_index}: missing id")
+            print(f"[SKIP] count {item_count}: missing id")
             continue
         if not duration_raw:
-            print(f"[SKIP] row {csv_index} item {item_id}: missing duration_seconds")
+            print(f"[SKIP] count {item_count} item {item_id}: missing duration_seconds")
             continue
 
         try:
             duration_seconds = float(duration_raw)
         except ValueError:
             print(
-                f"[SKIP] row {csv_index} item {item_id}: invalid duration_seconds={duration_raw!r}"
+                f"[SKIP] count {item_count} item {item_id}: invalid duration_seconds={duration_raw!r}"
             )
             continue
 
         item_folder = args.output_dir / f"site_257_item_{item_id}"
         if item_folder.exists():
-            print(f"[SKIP] row {csv_index} item {item_id}: folder exists ({item_folder})")
+            print(f"[SKIP] count {item_count} item {item_id}: folder exists ({item_folder})")
             continue
 
         segments = build_segments(duration_seconds, MAX_CLIP_SECONDS)
         if not segments:
-            print(f"[SKIP] row {csv_index} item {item_id}: non-positive duration")
+            print(f"[SKIP] count {item_count} item {item_id}: non-positive duration")
             continue
 
         item_folder.mkdir(parents=True, exist_ok=False)
         print(
-            f"[ITEM] row {csv_index} item {item_id}: duration={duration_seconds:.3f}s clips={len(segments)}"
+            f"[ITEM] count {item_count} item {item_id}: duration={duration_seconds:.3f}s clips={len(segments)}"
         )
 
         for clip_num, (start_offset, end_offset) in enumerate(segments, start=1):
@@ -218,7 +231,7 @@ def main() -> None:
             clip_path = item_folder / clip_name
             jobs.append(
                 (
-                    csv_index,
+                    item_count,
                     item_id,
                     clip_num,
                     start_offset,
