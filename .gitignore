@@ -35,6 +35,9 @@ coverage/
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
 
+# Resource downloads
+resources/site_257_bowra-dry-a/
+
 # IDE and editors
 .idea/
 .vscode/
