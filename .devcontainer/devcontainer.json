@@ -1,0 +1,28 @@
+{
+  "name": "COMP-6000 Capstone Dev Container",
+  "dockerComposeFile": [
+    "../services/dev/docker-compose.yml"
+  ],
+  "service": "acoustic_ai",
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "sh /workspace/.devcontainer/bootstrap-acoustic-ai.sh && pip install --no-cache-dir -r /workspace/acoustic_ai/requirements.txt",
+  "waitFor": "postCreateCommand",
+  "runServices": [
+    "acoustic_ai",
+    "postgres",
+    "backend",
+    "frontend"
+  ],
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  }
+}
