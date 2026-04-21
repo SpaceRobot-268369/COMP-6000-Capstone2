@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loginAccount } from "../lib/auth.js";
 
 export default function LoginPage({ accountName, onLogin }) {
   const navigate = useNavigate();
@@ -7,21 +8,36 @@ export default function LoginPage({ accountName, onLogin }) {
     account: accountName,
     password: "",
   });
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    setErrorMessage("");
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    const nextName = form.account.trim();
-    if (!nextName) {
+    if (!form.account.trim() || !form.password) {
+      setErrorMessage("Please enter both your account name and password.");
       return;
     }
 
-    onLogin(nextName);
-    navigate("/");
+    try {
+      setIsSubmitting(true);
+      const data = await loginAccount({
+        account: form.account,
+        password: form.password,
+      });
+
+      onLogin(data.user.username);
+      navigate("/");
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -31,7 +47,7 @@ export default function LoginPage({ accountName, onLogin }) {
           <p className="eyebrow">ACCOUNT</p>
           <h1>Login</h1>
           <p className="account-lead">
-            Sign in with your account name to enter the platform.
+            Sign in with your account name to access the platform.
           </p>
         </div>
       </header>
@@ -46,6 +62,7 @@ export default function LoginPage({ accountName, onLogin }) {
               value={form.account}
               onChange={handleChange}
               placeholder="Enter your account name"
+              autoComplete="username"
             />
           </label>
 
@@ -57,12 +74,15 @@ export default function LoginPage({ accountName, onLogin }) {
               value={form.password}
               onChange={handleChange}
               placeholder="Enter your password"
+              autoComplete="current-password"
             />
           </label>
 
-          <button type="submit" className="auth-primary-btn">
-            Login
+          <button type="submit" className="auth-primary-btn" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Login"}
           </button>
+
+          {errorMessage ? <p className="account-feedback error">{errorMessage}</p> : null}
 
           <p className="account-switch">
             No account yet? <Link to="/register">Register</Link>
