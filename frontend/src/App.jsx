@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
@@ -6,6 +6,8 @@ import TransformationPage from "./pages/TransformationPage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+
+const accountStorageKey = "sonic-lab-account-name";
 
 function sidebarLinkClass({ isActive }) {
   return `nav-item${isActive ? " active" : ""}`;
@@ -19,12 +21,27 @@ export default function App() {
   const [accountName, setAccountName] = useState("");
   const isLoggedIn = Boolean(accountName);
 
+  useEffect(() => {
+    const storedAccountName = window.localStorage.getItem(accountStorageKey);
+    if (storedAccountName) {
+      setAccountName(storedAccountName);
+    }
+  }, []);
+
   function handleAuthenticate(value) {
-    setAccountName(value.trim());
+    const nextValue = value.trim();
+    setAccountName(nextValue);
+    if (nextValue) {
+      window.localStorage.setItem(accountStorageKey, nextValue);
+      return;
+    }
+
+    window.localStorage.removeItem(accountStorageKey);
   }
 
   function handleLogout() {
     setAccountName("");
+    window.localStorage.removeItem(accountStorageKey);
   }
 
   return (

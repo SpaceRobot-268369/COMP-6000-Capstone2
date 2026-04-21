@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { registerAccount } from "../lib/auth.js";
 
 export default function RegisterPage({ accountName, onRegister }) {
   const navigate = useNavigate();
@@ -9,21 +10,43 @@ export default function RegisterPage({ accountName, onRegister }) {
     password: "",
     confirmPassword: "",
   });
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    setErrorMessage("");
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     const nextName = form.account.trim();
-    if (!nextName) {
+    if (!nextName || !form.email.trim() || !form.password) {
+      setErrorMessage("Please complete all required fields.");
       return;
     }
 
-    onRegister(nextName);
-    navigate("/");
+    if (form.password !== form.confirmPassword) {
+      setErrorMessage("The passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data = await registerAccount({
+        username: form.account,
+        email: form.email,
+        password: form.password,
+      });
+
+      onRegister(data.user.username);
+      navigate("/");
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -33,7 +56,7 @@ export default function RegisterPage({ accountName, onRegister }) {
           <p className="eyebrow">ACCOUNT</p>
           <h1>Register</h1>
           <p className="account-lead">
-            Create a simple account to access the platform.
+            Create an account to access the platform.
           </p>
         </div>
       </header>
@@ -48,6 +71,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               value={form.account}
               onChange={handleChange}
               placeholder="Choose an account name"
+              autoComplete="username"
             />
           </label>
 
@@ -59,6 +83,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               value={form.email}
               onChange={handleChange}
               placeholder="Enter your email"
+              autoComplete="email"
             />
           </label>
 
@@ -70,6 +95,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               value={form.password}
               onChange={handleChange}
               placeholder="Create a password"
+              autoComplete="new-password"
             />
           </label>
 
@@ -81,12 +107,15 @@ export default function RegisterPage({ accountName, onRegister }) {
               value={form.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm your password"
+              autoComplete="new-password"
             />
           </label>
 
-          <button type="submit" className="auth-primary-btn">
-            Register
+          <button type="submit" className="auth-primary-btn" disabled={isSubmitting}>
+            {isSubmitting ? "Registering..." : "Register"}
           </button>
+
+          {errorMessage ? <p className="account-feedback error">{errorMessage}</p> : null}
 
           <p className="account-switch">
             Already have an account? <Link to="/login">Login</Link>
