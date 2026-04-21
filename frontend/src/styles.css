@@ -22,7 +22,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -33,6 +35,9 @@ input {
 }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   border-right: 1px solid rgba(165, 216, 234, 0.1);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
@@ -98,6 +103,100 @@ input {
   justify-content: center;
   color: #b8f3ff;
   font-size: 1rem;
+}
+
+.sidebar-user {
+  margin-top: auto;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(120, 237, 255, 0.05), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+}
+
+.sidebar-user-head,
+.sidebar-user-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-user-label,
+.sidebar-action,
+.account-switch a,
+.field-group span,
+.sidebar-user-empty {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sidebar-user-label {
+  margin: 0;
+  color: rgba(210, 244, 255, 0.65);
+  font-size: 0.72rem;
+}
+
+.sidebar-user-simple {
+  display: grid;
+  gap: 12px;
+}
+
+.sidebar-user-name {
+  color: #eef9fc;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.sidebar-user-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sidebar-user-empty {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.68rem;
+}
+
+.sidebar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid rgba(177, 242, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d6f8ff;
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: 180ms ease;
+}
+
+.sidebar-action:hover,
+.sidebar-action.active {
+  border-color: rgba(177, 242, 255, 0.38);
+  background: rgba(177, 242, 255, 0.12);
+  color: #fcffff;
+}
+
+.sidebar-logout-button {
+  min-height: 40px;
+  border: 1px solid rgba(177, 242, 255, 0.14);
+  border-radius: 12px;
+  background: transparent;
+  color: #d6f8ff;
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sidebar-logout-button:hover {
+  border-color: rgba(177, 242, 255, 0.38);
+  background: rgba(177, 242, 255, 0.08);
 }
 
 .main-panel {
@@ -1702,6 +1801,102 @@ input {
   background: rgba(255, 255, 255, 0.7);
 }
 
+.account-page {
+  display: grid;
+  gap: 20px;
+}
+
+.account-topbar h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 3.2vw, 3.4rem);
+  line-height: 0.98;
+}
+
+.account-lead {
+  max-width: 34rem;
+  margin: 14px 0 0;
+  color: rgba(239, 244, 246, 0.76);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.account-card {
+  width: min(100%, 520px);
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(10, 12, 14, 0.88);
+}
+
+.account-form {
+  display: grid;
+  gap: 18px;
+}
+
+.field-group {
+  display: grid;
+  gap: 10px;
+}
+
+.field-group span {
+  color: rgba(206, 246, 255, 0.68);
+  font-size: 0.72rem;
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+  width: 100%;
+  border: 1px solid rgba(171, 224, 239, 0.14);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #eef7fa;
+  outline: 0;
+  resize: vertical;
+}
+
+.field-group input::placeholder,
+.field-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  border-color: rgba(177, 242, 255, 0.34);
+  box-shadow: 0 0 0 1px rgba(177, 242, 255, 0.14);
+}
+
+.auth-primary-btn,
+.secondary-ghost-btn {
+  min-height: 54px;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.auth-primary-btn {
+  border: 0;
+  background: linear-gradient(90deg, #91ebf6, #b7f7e0);
+  color: #07131a;
+  font-weight: 700;
+}
+
+.account-switch {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.88rem;
+}
+
+.account-switch a {
+  color: #c7f4ff;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1711,6 +1906,10 @@ input {
     padding-bottom: 18px;
     border-right: 0;
     border-bottom: 1px solid rgba(165, 216, 234, 0.1);
+  }
+
+  .sidebar-user {
+    margin-top: 0;
   }
 
   .main-panel {
@@ -1829,6 +2028,14 @@ input {
     padding-right: 14px;
   }
 
+  .sidebar-user-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-user-actions {
+    display: grid;
+  }
+
   .system-toolbar {
     width: 100%;
     flex-wrap: wrap;
@@ -1909,5 +2116,9 @@ input {
 
   .generation-player {
     padding: 14px 16px;
+  }
+
+  .account-card {
+    padding: 18px;
   }
 }
