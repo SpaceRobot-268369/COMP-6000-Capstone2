@@ -207,6 +207,9 @@ COMP-6000-Capstone2/
 ├── script/                 # Data download scripts
 │   ├── download_site_257_clips.py
 │   ├── download_site_257_originals.py
+│   ├── download_site_257_annotations.py
+│   ├── sample_mvp_dataset.py
+│   ├── fetch_nasa_env_data.py
 │   └── fetch_recordings.py
 ├── resources/              # Downloaded audio data (gitignored)
 └── .devcontainer/          # VS Code dev container config
@@ -274,6 +277,34 @@ Tracked at `resources/site_257_bowra-dry-a/site_257_filtered_items.csv`.
 python3 script/download_site_257_originals.py \
   --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv \
   --start-item 1 --end-item 9999 --workers 6
+```
+
+---
+
+## Data Commands
+
+### Download annotations for MVP sample
+```bash
+python3 script/download_site_257_annotations.py \
+  --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv \
+  --start-item 1 \
+  --end-item 287 \
+  --workers 6
+```
+
+### Fetch environmental data for MVP sample
+```bash
+python3 script/fetch_nasa_env_data.py
+```
+Output: `resources/site_257_bowra-dry-a/site_257_env_data.csv`
+
+### Download clips for MVP sample
+```bash
+python3 script/download_site_257_clips.py \
+  --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv \
+  --start-item 1 \
+  --end-item 287 \
+  --workers 6
 ```
 
 ---
