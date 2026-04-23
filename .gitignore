@@ -51,6 +51,9 @@ resources/site_257_bowra-dry-a/*
 *.local
 .env.*.local
 
+# Acoustic AI training checkpoints (keep best.pt tracked)
+acoustic_ai/checkpoints/epoch_*.pt
+
 
 # Claude
 /.claude/worktrees
