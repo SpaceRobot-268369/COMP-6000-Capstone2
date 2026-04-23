@@ -36,7 +36,8 @@ coverage/
 services/dev/postgresql/data/
 
 # Resource downloads
-resources/site_257_bowra-dry-a/
+resources/site_257_bowra-dry-a/*
+!resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 
 # IDE and editors
 .idea/
