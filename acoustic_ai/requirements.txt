@@ -1,1 +1,14 @@
+# Core
 numpy >= 1.26
+pandas >= 2.0
+
+# Audio
+librosa >= 0.10
+soundfile >= 0.12
+torchaudio >= 2.2
+
+# Deep learning
+torch >= 2.2
+
+# Utilities
+tqdm >= 4.66

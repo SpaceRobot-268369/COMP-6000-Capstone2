@@ -1,91 +1,103 @@
 import crypto from "node:crypto";
 import cors from "cors";
 import express from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-app.use(cors());
-app.use(express.json());
+const PgSession = connectPgSimple(session);
 
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true,
+}));
+app.use(express.json());
+app.use(session({
+  store: new PgSession({
+    pool,
+    tableName: "sessions",
+    pruneSessionInterval: 60 * 15, // prune expired sessions every 15 min
+  }),
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 function query(text, params = []) {
   return pool.query(text, params);
-}
-
-function scryptPassword(password, salt) {
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, (error, derivedKey) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(derivedKey);
-    });
-  });
-}
-
-async function createPasswordHash(password) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const derivedKey = await scryptPassword(password, salt);
-  return `${salt}:${derivedKey.toString("hex")}`;
-}
-
-async function verifyPassword(password, storedHash) {
-  const [salt, expectedHash] = storedHash.split(":");
-  if (!salt || !expectedHash) {
-    return false;
-  }
-
-  const derivedKey = await scryptPassword(password, salt);
-  const expectedBuffer = Buffer.from(expectedHash, "hex");
-
-  if (expectedBuffer.length !== derivedKey.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(expectedBuffer, derivedKey);
 }
 
 function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function ensureSchema() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `);
+function scryptPassword(password, salt) {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
 }
 
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const key = await scryptPassword(password, salt);
+  return `${salt}:${key.toString("hex")}`;
+}
+
+async function verifyPassword(password, storedHash) {
+  const [salt, expected] = storedHash.split(":");
+  if (!salt || !expected) return false;
+  const key = await scryptPassword(password, salt);
+  const expectedBuf = Buffer.from(expected, "hex");
+  if (expectedBuf.length !== key.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, key);
+}
+
+function requireAuth(req, res, next) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ ok: false, message: "Not authenticated." });
+  }
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
 app.get("/api/health", async (_req, res) => {
   try {
     const { rows } = await query("SELECT NOW() AS now");
     res.json({ ok: true, db: "connected", now: rows[0].now });
-  } catch (error) {
-    res.status(500).json({ ok: false, db: "error", message: String(error.message || error) });
+  } catch (err) {
+    res.status(500).json({ ok: false, db: "error", message: String(err.message || err) });
   }
 });
 
 app.post("/api/register", async (req, res) => {
   const username = normalizeString(req.body.username);
-  const email = normalizeString(req.body.email).toLowerCase();
+  const email    = normalizeString(req.body.email).toLowerCase();
   const password = typeof req.body.password === "string" ? req.body.password : "";
 
   if (!username || !email || !password) {
-    res.status(400).json({ ok: false, message: "Username, email, and password are required." });
-    return;
+    return res.status(400).json({ ok: false, message: "Username, email, and password are required." });
   }
 
   try {
-    const passwordHash = await createPasswordHash(password);
+    const passwordHash = await hashPassword(password);
     const { rows } = await query(
       `INSERT INTO users (username, email, password_hash)
        VALUES ($1, $2, $3)
@@ -93,29 +105,29 @@ app.post("/api/register", async (req, res) => {
       [username, email, passwordHash],
     );
 
-    res.status(201).json({ ok: true, user: rows[0] });
-  } catch (error) {
-    if (error.code === "23505") {
-      const message = error.constraint === "users_email_key"
+    const user = rows[0];
+    req.session.userId   = user.id;
+    req.session.username = user.username;
+
+    res.status(201).json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
+  } catch (err) {
+    if (err.code === "23505") {
+      const message = err.constraint === "users_email_key"
         ? "This email is already registered."
-        : "This account name is already taken.";
-
-      res.status(409).json({ ok: false, message });
-      return;
+        : "This username is already taken.";
+      return res.status(409).json({ ok: false, message });
     }
-
-    console.error("Register failed:", error);
-    res.status(500).json({ ok: false, message: String(error.message || error) });
+    console.error("Register failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
   }
 });
 
 app.post("/api/login", async (req, res) => {
-  const account = normalizeString(req.body.account);
+  const account  = normalizeString(req.body.account);
   const password = typeof req.body.password === "string" ? req.body.password : "";
 
   if (!account || !password) {
-    res.status(400).json({ ok: false, message: "Account and password are required." });
-    return;
+    return res.status(400).json({ ok: false, message: "Account and password are required." });
   }
 
   try {
@@ -128,28 +140,41 @@ app.post("/api/login", async (req, res) => {
     );
 
     const user = rows[0];
-    if (!user) {
-      res.status(401).json({ ok: false, message: "Invalid account or password." });
-      return;
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ ok: false, message: "Invalid account or password." });
     }
 
-    const isValidPassword = await verifyPassword(password, user.password_hash);
-    if (!isValidPassword) {
-      res.status(401).json({ ok: false, message: "Invalid account or password." });
-      return;
-    }
+    req.session.userId   = user.id;
+    req.session.username = user.username;
 
-    res.json({
-      ok: true,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      },
-    });
-  } catch (_error) {
-    console.error("Login failed:", _error);
-    res.status(500).json({ ok: false, message: String(_error.message || _error) });
+    res.json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
+  } catch (err) {
+    console.error("Login failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Logout failed:", err);
+      return res.status(500).json({ ok: false, message: "Logout failed." });
+    }
+    res.clearCookie("connect.sid");
+    res.json({ ok: true });
+  });
+});
+
+app.get("/api/me", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, username, email, created_at FROM users WHERE id = $1`,
+      [req.session.userId],
+    );
+    if (!rows[0]) return res.status(404).json({ ok: false, message: "User not found." });
+    res.json({ ok: true, user: rows[0] });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: String(err.message || err) });
   }
 });
 
@@ -157,16 +182,9 @@ app.get("/", (_req, res) => {
   res.json({ service: "backend", status: "running" });
 });
 
-async function startServer() {
-  try {
-    await ensureSchema();
-    app.listen(port, "0.0.0.0", () => {
-      console.log(`Backend running on http://0.0.0.0:${port}`);
-    });
-  } catch (error) {
-    console.error("Backend startup failed:", error);
-    process.exit(1);
-  }
-}
-
-startServer();
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Backend running on http://0.0.0.0:${port}`);
+});

@@ -18,6 +18,7 @@ Run from repository root:
   python3 script/fetch_nasa_env_data.py
   python3 script/fetch_nasa_env_data.py --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv
   python3 script/fetch_nasa_env_data.py --output resources/site_257_bowra-dry-a/site_257_env_data.csv
+  python3 script/fetch_nasa_env_data.py --ndvi
 """
 
 import argparse
@@ -59,6 +60,8 @@ DAILY_PARAMS = ",".join([
     "WS2M_MAX",          # Daily max wind speed (m/s)
 ])
 
+NASA_SENTINEL = -999.0   # NASA POWER missing-data marker
+
 # ---------------------------------------------------------------------------
 # Retry config
 # ---------------------------------------------------------------------------
@@ -86,6 +89,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=default_output)
     parser.add_argument("--lat", type=float, default=SITE_LAT)
     parser.add_argument("--lon", type=float, default=SITE_LON)
+    parser.add_argument(
+        "--ndvi",
+        action="store_true",
+        help="Also fetch MODIS NDVI 16-day vegetation index (not yet implemented).",
+    )
     return parser.parse_args()
 
 
@@ -97,6 +105,23 @@ def parse_recorded_date(value: str) -> datetime:
     if "." in value:
         value = value.split(".")[0]
     return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+
+
+def clean(val) -> Optional[float]:
+    """Return None for NASA sentinel (-999) or missing values, else the float."""
+    if val is None:
+        return None
+    try:
+        f = float(val)
+    except (TypeError, ValueError):
+        return None
+    return None if f <= NASA_SENTINEL + 1 else f
+
+
+def v(val, decimals=2) -> str:
+    """Format a value for CSV output: empty string for None/sentinel, else rounded."""
+    c = clean(val)
+    return "" if c is None else str(round(c, decimals))
 
 
 def get_with_retry(url: str, label: str) -> dict:
@@ -183,17 +208,23 @@ def build_daily_lookup(min_date: date, max_date: date, lat: float, lon: float) -
     return lookup
 
 
-def compute_days_since_rain(daily_lookup: dict, target_date: date,
+def compute_days_since_rain(daily_lookup: dict, utc_date: date,
                              threshold_mm: float = 1.0) -> Optional[int]:
-    """Count consecutive dry days before target_date (up to 90-day lookback)."""
+    """Count consecutive dry days before utc_date (up to 90-day lookback).
+
+    Uses UTC date throughout to match daily_lookup keys, which are keyed by
+    UTC date (YYYYMMDD) from NASA POWER. Passing local AEST date would cause
+    an off-by-one error for dawn/morning recordings where the AEST date is one
+    day ahead of the UTC date.
+    """
     count = 0
     for offset in range(1, 91):
-        d = target_date - timedelta(days=offset)
+        d = utc_date - timedelta(days=offset)
         key = d.strftime("%Y%m%d")
         day = daily_lookup.get(key)
         if day is None:
             return None
-        precip = day.get("PRECTOTCORR")
+        precip = clean(day.get("PRECTOTCORR"))
         if precip is None:
             return None
         if precip >= threshold_mm:
@@ -203,28 +234,29 @@ def compute_days_since_rain(daily_lookup: dict, target_date: date,
 
 
 # ---------------------------------------------------------------------------
-# Sunrise / sunset (astral)
+# Sunrise / sunset (astral) — returns local AEST times
 # ---------------------------------------------------------------------------
 def get_sun_times(local_date: date, lat: float, lon: float):
-    """Return (sunrise_utc, sunset_utc, daylight_hours) for a local AEST date.
+    """Return (sunrise_local, sunset_local, daylight_hours) for a local AEST date.
 
-    Computes in local timezone so sunrise and sunset fall on the same calendar
-    day and the subtraction is always positive, then converts times to UTC.
+    Times are in AEST (HH:MM) so that sunrise always precedes sunset on the
+    same calendar day. Storing UTC equivalents causes apparent inversion because
+    AEST sunrise (~05:xx local = ~19:xx UTC previous day) appears after sunset
+    (~17:xx local = ~07:xx UTC same day) when compared as bare HH:MM strings.
     """
     try:
         from astral import LocationInfo
         from astral.sun import sun as astral_sun
 
-        # Compute in local timezone — both sunrise and sunset land on local_date
         loc = LocationInfo(latitude=lat, longitude=lon, timezone="Australia/Brisbane")
-        local_tz = timedelta(hours=UTC_OFFSET_HOURS)
-        aware_tz = timezone(local_tz)
+        aware_tz = timezone(timedelta(hours=UTC_OFFSET_HOURS))
         s = astral_sun(loc.observer, date=local_date, tzinfo=aware_tz)
 
-        sunrise_utc = s["sunrise"].astimezone(timezone.utc).strftime("%H:%M")
-        sunset_utc  = s["sunset"].astimezone(timezone.utc).strftime("%H:%M")
-        daylight    = round((s["sunset"] - s["sunrise"]).total_seconds() / 3600, 2)
-        return sunrise_utc, sunset_utc, daylight
+        # s["sunrise"] and s["sunset"] are already in AEST (aware_tz)
+        sunrise_local = s["sunrise"].strftime("%H:%M")
+        sunset_local  = s["sunset"].strftime("%H:%M")
+        daylight      = round((s["sunset"] - s["sunrise"]).total_seconds() / 3600, 2)
+        return sunrise_local, sunset_local, daylight
     except ImportError:
         return "", "", ""
 
@@ -234,6 +266,10 @@ def get_sun_times(local_date: date, lat: float, lon: float):
 # ---------------------------------------------------------------------------
 def main() -> None:
     args = parse_args()
+
+    if args.ndvi:
+        print("[WARN] --ndvi flag is not yet implemented. MODIS NDVI fetch will be added in a future update.")
+        print("[WARN] Continuing without NDVI data.")
 
     if not args.csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {args.csv_path}")
@@ -259,9 +295,9 @@ def main() -> None:
 
     for row, dt in zip(recordings, dts):
         hourly_key = dt.strftime("%Y%m%d%H")
-        daily_key  = dt.strftime("%Y%m%d")
+        daily_key  = dt.strftime("%Y%m%d")           # UTC date — matches daily_lookup keys
         local_dt   = dt + timedelta(hours=UTC_OFFSET_HOURS)
-        local_date = local_dt.date()  # AEST date — correct input for astral
+        local_date = local_dt.date()                  # AEST date — used for astral only
 
         h = hourly_lookup.get(hourly_key, {})
         d = daily_lookup.get(daily_key, {})
@@ -274,10 +310,9 @@ def main() -> None:
             missing_daily += 1
 
         sunrise, sunset, daylight = get_sun_times(local_date, args.lat, args.lon)
-        days_rain = compute_days_since_rain(daily_lookup, local_date)
 
-        def v(val, decimals=2):
-            return round(val, decimals) if val is not None else ""
+        # Fix: pass UTC date so days_since_rain lookback uses same key space as daily_lookup
+        days_rain = compute_days_since_rain(daily_lookup, dt.date())
 
         output_rows.append({
             # --- Identity ---
@@ -294,7 +329,7 @@ def main() -> None:
             "wind_direction_deg":     v(h.get("WD2M"), 1),
             "precipitation_mm":       v(h.get("PRECTOTCORR")),
             "solar_radiation_wm2":    v(h.get("ALLSKY_SFC_SW_DWN")),
-            "cloud_clearness_index":  v(h.get("ALLSKY_KT")),
+            "cloud_clearness_index":  v(h.get("ALLSKY_KT")),   # empty for nighttime (no solar)
             "surface_pressure_kpa":   v(h.get("PS")),
 
             # --- Daily (NASA POWER) ---
@@ -304,9 +339,9 @@ def main() -> None:
             "wind_max_ms":            v(d.get("WS2M_MAX")),
             "days_since_rain":        days_rain if days_rain is not None else "",
 
-            # --- Sun times (astral, UTC output) ---
-            "sunrise_utc":            sunrise,
-            "sunset_utc":             sunset,
+            # --- Sun times (AEST local — sunrise always precedes sunset) ---
+            "sunrise_local":          sunrise,
+            "sunset_local":           sunset,
             "daylight_hours":         daylight,
 
             # --- Derived temporal ---

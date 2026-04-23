@@ -212,8 +212,22 @@ COMP-6000-Capstone2/
 │   ├── fetch_nasa_env_data.py
 │   └── fetch_recordings.py
 ├── resources/              # Downloaded audio data (gitignored)
+├── .claude/                # All AI-related files (skills, context, settings)
+│   ├── skills/             # Sampling policies, workflow skill docs
+│   ├── context/            # Known issues, decisions, project notes
+│   └── settings.local.json
 └── .devcontainer/          # VS Code dev container config
 ```
+
+### Storage Rule
+
+> **All AI-related files must live under `.claude/`** — not the project root.
+>
+> | Type | Location |
+> |------|----------|
+> | Skill / workflow docs | `.claude/skills/` |
+> | Known issues, decisions, notes | `.claude/context/` |
+> | Claude Code settings | `.claude/settings.local.json` |
 
 ---
 
@@ -306,6 +320,34 @@ python3 script/download_site_257_clips.py \
   --end-item 287 \
   --workers 6
 ```
+
+---
+
+## ⚠️ Known Data Issues
+
+> Full details in `.claude/context/known_issues.md`
+
+### Unrecoverable Clips — DO NOT RE-DOWNLOAD
+
+**12 clips permanently fail with `422 Unprocessable Entity` from the A2O API.**
+These are corrupted/missing on the server side. Retrying will always fail.
+
+| CSV Count | Recording ID | Clip |
+|-----------|-------------|------|
+| 216 | 1678484 | 021 |
+| 219 | 1678513 | 006 |
+| 222 | 1681319 | 009 |
+| 248 | 1679394 | 024 |
+| 249 | 1676521 | 005 |
+| 252 | 1676441 | 021 |
+| 254 | 1676444 | 018 |
+| 256 | 1670355 | 024 |
+| 266 | 1672094 | 011 |
+| 268 | 1681455 | 001 |
+| 270 | 1676142 | 023 |
+| 281 | 1672466 | 011 |
+
+**Impact:** 12 / 6,160 clips (0.2%) — negligible for training. Each affected recording still has the majority of its clips. **Exclude these from the training pipeline.**
 
 ---
 
