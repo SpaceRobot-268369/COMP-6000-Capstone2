@@ -6,6 +6,7 @@ import TransformationPage from "./pages/TransformationPage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 
 const accountStorageKey = "sonic-lab-account-name";
 
@@ -56,7 +57,7 @@ export default function App() {
           <nav className="sidebar-nav">
             <NavLink to="/about" className={sidebarLinkClass}>
               <span className="nav-icon">✦</span>
-              <span>System</span>
+              <span>Introduction</span>
             </NavLink>
             <NavLink to="/" end className={sidebarLinkClass}>
               <span className="nav-icon">◫</span>
@@ -72,6 +73,8 @@ export default function App() {
             </NavLink>
           </nav>
         </div>
+
+        <ThemeToggle />
 
         <section className="sidebar-user panel" aria-label="Account status">
           <div className="sidebar-user-head">

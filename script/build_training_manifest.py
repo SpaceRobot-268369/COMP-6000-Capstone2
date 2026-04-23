@@ -22,6 +22,23 @@ from pathlib import Path
 
 MAX_CLIP_SECONDS = 300.0
 
+# Clips that permanently fail with 422 on the A2O API — exclude from manifest.
+# Source: .claude/context/known_issues.md
+EXCLUDED_CLIPS: set[tuple[str, int]] = {
+    ("1678484", 21),
+    ("1678513",  6),
+    ("1681319",  9),
+    ("1679394", 24),
+    ("1676521",  5),
+    ("1676441", 21),
+    ("1676444", 18),
+    ("1670355", 24),
+    ("1672094", 11),
+    ("1681455",  1),
+    ("1676142", 23),
+    ("1672466", 11),
+}
+
 
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parent.parent
@@ -65,6 +82,7 @@ def main() -> None:
     missing_folder = []
     empty_folders = []
     unknown_clips = []
+    excluded_clips = []
 
     for recording_id, item in sorted(filtered.items(), key=lambda x: int(x[0])):
         folder = args.clips_dir / f"site_257_item_{recording_id}"
@@ -91,6 +109,10 @@ def main() -> None:
                 clip_index = int(stem.rsplit("_", 1)[-1])  # 1-based
             except ValueError:
                 unknown_clips.append(str(clip_path))
+                continue
+
+            if (recording_id, clip_index) in EXCLUDED_CLIPS:
+                excluded_clips.append((recording_id, clip_index))
                 continue
 
             seg_idx = clip_index - 1
@@ -123,6 +145,7 @@ def main() -> None:
     print(f"Empty folders    : {len(empty_folders)}  → {empty_folders}")
     print(f"Missing env data : {len(missing_env)}")
     print(f"Unknown clips    : {len(unknown_clips)}")
+    print(f"Excluded (422)   : {len(excluded_clips)}")
 
     from collections import Counter
     bin_counts = Counter(r["sample_bin"] for r in rows)

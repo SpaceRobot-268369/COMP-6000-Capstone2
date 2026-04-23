@@ -50,3 +50,7 @@ resources/site_257_bowra-dry-a/*
 # Misc
 *.local
 .env.*.local
+
+
+# Claude
+/.claude/worktrees

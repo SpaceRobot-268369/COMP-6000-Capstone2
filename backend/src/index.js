@@ -178,6 +178,60 @@ app.get("/api/me", requireAuth, async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// AI routes — proxy to FastAPI inference server (port 8000)
+// ---------------------------------------------------------------------------
+const AI_SERVER = process.env.AI_SERVER_URL || "http://localhost:8000";
+
+app.get("/api/ai/health", async (_req, res) => {
+  try {
+    const r = await fetch(`${AI_SERVER}/health`);
+    const body = await r.json();
+    res.json(body);
+  } catch (err) {
+    res.status(503).json({ ok: false, message: "AI server unreachable.", detail: String(err.message) });
+  }
+});
+
+app.post("/api/analysis", requireAuth, async (req, res) => {
+  try {
+    // Forward the multipart file + query params to FastAPI
+    const url = new URL(`${AI_SERVER}/analysis`);
+    Object.entries(req.body).forEach(([k, v]) => url.searchParams.set(k, v));
+
+    const r = await fetch(url.toString(), {
+      method: "POST",
+      headers: req.headers["content-type"]
+        ? { "content-type": req.headers["content-type"] }
+        : {},
+      body: req,  // stream the raw request body through
+      duplex: "half",
+    });
+
+    const body = await r.json();
+    res.status(r.status).json(body);
+  } catch (err) {
+    console.error("Analysis proxy failed:", err);
+    res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
+  }
+});
+
+app.post("/api/generation", requireAuth, async (req, res) => {
+  try {
+    const r = await fetch(`${AI_SERVER}/generation`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+
+    const body = await r.json();
+    res.status(r.status).json(body);
+  } catch (err) {
+    console.error("Generation proxy failed:", err);
+    res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
+  }
+});
+
 app.get("/", (_req, res) => {
   res.json({ service: "backend", status: "running" });
 });

@@ -21,6 +21,7 @@ from tqdm import tqdm
 
 from dataset import SoundscapeDataset, N_ENV_FEATURES
 from model import SoundscapeModel
+from preprocess import SPEC_CFG
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -40,7 +41,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--batch-size",  type=int,  default=16)
     p.add_argument("--lr",          type=float,default=1e-4)
     p.add_argument("--val-frac",    type=float,default=0.15)
-    p.add_argument("--num-workers", type=int,  default=4)
+    p.add_argument("--num-workers", type=int,  default=0,
+                   help="DataLoader workers. Default 0 avoids MPS/multiprocessing issues on Mac.")
+    p.add_argument("--crop-seconds", type=float, default=30.0,
+                   help="Random time crop per training step (seconds). 0 = no crop.")
     p.add_argument("--seed",        type=int,  default=42)
     p.add_argument("--resume",      type=Path, default=None,
                    help="Path to checkpoint .pt to resume from.")
@@ -101,10 +105,12 @@ def save_checkpoint(state: dict, path: Path) -> None:
     torch.save(state, path)
 
 
-def load_checkpoint(path: Path, model: nn.Module, optimiser) -> tuple[int, float]:
-    ckpt       = torch.load(path, map_location="cpu")
+def load_checkpoint(path: Path, model: nn.Module, optimiser, scheduler) -> tuple[int, float]:
+    ckpt       = torch.load(path, map_location="cpu", weights_only=False)
     model.load_state_dict(ckpt["model"])
     optimiser.load_state_dict(ckpt["optimiser"])
+    if "scheduler" in ckpt:
+        scheduler.load_state_dict(ckpt["scheduler"])
     print(f"  Resumed from {path}  (epoch {ckpt['epoch']}, best_val={ckpt['best_val']:.6f})")
     return ckpt["epoch"], ckpt["best_val"]
 
@@ -118,6 +124,14 @@ def main() -> None:
     print(f"Device : {device}")
     print(f"Manifest: {args.manifest}")
 
+    # ── Crop frames ───────────────────────────────────────────────────────────
+    crop_frames = (
+        int(args.crop_seconds * SPEC_CFG["sample_rate"] / SPEC_CFG["hop_length"])
+        if args.crop_seconds > 0 else None
+    )
+    if crop_frames:
+        print(f"Crop frames : {crop_frames}  ({args.crop_seconds:.0f}s per training step)")
+
     # ── Datasets ─────────────────────────────────────────────────────────────
     train_ds = SoundscapeDataset(
         manifest_path=str(args.manifest),
@@ -125,6 +139,7 @@ def main() -> None:
         split="train",
         val_fraction=args.val_frac,
         seed=args.seed,
+        crop_frames=crop_frames,
     )
     val_ds = SoundscapeDataset(
         manifest_path=str(args.manifest),
@@ -133,6 +148,7 @@ def main() -> None:
         val_fraction=args.val_frac,
         seed=args.seed,
         stats=train_ds.get_stats(),   # normalise val with training stats
+        crop_frames=crop_frames,
     )
     print(f"Train clips : {len(train_ds)}  |  Val clips : {len(val_ds)}")
     print(f"Env dim     : {train_ds.env_dim}")
@@ -153,10 +169,12 @@ def main() -> None:
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
+    from preprocess import FRAMES_PER_CLIP
     model = SoundscapeModel(
         env_dim=N_ENV_FEATURES,
         embed_dim=args.embed_dim,
         latent_dim=args.latent_dim,
+        target_frames=crop_frames if crop_frames else FRAMES_PER_CLIP,
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -172,7 +190,7 @@ def main() -> None:
     best_val    = math.inf
 
     if args.resume:
-        start_epoch, best_val = load_checkpoint(args.resume, model, optimiser)
+        start_epoch, best_val = load_checkpoint(args.resume, model, optimiser, scheduler)
         start_epoch += 1
 
     # ── Training loop ─────────────────────────────────────────────────────────
@@ -197,6 +215,7 @@ def main() -> None:
             "epoch":     epoch,
             "model":     model.state_dict(),
             "optimiser": optimiser.state_dict(),
+            "scheduler": scheduler.state_dict(),
             "best_val":  best_val,
             "args":      vars(args),
         }

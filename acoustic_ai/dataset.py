@@ -27,6 +27,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+import numpy as np
 from preprocess import audio_to_tensor
 
 # ---------------------------------------------------------------------------
@@ -74,6 +75,10 @@ N_ENV_FEATURES = len(NUMERIC_COLS) + 2 * len(CIRCULAR_COLS) + sum(len(v) for v i
 # Dataset
 # ---------------------------------------------------------------------------
 
+MEL_MIN_DB = -80.0   # matches top_db=80 in SPEC_CFG
+MEL_MAX_DB =   0.0
+
+
 class SoundscapeDataset(Dataset):
     """Loads clips from site_257_training_manifest.csv.
 
@@ -86,6 +91,8 @@ class SoundscapeDataset(Dataset):
         stats         : pre-computed (means, stds) dict for normalisation;
                         if None, computed from this split (use training split stats
                         when creating the val split)
+        crop_frames   : if set, return a random time crop of this many frames
+                        instead of the full 12 921-frame clip (speeds up training)
     """
 
     def __init__(
@@ -96,7 +103,9 @@ class SoundscapeDataset(Dataset):
         val_fraction: float = 0.15,
         seed: int = 42,
         stats: Optional[dict] = None,
+        crop_frames: Optional[int] = None,
     ):
+        self.crop_frames = crop_frames
         self.project_root = Path(project_root)
         df = pd.read_csv(manifest_path)
 
@@ -179,7 +188,21 @@ class SoundscapeDataset(Dataset):
         row  = self.df.iloc[idx]
         path = self.project_root / row["clip_path"]
 
-        mel = audio_to_tensor(str(path))
+        npy = Path(str(path) + ".npy")       # clip_001.webm.npy
+        if npy.exists():
+            mel = torch.from_numpy(np.load(str(npy)))
+        else:
+            mel = audio_to_tensor(str(Path(str(path) + ".wav")))  # clip_001.webm.wav
+
+        # Normalise dB values from [−80, 0] → [0, 1]
+        mel = (mel - MEL_MIN_DB) / (MEL_MAX_DB - MEL_MIN_DB)
+
+        # Random time crop (avoids processing full 300 s tensor every step)
+        if self.crop_frames is not None and mel.shape[-1] > self.crop_frames:
+            max_start = mel.shape[-1] - self.crop_frames
+            start = int(torch.randint(0, max_start, (1,)).item())
+            mel = mel[:, :, start : start + self.crop_frames]
+
         env = self._build_env_vector(row)
 
         meta = {

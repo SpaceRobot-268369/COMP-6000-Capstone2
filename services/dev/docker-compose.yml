@@ -27,6 +27,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: ${BACKEND_PORT}
+      AI_SERVER_URL: http://acoustic_ai_server:8000
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -58,6 +59,19 @@ services:
     command: sleep infinity
     volumes:
       - ../../:/workspace
+
+  acoustic_ai_server:
+    image: python:3.11-slim
+    working_dir: /workspace
+    command: >
+      bash -c "pip install -q -r acoustic_ai/requirements.txt &&
+               python3 acoustic_ai/server.py"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../:/workspace
+    environment:
+      PYTHONPATH: /workspace/acoustic_ai
 
 volumes:
   backend_node_modules:

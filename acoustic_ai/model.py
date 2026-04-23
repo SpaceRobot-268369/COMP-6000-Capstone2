@@ -176,14 +176,15 @@ class SoundscapeModel(nn.Module):
 
     def __init__(
         self,
-        env_dim:    int = 29,
-        embed_dim:  int = 512,
-        latent_dim: int = 256,
+        env_dim:       int = 29,
+        embed_dim:     int = 512,
+        latent_dim:    int = 256,
+        target_frames: int = FRAMES_PER_CLIP,
     ):
         super().__init__()
         self.encoder = AudioEncoder(embed_dim=embed_dim)
         self.fusion  = FusionMLP(audio_dim=embed_dim, env_dim=env_dim, latent_dim=latent_dim)
-        self.decoder = MelDecoder(latent_dim=latent_dim)
+        self.decoder = MelDecoder(latent_dim=latent_dim, target_frames=target_frames)
 
     def encode(self, mel: torch.Tensor, env: torch.Tensor) -> torch.Tensor:
         """Returns the latent vector z."""

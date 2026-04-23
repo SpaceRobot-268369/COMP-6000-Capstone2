@@ -58,6 +58,36 @@ Raw Audio → Mel-Spectrogram → CNN Encoder → Audio Embedding
 
 Model types to consider: CNN encoders, Transformers, Conditional diffusion models, GAN/VAE, Neural vocoders.
 
+### AI Module Architecture — A / B / C Pattern
+
+The AI system is split into three independent modules. This separation allows each to be trained, frozen, and extended without disrupting the others.
+
+**Module A — Environmental Autoencoder** (`acoustic_ai/model.py`, current)
+- Trained unsupervised on audio + environmental features (no annotations needed)
+- Learns: environment ↔ soundscape structure relationship
+- Output: latent representation `z` (256-dim)
+- Status: pilot training complete (Stage 2)
+
+**Module B — Ecological Classifier** (Stage 3, future)
+- Built on top of frozen Module A encoder
+- Trained on annotated clips only (sparse annotation coverage is fine)
+- Learns: `z → species presence vector` (e.g. probability per species)
+- Can be added later without retraining Module A
+
+**Module C — Conditioned Generator** (Stage 3, future)
+- Combines Module A's environmental latent + Module B's species signal
+- Input: target env conditions + optional target species
+- Output: generated spectrogram matching both signals
+- Implemented as an extended decoder: `[z, species_vector] → spectrogram`
+
+**Build order for Stage 3:**
+1. Freeze Module A weights (`model.requires_grad_(False)`)
+2. Train Module B (small MLP head) on annotated clips
+3. Build Module C — extend decoder to accept `[z, species_vector]`
+4. Fine-tune Module C while keeping A and B frozen
+
+This is the **frozen backbone + task head** pattern — standard ML practice for extending a pretrained base model without losing learned representations.
+
 ### Environmental Variables
 temperature, humidity, wind speed/direction, rainfall, time of day, season, geographic site
 
