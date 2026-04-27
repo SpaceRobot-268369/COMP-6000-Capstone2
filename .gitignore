@@ -51,8 +51,13 @@ resources/site_257_bowra-dry-a/*
 *.local
 .env.*.local
 
-# Acoustic AI training checkpoints (keep best.pt tracked)
+# Acoustic AI training checkpoints
+acoustic_ai/checkpoints/best.pt
 acoustic_ai/checkpoints/epoch_*.pt
+
+# Vocoder checkpoints (all ignored — large binary files)
+acoustic_ai/vocoder_checkpoints/
+# !acoustic_ai/vocoder_checkpoints/best.pt
 
 
 # Claude

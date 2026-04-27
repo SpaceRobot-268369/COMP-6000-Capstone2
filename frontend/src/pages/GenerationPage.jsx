@@ -72,22 +72,25 @@ export default function GenerationPage() {
         {/* ── Centre: canvas / status ── */}
         <main className="panel generation-canvas-card">
           <div className="generation-canvas">
-            <div className="gen-wave gen-wave-back" />
-            <div className="gen-wave gen-wave-mid" />
-            <div className="gen-wave gen-wave-front" />
+            {isDone && result?.image_b64 ? (
+              <img
+                src={`data:image/png;base64,${result.image_b64}`}
+                alt="Generated mel-spectrogram"
+                className="gen-spectrogram-img"
+              />
+            ) : (
+              <>
+                <div className="gen-wave gen-wave-back" />
+                <div className="gen-wave gen-wave-mid" />
+                <div className="gen-wave gen-wave-front" />
+              </>
+            )}
 
             {isGenerating && (
               <div className="gen-computing-overlay">
                 <div className="gen-computing-ring" />
                 <p>Synthesising latent space…</p>
               </div>
-            )}
-
-            {isDone && result?.mock && (
-              <span className="gen-node gen-node-one">● Demo mode active</span>
-            )}
-            {isDone && !result?.mock && (
-              <span className="gen-node gen-node-two">● Model inference complete</span>
             )}
           </div>
 
@@ -158,14 +161,33 @@ export default function GenerationPage() {
               {isGenerating ? "Generating…" : "▣ Generate Soundscape"}
             </button>
 
-            {isDone && result?.audioUrl && (
-              <button type="button" className="gen-secondary-btn" onClick={handleDownload}>
-                ↓ Download WAV
+            {isDone && result?.image_b64 && (
+              <button
+                type="button"
+                className="gen-secondary-btn"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = `data:image/png;base64,${result.image_b64}`;
+                  a.download = `spectrogram_${conditions.season}_${conditions.sample_bin}.png`;
+                  a.click();
+                }}
+              >
+                ↓ Download Spectrogram
               </button>
             )}
-            {isDone && !result?.audioUrl && (
-              <button type="button" className="gen-secondary-btn" disabled>
-                Model not connected
+
+            {isDone && result?.audio_b64 && (
+              <button
+                type="button"
+                className="gen-secondary-btn"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = `data:audio/wav;base64,${result.audio_b64}`;
+                  a.download = `soundscape_${conditions.season}_${conditions.sample_bin}.wav`;
+                  a.click();
+                }}
+              >
+                ↓ Download Audio (.wav)
               </button>
             )}
           </div>
@@ -173,7 +195,7 @@ export default function GenerationPage() {
       </div>
 
       <AudioPlayer
-        src={result?.audioUrl ?? null}
+        src={result?.audio_b64 ? `data:audio/wav;base64,${result.audio_b64}` : null}
         label={isDone ? `${conditions.season} · ${conditions.sample_bin}` : "Generation Output"}
         detail={!isDone ? "Generate a soundscape to play it here" : undefined}
       />

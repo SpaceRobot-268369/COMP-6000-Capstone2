@@ -42,3 +42,14 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions (expire);
+
+-- ============================================================
+-- Seed — test account (password: test1234)
+-- ============================================================
+INSERT INTO users (username, email, password_hash)
+VALUES (
+    'testuser',
+    'test@test.com',
+    '67eb8ad9c110d329032388a788d9c382:4cb0c31056573c14a5f6dc47b6f8e04d3622672029c8960da2862ae77d64ca2d4e5b84f3937be7c7914f7628b3f99db0b61455fea0e93ac53e0c09108a9c074c'
+)
+ON CONFLICT DO NOTHING;

@@ -31,7 +31,11 @@ from pydantic import BaseModel
 # Ensure acoustic_ai modules are importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from inference import encode_clip, generate_spectrogram, DEFAULT_CKPT
+from inference import (
+    encode_clip, generate_spectrogram, estimate_env_conditions,
+    mel_db_to_wav, mel_db_to_wav_hifigan, mel_db_to_wav_ecoacoustic,
+    DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
+)
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
 
@@ -141,10 +145,21 @@ async def analysis(
     finally:
         Path(tmp_path).unlink(missing_ok=True)
 
+    # Nearest-neighbour env estimation — requires latent_clips.npy
+    estimated_conditions: dict = {}
+    if CLIPS_PATH.exists():
+        try:
+            import numpy as _np
+            clips = _np.load(str(CLIPS_PATH), allow_pickle=True).item()
+            estimated_conditions = estimate_env_conditions(latent, clips, top_k=5)
+        except Exception as exc:
+            print(f"[WARN] Env estimation failed: {exc}")
+
     return {
-        "ok":          True,
-        "latent_dim":  len(latent),
-        "latent":      latent.tolist(),
+        "ok":                    True,
+        "latent_dim":            len(latent),
+        "latent":                latent.tolist(),
+        "estimated_conditions":  estimated_conditions,
     }
 
 
@@ -165,14 +180,40 @@ def generation(body: EnvFeatures):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}")
 
-    # Encode as base64 PNG for easy display in the frontend
     png_b64 = _mel_to_png_b64(mel_db)
+
+    # Vocoder priority:
+    #   1. Ecoacoustic HiFi-GAN (fine-tuned on site 257, 128-bin 22kHz) — best quality
+    #   2. Speech HiFi-GAN (SpeechT5, 80-bin 16kHz + interp)             — Stage 2 fallback
+    #   3. Griffin-Lim (no neural model required)                          — last resort
+    if VOCODER_CKPT.exists():
+        try:
+            wav_bytes = mel_db_to_wav_ecoacoustic(mel_db)
+            print("[INFO] Ecoacoustic vocoder succeeded.")
+        except Exception as exc:
+            print(f"[WARN] Ecoacoustic vocoder failed ({exc}), trying speech HiFi-GAN.")
+            wav_bytes = None
+    else:
+        wav_bytes = None
+
+    if wav_bytes is None:
+        try:
+            wav_bytes = mel_db_to_wav_hifigan(mel_db)
+            print("[INFO] Speech HiFi-GAN vocoding succeeded.")
+        except Exception as exc:
+            print(f"[WARN] Speech HiFi-GAN failed ({exc}), falling back to Griffin-Lim.")
+            try:
+                wav_bytes = mel_db_to_wav(mel_db)
+            except Exception as exc2:
+                wav_bytes = b""
+                print(f"[WARN] Griffin-Lim also failed: {exc2}")
+    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8") if wav_bytes else ""
 
     return {
         "ok":        True,
         "shape":     list(mel_db.shape),
-        "mel_db":    mel_db.tolist(),
         "image_b64": png_b64,
+        "audio_b64": audio_b64,
     }
 
 

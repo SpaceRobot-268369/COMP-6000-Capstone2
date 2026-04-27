@@ -58,6 +58,29 @@ Raw Audio → Mel-Spectrogram → CNN Encoder → Audio Embedding
 
 Model types to consider: CNN encoders, Transformers, Conditional diffusion models, GAN/VAE, Neural vocoders.
 
+### Vocoding — Mel-Spectrogram → Audio
+
+Converting the generated mel-spectrogram back to a playable audio file requires a **vocoder**.
+
+| Option | Quality | Dependency | Status |
+|--------|---------|------------|--------|
+| **Griffin-Lim** | Robotic but functional | librosa (already installed) | **MVP — implemented** |
+| HiFi-GAN | Natural sounding | Pretrained ~50 MB checkpoint | Stage 3 upgrade |
+
+**Decision:** HiFi-GAN (speechbrain LJSpeech checkpoint) with Griffin-Lim fallback.
+Implemented in `acoustic_ai/inference.py`: `mel_db_to_wav_hifigan()` → `mel_db_to_wav()`.
+
+Pipeline with vocoding:
+```
+env conditions → model → mel-spectrogram → HiFi-GAN → .wav → browser audio player
+```
+
+**Known limitation — mel bin mismatch:**
+Our model uses `n_mels=128`; pretrained HiFi-GAN expects `n_mels=80`.
+Current workaround: interpolate 128→80 bins before vocoding (scipy zoom).
+Proper fix: retrain model with `n_mels=80` in `preprocess.py` → no interpolation needed → better audio quality.
+HiFi-GAN cache downloads to `acoustic_ai/hifigan_cache/` on first run (~50 MB).
+
 ### AI Module Architecture — A / B / C Pattern
 
 The AI system is split into three independent modules. This separation allows each to be trained, frozen, and extended without disrupting the others.

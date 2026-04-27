@@ -206,9 +206,10 @@ class SoundscapeDataset(Dataset):
         env = self._build_env_vector(row)
 
         meta = {
-            "recording_id":    row["recording_id"],
-            "clip_path":       row["clip_path"],
-            "sample_bin":      row["sample_bin"],
+            "recording_id":      row["recording_id"],
+            "clip_path":         row["clip_path"],
+            "sample_bin":        row["sample_bin"],
+            "season":            row["season"],
             "sample_local_date": row["sample_local_date"],
         }
         return mel, env, meta

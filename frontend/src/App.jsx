@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import TransformationPage from "./pages/TransformationPage.jsx";
@@ -59,7 +59,7 @@ export default function App() {
               <span className="nav-icon">✦</span>
               <span>Introduction</span>
             </NavLink>
-            <NavLink to="/" end className={sidebarLinkClass}>
+            <NavLink to="/analysis" className={sidebarLinkClass}>
               <span className="nav-icon">◫</span>
               <span>Analysis</span>
             </NavLink>
@@ -108,8 +108,9 @@ export default function App() {
 
       <main className="main-panel">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/about" replace />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
           <Route

@@ -101,7 +101,7 @@ function Slider({ label, display, min, max, step, val, onChange }) {
         <span>{label}</span>
         <strong>{display}</strong>
       </div>
-      <div className="env-slider-wrap">
+      <div className="env-slider-wrap" style={{ "--thumb-pct": `${pct}%` }}>
         <div className="env-slider-track">
           <div className="env-slider-fill" style={{ width: `${pct}%` }} />
         </div>
