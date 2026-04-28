@@ -49,7 +49,6 @@ export default function HomePage() {
   const fileInputRef = useRef(null);
 
   const [health,     setHealth]     = useState({ loading: true });
-  const [authStatus, setAuthStatus] = useState("checking");
   const [file,       setFile]       = useState(null);
   const [audioUrl,   setAudioUrl]   = useState(null);
   const [status,     setStatus]     = useState("idle");
@@ -64,12 +63,6 @@ export default function HomePage() {
       .then(r => r.json())
       .then(d => setHealth(d))
       .catch(e => setHealth({ ok: false, message: String(e) }));
-  }, []);
-
-  useEffect(() => {
-    fetch(`${apiBase}/api/me`, { credentials: "include" })
-      .then(r => { setAuthStatus(r.ok ? "in" : "out"); })
-      .catch(() => setAuthStatus("out"));
   }, []);
 
   const healthText = health.loading
@@ -169,20 +162,12 @@ export default function HomePage() {
                 <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
               </div>
 
-              {authStatus === "out" && (
-                <p className="analysis-auth-notice">
-                  Login required to run analysis →{" "}
-                  <a href="/login" className="analysis-auth-link">Sign in</a>
-                </p>
-              )}
-
               <div className="upload-actions">
                 <button
                   type="button"
                   className="analyse-btn"
                   onClick={runAnalysis}
-                  disabled={isAnalysing || authStatus === "out"}
-                  title={authStatus === "out" ? "Login required" : undefined}
+                  disabled={isAnalysing}
                 >
                   {isAnalysing ? "Analysing…" : "✦ Run Analysis"}
                 </button>
@@ -326,15 +311,9 @@ export default function HomePage() {
               detail="Plays uploaded file immediately"
             />
             <PipelineStage
-              state={authStatus === "checking" ? "pending" : authStatus === "in" ? "live" : "blocked"}
+              state="live"
               label="VAE encode → latent vector (256-d)"
-              detail={
-                authStatus === "in"
-                  ? `Module A · VAE · best.pt · ${rawLatent ? `last run: ${rawLatent.latent_dim}-dim` : "ready"}`
-                  : authStatus === "out"
-                  ? "Requires login — /login or /register"
-                  : "Checking session…"
-              }
+              detail={`Module A · VAE · best.pt · ${rawLatent ? `last run: ${rawLatent.latent_dim}-dim` : "ready"}`}
             />
             <PipelineStage
               state={isDone && estimated && Object.keys(estimated).length > 0 ? "live" : "proxy"}
