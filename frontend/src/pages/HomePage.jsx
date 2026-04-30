@@ -5,6 +5,31 @@ import { analyseAudio } from "../lib/api.js";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const SEASON_MONTH_RANGES = {
+  summer: "Dec-Feb",
+  autumn: "Mar-May",
+  winter: "Jun-Aug",
+  spring: "Sep-Nov",
+};
+
+function monthDisplay(estimated) {
+  const rawMonth = Number(estimated?.month);
+  if (Number.isFinite(rawMonth) && rawMonth >= 1 && rawMonth <= 12) {
+    return MONTH_NAMES[Math.round(rawMonth) - 1];
+  }
+
+  const range = estimated?.month_range;
+  if (range) return range;
+
+  const season = String(estimated?.season || "").toLowerCase();
+  return SEASON_MONTH_RANGES[season] || "";
+}
+
 // ---------------------------------------------------------------------------
 // Latent vector stats (secondary display only)
 // ---------------------------------------------------------------------------
@@ -109,6 +134,7 @@ export default function HomePage() {
 
   const isAnalysing = status === "analysing";
   const isDone      = status === "done";
+  const estimatedMonth = monthDisplay(estimated);
 
   return (
     <section className="dashboard-page">
@@ -211,11 +237,11 @@ export default function HomePage() {
 
           {isDone && estimated && Object.keys(estimated).length > 0 ? (
             <>
-              {/* Season + time of day badges */}
+              {/* Month + time of day badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                {estimated.season && (
-                  <span className="pipeline-badge pipeline-badge--live" style={{ textTransform: "capitalize" }}>
-                    {estimated.season}
+                {estimatedMonth && (
+                  <span className="pipeline-badge pipeline-badge--live">
+                    Month: {estimatedMonth}
                   </span>
                 )}
                 {estimated.sample_bin && (
@@ -281,7 +307,7 @@ export default function HomePage() {
           <p className="summary-text">
             {isDone && estimated && Object.keys(estimated).length > 0
               ? `Module A encoded the clip into a 256-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
-                `Nearest-neighbour lookup estimated ${estimated.season} ${estimated.sample_bin} conditions: ` +
+                `Nearest-neighbour lookup estimated ${estimatedMonth || "month-unavailable"} ${estimated.sample_bin} conditions: ` +
                 `${estimated.temperature_c}°C, ${estimated.humidity_pct}% humidity, ` +
                 `${estimated.wind_speed_ms} m/s wind. ` +
                 `Confidence: ${Math.round((estimated.confidence ?? 0) * 100)}%. ` +

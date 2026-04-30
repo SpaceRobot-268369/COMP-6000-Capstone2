@@ -336,7 +336,7 @@ def estimate_env_conditions(
           temperature_c, humidity_pct, wind_speed_ms, precipitation_mm,
           solar_radiation_wm2, surface_pressure_kpa, temp_max_c, temp_min_c,
           wind_max_ms, days_since_rain, daylight_hours, hour_local,
-          season, sample_bin, confidence (0–1)
+          month, month_range, sample_bin, confidence (0–1)
     """
     latents = clips["latents"]   # (N, latent_dim)
     env_raw = clips.get("env_raw")
@@ -363,9 +363,23 @@ def estimate_env_conditions(
         vals = [float(env_raw[i].get(col, 0.0)) for i in top_idx]
         estimates[col] = round(float(np.mean(vals)), 2)
 
-    # Most common season / sample_bin among top-k
+    # Most common month / sample_bin among top-k. Older latent_clips.npy files
+    # may not include month, so fall back to a month range derived from season.
     from collections import Counter
-    estimates["season"]     = Counter(env_raw[i]["season"]     for i in top_idx).most_common(1)[0][0]
+    if "month" in env_raw[top_idx[0]]:
+        months = [int(float(env_raw[i].get("month", 0))) for i in top_idx]
+        months = [m for m in months if 1 <= m <= 12]
+        if months:
+            estimates["month"] = Counter(months).most_common(1)[0][0]
+
+    season = Counter(env_raw[i]["season"] for i in top_idx).most_common(1)[0][0]
+    estimates["season"] = season
+    estimates["month_range"] = {
+        "summer": "Dec-Feb",
+        "autumn": "Mar-May",
+        "winter": "Jun-Aug",
+        "spring": "Sep-Nov",
+    }.get(str(season).lower(), "")
     estimates["sample_bin"] = Counter(env_raw[i]["sample_bin"] for i in top_idx).most_common(1)[0][0]
     estimates["confidence"] = round(confidence, 3)
 

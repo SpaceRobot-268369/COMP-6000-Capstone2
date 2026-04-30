@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AudioPlayer from "../components/AudioPlayer.jsx";
-import EnvControls, { DEFAULT_CONDITIONS } from "../components/EnvControls.jsx";
+import EnvControls, { DEFAULT_CONDITIONS, monthLabel } from "../components/EnvControls.jsx";
 import { generateSoundscape } from "../lib/api.js";
 
 export default function GenerationPage() {
@@ -27,12 +27,19 @@ export default function GenerationPage() {
     if (!result?.audioUrl) return;
     const a = document.createElement("a");
     a.href = result.audioUrl;
-    a.download = `soundscape_${conditions.season}_${conditions.sample_bin}.wav`;
+    a.download = `soundscape_${monthLabel(conditions.month)}_${conditions.sample_bin}.wav`;
     a.click();
   }
 
   const isGenerating = status === "generating";
   const isDone       = status === "done";
+  const audioMime    = result?.audio_mime || "audio/wav";
+  const audioExt     = result?.audio_ext || "wav";
+  const audioSrc     = result?.audio_b64 ? `data:${audioMime};base64,${result.audio_b64}` : null;
+  const selectedClip = result?.selected?.clip_path;
+  const isLayerA     = result?.mode === "layer_a_ambient_bed";
+  const conditionMonth = monthLabel(conditions.month);
+  const selectedMonth  = result?.selected?.month ? monthLabel(result.selected.month) : conditionMonth;
 
   return (
     <section className="generation-page">
@@ -89,21 +96,23 @@ export default function GenerationPage() {
             {isGenerating && (
               <div className="gen-computing-overlay">
                 <div className="gen-computing-ring" />
-                <p>Synthesising latent space…</p>
+                <p>Retrieving ambient bed…</p>
               </div>
             )}
           </div>
 
           <div className="generation-caption">
-            <h1>Latent Soundscape Synthesis</h1>
+            <h1>{isDone && isLayerA ? "Ambient Bed Retrieval" : "Latent Soundscape Synthesis"}</h1>
             <div className="generation-caption-row">
               <i />
               <p>
                 {isGenerating
-                  ? "Processing conditions…"
-                  : isDone
-                    ? `${conditions.season} · ${conditions.sample_bin} · ${conditions.temperature_c}°C`
-                    : "Set conditions and generate"}
+                  ? "Retrieving ambient bed…"
+                  : isDone && isLayerA
+                    ? `Layer A ambient bed · ${selectedMonth} · ${result.selected?.sample_bin}`
+                    : isDone
+                      ? `${conditionMonth} · ${conditions.sample_bin} · ${conditions.temperature_c}°C`
+                      : "Set conditions and generate"}
               </p>
             </div>
             {errorMsg && <p className="analysis-error" style={{ marginTop: 12 }}>{errorMsg}</p>}
@@ -122,7 +131,7 @@ export default function GenerationPage() {
               <span>{isGenerating ? "Progress" : isDone ? "Complete" : "Ready"}</span>
               <div className="gen-progress-line">
                 <strong>{isGenerating ? "…" : isDone ? "100%" : "—"}</strong>
-                <p>{isGenerating ? "Reconstructing…" : isDone ? "Done" : "Awaiting input"}</p>
+                <p>{isGenerating ? "Retrieving…" : isDone ? "Done" : "Awaiting input"}</p>
               </div>
               <div className="gen-progress-track">
                 <i style={{
@@ -140,7 +149,7 @@ export default function GenerationPage() {
                   <span>Output file</span>
                   <strong>
                     {isDone
-                      ? `${conditions.season.toUpperCase()}_${conditions.sample_bin.toUpperCase()}`
+                      ? `${conditionMonth.toUpperCase()}_${conditions.sample_bin.toUpperCase()}`
                       : "—"}
                   </strong>
                 </div>
@@ -150,6 +159,16 @@ export default function GenerationPage() {
 
             {isDone && result?.mock && (
               <p className="mock-badge">Demo mode — connect model server for real audio</p>
+            )}
+
+            {isDone && selectedClip && (
+              <p className="mock-badge">
+                Layer A selected: {selectedClip.split("/").slice(-2).join("/")}
+              </p>
+            )}
+
+            {isDone && result?.explanation && (
+              <p className="metrics-proxy-note">{result.explanation}</p>
             )}
 
             <button
@@ -168,7 +187,7 @@ export default function GenerationPage() {
                 onClick={() => {
                   const a = document.createElement("a");
                   a.href = `data:image/png;base64,${result.image_b64}`;
-                  a.download = `spectrogram_${conditions.season}_${conditions.sample_bin}.png`;
+                  a.download = `spectrogram_${conditionMonth}_${conditions.sample_bin}.png`;
                   a.click();
                 }}
               >
@@ -182,12 +201,12 @@ export default function GenerationPage() {
                 className="gen-secondary-btn"
                 onClick={() => {
                   const a = document.createElement("a");
-                  a.href = `data:audio/wav;base64,${result.audio_b64}`;
-                  a.download = `soundscape_${conditions.season}_${conditions.sample_bin}.wav`;
+                  a.href = audioSrc;
+                  a.download = `soundscape_${conditionMonth}_${conditions.sample_bin}.${audioExt}`;
                   a.click();
                 }}
               >
-                ↓ Download Audio (.wav)
+                ↓ Download Audio (.{audioExt})
               </button>
             )}
           </div>
@@ -195,8 +214,8 @@ export default function GenerationPage() {
       </div>
 
       <AudioPlayer
-        src={result?.audio_b64 ? `data:audio/wav;base64,${result.audio_b64}` : null}
-        label={isDone ? `${conditions.season} · ${conditions.sample_bin}` : "Generation Output"}
+        src={audioSrc}
+        label={isDone ? `${conditionMonth} · ${conditions.sample_bin}` : "Generation Output"}
         detail={!isDone ? "Generate a soundscape to play it here" : undefined}
       />
     </section>

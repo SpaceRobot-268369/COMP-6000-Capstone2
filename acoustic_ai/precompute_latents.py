@@ -85,11 +85,12 @@ def main():
 
     # ── Collect raw env values (in dataset order, for nearest-neighbour lookup) ─
     from dataset import NUMERIC_COLS
-    raw_env_keys = NUMERIC_COLS + ["season", "sample_bin"]
     all_env_raw: list = []
     for idx in range(len(ds)):
         row = ds.df.iloc[idx]
         entry = {col: float(row[col]) for col in NUMERIC_COLS}
+        entry["month"]       = float(row["month"])
+        entry["day_of_year"] = float(row["day_of_year"])
         entry["season"]     = str(row["season"])
         entry["sample_bin"] = str(row["sample_bin"])
         all_env_raw.append(entry)

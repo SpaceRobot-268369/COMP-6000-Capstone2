@@ -4,14 +4,31 @@
  * sent to the model inference API without transformation.
  */
 
-const SEASONS   = ["summer", "autumn", "winter", "spring"];
 const TIME_BINS = ["dawn", "morning", "afternoon", "night"];
+export const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+export function monthToSeason(month) {
+  const m = Number(month);
+  if (m === 12 || m === 1 || m === 2) return "summer";
+  if (m >= 3 && m <= 5) return "autumn";
+  if (m >= 6 && m <= 8) return "winter";
+  return "spring";
+}
+
+export function monthLabel(month) {
+  const m = Math.min(12, Math.max(1, Math.round(Number(month) || 1)));
+  return MONTH_NAMES[m - 1];
+}
 
 export const DEFAULT_CONDITIONS = {
   temperature_c:    22,
   humidity_pct:     60,
   wind_speed_ms:    3,
   precipitation_mm: 0,
+  month:            1,
   season:           "summer",
   sample_bin:       "morning",
 };
@@ -24,6 +41,10 @@ export const DEFAULT_CONDITIONS = {
 export default function EnvControls({ value, onChange }) {
   function set(key, val) {
     onChange({ ...value, [key]: val });
+  }
+
+  function setMonth(month) {
+    onChange({ ...value, month, season: monthToSeason(month) });
   }
 
   return (
@@ -58,19 +79,14 @@ export default function EnvControls({ value, onChange }) {
       />
 
       <div className="gen-info-block">
-        <p>Season</p>
-        <div className="season-grid">
-          {SEASONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`season-pill${value.season === s ? " active" : ""}`}
-              onClick={() => set("season", s)}
-            >
-              {s[0].toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
+        <p>Month</p>
+        <Slider
+          label="Month"
+          display={monthLabel(value.month)}
+          min={1} max={12} step={1}
+          val={value.month ?? 1}
+          onChange={setMonth}
+        />
       </div>
 
       <div className="gen-info-block">

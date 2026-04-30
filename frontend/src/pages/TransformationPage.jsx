@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import AudioPlayer from "../components/AudioPlayer.jsx";
-import EnvControls, { DEFAULT_CONDITIONS } from "../components/EnvControls.jsx";
+import EnvControls, { DEFAULT_CONDITIONS, monthLabel } from "../components/EnvControls.jsx";
 import { transformSoundscape } from "../lib/api.js";
 
 export default function TransformationPage() {
@@ -48,16 +48,17 @@ export default function TransformationPage() {
     if (!result?.audioUrl) return;
     const a = document.createElement("a");
     a.href = result.audioUrl;
-    a.download = `transformed_${conditions.season}_${conditions.sample_bin}.wav`;
+    a.download = `transformed_${monthLabel(conditions.month)}_${conditions.sample_bin}.wav`;
     a.click();
   }
 
   const isSynthesizing = status === "synthesizing";
   const isDone         = status === "done";
   const playerSrc      = activePlayer === "source" ? sourceUrl : result?.audioUrl ?? null;
+  const conditionMonth = monthLabel(conditions.month);
   const playerLabel    = activePlayer === "source"
     ? (file?.name ?? "Source audio")
-    : `Transformed · ${conditions.season} · ${conditions.sample_bin}`;
+    : `Transformed · ${conditionMonth} · ${conditions.sample_bin}`;
 
   return (
     <section className="transform-page">
@@ -183,8 +184,8 @@ export default function TransformationPage() {
               </div>
               <div className="transform-meta-grid">
                 <article className="transform-meta-card">
-                  <span>Target season</span>
-                  <strong>{conditions.season[0].toUpperCase() + conditions.season.slice(1)}</strong>
+                  <span>Target month</span>
+                  <strong>{conditionMonth}</strong>
                 </article>
                 <article className="transform-meta-card">
                   <span>Time of day</span>

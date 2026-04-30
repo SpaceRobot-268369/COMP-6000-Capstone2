@@ -17,7 +17,7 @@ const workflows = [
     to: "/generation",
     tagline: "Synthesise a soundscape from conditions",
     description:
-      "Set environmental conditions — temperature, humidity, wind speed, precipitation, season, and time of day — and the model generates a speculative soundscape that would plausibly occur under those conditions. Useful for exploring how climate change or seasonal shifts might alter acoustic environments.",
+      "Set environmental conditions — temperature, humidity, wind speed, precipitation, month, and time of day — and the model generates a speculative soundscape that would plausibly occur under those conditions. Useful for exploring how climate change or monthly shifts might alter acoustic environments.",
     steps: ["Set environmental conditions", "Model maps conditions → latent z", "Decoder reconstructs spectrogram → audio"],
     status: "live",
     featured: true,
@@ -28,7 +28,7 @@ const workflows = [
     to: "/transformation",
     tagline: "Shift an existing recording to new conditions",
     description:
-      "Upload a source recording then dial in a new set of environmental conditions. The model encodes the source audio, adjusts the latent representation toward the target conditions, and decodes a transformed soundscape. Hear what the same site might sound like in a different season or under a changing climate.",
+      "Upload a source recording then dial in a new set of environmental conditions. The model encodes the source audio, adjusts the latent representation toward the target conditions, and decodes a transformed soundscape. Hear what the same site might sound like in a different month or under a changing climate.",
     steps: ["Upload source audio", "Set target env conditions", "Encode → adjust z → decode → output audio"],
     status: "live",
   },

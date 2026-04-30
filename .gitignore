@@ -62,3 +62,11 @@ acoustic_ai/vocoder_checkpoints/
 
 # Claude
 /.claude/worktrees
+
+# Large local audio clips
+resources/site_257_bowra-dry-a/downloaded_clips/
+*.webm
+
+# Python cache
+__pycache__/
+*.pyc

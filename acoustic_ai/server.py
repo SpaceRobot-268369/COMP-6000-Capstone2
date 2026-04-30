@@ -36,6 +36,7 @@ from inference import (
     mel_db_to_wav, mel_db_to_wav_hifigan, mel_db_to_wav_ecoacoustic,
     DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
 )
+from layer_a import generate_layer_a_response
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
 
@@ -165,15 +166,21 @@ async def analysis(
 
 @app.post("/generation")
 def generation(body: EnvFeatures):
-    """Generate a spectrogram from environmental conditions.
+    """Generate a soundscape from environmental conditions.
 
-    Returns a base64-encoded PNG of the mel-spectrogram and the raw
-    dB matrix as a nested JSON array.
+    Revised architecture MVP: prefer Layer A retrieval of a real ambient bed.
+    Falls back to the older VAE/vocoder path if no downloaded clips are present.
     """
-    if not DEFAULT_CKPT.exists():
-        raise HTTPException(status_code=503, detail="Model checkpoint not found.")
-
     env_dict = body.model_dump(exclude={"noise_std", "seed"})
+    layer_a_env = body.model_dump(exclude={"noise_std", "seed"}, exclude_unset=True) or env_dict
+
+    try:
+        return generate_layer_a_response(layer_a_env, seed=body.seed)
+    except FileNotFoundError as exc:
+        print(f"[WARN] Layer A unavailable ({exc}); falling back to VAE generation.")
+
+    if not DEFAULT_CKPT.exists():
+        raise HTTPException(status_code=503, detail="Model checkpoint not found and Layer A clips unavailable.")
 
     try:
         mel_db = generate_spectrogram(env_dict, noise_std=body.noise_std, seed=body.seed)
@@ -211,9 +218,12 @@ def generation(body: EnvFeatures):
 
     return {
         "ok":        True,
+        "mode":      "vae_decoder",
         "shape":     list(mel_db.shape),
         "image_b64": png_b64,
         "audio_b64": audio_b64,
+        "audio_mime": "audio/wav",
+        "audio_ext":  "wav",
     }
 
 

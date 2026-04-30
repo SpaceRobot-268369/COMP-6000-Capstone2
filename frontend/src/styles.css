@@ -2587,7 +2587,7 @@ textarea {
   overflow: hidden;
 }
 
-/* Season pills — prevent text wrap on small containers */
+/* Time-bin pills — prevent text wrap on small containers */
 .season-pill {
   min-height: 48px;
   font-size: 0.72rem;
