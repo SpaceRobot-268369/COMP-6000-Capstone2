@@ -284,20 +284,136 @@ COMP-6000-Capstone2/
 > | Known issues, decisions, notes | `.claude/context/` |
 > | Claude Code settings | `.claude/settings.local.json` |
 
-### Data Management (DVC)
+---
 
-Large binary artifacts are tracked with DVC, not git. Git only stores the `.dvc` pointer files.
+## Git + DVC Collaboration
+
+Git tracks code and small text files. DVC tracks large binary artifacts (audio, spectrograms, model weights, latent databases). They work together so every git branch carries a complete, reproducible snapshot of both code and data.
+
+### How it works
+
+```
+git commit  →  .dvc pointer files committed (tiny text, ~100 bytes each)
+               actual binary data stored in local cache (~/.dvc-store/capstone2)
+
+git checkout <branch>  →  post-checkout hook fires
+                           dvc checkout runs automatically
+                           binary files swapped to match the branch's .dvc pointers
+```
+
+Each `.dvc` file in the repo is a pointer — it stores the content hash and size of the real artifact. The actual bytes live in the cache, never in git.
+
+### Automatic git hooks
+
+All four hooks were installed by `dvc install` and fire without any manual step:
+
+| Git action | Hook | DVC action |
+|---|---|---|
+| `git checkout <branch>` / `git switch` | `post-checkout` | `dvc checkout` — swaps data files to match the new branch |
+| `git pull` / `git merge` | `post-merge` | `dvc checkout` — syncs data after incoming commits change `.dvc` files |
+| `git commit` | `pre-commit` | warns if tracked data was modified but not staged with `dvc add` |
+| `git push` | `pre-push` | `dvc push` — copies new/changed artifacts into local cache before code push |
+
+### Local cache
+
+All data is stored outside the repo:
+
+```
+~/.dvc-store/capstone2/   ← local DVC cache (set in .dvc/config)
+```
+
+DVC deduplicates by content hash — a file used on two branches is stored once. Branches share the cache.
+
+### Typical branch workflow
 
 ```bash
-# Sync data after branch switch (also runs automatically via git hook)
-dvc checkout
+# Start a new experiment
+git checkout -b experiment/beta-kl-0.05
+# post-checkout fires → dvc checkout syncs data for this branch (same as main initially)
 
-# Push new artifacts to local cache
-dvc push
+# Change a hyperparameter and re-run the pipeline
+vim params.yaml
+python3 -m dvc repro          # only re-runs stages whose inputs changed
+git add .
+git commit -m "experiment: higher beta KL"
+# pre-commit fires → warns if any DVC-tracked file is dirty
+git push
+# pre-push fires → dvc push copies new checkpoint to local cache
 
-# Reproduce pipeline stages that have changed inputs
-dvc repro
+# Switch back — everything restores automatically
+git checkout main
+# post-checkout fires → dvc checkout restores main's best.pt, latents, etc.
 ```
+
+### DVC pipeline (`dvc.yaml`)
+
+Defines reproducible stages. `dvc repro` re-runs only stages whose deps or params changed.
+
+| Stage | Command | Key outputs |
+|---|---|---|
+| `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
+| `train_vae` | `modules/ambient/train.py` | `checkpoints/ambient/best.pt` |
+| `precompute_latents` | `precompute/precompute_latents.py` | `data/module_a/latents/latent_clips.npy`, `latent_templates.npy` |
+| `train_vocoder` | `modules/ambient/train_vocoder.py` | `checkpoints/vocoder/best.pt` |
+
+Hyperparameters that affect which stages re-run are tracked in `params.yaml`.
+Compare params between branches: `python3 -m dvc params diff main`.
+
+### Makefile shortcuts
+
+The `Makefile` wraps the most common combined git+dvc operations:
+
+```bash
+make branch b=<name>   # git checkout <name> + dvc checkout
+make push              # git push + dvc push
+make pull              # git pull + dvc pull
+make repro             # dvc repro (re-run changed pipeline stages)
+make diff              # git diff + dvc params diff
+make status            # git status + dvc status
+make ai                # start AI server locally on port 8000
+```
+
+### What is tracked where
+
+| Artifact | Tracked by | Location |
+|---|---|---|
+| Source code, scripts, configs | git | everywhere in repo |
+| Small CSVs (manifests, env data) | git | `resources/site_257_bowra-dry-a/*.csv` |
+| `.dvc` pointer files | git | alongside DVC-tracked artifacts |
+| `dvc.yaml`, `params.yaml`, `dvc.lock` | git | project root |
+| Model checkpoints (`best.pt`) | DVC | `acoustic_ai/checkpoints/*/` |
+| Latent databases (`.npy`) | DVC | `acoustic_ai/data/module_a/latents/` |
+| Shared wavs + spectrograms | DVC | `acoustic_ai/data/shared/` |
+| Weather assets | DVC | `acoustic_ai/data/module_b/weather_assets/` |
+| Event snippets | DVC | `acoustic_ai/data/module_c/event_snippets/` |
+| Raw audio clips (125 GB) | DVC | `resources/site_257_bowra-dry-a/downloaded_clips/` |
+| Raw annotations | DVC | `resources/site_257_bowra-dry-a/downloaded_annotations/` |
+
+### Fresh clone setup
+
+On a new machine, after `git clone`:
+
+```bash
+# 1. Install DVC
+pip3 install dvc
+
+# 2. Configure the local cache path (must match where data was pushed)
+python3 -m dvc remote add local_cache /path/to/your/dvc-store/capstone2
+python3 -m dvc remote default local_cache
+
+# 3. Pull all tracked data
+python3 -m dvc pull
+
+# 4. Re-install git hooks (hooks live in .git/, not committed)
+python3 -m dvc install
+# Fix hooks to use python3 -m dvc (if dvc is not on PATH)
+sed -i '' 's/exec dvc /exec python3 -m dvc /g' .git/hooks/pre-commit .git/hooks/pre-push .git/hooks/post-checkout
+# Add post-merge hook manually
+echo '#!/bin/sh\npython3 -m dvc git-hook post-checkout $@' > .git/hooks/post-merge
+chmod +x .git/hooks/post-merge
+```
+
+> **Note:** `dvc` may not be on `PATH` on macOS when installed via `pip3`. All commands in this project use `python3 -m dvc` explicitly. The git hooks are patched to do the same (see above).
 
 ---
 
