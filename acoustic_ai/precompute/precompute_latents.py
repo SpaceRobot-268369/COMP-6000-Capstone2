@@ -2,7 +2,7 @@
 
 Runs all training clips through the encoder in best.pt, groups the resulting
 latent vectors by (season, sample_bin), averages each group, and saves the
-result to acoustic_ai/data/module_a/latents/latent_templates.npy.
+result to acoustic_ai/data/ambient/latents/latent_templates.npy.
 
 The generation endpoint loads this file at startup instead of sampling random
 noise — producing spectrograms grounded in real soundscape structure.
@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 PROJECT_ROOT   = Path(__file__).resolve().parent.parent.parent
 MANIFEST_PATH  = PROJECT_ROOT / "resources" / "site_257_bowra-dry-a" / "site_257_training_manifest.csv"
-OUTPUT_PATH    = Path(__file__).resolve().parent.parent / "data" / "module_a" / "latents" / "latent_templates.npy"
+OUTPUT_PATH    = Path(__file__).resolve().parent.parent / "data" / "ambient" / "latents" / "latent_templates.npy"
 
 
 def get_device() -> torch.device:

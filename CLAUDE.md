@@ -90,9 +90,9 @@ Checkpoint: `acoustic_ai/checkpoints/vocoder/best.pt` (DVC-tracked).
 
 **VAE checkpoint:** `acoustic_ai/checkpoints/ambient/best.pt` (DVC-tracked).
 
-> Full details: `.claude/context/ai_module_architecture.md`
-> Layer design: `.claude/context/generation_layers.md`
-> Analysis design: `.claude/context/analysis_components.md`
+> Full details: `.claude/context/ai/architecture.md`
+> Pipeline design: `.claude/context/ai/pipeline_design.md`
+> Decision log: `.claude/context/ai/logs/mvp_decision_log.md`
 
 ### Environmental Variables
 temperature, humidity, wind speed/direction, rainfall, time of day, season, geographic site
@@ -204,7 +204,7 @@ Services started:
 ```bash
 cd acoustic_ai
 pip install -r requirements.txt
-uvicorn server:app --reload --port 8000
+uvicorn server.server:app --reload --port 8000
 ```
 
 The backend connects to the AI server at `http://localhost:8000`.
@@ -246,14 +246,16 @@ COMP-6000-Capstone2/
 │   ├── precompute/              # One-off data prep scripts
 │   ├── data/                    # DVC-tracked pipeline artifacts
 │   │   ├── shared/              # Shared wavs + spectrograms
-│   │   ├── module_a/latents/    # Latent clip database
-│   │   ├── module_b/            # Weather assets + asset_index.csv
-│   │   └── module_c/            # Event index + snippets
+│   │   ├── ambient/latents/     # Latent clip database
+│   │   ├── weather/             # Weather assets + asset_index.csv
+│   │   ├── events/              # Event index + snippets
+│   │   └── analysis/            # Analysis module data
 │   ├── checkpoints/
 │   │   ├── ambient/best.pt      # VAE checkpoint (DVC)
 │   │   └── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
-│   ├── server.py                # FastAPI entry point
-│   └── inference.py             # Inference helpers
+│   └── server/                  # FastAPI server
+│       ├── server.py            # FastAPI entry point
+│       └── inference.py         # Inference helpers
 ├── resources/                   # Raw source data (DVC-tracked)
 │   └── site_257_bowra-dry-a/
 │       ├── site_257_filtered_items.csv    (git)
@@ -353,7 +355,7 @@ Defines reproducible stages. `dvc repro` re-runs only stages whose deps or param
 |---|---|---|
 | `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
 | `train_vae` | `modules/ambient/train.py` | `checkpoints/ambient/best.pt` |
-| `precompute_latents` | `precompute/precompute_latents.py` | `data/module_a/latents/latent_clips.npy`, `latent_templates.npy` |
+| `precompute_latents` | `precompute/precompute_latents.py` | `data/ambient/latents/latent_clips.npy`, `latent_templates.npy` |
 | `train_vocoder` | `modules/ambient/train_vocoder.py` | `checkpoints/vocoder/best.pt` |
 
 Hyperparameters that affect which stages re-run are tracked in `params.yaml`.
@@ -382,10 +384,10 @@ make ai                # start AI server locally on port 8000
 | `.dvc` pointer files | git | alongside DVC-tracked artifacts |
 | `dvc.yaml`, `params.yaml`, `dvc.lock` | git | project root |
 | Model checkpoints (`best.pt`) | DVC | `acoustic_ai/checkpoints/*/` |
-| Latent databases (`.npy`) | DVC | `acoustic_ai/data/module_a/latents/` |
+| Latent databases (`.npy`) | DVC | `acoustic_ai/data/ambient/latents/` |
 | Shared wavs + spectrograms | DVC | `acoustic_ai/data/shared/` |
-| Weather assets | DVC | `acoustic_ai/data/module_b/weather_assets/` |
-| Event snippets | DVC | `acoustic_ai/data/module_c/event_snippets/` |
+| Weather assets | DVC | `acoustic_ai/data/weather/weather_assets/` |
+| Event snippets | DVC | `acoustic_ai/data/events/event_snippets/` |
 | Raw audio clips (125 GB) | DVC | `resources/site_257_bowra-dry-a/downloaded_clips/` |
 | Raw annotations | DVC | `resources/site_257_bowra-dry-a/downloaded_annotations/` |
 
@@ -511,7 +513,7 @@ python3 script/download_site_257_clips.py \
 
 ## ⚠️ Known Data Issues
 
-> Full details in `.claude/context/known_issues.md`
+> Full details in `.claude/context/issues/known_issues.md`
 
 ### Unrecoverable Clips — DO NOT RE-DOWNLOAD
 

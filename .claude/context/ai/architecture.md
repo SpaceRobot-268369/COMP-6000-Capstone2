@@ -60,7 +60,7 @@ Uploaded audio clip
 
 **Checkpoint:** `checkpoints/ambient/best.pt` (213 MB, DVC-tracked)
 **Vocoder:** `checkpoints/vocoder/best.pt` (11 MB, DVC-tracked)
-**Latents:** `data/module_a/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
+**Latents:** `data/ambient/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
 
 **Current status:** VAE trained 30 epochs, best val loss ≈ 0.003580, KL ≈ 0.05/element.
 Generation uses nearest-neighbour grounding (top-10 clips) + controlled noise (std=0.3).
@@ -72,8 +72,8 @@ Generation uses nearest-neighbour grounding (top-10 clips) + controlled noise (s
 | `asset_index.py` | Weather asset library loader [PLACEHOLDER] |
 | `mixer.py` | Parameter → gain/EQ/density mixing [PLACEHOLDER] |
 
-**Data:** `data/module_b/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/` (DVC-tracked)
-**Asset index:** `data/module_b/asset_index.csv` (git-tracked, headers only for now)
+**Data:** `data/weather/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/` (DVC-tracked)
+**Asset index:** `data/weather/asset_index.csv` (git-tracked, headers only for now)
 
 Intensity mapping:
 - wind: none <2 m/s, light 2–6, moderate 6–10, strong >10
@@ -87,7 +87,7 @@ Intensity mapping:
 | `event_index.py` | Extract event snippets from clips [PLACEHOLDER] |
 | `scheduler.py` | Timeline event placement [PLACEHOLDER] |
 
-**Data:** `data/module_c/annotation_event_index.csv`, `event_snippets/`, `birdnet_labels/` (DVC-tracked)
+**Data:** `data/events/annotation_event_index.csv`, `event_snippets/`, `birdnet_labels/` (DVC-tracked)
 **Pre-condition:** annotation_audit.py must run before any Module C training.
 
 ### Module D — Mixer (`modules/mixer/`)
@@ -113,11 +113,11 @@ No dedicated training data. Uses Module A latents, Module B asset index, Module 
 
 | Module | Reads | Produces |
 |---|---|---|
-| A | `resources/downloaded_clips/`, `data/shared/spectrograms/` | `data/module_a/latents/` |
-| B | `resources/downloaded_clips/` (curation), `data/shared/wavs/` | `data/module_b/weather_assets/` |
-| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/module_c/annotation_event_index.csv`, `event_snippets/` |
-| D | `data/module_a/latents/`, `data/module_b/weather_assets/`, `data/module_c/event_snippets/` | ephemeral WAV + JSON per request |
-| E | `data/module_a/latents/`, `data/module_b/asset_index.csv`, `data/module_c/annotation_event_index.csv` | ephemeral analysis report |
+| A | `resources/downloaded_clips/`, `data/shared/spectrograms/` | `data/ambient/latents/` |
+| B | `resources/downloaded_clips/` (curation), `data/shared/wavs/` | `data/weather/weather_assets/` |
+| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/events/annotation_event_index.csv`, `event_snippets/` |
+| D | `data/ambient/latents/`, `data/weather/weather_assets/`, `data/events/event_snippets/` | ephemeral WAV + JSON per request |
+| E | `data/ambient/latents/`, `data/weather/asset_index.csv`, `data/events/annotation_event_index.csv` | ephemeral analysis report |
 
 ---
 

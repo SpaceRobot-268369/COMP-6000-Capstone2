@@ -31,4 +31,4 @@ status:
 	git status && python3 -m dvc status
 
 ai:
-	cd acoustic_ai && uvicorn server:app --reload --port 8000
+	cd acoustic_ai && uvicorn server.server:app --reload --port 8000

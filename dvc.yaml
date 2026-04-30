@@ -47,9 +47,9 @@ stages:
       - params.yaml:
           - ambient.top_k_retrieval
     outs:
-      - acoustic_ai/data/module_a/latents/latent_clips.npy:
+      - acoustic_ai/data/ambient/latents/latent_clips.npy:
           cache: true
-      - acoustic_ai/data/module_a/latents/latent_templates.npy:
+      - acoustic_ai/data/ambient/latents/latent_templates.npy:
           cache: true
 
   train_vocoder:

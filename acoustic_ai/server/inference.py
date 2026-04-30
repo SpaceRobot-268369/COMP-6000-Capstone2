@@ -26,12 +26,13 @@ import torch
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-PROJECT_ROOT      = Path(__file__).resolve().parent.parent
-CHECKPOINT_DIR    = Path(__file__).resolve().parent / "checkpoints" / "ambient"
+_AI_ROOT          = Path(__file__).resolve().parent.parent
+PROJECT_ROOT      = _AI_ROOT.parent
+CHECKPOINT_DIR    = _AI_ROOT / "checkpoints" / "ambient"
 DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
-TEMPLATES_PATH    = Path(__file__).resolve().parent / "data" / "module_a" / "latents" / "latent_templates.npy"
-CLIPS_PATH        = Path(__file__).resolve().parent / "data" / "module_a" / "latents" / "latent_clips.npy"
-VOCODER_CKPT      = Path(__file__).resolve().parent / "checkpoints" / "vocoder" / "best.pt"
+TEMPLATES_PATH    = _AI_ROOT / "data" / "ambient" / "latents" / "latent_templates.npy"
+CLIPS_PATH        = _AI_ROOT / "data" / "ambient" / "latents" / "latent_clips.npy"
+VOCODER_CKPT      = _AI_ROOT / "checkpoints" / "vocoder" / "best.pt"
 
 
 # ---------------------------------------------------------------------------

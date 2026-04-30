@@ -8,11 +8,9 @@ Endpoints:
   POST /generation  — env conditions JSON → generated spectrogram as base64 PNG
   GET  /health      — liveness check
 
-Usage (from project root):
-  pip install -r acoustic_ai/requirements.txt
-  python3 acoustic_ai/server.py
-  # or with auto-reload during development:
-  uvicorn acoustic_ai.server:app --reload --port 8000
+Usage (from acoustic_ai/):
+  pip install -r requirements.txt
+  uvicorn server.server:app --reload --port 8000
 """
 
 import base64
@@ -28,10 +26,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Ensure acoustic_ai modules are importable
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Ensure acoustic_ai root is importable (for modules.* and server.*)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from inference import (
+from server.inference import (
     encode_clip, generate_spectrogram, estimate_env_conditions,
     mel_db_to_wav, mel_db_to_wav_hifigan, mel_db_to_wav_ecoacoustic,
     DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
@@ -252,4 +250,4 @@ def _mel_to_png_b64(mel_db: np.ndarray) -> str:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("server.server:app", host="0.0.0.0", port=8000, reload=False)

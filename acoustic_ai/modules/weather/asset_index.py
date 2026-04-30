@@ -1,8 +1,8 @@
 """Module B — weather asset library.
 
 Manages the curated wind/rain clip index stored in
-acoustic_ai/data/module_b/asset_index.csv and the audio files under
-acoustic_ai/data/module_b/weather_assets/.
+acoustic_ai/data/weather/asset_index.csv and the audio files under
+acoustic_ai/data/weather/weather_assets/.
 
 Intensity buckets:
   wind: none (<2 m/s), light (2–6 m/s), moderate (6–10 m/s), strong (>10 m/s)
