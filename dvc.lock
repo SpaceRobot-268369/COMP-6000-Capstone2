@@ -1,0 +1,135 @@
+schema: '2.0'
+stages:
+  precompute_spectrograms:
+    cmd: python3 acoustic_ai/precompute/precompute_spectrograms.py
+    deps:
+    - path: acoustic_ai/modules/ambient/preprocess.py
+      hash: md5
+      md5: 16a6fd00753f595c10934ee4b65c84bb
+      size: 3108
+    - path: acoustic_ai/precompute/precompute_spectrograms.py
+      hash: md5
+      md5: 8190999a6f2f763b789718cab81e2bfb
+      size: 4533
+    - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+      hash: md5
+      md5: 6b75da0685d9463a783adb866491f86c
+      size: 1572831
+    outs:
+    - path: acoustic_ai/data/shared/spectrograms
+      hash: md5
+      md5: 6ffbaaad7b4ac6e1afabed19a80b2560.dir
+      size: 0
+      nfiles: 1
+    - path: acoustic_ai/data/shared/wavs
+      hash: md5
+      md5: 6ffbaaad7b4ac6e1afabed19a80b2560.dir
+      size: 0
+      nfiles: 1
+  train_vae:
+    cmd: python3 acoustic_ai/modules/ambient/train.py
+    deps:
+    - path: acoustic_ai/modules/ambient/dataset.py
+      hash: md5
+      md5: 6dd5cacab286334404e5d07af118db07
+      size: 8238
+    - path: acoustic_ai/modules/ambient/model.py
+      hash: md5
+      md5: c7ec1b0933bded68d85f286126f499be
+      size: 9750
+    - path: acoustic_ai/modules/ambient/preprocess.py
+      hash: md5
+      md5: 16a6fd00753f595c10934ee4b65c84bb
+      size: 3108
+    - path: acoustic_ai/modules/ambient/train.py
+      hash: md5
+      md5: d3b40a2d9d348b83cc6ff426c6677ffe
+      size: 11010
+    - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+      hash: md5
+      md5: 6b75da0685d9463a783adb866491f86c
+      size: 1572831
+    params:
+      params.yaml:
+        ambient.batch_size: 16
+        ambient.beta_kl: 0.01
+        ambient.crop_seconds: 30.0
+        ambient.embed_dim: 512
+        ambient.epochs: 30
+        ambient.latent_dim: 256
+        ambient.lr: 0.0001
+        ambient.n_mels: 128
+    outs:
+    - path: acoustic_ai/checkpoints/ambient/best.pt
+      hash: md5
+      md5: e56373ed30bbcd2225f8e0d4241e7af6
+      size: 223252925
+  precompute_latents:
+    cmd: python3 acoustic_ai/precompute/precompute_latents.py
+    deps:
+    - path: acoustic_ai/checkpoints/ambient/best.pt
+      hash: md5
+      md5: e56373ed30bbcd2225f8e0d4241e7af6
+      size: 223252925
+    - path: acoustic_ai/modules/ambient/dataset.py
+      hash: md5
+      md5: 6dd5cacab286334404e5d07af118db07
+      size: 8238
+    - path: acoustic_ai/modules/ambient/model.py
+      hash: md5
+      md5: c7ec1b0933bded68d85f286126f499be
+      size: 9750
+    - path: acoustic_ai/modules/ambient/preprocess.py
+      hash: md5
+      md5: 16a6fd00753f595c10934ee4b65c84bb
+      size: 3108
+    - path: acoustic_ai/precompute/precompute_latents.py
+      hash: md5
+      md5: e5f919168808a2d5a4d5e7708be603af
+      size: 6278
+    - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+      hash: md5
+      md5: 6b75da0685d9463a783adb866491f86c
+      size: 1572831
+    params:
+      params.yaml:
+        ambient.top_k_retrieval: 10
+    outs:
+    - path: acoustic_ai/data/module_a/latents/latent_clips.npy
+      hash: md5
+      md5: 5fae731fd6cebba61459789408e176b8
+      size: 7012866
+    - path: acoustic_ai/data/module_a/latents/latent_templates.npy
+      hash: md5
+      md5: 1a543b2289f29cefdf3da83eea8c67ad
+      size: 17501
+  train_vocoder:
+    cmd: python3 acoustic_ai/modules/ambient/train_vocoder.py
+    deps:
+    - path: acoustic_ai/modules/ambient/train_vocoder.py
+      hash: md5
+      md5: 4caf8d934c5b1a8fea2ed37b702cdd05
+      size: 16848
+    - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+      hash: md5
+      md5: 6b75da0685d9463a783adb866491f86c
+      size: 1572831
+    params:
+      params.yaml:
+        vocoder.base_channels: 128
+        vocoder.batch_size: 8
+        vocoder.epochs: 100
+        vocoder.lr: 0.0002
+        vocoder.max_clips: 500
+        vocoder.n_mels: 128
+        vocoder.sample_rate: 22050
+        vocoder.upsample_rates:
+        - 8
+        - 8
+        - 4
+        - 2
+    outs:
+    - path: acoustic_ai/checkpoints/vocoder/best.pt
+      hash: md5
+      md5: 898eec9d50b253bb4909f5be38f33f09
+      size: 11806077

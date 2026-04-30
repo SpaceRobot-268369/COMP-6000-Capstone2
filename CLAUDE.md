@@ -48,68 +48,51 @@ Input Audio → Embedding → User-defined Environmental Changes
 → Conditioned Generative Model → New Soundscape → Audio Output
 ```
 
-### AI Modeling Approach
+### AI Modeling Approach — Layered Soundscape System
+
+A soundscape is treated as a layered composition, not a single generated waveform:
+
 ```
-Raw Audio → Mel-Spectrogram → CNN Encoder → Audio Embedding
-→ Combine with Environmental Variables → Multimodal Model
-→ Latent Soundscape Representation → Conditional Generator
-→ Spectrogram → Neural Vocoder → Generated Audio
-```
-
-Model types to consider: CNN encoders, Transformers, Conditional diffusion models, GAN/VAE, Neural vocoders.
-
-### Vocoding — Mel-Spectrogram → Audio
-
-Converting the generated mel-spectrogram back to a playable audio file requires a **vocoder**.
-
-| Option | Quality | Dependency | Status |
-|--------|---------|------------|--------|
-| **Griffin-Lim** | Robotic but functional | librosa (already installed) | **MVP — implemented** |
-| HiFi-GAN | Natural sounding | Pretrained ~50 MB checkpoint | Stage 3 upgrade |
-
-**Decision:** HiFi-GAN (speechbrain LJSpeech checkpoint) with Griffin-Lim fallback.
-Implemented in `acoustic_ai/inference.py`: `mel_db_to_wav_hifigan()` → `mel_db_to_wav()`.
-
-Pipeline with vocoding:
-```
-env conditions → model → mel-spectrogram → HiFi-GAN → .wav → browser audio player
+speculative soundscape = ambient site bed (Module A)
+                       + weather layer    (Module B)
+                       + event layer      (Module C)
+                       + final mix        (Module D)
 ```
 
-**Known limitation — mel bin mismatch:**
-Our model uses `n_mels=128`; pretrained HiFi-GAN expects `n_mels=80`.
-Current workaround: interpolate 128→80 bins before vocoding (scipy zoom).
-Proper fix: retrain model with `n_mels=80` in `preprocess.py` → no interpolation needed → better audio quality.
-HiFi-GAN cache downloads to `acoustic_ai/hifigan_cache/` on first run (~50 MB).
+**Generation pipeline:**
+```
+env conditions → Module A: ambient retrieval (NN search in latent_clips.npy)
+              → Module B: weather asset mixing (wind/rain → gain/EQ)
+              → Module C: event scheduling (annotation/BirdNET snippets)
+              → Module D: layer combiner → WAV + spectrogram + explanation JSON
+```
 
-### AI Module Architecture — A / B / C Pattern
+**Analysis pipeline:**
+```
+uploaded audio → Module E: ambient similarity (VAE latent NN)
+              → Module E: weather detector (spectral heuristics / classifier)
+              → Module E: event detector (BirdNET / annotation lookup)
+              → analysis report (estimated conditions + layer breakdown)
+```
 
-The AI system is split into three independent modules. This separation allows each to be trained, frozen, and extended without disrupting the others.
+### AI Module Details
 
-**Module A — Environmental Autoencoder** (`acoustic_ai/model.py`, current)
-- Trained unsupervised on audio + environmental features (no annotations needed)
-- Learns: environment ↔ soundscape structure relationship
-- Output: latent representation `z` (256-dim)
-- Status: pilot training complete (Stage 2)
+| Module | Role | Status | Code location |
+|---|---|---|---|
+| A — Ambient | VAE encoder + NN retrieval for ambient bed | VAE trained (30 epochs) | `acoustic_ai/modules/ambient/` |
+| B — Weather | Curated wind/rain assets + parameter mixing | Placeholder | `acoustic_ai/modules/weather/` |
+| C — Events | Annotation audit + event snippets + scheduler | Placeholder | `acoustic_ai/modules/events/` |
+| D — Mixer | Combine A+B+C → WAV + explanation JSON | Placeholder | `acoustic_ai/modules/mixer/` |
+| E — Analysis | Ambient similarity + weather + event detectors | Partial (A working) | `acoustic_ai/modules/analysis/` |
 
-**Module B — Ecological Classifier** (Stage 3, future)
-- Built on top of frozen Module A encoder
-- Trained on annotated clips only (sparse annotation coverage is fine)
-- Learns: `z → species presence vector` (e.g. probability per species)
-- Can be added later without retraining Module A
+**Vocoder:** Ecoacoustic HiFi-GAN trained on Site 257 audio (128-bin, 22,050 Hz).
+Checkpoint: `acoustic_ai/checkpoints/vocoder/best.pt` (DVC-tracked).
 
-**Module C — Conditioned Generator** (Stage 3, future)
-- Combines Module A's environmental latent + Module B's species signal
-- Input: target env conditions + optional target species
-- Output: generated spectrogram matching both signals
-- Implemented as an extended decoder: `[z, species_vector] → spectrogram`
+**VAE checkpoint:** `acoustic_ai/checkpoints/ambient/best.pt` (DVC-tracked).
 
-**Build order for Stage 3:**
-1. Freeze Module A weights (`model.requires_grad_(False)`)
-2. Train Module B (small MLP head) on annotated clips
-3. Build Module C — extend decoder to accept `[z, species_vector]`
-4. Fine-tune Module C while keeping A and B frozen
-
-This is the **frozen backbone + task head** pattern — standard ML practice for extending a pretrained base model without losing learned representations.
+> Full details: `.claude/context/ai_module_architecture.md`
+> Layer design: `.claude/context/generation_layers.md`
+> Analysis design: `.claude/context/analysis_components.md`
 
 ### Environmental Variables
 temperature, humidity, wind speed/direction, rainfall, time of day, season, geographic site
@@ -201,9 +184,13 @@ brew install docker          # Docker Desktop handles compose
 # or install Docker Desktop from https://www.docker.com/products/docker-desktop/
 ```
 
-### Running with Docker Compose (recommended)
+### Running with Docker Compose
+
+Docker runs PostgreSQL, backend, and frontend only.
+**The AI server must run natively** — Docker cannot access the macOS GPU (MPS).
+
 ```bash
-# From project root
+# Start postgres + backend + frontend
 docker compose -f services/dev/docker-compose.yml up
 ```
 
@@ -211,9 +198,18 @@ Services started:
 - **Frontend** → http://localhost:5173
 - **Backend API** → http://localhost:4000
 - **PostgreSQL** → localhost:5432
-- **acoustic_ai** — Python container (workspace at `/workspace`)
 
-### Running natively (faster iteration)
+### Running the AI server natively (required for GPU)
+
+```bash
+cd acoustic_ai
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8000
+```
+
+The backend connects to the AI server at `http://localhost:8000`.
+
+### Running other services natively
 
 **PostgreSQL** (via Docker only):
 ```bash
@@ -232,55 +228,76 @@ cd frontend
 VITE_API_URL=http://localhost:4000 npm run dev
 ```
 
-**Acoustic AI (Python):**
-```bash
-cd acoustic_ai
-pip install -r requirements.txt
-# then run individual scripts/notebooks
-```
-
-### Dev Container (VS Code)
-Open the project in VS Code → "Reopen in Container". All services start automatically.
-
 ---
 
 ## Project File Structure
 
 ```
 COMP-6000-Capstone2/
-├── frontend/               # React + Vite UI (Analysis, Generation, Transformation)
-│   └── src/pages/          # HomePage, GenerationPage, TransformationPage, Auth
-├── backend/                # Express.js API (auth + future AI endpoints)
-│   └── src/index.js        # Entry point, DB schema, API routes
-├── acoustic_ai/            # Python AI module
-│   └── requirements.txt    # Python dependencies
-├── services/dev/           # Docker Compose + PostgreSQL config
-│   ├── docker-compose.yml
-│   └── .env                # Local secrets (not committed)
-├── script/                 # Data download scripts
-│   ├── download_site_257_clips.py
-│   ├── download_site_257_originals.py
-│   ├── download_site_257_annotations.py
-│   ├── sample_mvp_dataset.py
-│   ├── fetch_nasa_env_data.py
-│   └── fetch_recordings.py
-├── resources/              # Downloaded audio data (gitignored)
-├── .claude/                # All AI-related files (skills, context, settings)
-│   ├── skills/             # Sampling policies, workflow skill docs
-│   ├── context/            # Known issues, decisions, project notes
-│   └── settings.local.json
-└── .devcontainer/          # VS Code dev container config
+├── frontend/                    # React + Vite UI
+├── backend/                     # Express.js API
+├── acoustic_ai/                 # Python AI module (runs natively for GPU)
+│   ├── modules/
+│   │   ├── ambient/             # Module A: VAE + retrieval
+│   │   ├── weather/             # Module B: weather assets + mixing
+│   │   ├── events/              # Module C: annotation + event scheduling
+│   │   ├── mixer/               # Module D: layer combiner
+│   │   └── analysis/            # Module E: analysis explainer
+│   ├── precompute/              # One-off data prep scripts
+│   ├── data/                    # DVC-tracked pipeline artifacts
+│   │   ├── shared/              # Shared wavs + spectrograms
+│   │   ├── module_a/latents/    # Latent clip database
+│   │   ├── module_b/            # Weather assets + asset_index.csv
+│   │   └── module_c/            # Event index + snippets
+│   ├── checkpoints/
+│   │   ├── ambient/best.pt      # VAE checkpoint (DVC)
+│   │   └── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
+│   ├── server.py                # FastAPI entry point
+│   └── inference.py             # Inference helpers
+├── resources/                   # Raw source data (DVC-tracked)
+│   └── site_257_bowra-dry-a/
+│       ├── site_257_filtered_items.csv    (git)
+│       ├── site_257_env_data.csv          (git)
+│       ├── site_257_training_manifest.csv (git)
+│       ├── downloaded_clips/              (DVC, 125 GB)
+│       └── downloaded_annotations/        (DVC)
+├── services/dev/                # Docker Compose (postgres + backend + frontend only)
+├── script/                      # Data download scripts
+├── dvc.yaml                     # DVC pipeline stages
+├── params.yaml                  # Tracked hyperparameters
+├── Makefile                     # git+dvc convenience commands
+└── .claude/                     # Claude Code context and settings
+    └── context/
+        ├── ai_module_architecture.md
+        ├── generation_layers.md
+        ├── analysis_components.md
+        └── ai_mvp_decision_log_and_new_architecture.md
 ```
 
 ### Storage Rule
 
-> **All AI-related files must live under `.claude/`** — not the project root.
+> **All Claude-related context files must live under `.claude/`** — not the project root.
 >
 > | Type | Location |
 > |------|----------|
-> | Skill / workflow docs | `.claude/skills/` |
+> | Architecture and design docs | `.claude/context/` |
 > | Known issues, decisions, notes | `.claude/context/` |
 > | Claude Code settings | `.claude/settings.local.json` |
+
+### Data Management (DVC)
+
+Large binary artifacts are tracked with DVC, not git. Git only stores the `.dvc` pointer files.
+
+```bash
+# Sync data after branch switch (also runs automatically via git hook)
+dvc checkout
+
+# Push new artifacts to local cache
+dvc push
+
+# Reproduce pipeline stages that have changed inputs
+dvc repro
+```
 
 ---
 

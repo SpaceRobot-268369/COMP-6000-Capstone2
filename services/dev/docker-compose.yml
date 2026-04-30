@@ -27,13 +27,12 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: ${BACKEND_PORT}
-      AI_SERVER_URL: http://acoustic_ai_server:8000
+      # AI server runs locally (not in Docker) to access macOS GPU (MPS)
+      AI_SERVER_URL: http://host.docker.internal:8000
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       postgres:
-        condition: service_healthy
-      acoustic_ai_server:
         condition: service_healthy
     volumes:
       - ../../backend:/app
@@ -55,29 +54,10 @@ services:
       - ../../frontend:/app
       - frontend_node_modules:/app/node_modules
 
-  acoustic_ai:
-    image: python:3.11-slim
-    working_dir: /workspace/acoustic_ai
-    command: sleep infinity
-    volumes:
-      - ../../:/workspace
-
-  acoustic_ai_server:
-    build:
-      context: ../../acoustic_ai
-      dockerfile: Dockerfile
-    working_dir: /workspace
-    ports:
-      - "8000:8000"
-    volumes:
-      - ../../:/workspace
-    environment:
-      PYTHONPATH: /workspace/acoustic_ai
-    healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # acoustic_ai and acoustic_ai_server are intentionally removed.
+  # The AI server must run natively on macOS to access the Apple GPU (MPS).
+  # Start it with:
+  #   cd acoustic_ai && uvicorn server:app --reload --port 8000
 
 volumes:
   backend_node_modules:

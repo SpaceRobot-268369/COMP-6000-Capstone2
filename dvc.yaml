@@ -1,0 +1,73 @@
+stages:
+  precompute_spectrograms:
+    cmd: python3 acoustic_ai/precompute/precompute_spectrograms.py
+    deps:
+      - acoustic_ai/precompute/precompute_spectrograms.py
+      - acoustic_ai/modules/ambient/preprocess.py
+      - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+    outs:
+      - acoustic_ai/data/shared/wavs:
+          cache: true
+      - acoustic_ai/data/shared/spectrograms:
+          cache: true
+
+  train_vae:
+    cmd: python3 acoustic_ai/modules/ambient/train.py
+    deps:
+      - acoustic_ai/modules/ambient/train.py
+      - acoustic_ai/modules/ambient/model.py
+      - acoustic_ai/modules/ambient/dataset.py
+      - acoustic_ai/modules/ambient/preprocess.py
+      - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+    params:
+      - params.yaml:
+          - ambient.latent_dim
+          - ambient.embed_dim
+          - ambient.beta_kl
+          - ambient.n_mels
+          - ambient.crop_seconds
+          - ambient.epochs
+          - ambient.batch_size
+          - ambient.lr
+    outs:
+      - acoustic_ai/checkpoints/ambient/best.pt:
+          cache: true
+    # metrics: acoustic_ai/checkpoints/ambient/metrics.json  # add when train.py writes this file
+
+  precompute_latents:
+    cmd: python3 acoustic_ai/precompute/precompute_latents.py
+    deps:
+      - acoustic_ai/precompute/precompute_latents.py
+      - acoustic_ai/modules/ambient/model.py
+      - acoustic_ai/modules/ambient/dataset.py
+      - acoustic_ai/modules/ambient/preprocess.py
+      - acoustic_ai/checkpoints/ambient/best.pt
+      - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+    params:
+      - params.yaml:
+          - ambient.top_k_retrieval
+    outs:
+      - acoustic_ai/data/module_a/latents/latent_clips.npy:
+          cache: true
+      - acoustic_ai/data/module_a/latents/latent_templates.npy:
+          cache: true
+
+  train_vocoder:
+    cmd: python3 acoustic_ai/modules/ambient/train_vocoder.py
+    deps:
+      - acoustic_ai/modules/ambient/train_vocoder.py
+      - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+    params:
+      - params.yaml:
+          - vocoder.base_channels
+          - vocoder.upsample_rates
+          - vocoder.n_mels
+          - vocoder.sample_rate
+          - vocoder.epochs
+          - vocoder.max_clips
+          - vocoder.batch_size
+          - vocoder.lr
+    outs:
+      - acoustic_ai/checkpoints/vocoder/best.pt:
+          cache: true
+    # metrics: acoustic_ai/checkpoints/vocoder/metrics.json  # add when train_vocoder.py writes this file

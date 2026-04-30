@@ -1,7 +1,16 @@
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
 Desktop.ini
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.egg-info/
+.Python
 
 # Dependencies
 node_modules/
@@ -33,12 +42,15 @@ coverage/
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
 
-# Resource downloads
-resources/site_257_bowra-dry-a/*
+# Resource downloads — raw source data (DVC-tracked)
+resources/site_257_bowra-dry-a/downloaded_clips/
+resources/site_257_bowra-dry-a/downloaded_annotations/
+resources/site_257_bowra-dry-a/site_257_all_items.csv
+resources/site_257_bowra-dry-a/site_257_all_items.json
+# Keep the three small CSVs in git
 !resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
 !resources/site_257_bowra-dry-a/site_257_training_manifest.csv
-
 
 # IDE and editors
 .idea/
@@ -51,14 +63,26 @@ resources/site_257_bowra-dry-a/*
 *.local
 .env.*.local
 
-# Acoustic AI training checkpoints
-acoustic_ai/checkpoints/best.pt
-acoustic_ai/checkpoints/epoch_*.pt
+# Acoustic AI — model checkpoints (DVC-tracked, not git)
+acoustic_ai/checkpoints/ambient/epoch_*.pt
+acoustic_ai/checkpoints/vocoder/epoch_*.pt
+# best.pt files are DVC-tracked — pointer files (.dvc) go in git, not the weights
+acoustic_ai/checkpoints/ambient/best.pt
+acoustic_ai/checkpoints/vocoder/best.pt
 
-# Vocoder checkpoints (all ignored — large binary files)
-acoustic_ai/vocoder_checkpoints/
-# !acoustic_ai/vocoder_checkpoints/best.pt
+# Acoustic AI — large computed data artifacts (DVC-tracked, not git)
+acoustic_ai/data/shared/wavs/
+acoustic_ai/data/shared/spectrograms/
+acoustic_ai/data/module_b/weather_assets/
+acoustic_ai/data/module_c/event_snippets/
+acoustic_ai/data/module_c/birdnet_labels/
+# latent npy files will be DVC-tracked once dvc add is run
 
+# HiFi-GAN speech-domain cache (not needed — using ecoacoustic vocoder)
+acoustic_ai/hifigan_cache/
+
+# DVC internal
+/tmp/
 
 # Claude
 /.claude/worktrees

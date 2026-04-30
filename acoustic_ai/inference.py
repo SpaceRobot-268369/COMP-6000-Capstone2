@@ -27,11 +27,11 @@ import torch
 # Paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT      = Path(__file__).resolve().parent.parent
-CHECKPOINT_DIR    = Path(__file__).resolve().parent / "checkpoints"
+CHECKPOINT_DIR    = Path(__file__).resolve().parent / "checkpoints" / "ambient"
 DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
-TEMPLATES_PATH    = Path(__file__).resolve().parent / "latent_templates.npy"
-CLIPS_PATH        = Path(__file__).resolve().parent / "latent_clips.npy"
-VOCODER_CKPT      = Path(__file__).resolve().parent / "vocoder_checkpoints" / "best.pt"
+TEMPLATES_PATH    = Path(__file__).resolve().parent / "data" / "module_a" / "latents" / "latent_templates.npy"
+CLIPS_PATH        = Path(__file__).resolve().parent / "data" / "module_a" / "latents" / "latent_clips.npy"
+VOCODER_CKPT      = Path(__file__).resolve().parent / "checkpoints" / "vocoder" / "best.pt"
 
 
 # ---------------------------------------------------------------------------
@@ -48,8 +48,8 @@ def _get_device() -> torch.device:
 
 def _load_model(checkpoint: Path, device: torch.device):
     """Load SoundscapeModel from checkpoint. Returns model in eval mode."""
-    from model import SoundscapeModel
-    from dataset import N_ENV_FEATURES
+    from modules.ambient.model import SoundscapeModel
+    from modules.ambient.dataset import N_ENV_FEATURES
 
     ckpt  = torch.load(checkpoint, map_location="cpu", weights_only=False)
     args  = ckpt.get("args", {})
@@ -66,11 +66,11 @@ def _load_model(checkpoint: Path, device: torch.device):
 
 
 def _default_target_frames(args: dict) -> int:
-    from preprocess import SPEC_CFG
+    from modules.ambient.preprocess import SPEC_CFG
     crop_seconds = args.get("crop_seconds", 30.0)
     if crop_seconds and crop_seconds > 0:
         return int(crop_seconds * SPEC_CFG["sample_rate"] / SPEC_CFG["hop_length"])
-    from preprocess import FRAMES_PER_CLIP
+    from modules.ambient.preprocess import FRAMES_PER_CLIP
     return FRAMES_PER_CLIP
 
 
@@ -82,7 +82,7 @@ def _build_env_tensor(env_dict: dict) -> torch.Tensor:
     stats dict if available).  Categorical fields (season, sample_bin) are
     handled by one-hot / circular encoding regardless.
     """
-    from dataset import NUMERIC_COLS, CIRCULAR_COLS, ONEHOT_COLS
+    from modules.ambient.dataset import NUMERIC_COLS, CIRCULAR_COLS, ONEHOT_COLS
 
     parts: list[float] = []
 
@@ -131,7 +131,7 @@ def mel_db_to_wav_ecoacoustic(mel_db: np.ndarray, sample_rate: int = 22_050) -> 
 
     import io
     import soundfile as sf
-    from train_vocoder import HiFiGANGenerator, TOP_DB
+    from modules.ambient.train_vocoder import HiFiGANGenerator, TOP_DB
 
     # Load generator
     ckpt  = torch.load(VOCODER_CKPT, map_location="cpu", weights_only=False)
@@ -230,7 +230,7 @@ def mel_db_to_wav(mel_db: np.ndarray, sample_rate: int = 22_050) -> bytes:
     import io
     import librosa
     import soundfile as sf
-    from preprocess import SPEC_CFG
+    from modules.ambient.preprocess import SPEC_CFG
 
     # dB → power
     mel_power = librosa.db_to_power(mel_db)
@@ -284,7 +284,7 @@ def encode_clip(
     Returns:
         numpy array of shape (latent_dim,) — typically (256,)
     """
-    from preprocess import audio_to_tensor
+    from modules.ambient.preprocess import audio_to_tensor
 
     device = _get_device()
     model  = _load_model(checkpoint, device)
