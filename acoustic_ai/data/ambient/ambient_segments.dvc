@@ -1,0 +1,6 @@
+outs:
+- md5: 623566ae6fdf576c6fba4bf32282eb9a.dir
+  size: 1132507304
+  nfiles: 1982
+  hash: md5
+  path: ambient_segments

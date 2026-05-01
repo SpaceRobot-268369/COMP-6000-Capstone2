@@ -17,6 +17,8 @@ Usage (from project root):
   python3 acoustic_ai/modules/ambient/audit_segments.py --stratify
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import random

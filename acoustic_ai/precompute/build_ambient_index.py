@@ -17,6 +17,8 @@ Usage (from project root):
   python3 acoustic_ai/precompute/build_ambient_index.py --overwrite
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import math
@@ -46,8 +48,12 @@ FPS = SR / HOP  # ~43.07 frames per second
 CFG = {
     "rolling_window_s":   30.0,   # baseline window for per-clip median + MAD
     "mad_threshold":      3.0,    # frame anomalous if any feature > 3·MAD
-    "dilation_s":         0.5,    # extend each anomalous frame by ±0.5 s
-    "min_span_s":         20.0,   # discard contiguous spans shorter than this
+    "dilation_s":         0.1,    # extend each anomalous frame by ±0.1 s
+                                  # (was 0.5 s — too aggressive; 80 short events × 44-frame
+                                  #  dilation each turned 7.8% anomalous into 56% masked)
+    "min_span_s":         10.0,   # discard contiguous spans shorter than this
+                                  # (was 20 s — dawn chorus clips max out ~10 s; other
+                                  #  diel bins produce longer spans naturally)
     "target_seg_s":       30.0,   # preferred segment length when slicing a span
     "max_seg_s":          60.0,   # cap segment length
     "rms_low_pct":        20,     # span RMS must lie within [p20, p80] of clip
@@ -76,6 +82,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--limit", type=int, default=None, help="Process only N clips (smoke test).")
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--diagnose", action="store_true",
+                   help="Print per-feature anomaly rates and span stats for the first clip. "
+                        "Forces --limit 1 --workers 1.")
     return p.parse_args()
 
 
@@ -124,7 +133,7 @@ def extract_frame_features(waveform: np.ndarray) -> dict[str, np.ndarray]:
     )
     mel_db = librosa.power_to_db(mel, top_db=SPEC_CFG["top_db"])
 
-    rms = librosa.feature.rms(S=S, hop_length=hop)[0]
+    rms = librosa.feature.rms(y=waveform, frame_length=n_fft, hop_length=hop)[0]
     centroid = librosa.feature.spectral_centroid(S=S, sr=SR)[0]
     flatness = librosa.feature.spectral_flatness(S=S)[0]
     zcr = librosa.feature.zero_crossing_rate(waveform, hop_length=hop)[0]
@@ -156,21 +165,42 @@ def rolling_median_mad(x: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarr
     return med, mad
 
 
-def anomaly_mask(features: dict[str, np.ndarray]) -> np.ndarray:
-    """Return a bool array — True where the frame is anomalous on any feature."""
+def anomaly_mask(
+    features: dict[str, np.ndarray],
+    diagnose: bool = False,
+) -> np.ndarray:
+    """Return a bool array — True where the frame is anomalous.
+
+    Gate features: flux and rms only.
+      - Flux captures sudden spectral changes (onset of any event type).
+      - RMS captures sudden energy changes (loud events, silence drops).
+      - Centroid, flatness, ZCR are excluded — they drift naturally in
+        ambient audio (insects change frequency, background shifts) and
+        produce excessive false anomalies on stationary recordings.
+
+    MAD floor: max(1e-6, 0.02 * |rolling_median|)
+      - Prevents near-zero MAD from amplifying tiny natural drifts into
+        huge z-scores when the audio is very stationary.
+    """
     window = max(3, int(round(CFG["rolling_window_s"] * FPS)))
     threshold = CFG["mad_threshold"]
-    eps = 1e-6
 
-    feature_names = ["mel_mean", "rms", "centroid", "flatness", "flux", "zcr"]
-    T = features[feature_names[0]].size
+    gate_features = ["flux", "rms"]
+    T = features[gate_features[0]].size
     mask = np.zeros(T, dtype=bool)
 
-    for name in feature_names:
+    for name in gate_features:
         x = features[name]
         med, mad = rolling_median_mad(x, window)
-        z = np.abs(x - med) / (mad + eps)
-        mask |= (z > threshold)
+        # Floor: deviation must exceed 2% of local median to count.
+        floor = np.maximum(1e-6, 0.02 * np.abs(med))
+        z = np.abs(x - med) / (mad + floor)
+        feature_mask = z > threshold
+        if diagnose:
+            pct = 100.0 * feature_mask.mean()
+            print(f"    {name:12s}  anomalous={pct:5.1f}%  "
+                  f"mad_mean={mad.mean():.4f}  floor_mean={floor.mean():.4f}")
+        mask |= feature_mask
 
     return mask
 
@@ -244,7 +274,7 @@ def slice_span_into_segments(s: int, e: int) -> list[tuple[int, int]]:
 # Per-clip worker
 # ---------------------------------------------------------------------------
 
-def process_clip(meta: ClipMeta, out_dir: Path, overwrite: bool) -> dict:
+def process_clip(meta: ClipMeta, out_dir: Path, overwrite: bool, diagnose: bool = False) -> dict:
     clip_path = PROJECT_ROOT / meta.clip_path
     wav_path = clip_path.with_suffix(clip_path.suffix + ".wav")
     src = wav_path if wav_path.exists() else clip_path
@@ -259,7 +289,16 @@ def process_clip(meta: ClipMeta, out_dir: Path, overwrite: bool) -> dict:
 
     features = extract_frame_features(waveform)
 
-    mask = anomaly_mask(features)
+    if diagnose:
+        print(f"\n  clip:  {meta.clip_path}")
+        print(f"  frames: {features['flux'].size}  duration: {waveform.size/SR:.1f}s")
+        print("  per-feature anomaly rates:")
+
+    mask = anomaly_mask(features, diagnose=diagnose)
+
+    if diagnose:
+        print(f"  combined anomalous: {100*mask.mean():.1f}%")
+
     mask = dilate_mask(mask, radius_frames=int(round(CFG["dilation_s"] * FPS)))
 
     rms = features["rms"]
@@ -269,6 +308,26 @@ def process_clip(meta: ClipMeta, out_dir: Path, overwrite: bool) -> dict:
     mel_db = features["mel_db"]
     frame_diffs = np.linalg.norm(np.diff(mel_db, axis=1), axis=0)
     clip_frame_diff_median = float(np.median(frame_diffs)) if frame_diffs.size else 1.0
+
+    if diagnose:
+        dilated_pct = 100 * mask.mean()
+        # Find longest clean run before verify step.
+        unmasked_runs = []
+        i, T = 0, mask.size
+        while i < T:
+            if mask[i]:
+                i += 1
+                continue
+            j = i
+            while j < T and not mask[j]:
+                j += 1
+            unmasked_runs.append(j - i)
+            i = j
+        longest = max(unmasked_runs) if unmasked_runs else 0
+        print(f"  after dilation: anomalous={dilated_pct:.1f}%  "
+              f"clean_runs={len(unmasked_runs)}  "
+              f"longest_clean={longest/FPS:.1f}s  "
+              f"min_required={CFG['min_span_s']}s")
 
     min_span_frames = int(round(CFG["min_span_s"] * FPS))
     spans = find_clean_spans(mask, min_span_frames)
@@ -334,15 +393,19 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     args.index_csv.parent.mkdir(parents=True, exist_ok=True)
 
+    if args.diagnose:
+        args.limit = 1
+        args.workers = 1
+
     metas = load_manifest(args.manifest, args.limit)
     print(f"loaded {len(metas)} clips from {args.manifest.name}")
 
     all_rows: list[dict] = []
     stats = {"ok": 0, "load_error": 0, "too_short": 0, "total_segments": 0}
 
-    if args.workers <= 1:
+    if args.workers <= 1 or args.diagnose:
         for meta in tqdm(metas, desc="cleaning"):
-            res = process_clip(meta, args.out_dir, args.overwrite)
+            res = process_clip(meta, args.out_dir, args.overwrite, diagnose=args.diagnose)
             stats[res["status"]] = stats.get(res["status"], 0) + 1
             stats["total_segments"] += len(res["segments"])
             all_rows.extend(res["segments"])
