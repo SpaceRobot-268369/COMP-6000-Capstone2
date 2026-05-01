@@ -282,15 +282,21 @@ Purpose:
 
 Recommended MVP implementation:
 
-- Use retrieval first.
-- Given user conditions, find similar real clips by season, sample bin, and environmental vector.
-- Use the retrieved audio directly or use VAE reconstruction/transformation only as a secondary option.
+- Use retrieval first, but **not over the raw downloaded clips** — those contain bird calls, vehicles, helicopters, and other events that belong in Layer C. Retrieving full clips as the bed double-counts events and breaks layer separation.
+- Build a **cleaned ambient-only segment pool** as a precompute step. Cleaning is **audio-only and content-agnostic**, driven by two facts:
+  - A2O annotations are sparse and asymmetric (presence ⇒ event, absence ⇏ no event), so they cannot serve as a gating signal.
+  - Events are an open class. We can never enumerate every category (species, helicopters, vehicles, frogs, voices, unknown). But every event shares one property: it deviates from its own clip's stationary baseline.
+- The gate is therefore a **per-clip anomaly detector**: compute frame features (mel, RMS, centroid, flatness, flux, ZCR), maintain a 30 s rolling median + MAD baseline, mark frames where any feature deviates > 3·MAD as anomalous, dilate ± 0.5 s, then keep contiguous unmasked spans ≥ 20 s and slice them into segments of 20–60 s (target 30 s). Long segments mean runtime crossfades are at most ~1 s and inaudible.
+- A neural species detector (BirdNET) is deliberately **not** in the gate — it only knows species in its training set and is deaf to other event types, which is the wrong failure mode for a permissive gate. BirdNET and annotations are demoted to post-hoc audits over retained segments, used to tune the MAD threshold rather than to filter.
+- At runtime, retrieve from this cleaned pool with a two-step rule. **Hard filter** on `diel_bin` and `season` — categorical mismatches sound wrong regardless of numeric proximity. **Soft rank** by cosine similarity on `[hour_sin, hour_cos, month_sin, month_cos]` only: time-of-day and seasonal *position* within the bin. Top-k=5, softmax-weighted crossfade blend.
+- Temp/humidity/wind/rain are deliberately **excluded** from the Layer A retrieval key. Wind and rain are direct acoustic signals owned by Layer B. Temperature and humidity affect species/insect behaviour and so flow through Layer C. The ambient bed itself is driven by time and season; pulling weather variables into the key would either double-count (with B) or pull in similarity that is irrelevant to ambient character (with C).
+- VAE reconstruction is **not** on the Layer A path. The existing VAE was trained on event-contaminated full clips, so its latent manifold is not "ambient-only". Keep it for transformation mode and Module E analysis.
 
 Why:
 
-- This gives realistic audio immediately.
-- It avoids asking the VAE to invent a whole soundscape from weak conditioning.
-- It remains research-valid because the bed is selected based on environmental similarity.
+- Layered separation only works if Layer A actually contains *only* ambience. Anything else makes Layer C double-count and makes the explanation JSON dishonest.
+- Retrieval over cleaned segments + crossfade has zero lossy steps (no decoder, no vocoder), so audio quality is bounded by the source recordings rather than by the model.
+- Selection remains research-valid and explainable: each retrieved segment carries its source clip ID, env vector, and similarity score.
 
 Comparison:
 

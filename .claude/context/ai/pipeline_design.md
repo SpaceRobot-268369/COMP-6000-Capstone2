@@ -17,15 +17,46 @@ speculative soundscape = ambient site bed
 
 ### Layer A — Ambient Site Bed
 
-**Purpose:** continuous ecoacoustic background texture (insects, low-level ambience, site tone).
+**Purpose:** continuous ecoacoustic background texture (insects, low-level ambience, site tone). **Must not contain events** — bird calls, vehicles, helicopters belong in Layer C, weather in Layer B. Mixing events into the bed double-counts them and breaks layer separation.
 
-**MVP implementation:** retrieval-first.
-- Given user env conditions, find similar real clips by env vector cosine similarity.
-- Use retrieved audio directly as the bed.
-- VAE reconstruction is a secondary option only when retrieval quality is insufficient.
+**MVP implementation:** retrieval-first over a *cleaned ambient-only segment pool*.
+
+Stage 1 — offline data cleaning (precompute), **audio-only and content-agnostic**:
+
+Two principles drive the design:
+
+1. **Annotations are unreliable as a negative signal.** Sparse coverage means *absence of annotation does not mean absence of event*. The only trustable signal is the audio itself.
+2. **Events are an open class — ambient is locally stationary.** We cannot enumerate every event type (birds, helicopters, vehicles, branch snaps, frogs, distant voices, unknown insects). But every event has the same property: it deviates from its own clip's stationary baseline. So the gate detects *anomalies relative to the local baseline*, not specific event categories.
+
+Per-clip pipeline:
+
+  1. **Frame features** along the whole clip: mel spectrogram (128 bins), RMS, spectral centroid, spectral flatness, spectral flux, zero-crossing rate.
+  2. **Per-clip rolling baseline:** rolling median + MAD over a 30 s window for each feature.
+  3. **Anomaly mask:** mark a frame anomalous if *any* feature deviates > 3·MAD from its rolling median. (3·MAD ≈ 3σ but robust to outliers — the events themselves.)
+  4. **Dilation:** extend each anomalous frame by ± 0.5 s so partial onsets/offsets are masked.
+  5. **Contiguous spans:** invert the mask, find unmasked stretches, **keep only spans ≥ 20 s**.
+  6. **Span verification:** within each kept span, require RMS within [p20, p80] of the clip *and* low frame-to-frame mel variance (re-confirms the span is itself stationary, not just non-anomalous on average).
+  7. **Slice** each verified span into segments of **20–60 s** (target 30 s). Long segments mean the runtime crossfade is at most ~1 s and inaudible — generation does not depend on stitch quality.
+
+Outputs: `data/ambient/ambient_segments/*.wav` plus `ambient_index.csv` with columns (`segment_id`, `source_clip`, `t_start`, `t_end`, `diel_bin`, `season`, `hour_sin`, `hour_cos`, `month_sin`, `month_cos`).
+
+**Validation, not gating:** A2O annotations and BirdNET are run *over retained segments* as audits, not as gates. Targets: <1% of retained-segment-seconds overlap any annotated event; BirdNET fire-rate above conf 0.3 stays below an acceptable threshold (tune-up signal, not pass/fail). If either audit fails, tighten MAD threshold and re-run.
+
+**Why no neural detector in the gate:** BirdNET only knows species in its training set, is deaf to everything else, and is the wrong failure mode for a permissive gate. The 3·MAD anomaly check is content-agnostic, self-calibrating per clip (cicada-rich clips get a higher noise floor automatically), and runs on CPU in minutes for the whole 6,148-clip pool.
+
+Stage 2 — runtime retrieval:
+- **Hard filter:** restrict to segments matching the requested `diel_bin` and `season`. Categorical mismatch sounds wrong regardless of numeric proximity.
+- **Soft rank:** cosine similarity on `[hour_sin, hour_cos, month_sin, month_cos]` only — the four features that describe time/seasonal *position* within the bin. Take top-k=5.
+- **Blend:** `blend_weights = softmax(sim / τ)` with τ=0.1, crossfade-mix the k segments, RMS-match, tile/loop to `target_duration_s`.
+- If hard filter returns <k segments, relax to neighbouring diel bin and flag `low_confidence: true` in metadata.
+
+**Why temp/humidity/wind/rain are excluded from retrieval:** wind and rain are direct acoustic signals owned by Layer B; temperature and humidity affect species/insect *behaviour* and so flow through Layer C. The ambient bed itself — site tone, low-level texture — is driven by time of day and seasonal position, not weather. Including weather variables in the Layer A key would either double-count (with B) or pull in irrelevant similarity (with C).
+
+VAE reconstruction is **not** part of the MVP path for Layer A — the existing VAE was trained on event-contaminated full clips, so its latent space mixes ambient with events and is the wrong tool for this layer. Keep VAE for transformation mode and Module E analysis.
 
 **Code:** `modules/ambient/retrieval.py` [PLACEHOLDER]
-**Data:** `data/ambient/latents/latent_clips.npy` (5,318 per-clip latents + env vectors)
+**Data:** `data/ambient/ambient_segments/`, `data/ambient/ambient_index.csv` (cleaned ambient-only pool — to be built)
+**Legacy data:** `data/ambient/latents/latent_clips.npy` (5,318 per-clip latents over uncleaned clips — retained for transformation/analysis, not used for Layer A retrieval)
 
 ---
 

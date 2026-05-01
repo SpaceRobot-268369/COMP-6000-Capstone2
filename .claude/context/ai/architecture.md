@@ -62,8 +62,9 @@ Uploaded audio clip
 **Vocoder:** `checkpoints/vocoder/best.pt` (11 MB, DVC-tracked)
 **Latents:** `data/ambient/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
 
-**Current status:** VAE trained 30 epochs, best val loss ≈ 0.003580, KL ≈ 0.05/element.
-Generation uses nearest-neighbour grounding (top-10 clips) + controlled noise (std=0.3).
+**Current status:** VAE trained 30 epochs on event-contaminated full clips, best val loss ≈ 0.003580, KL ≈ 0.05/element. The original generation path (NN latent grounding + controlled noise + decoder + vocoder) is being **replaced** for Layer A by direct retrieval over a cleaned ambient-only segment pool — see `pipeline_design.md` § Layer A. The trained VAE is retained for transformation mode and Module E analysis only; it is not on the Layer A generation path.
+
+**Layer A data dependency:** the cleaned segment pool (`data/ambient/ambient_segments/` + `ambient_index.csv`) must be built by `precompute/build_ambient_index.py` before retrieval can run. Cleaning is **audio-only and content-agnostic** — events are an open class (birds, vehicles, frogs, helicopters, voices, unknown), but ambient is locally stationary, so the gate flags frames that deviate > 3·MAD from a per-clip rolling-median baseline of mel/RMS/centroid/flatness/flux/ZCR features. After ±0.5 s dilation, contiguous unmasked spans ≥ 20 s are kept and sliced into 20–60 s segments (target 30 s) so runtime crossfades are minimal. BirdNET and A2O annotations are run as **post-hoc audits** over retained segments, not as gates. Retrieval matches on `diel_bin` + `season` + (`hour`, `month`) cyclic encoding only — temp/humidity/wind/rain are excluded because they belong to Layers B and C.
 
 ### Module B — Weather Sound Engine (`modules/weather/`)
 

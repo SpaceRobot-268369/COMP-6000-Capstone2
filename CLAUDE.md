@@ -184,37 +184,18 @@ brew install docker          # Docker Desktop handles compose
 # or install Docker Desktop from https://www.docker.com/products/docker-desktop/
 ```
 
-### Running with Docker Compose
+### Quick Start
 
-Docker runs PostgreSQL, backend, and frontend only.
-**The AI server must run natively** — Docker cannot access the macOS GPU (MPS).
-
+The simplest way to get all services running is with Docker Compose:
 ```bash
-# Start postgres + backend + frontend
 docker compose -f services/dev/docker-compose.yml up
 ```
 
-Services started:
-- **Frontend** → http://localhost:5173
-- **Backend API** → http://localhost:4000
-- **PostgreSQL** → localhost:5432
+This starts PostgreSQL, backend, and frontend. The **AI server must run natively** — Docker cannot access the macOS GPU (MPS).
 
-### Running the AI server natively (required for GPU)
+### Running Individual Services Natively
 
-```bash
-cd acoustic_ai
-pip install -r requirements.txt
-uvicorn server.server:app --reload --port 8000
-```
-
-The backend connects to the AI server at `http://localhost:8000`.
-
-### Running other services natively
-
-**PostgreSQL** (via Docker only):
-```bash
-docker compose -f services/dev/docker-compose.yml up postgres -d
-```
+If you need to run services outside of Docker:
 
 **Backend:**
 ```bash
@@ -226,6 +207,13 @@ DATABASE_URL=postgresql://capstone_user:<password>@localhost:5432/capstone_dev P
 ```bash
 cd frontend
 VITE_API_URL=http://localhost:4000 npm run dev
+```
+
+**AI server** (required for GPU access):
+```bash
+cd acoustic_ai
+pip install -r requirements.txt
+uvicorn server.server:app --reload --port 8000
 ```
 
 ---
@@ -288,11 +276,138 @@ COMP-6000-Capstone2/
 
 ---
 
-## Git + DVC Collaboration
+## Git Workflow
 
-Git tracks code and small text files. DVC tracks large binary artifacts (audio, spectrograms, model weights, latent databases). They work together so every git branch carries a complete, reproducible snapshot of both code and data.
+All contributors must follow these conventions to keep the repo consistent.
 
-### How it works
+### Branch Naming
+
+All branches must follow this pattern:
+```
+<type>/<author>/<short-description>
+```
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New feature or capability |
+| `fix` | Bug fix |
+| `data` | Data pipeline changes (scripts, manifests, DVC stages) |
+| `model` | Model architecture, training, or checkpoint changes |
+| `infra` | Docker, CI, server config changes |
+| `refactor` | Code restructure without behaviour change |
+| `docs` | Documentation only |
+| `exp` | Throwaway experiments (will not be merged to main) |
+
+**Examples:**
+```
+feat/lucas/ambient-retrieval-endpoint
+fix/lucas/vocoder-resampling-bug
+data/alex/birdnet-annotation-index
+model/lucas/vae-beta-annealing
+infra/alex/docker-compose-ai-server
+exp/lucas/latent-diffusion-prototype
+```
+
+### Commit Messages
+
+Use the imperative mood, present tense. Keep the subject line under 72 characters.
+```
+Add ambient retrieval function to inference.py
+Fix days_since_rain UTC/AEST off-by-one error
+Train ecoacoustic HiFi-GAN on site 257 clips
+Update docker-compose to expose AI server port
+```
+
+Do **not** reference issue numbers or internal task IDs in the subject line — put that in the body if needed.
+
+### Main Branch Protection
+
+- `main` is the stable branch. Only merge via PR.
+- All PRs must pass local tests before merging.
+- Never force-push to `main`.
+- Never commit large binary files (audio, checkpoints, `.npy`) directly — use DVC.
+
+### Pull Request Rules
+
+- Keep PRs focused: one logical change per PR.
+- Include a brief description of what changed and why.
+- Link to any relevant context doc in `.claude/context/`.
+- If a PR changes a DVC stage or tracked artifact, include `dvc repro` output or confirm pipeline runs cleanly.
+
+---
+
+## DVC Workflow
+
+DVC tracks large binary artifacts (audio clips, spectrograms, model checkpoints, latent databases) so they stay out of git history. Git only stores the `.dvc` pointer files.
+
+### What is Tracked by DVC
+
+| Artifact | Path | Why |
+|----------|------|-----|
+| Downloaded audio clips | `resources/site_257_bowra-dry-a/downloaded_clips/` | 43+ GB of `.webm` files |
+| Downloaded annotations | `resources/site_257_bowra-dry-a/downloaded_annotations/` | Sparse CSV files |
+| VAE checkpoint | `acoustic_ai/checkpoints/ambient/best.pt` | 213 MB |
+| Vocoder checkpoint | `acoustic_ai/checkpoints/vocoder/best.pt` | 11 MB |
+| Per-clip latent database | `acoustic_ai/data/module_a/latents/latent_clips.npy` | Per-clip VAE latents |
+| Weather assets | `acoustic_ai/data/module_b/weather_assets/` | Curated wind/rain clips |
+| Event snippets | `acoustic_ai/data/module_c/event_snippets/` | Extracted annotation clips |
+
+### What is Tracked by Git (not DVC)
+
+| File | Why |
+|------|-----|
+| `resources/site_257_bowra-dry-a/site_257_filtered_items.csv` | Small metadata file |
+| `resources/site_257_bowra-dry-a/site_257_env_data.csv` | Small env data table |
+| `resources/site_257_bowra-dry-a/site_257_training_manifest.csv` | Small manifest |
+| `acoustic_ai/data/module_b/asset_index.csv` | Asset index headers |
+| All `.dvc` pointer files | Pointers to DVC-tracked artifacts |
+| `dvc.yaml` | Pipeline stage definitions |
+| `params.yaml` | Tracked hyperparameters |
+
+### Common DVC Commands
+
+```bash
+# After switching branches or pulling — sync tracked artifacts to match the current commit
+dvc checkout
+
+# Run pipeline stages whose inputs have changed
+dvc repro
+
+# Push new or changed artifacts to the remote cache
+dvc push
+
+# Pull artifacts from the remote cache (after cloning or on a new machine)
+dvc pull
+
+# Check what pipeline stages are out of date
+dvc status
+```
+
+### Adding a New Tracked Artifact
+
+```bash
+# Track a new large file or folder
+dvc add path/to/large_file.pt
+
+# This creates path/to/large_file.pt.dvc — commit that pointer file to git
+git add path/to/large_file.pt.dvc .gitignore
+git commit -m "Track large_file.pt with DVC"
+dvc push
+```
+
+### Adding a New Pipeline Stage
+
+Edit `dvc.yaml` to define the stage with `cmd`, `deps`, and `outs`. Then:
+```bash
+dvc repro          # runs only changed stages
+git add dvc.yaml dvc.lock
+git commit -m "Add <stage-name> pipeline stage"
+dvc push
+```
+
+### How Git and DVC Work Together
+
+Git tracks code and small text files. DVC tracks large binary artifacts. They work together so every git branch carries a complete, reproducible snapshot of both code and data.
 
 ```
 git commit  →  .dvc pointer files committed (tiny text, ~100 bytes each)
@@ -305,7 +420,7 @@ git checkout <branch>  →  post-checkout hook fires
 
 Each `.dvc` file in the repo is a pointer — it stores the content hash and size of the real artifact. The actual bytes live in the cache, never in git.
 
-### Automatic git hooks
+### Automatic Git Hooks
 
 All four hooks were installed by `dvc install` and fire without any manual step:
 
@@ -316,7 +431,7 @@ All four hooks were installed by `dvc install` and fire without any manual step:
 | `git commit` | `pre-commit` | warns if tracked data was modified but not staged with `dvc add` |
 | `git push` | `pre-push` | `dvc push` — copies new/changed artifacts into local cache before code push |
 
-### Local cache
+### Local Cache
 
 All data is stored outside the repo:
 
@@ -326,7 +441,7 @@ All data is stored outside the repo:
 
 DVC deduplicates by content hash — a file used on two branches is stored once. Branches share the cache.
 
-### Typical branch workflow
+### Typical Branch Workflow
 
 ```bash
 # Start a new experiment
@@ -347,7 +462,7 @@ git checkout main
 # post-checkout fires → dvc checkout restores main's best.pt, latents, etc.
 ```
 
-### DVC pipeline (`dvc.yaml`)
+### DVC Pipeline (`dvc.yaml`)
 
 Defines reproducible stages. `dvc repro` re-runs only stages whose deps or params changed.
 
@@ -361,7 +476,7 @@ Defines reproducible stages. `dvc repro` re-runs only stages whose deps or param
 Hyperparameters that affect which stages re-run are tracked in `params.yaml`.
 Compare params between branches: `python3 -m dvc params diff main`.
 
-### Makefile shortcuts
+### Makefile Shortcuts
 
 The `Makefile` wraps the most common combined git+dvc operations:
 
@@ -375,23 +490,7 @@ make status            # git status + dvc status
 make ai                # start AI server locally on port 8000
 ```
 
-### What is tracked where
-
-| Artifact | Tracked by | Location |
-|---|---|---|
-| Source code, scripts, configs | git | everywhere in repo |
-| Small CSVs (manifests, env data) | git | `resources/site_257_bowra-dry-a/*.csv` |
-| `.dvc` pointer files | git | alongside DVC-tracked artifacts |
-| `dvc.yaml`, `params.yaml`, `dvc.lock` | git | project root |
-| Model checkpoints (`best.pt`) | DVC | `acoustic_ai/checkpoints/*/` |
-| Latent databases (`.npy`) | DVC | `acoustic_ai/data/ambient/latents/` |
-| Shared wavs + spectrograms | DVC | `acoustic_ai/data/shared/` |
-| Weather assets | DVC | `acoustic_ai/data/weather/weather_assets/` |
-| Event snippets | DVC | `acoustic_ai/data/events/event_snippets/` |
-| Raw audio clips (125 GB) | DVC | `resources/site_257_bowra-dry-a/downloaded_clips/` |
-| Raw annotations | DVC | `resources/site_257_bowra-dry-a/downloaded_annotations/` |
-
-### Fresh clone setup
+### Fresh Clone Setup
 
 On a new machine, after `git clone`:
 
@@ -416,6 +515,87 @@ chmod +x .git/hooks/post-merge
 ```
 
 > **Note:** `dvc` may not be on `PATH` on macOS when installed via `pip3`. All commands in this project use `python3 -m dvc` explicitly. The git hooks are patched to do the same (see above).
+
+---
+
+## Code Conventions
+
+### Python (AI Module)
+
+- Python 3.10+
+- Format with `black`, lint with `ruff`
+- All scripts in `script/` must be runnable standalone with `python3 script/name.py --args`
+- Precompute scripts in `acoustic_ai/precompute/` are one-off — document inputs/outputs at the top of each file
+- No relative imports outside `acoustic_ai/` package boundary
+
+### JavaScript (Backend / Frontend)
+
+- Node 20+
+- **Backend:** Express.js, CommonJS modules
+- **Frontend:** React + Vite, ES modules
+- No TypeScript currently — keep JSDoc comments on exported functions
+
+### File Naming
+
+| Context | Convention |
+|---------|-----------|
+| Python modules | `snake_case.py` |
+| React components | `PascalCase.jsx` |
+| Scripts | `snake_case.py` |
+| Config files | `kebab-case.json` / `snake_case.yaml` |
+| DVC pointer files | Same name as tracked file + `.dvc` extension |
+
+---
+
+## Environment Variables
+
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | Backend | PostgreSQL connection string |
+| `PORT` | Backend | Port to bind (default 4000) |
+| `AI_SERVER_URL` | Backend | AI FastAPI URL (default `http://localhost:8000`) |
+| `VITE_API_URL` | Frontend | Backend base URL for Vite proxy |
+
+---
+
+## Running Services
+
+| Service | How | URL |
+|---------|-----|-----|
+| Frontend | Docker or `npm run dev` | `http://localhost:5173` |
+| Backend | Docker or `npm run dev` | `http://localhost:4000` |
+| PostgreSQL | Docker only | `localhost:5432` |
+| AI server | **Native only** (GPU/MPS) | `http://localhost:8000` |
+
+**Start postgres + backend + frontend via Docker:**
+```bash
+docker compose -f services/dev/docker-compose.yml up
+```
+
+**Start AI server natively** (required for Apple Silicon MPS / CUDA):
+```bash
+cd acoustic_ai
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8000
+```
+
+---
+
+## Architecture Reference
+
+Full architecture details live in `.claude/context/` in the repo:
+
+| Topic | File |
+|-------|------|
+| AI module architecture | `.claude/context/ai/architecture.md` |
+| Generation & analysis pipeline design | `.claude/context/ai/pipeline_design.md` |
+| MVP decision log | `.claude/context/ai/logs/mvp_decision_log.md` |
+| Data alignment & env features | `.claude/context/data/data_reference.md` |
+| Generation quality analysis | `.claude/context/data/logs/generation_quality_analysis.md` |
+| Known data issues | `.claude/context/issues/known_issues.md` |
+| Analysis test cases | `.claude/context/testing/analysis_test_cases.md` |
+| Layer verification & handoff formats | `.claude/context/testing/layer_verification_formats.md` |
+| Workflow diagrams | `.claude/context/diagrams/workflow_diagrams.md` |
 
 ---
 
