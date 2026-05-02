@@ -10,24 +10,17 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const SEASON_MONTH_RANGES = {
-  summer: "Dec-Feb",
-  autumn: "Mar-May",
-  winter: "Jun-Aug",
-  spring: "Sep-Nov",
-};
-
 function monthDisplay(estimated) {
   const rawMonth = Number(estimated?.month);
   if (Number.isFinite(rawMonth) && rawMonth >= 1 && rawMonth <= 12) {
     return MONTH_NAMES[Math.round(rawMonth) - 1];
   }
 
-  const range = estimated?.month_range;
-  if (range) return range;
-
-  const season = String(estimated?.season || "").toLowerCase();
-  return SEASON_MONTH_RANGES[season] || "";
+  const range = String(estimated?.month_range || "");
+  return range
+    .split("-")
+    .map(part => part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part)
+    .join("-");
 }
 
 // ---------------------------------------------------------------------------

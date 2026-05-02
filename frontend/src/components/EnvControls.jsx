@@ -10,12 +10,12 @@ export const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export function monthToSeason(month) {
+export function monthRangeForMonth(month) {
   const m = Number(month);
-  if (m === 12 || m === 1 || m === 2) return "summer";
-  if (m >= 3 && m <= 5) return "autumn";
-  if (m >= 6 && m <= 8) return "winter";
-  return "spring";
+  if (m === 12 || m === 1 || m === 2) return "December-February";
+  if (m >= 3 && m <= 5) return "March-May";
+  if (m >= 6 && m <= 8) return "June-August";
+  return "September-November";
 }
 
 export function monthLabel(month) {
@@ -24,13 +24,17 @@ export function monthLabel(month) {
 }
 
 export const DEFAULT_CONDITIONS = {
-  temperature_c:    22,
-  humidity_pct:     60,
-  wind_speed_ms:    3,
-  precipitation_mm: 0,
-  month:            1,
-  season:           "summer",
-  sample_bin:       "morning",
+  temperature_c:             22,
+  humidity_pct:              60,
+  wind_speed_ms:             3,
+  wind_direction_deg:        180,
+  wind_max_ms:               5,
+  precipitation_mm:          0,
+  precipitation_daily_mm:    0,
+  days_since_rain:           7,
+  month:                     1,
+  month_range:               "December-February",
+  sample_bin:                "morning",
 };
 
 /**
@@ -44,7 +48,7 @@ export default function EnvControls({ value, onChange }) {
   }
 
   function setMonth(month) {
-    onChange({ ...value, month, season: monthToSeason(month) });
+    onChange({ ...value, month, month_range: monthRangeForMonth(month) });
   }
 
   return (
@@ -71,11 +75,39 @@ export default function EnvControls({ value, onChange }) {
         onChange={(v) => set("wind_speed_ms", v)}
       />
       <Slider
+        label="Wind Gust"
+        display={`${value.wind_max_ms} m/s`}
+        min={0} max={30} step={0.5}
+        val={value.wind_max_ms}
+        onChange={(v) => set("wind_max_ms", v)}
+      />
+      <Slider
+        label="Wind Direction"
+        display={`${value.wind_direction_deg}°`}
+        min={0} max={359} step={1}
+        val={value.wind_direction_deg}
+        onChange={(v) => set("wind_direction_deg", v)}
+      />
+      <Slider
         label="Precipitation"
         display={`${value.precipitation_mm} mm`}
         min={0} max={80} step={0.5}
         val={value.precipitation_mm}
         onChange={(v) => set("precipitation_mm", v)}
+      />
+      <Slider
+        label="Daily Rain"
+        display={`${value.precipitation_daily_mm} mm`}
+        min={0} max={120} step={0.5}
+        val={value.precipitation_daily_mm}
+        onChange={(v) => set("precipitation_daily_mm", v)}
+      />
+      <Slider
+        label="Days Since Rain"
+        display={`${value.days_since_rain} d`}
+        min={0} max={30} step={1}
+        val={value.days_since_rain}
+        onChange={(v) => set("days_since_rain", v)}
       />
 
       <div className="gen-info-block">
@@ -91,12 +123,12 @@ export default function EnvControls({ value, onChange }) {
 
       <div className="gen-info-block">
         <p>Time of Day</p>
-        <div className="season-grid">
+        <div className="time-bin-grid">
           {TIME_BINS.map((b) => (
             <button
               key={b}
               type="button"
-              className={`season-pill${value.sample_bin === b ? " active" : ""}`}
+              className={`time-bin-pill${value.sample_bin === b ? " active" : ""}`}
               onClick={() => set("sample_bin", b)}
             >
               {b[0].toUpperCase() + b.slice(1)}

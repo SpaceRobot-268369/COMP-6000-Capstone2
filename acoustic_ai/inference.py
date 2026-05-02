@@ -11,7 +11,7 @@ Provides two high-level functions used by the backend API:
     → used by POST /api/generation
 
 Both functions accept env_dict as a plain Python dict with the same keys
-as the training manifest (temperature_c, humidity_pct, season, etc.).
+as the training manifest (temperature_c, humidity_pct, month_range, etc.).
 """
 
 from __future__ import annotations
@@ -79,10 +79,10 @@ def _build_env_tensor(env_dict: dict) -> torch.Tensor:
 
     Uses the same feature schema as dataset.py but without normalisation stats
     (caller should pass already-normalised numeric values, or use the dataset
-    stats dict if available).  Categorical fields (season, sample_bin) are
+    stats dict if available).  Categorical fields (month_range, sample_bin) are
     handled by one-hot / circular encoding regardless.
     """
-    from dataset import NUMERIC_COLS, CIRCULAR_COLS, ONEHOT_COLS
+    from dataset import NUMERIC_COLS, CIRCULAR_COLS, ONEHOT_COLS, month_range_for_month
 
     parts: list[float] = []
 
@@ -95,7 +95,10 @@ def _build_env_tensor(env_dict: dict) -> torch.Tensor:
         parts.append(math.cos(2 * math.pi * val / period))
 
     for col, categories in ONEHOT_COLS.items():
-        val = str(env_dict.get(col, "")).strip().lower()
+        if col == "month_range" and not env_dict.get(col):
+            val = month_range_for_month(env_dict.get("month", 1))
+        else:
+            val = str(env_dict.get(col, "")).strip().lower()
         parts.extend([1.0 if val == c else 0.0 for c in categories])
 
     return torch.tensor(parts, dtype=torch.float32).unsqueeze(0)  # (1, N)
@@ -364,22 +367,20 @@ def estimate_env_conditions(
         estimates[col] = round(float(np.mean(vals)), 2)
 
     # Most common month / sample_bin among top-k. Older latent_clips.npy files
-    # may not include month, so fall back to a month range derived from season.
+    # may not include month, so fall back to their stored month-range bucket.
     from collections import Counter
+    from dataset import month_range_for_month
     if "month" in env_raw[top_idx[0]]:
         months = [int(float(env_raw[i].get("month", 0))) for i in top_idx]
         months = [m for m in months if 1 <= m <= 12]
         if months:
             estimates["month"] = Counter(months).most_common(1)[0][0]
+            estimates["month_range"] = month_range_for_month(estimates["month"]).title()
 
-    season = Counter(env_raw[i]["season"] for i in top_idx).most_common(1)[0][0]
-    estimates["season"] = season
-    estimates["month_range"] = {
-        "summer": "Dec-Feb",
-        "autumn": "Mar-May",
-        "winter": "Jun-Aug",
-        "spring": "Sep-Nov",
-    }.get(str(season).lower(), "")
+    if "month_range" not in estimates:
+        ranges = [str(env_raw[i].get("month_range", "")).strip() for i in top_idx]
+        ranges = [r for r in ranges if r]
+        estimates["month_range"] = Counter(ranges).most_common(1)[0][0] if ranges else ""
     estimates["sample_bin"] = Counter(env_raw[i]["sample_bin"] for i in top_idx).most_common(1)[0][0]
     estimates["confidence"] = round(confidence, 3)
 
@@ -419,7 +420,7 @@ def generate_spectrogram(
 
     Priority:
       1. Per-clip nearest-neighbour (latent_clips.npy) — uses all env features
-      2. Group template (latent_templates.npy) — uses only season × sample_bin
+      2. Group template (latent_templates.npy) — uses only month range × sample_bin
       3. Pure N(0,1) sample — no grounding
 
     Args:
@@ -448,9 +449,9 @@ def generate_spectrogram(
         mean_z     = _nearest_neighbour_latent(env_vec, clips)
     elif TEMPLATES_PATH.exists():
         templates  = _load_templates()
-        season     = str(env_dict.get("season", "")).strip().lower()
+        month_range = str(env_dict.get("month_range", "")).strip().lower()
         sample_bin = str(env_dict.get("sample_bin", "")).strip().lower()
-        key        = f"{season}|{sample_bin}"
+        key        = f"{month_range}|{sample_bin}"
         if key in templates:
             mean_z = templates[key]
         else:
@@ -496,7 +497,7 @@ if __name__ == "__main__":
         "wind_max_ms": 7.0, "days_since_rain": 5.0, "daylight_hours": 11.5,
         "hour_utc": 6.0, "hour_local": 16.0,
         "wind_direction_deg": 180.0, "month": 9.0, "day_of_year": 260.0,
-        "season": "spring", "sample_bin": "afternoon",
+        "month_range": "september-november", "sample_bin": "afternoon",
     }
 
     mel = generate_spectrogram(dummy_env, seed=42)

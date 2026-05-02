@@ -1120,14 +1120,14 @@ textarea {
   box-shadow: 0 0 16px rgba(198, 247, 255, 0.4);
 }
 
-.season-grid {
+.time-bin-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 22px;
 }
 
-.season-pill {
+.time-bin-pill {
   min-height: 56px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
@@ -1142,18 +1142,18 @@ textarea {
     color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
-.season-pill:hover:not(.active) {
+.time-bin-pill:hover:not(.active) {
   background: rgba(135, 239, 226, 0.08);
   border-color: rgba(135, 239, 226, 0.3);
   color: rgba(255, 255, 255, 0.75);
   transform: translateY(-1px);
 }
 
-.season-pill:active {
+.time-bin-pill:active {
   transform: scale(0.95);
 }
 
-.season-pill.active {
+.time-bin-pill.active {
   background: #c5f2ff;
   color: #0c171d;
   border-color: transparent;
@@ -2170,7 +2170,7 @@ textarea {
     width: 100%;
   }
 
-  .season-grid,
+  .time-bin-grid,
   .transform-meta-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -2588,7 +2588,7 @@ textarea {
 }
 
 /* Time-bin pills — prevent text wrap on small containers */
-.season-pill {
+.time-bin-pill {
   min-height: 48px;
   font-size: 0.72rem;
   padding: 4px 6px;
@@ -3085,8 +3085,8 @@ textarea {
 }
 
 [data-theme="light"] .env-slider-track  { background: rgba(0,0,0,0.1); }
-[data-theme="light"] .season-pill       { border-color: rgba(0,0,0,0.1); color: rgba(0,30,50,0.52); background: rgba(0,0,0,0.03); }
-[data-theme="light"] .season-pill.active { background: #0088bb; color: #fff; border-color: transparent; }
+[data-theme="light"] .time-bin-pill       { border-color: rgba(0,0,0,0.1); color: rgba(0,30,50,0.52); background: rgba(0,0,0,0.03); }
+[data-theme="light"] .time-bin-pill.active { background: #0088bb; color: #fff; border-color: transparent; }
 
 /* Generation canvas — keep deliberately dark (it's a visualisation) but lighten frame */
 [data-theme="light"] .generation-canvas-card {
@@ -3337,6 +3337,15 @@ textarea {
   font-size: 0.75rem;
   letter-spacing: 0.07em;
   font-style: italic;
+}
+
+.gen-weather-list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.gen-weather-list li {
+  margin: 4px 0;
 }
 
 [data-theme="light"] .metrics-proxy-note { color: rgba(0, 30, 50, 0.38); }

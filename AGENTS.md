@@ -112,7 +112,7 @@ The AI system is split into three independent modules. This separation allows ea
 This is the **frozen backbone + task head** pattern — standard ML practice for extending a pretrained base model without losing learned representations.
 
 ### Environmental Variables
-temperature, humidity, wind speed/direction, rainfall, time of day, season, geographic site
+temperature, humidity, wind speed/direction, rainfall, time of day, month or month range, geographic site
 
 ### Data Sources
 - Australian Acoustic Observatory

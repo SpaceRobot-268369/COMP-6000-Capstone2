@@ -3,13 +3,13 @@
 Each item returns:
   mel      — (1, n_mels, time_frames) float32 tensor  — audio input
   env      — (N_ENV_FEATURES,) float32 tensor          — conditioning features
-  meta     — dict with recording_id, clip_path, sample_bin, sample_local_date
+        meta     — dict with recording_id, clip_path, sample_bin, month_range, sample_local_date
 
 Environmental features
 ----------------------
 Numeric features are normalised with pre-computed mean/std (fit on training
 split only). Categorical features are encoded as follows:
-  - season        : one-hot (4 dims: summer/autumn/winter/spring)
+  - month_range   : one-hot (4 dims: December-February/March-May/June-August/September-November)
   - sample_bin    : one-hot (4 dims: dawn/morning/afternoon/night)
   - wind_direction: sin/cos encoding (2 dims, preserves circularity)
   - month         : sin/cos encoding (2 dims)
@@ -62,12 +62,12 @@ CIRCULAR_COLS = [
 
 # One-hot columns and their fixed category order
 ONEHOT_COLS = {
-    "season":     ["summer", "autumn", "winter", "spring"],
+    "month_range": ["december-february", "march-may", "june-august", "september-november"],
     "sample_bin": ["dawn", "morning", "afternoon", "night"],
 }
 
 # Total env feature dimension:
-# 15 numeric + 3*2 circular + 4 season + 4 bin = 15 + 6 + 4 + 4 = 29
+# 15 numeric + 3*2 circular + 4 month-range + 4 bin = 15 + 6 + 4 + 4 = 29
 N_ENV_FEATURES = len(NUMERIC_COLS) + 2 * len(CIRCULAR_COLS) + sum(len(v) for v in ONEHOT_COLS.values())
 
 
@@ -77,6 +77,17 @@ N_ENV_FEATURES = len(NUMERIC_COLS) + 2 * len(CIRCULAR_COLS) + sum(len(v) for v i
 
 MEL_MIN_DB = -80.0   # matches top_db=80 in SPEC_CFG
 MEL_MAX_DB =   0.0
+
+
+def month_range_for_month(month: float) -> str:
+    m = int(round(float(month)))
+    if m == 12 or m in (1, 2):
+        return "december-february"
+    if 3 <= m <= 5:
+        return "march-may"
+    if 6 <= m <= 8:
+        return "june-august"
+    return "september-november"
 
 
 class SoundscapeDataset(Dataset):
@@ -174,7 +185,12 @@ class SoundscapeDataset(Dataset):
 
         # 3. One-hot encodings
         for col, categories in ONEHOT_COLS.items():
-            val = str(row[col]).strip().lower()
+            if col == "month_range" and (
+                col not in row or pd.isna(row[col]) or str(row[col]).strip() == ""
+            ):
+                val = month_range_for_month(row["month"])
+            else:
+                val = str(row[col]).strip().lower()
             parts.extend([1.0 if val == c else 0.0 for c in categories])
 
         return torch.tensor(parts, dtype=torch.float32)
@@ -209,7 +225,7 @@ class SoundscapeDataset(Dataset):
             "recording_id":      row["recording_id"],
             "clip_path":         row["clip_path"],
             "sample_bin":        row["sample_bin"],
-            "season":            row["season"],
+            "month_range":       month_range_for_month(row["month"]),
             "sample_local_date": row["sample_local_date"],
         }
         return mel, env, meta

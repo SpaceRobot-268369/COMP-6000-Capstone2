@@ -37,6 +37,19 @@ from inference import (
     DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
 )
 from layer_a import generate_layer_a_response
+from layer_b import prepare_weather_layers
+
+
+def month_range_for_month(month: float) -> str:
+    m = int(round(float(month)))
+    if m == 12 or m in (1, 2):
+        return "December-February"
+    if 3 <= m <= 5:
+        return "March-May"
+    if 6 <= m <= 8:
+        return "June-August"
+    return "September-November"
+
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
 
@@ -71,7 +84,7 @@ class EnvFeatures(BaseModel):
     wind_direction_deg:     float = 180.0
     month:                  float = 9.0
     day_of_year:            float = 260.0
-    season:                 str   = "spring"
+    month_range:            str   = "September-November"
     sample_bin:             str   = "afternoon"
     noise_std:              float = 0.5   # generation only
     seed:                   Optional[int] = None
@@ -107,7 +120,7 @@ async def analysis(
     wind_direction_deg:     float = 180.0,
     month:                  float = 9.0,
     day_of_year:            float = 260.0,
-    season:                 str   = "spring",
+    month_range:            str   = "September-November",
     sample_bin:             str   = "afternoon",
 ):
     """Encode an uploaded audio file into a latent vector.
@@ -130,7 +143,8 @@ async def analysis(
         "daylight_hours": daylight_hours, "hour_utc": hour_utc,
         "hour_local": hour_local, "wind_direction_deg": wind_direction_deg,
         "month": month, "day_of_year": day_of_year,
-        "season": season, "sample_bin": sample_bin,
+        "month_range": month_range or month_range_for_month(month),
+        "sample_bin": sample_bin,
     }
 
     # Save upload to a temp file so librosa can read it
@@ -172,10 +186,18 @@ def generation(body: EnvFeatures):
     Falls back to the older VAE/vocoder path if no downloaded clips are present.
     """
     env_dict = body.model_dump(exclude={"noise_std", "seed"})
+    env_dict["month_range"] = env_dict.get("month_range") or month_range_for_month(body.month)
     layer_a_env = body.model_dump(exclude={"noise_std", "seed"}, exclude_unset=True) or env_dict
+    layer_a_env["month_range"] = layer_a_env.get("month_range") or month_range_for_month(body.month)
 
     try:
-        return generate_layer_a_response(layer_a_env, seed=body.seed)
+        response = generate_layer_a_response(layer_a_env, seed=body.seed)
+        weather = prepare_weather_layers(env_dict, seed=body.seed)
+        response["weather"] = weather
+        response.setdefault("layer_status", {})["weather_layer"] = weather["status"]
+        if weather["status"] == "prepared":
+            response["explanation"] = f"{response.get('explanation', '')} {weather['explanation']}".strip()
+        return response
     except FileNotFoundError as exc:
         print(f"[WARN] Layer A unavailable ({exc}); falling back to VAE generation.")
 

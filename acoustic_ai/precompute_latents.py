@@ -1,7 +1,7 @@
-"""Pre-compute mean latent vectors for each season × sample_bin combination.
+"""Pre-compute mean latent vectors for each month-range × sample_bin combination.
 
 Runs all training clips through the encoder in best.pt, groups the resulting
-latent vectors by (season, sample_bin), averages each group, and saves the
+latent vectors by (month_range, sample_bin), averages each group, and saves the
 result to acoustic_ai/latent_templates.npy.
 
 The generation endpoint loads this file at startup instead of sampling random
@@ -84,14 +84,14 @@ def main():
     print(f"Clips      : {len(ds)}\n")
 
     # ── Collect raw env values (in dataset order, for nearest-neighbour lookup) ─
-    from dataset import NUMERIC_COLS
+    from dataset import NUMERIC_COLS, month_range_for_month
     all_env_raw: list = []
     for idx in range(len(ds)):
         row = ds.df.iloc[idx]
         entry = {col: float(row[col]) for col in NUMERIC_COLS}
         entry["month"]       = float(row["month"])
         entry["day_of_year"] = float(row["day_of_year"])
-        entry["season"]     = str(row["season"])
+        entry["month_range"] = month_range_for_month(row["month"])
         entry["sample_bin"] = str(row["sample_bin"])
         all_env_raw.append(entry)
 
@@ -107,9 +107,9 @@ def main():
             env_np = env.cpu().numpy()
 
             for i in range(len(z_np)):
-                season     = meta["season"][i]
+                month_range = meta["month_range"][i]
                 sample_bin = meta["sample_bin"][i]
-                key = f"{season}|{sample_bin}"
+                key = f"{month_range}|{sample_bin}"
                 bucket[key].append(z_np[i])
                 all_latents.append(z_np[i])
                 all_envs.append(env_np[i])

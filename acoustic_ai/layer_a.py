@@ -37,7 +37,6 @@ NUMERIC_WEIGHTS = {
 }
 
 CATEGORICAL_PENALTIES = {
-    "season": 3.0,
     "sample_bin": 4.0,
 }
 
@@ -46,6 +45,16 @@ _QUALITY_WARNING_SHOWN = False
 TIME_BINS = ["dawn", "morning", "afternoon", "night"]
 MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def month_range_for_month(month: int) -> str:
+    if month == 12 or month in (1, 2):
+        return "December-February"
+    if 3 <= month <= 5:
+        return "March-May"
+    if 6 <= month <= 8:
+        return "June-August"
+    return "September-November"
 
 
 @dataclass(frozen=True)
@@ -205,8 +214,8 @@ def _summarise(candidate: AmbientCandidate) -> dict:
         "clip_path": str(candidate.path.relative_to(PROJECT_ROOT)),
         "recording_id": row.get("recording_id"),
         "clip_index": int(_to_float(row.get("clip_index"), 0) or 0),
-        "season": row.get("season"),
         "month": int(_to_float(row.get("month"), 0) or 0),
+        "month_range": month_range_for_month(int(_to_float(row.get("month"), 1) or 1)),
         "sample_bin": row.get("sample_bin"),
         "temperature_c": _to_float(row.get("temperature_c")),
         "humidity_pct": _to_float(row.get("humidity_pct")),
@@ -431,8 +440,8 @@ def generate_layer_a_response(env: dict, seed: Optional[int] = None) -> dict:
         "clip_end_seconds": _to_float(row.get("clip_end_seconds")),
         "clip_duration_seconds": _to_float(row.get("clip_duration_seconds")),
         "sample_local_date": row.get("sample_local_date"),
-        "season": row.get("season"),
         "month": int(_to_float(row.get("month"), 0) or 0),
+        "month_range": month_range_for_month(int(_to_float(row.get("month"), 1) or 1)),
         "sample_bin": row.get("sample_bin"),
         "score": round(float(candidate.score), 4),
         "env_score": round(float(candidate.env_score), 4),

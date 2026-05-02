@@ -6,7 +6,7 @@ Data sources:
     cloud clearness index, surface pressure
   - NASA POWER daily: temp max/min, daily precip total, max wind speed
   - Derived locally: days_since_rain, sunrise/sunset/daylight hours (astral),
-    season, day_of_year, hour_local
+    month_range, day_of_year, hour_local
 
 All NASA POWER data is in UTC. recorded_date in the CSV is also UTC — no
 timezone conversion needed for hourly/daily joins.
@@ -31,10 +31,10 @@ from typing import Optional
 import requests
 
 # ---------------------------------------------------------------------------
-# Site
+# Site: A2O Bowra, point 257 (Bowra Dry A)
 # ---------------------------------------------------------------------------
-SITE_LAT = -30.04
-SITE_LON = 145.87
+SITE_LAT = -27.987
+SITE_LON = 145.609
 UTC_OFFSET_HOURS = 10  # Australia/Brisbane — no DST
 
 # ---------------------------------------------------------------------------
@@ -140,12 +140,11 @@ def get_with_retry(url: str, label: str) -> dict:
     raise RuntimeError(f"Failed after {MAX_ATTEMPTS} attempts: {label}")
 
 
-def season_for_month(month: int) -> str:
-    """Southern hemisphere seasons."""
-    return {12: "summer", 1: "summer",  2: "summer",
-             3: "autumn",  4: "autumn",  5: "autumn",
-             6: "winter",  7: "winter",  8: "winter",
-             9: "spring", 10: "spring", 11: "spring"}[month]
+def month_range_for_month(month: int) -> str:
+    return {12: "December-February", 1: "December-February", 2: "December-February",
+             3: "March-May",         4: "March-May",         5: "March-May",
+             6: "June-August",       7: "June-August",       8: "June-August",
+             9: "September-November", 10: "September-November", 11: "September-November"}[month]
 
 
 # ---------------------------------------------------------------------------
@@ -348,8 +347,8 @@ def main() -> None:
             "hour_utc":               dt.hour,
             "hour_local":             local_dt.hour,
             "month":                  local_dt.month,
+            "month_range":            month_range_for_month(local_dt.month),
             "day_of_year":            local_dt.timetuple().tm_yday,
-            "season":                 season_for_month(local_dt.month),
         })
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -40,6 +40,11 @@ export default function GenerationPage() {
   const isLayerA     = result?.mode === "layer_a_ambient_bed";
   const conditionMonth = monthLabel(conditions.month);
   const selectedMonth  = result?.selected?.month ? monthLabel(result.selected.month) : conditionMonth;
+  const weather = result?.weather;
+  const weatherLayers = weather?.layers;
+  const activeWeather = weatherLayers
+    ? Object.entries(weatherLayers).filter(([, layer]) => layer?.enabled)
+    : [];
 
   return (
     <section className="generation-page">
@@ -69,7 +74,7 @@ export default function GenerationPage() {
                 </div>
                 <div>
                   <span>Coordinates</span>
-                  <strong>28.3°S 145.5°E</strong>
+                  <strong>27.987°S 145.609°E</strong>
                 </div>
               </div>
             </div>
@@ -165,6 +170,27 @@ export default function GenerationPage() {
               <p className="mock-badge">
                 Layer A selected: {selectedClip.split("/").slice(-2).join("/")}
               </p>
+            )}
+
+            {isDone && weather && (
+              <div className="metrics-proxy-note">
+                <strong>Layer B weather: {weather.status}</strong>
+                {activeWeather.length > 0 ? (
+                  <ul className="gen-weather-list">
+                    {activeWeather.map(([kind, layer]) => (
+                      <li key={kind}>
+                        {kind}: {layer.target_intensity}
+                        {" · "}
+                        confidence {Math.round((layer.confidence ?? 0) * 100)}%
+                        {" · "}
+                        {layer.gain_db} dB
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span> · no wind/rain layer selected</span>
+                )}
+              </div>
             )}
 
             {isDone && result?.explanation && (
