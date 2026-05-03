@@ -39,6 +39,10 @@ resources/site_257_bowra-dry-a/*
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
 !resources/site_257_bowra-dry-a/site_257_training_manifest.csv
 !resources/site_257_bowra-dry-a/weather_asset_manifest.csv
+!resources/site_257_bowra-dry-a/annotation_audit_report.md
+!resources/site_257_bowra-dry-a/annotation_event_index.csv
+!resources/site_257_bowra-dry-a/event_snippet_manifest.csv
+!resources/site_257_bowra-dry-a/activity_label_manifest.csv
 
 
 # IDE and editors

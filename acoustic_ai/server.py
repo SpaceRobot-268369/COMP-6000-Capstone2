@@ -38,6 +38,7 @@ from inference import (
 )
 from layer_a import generate_layer_a_response
 from layer_b import prepare_weather_layers
+from layer_c import prepare_event_layers
 
 
 def month_range_for_month(month: float) -> str:
@@ -193,10 +194,15 @@ def generation(body: EnvFeatures):
     try:
         response = generate_layer_a_response(layer_a_env, seed=body.seed)
         weather = prepare_weather_layers(env_dict, seed=body.seed)
+        events = prepare_event_layers(env_dict, seed=body.seed)
         response["weather"] = weather
+        response["events"] = events
         response.setdefault("layer_status", {})["weather_layer"] = weather["status"]
+        response.setdefault("layer_status", {})["species_event_layer"] = events["status"]
         if weather["status"] == "prepared":
             response["explanation"] = f"{response.get('explanation', '')} {weather['explanation']}".strip()
+        if events["status"] == "prepared":
+            response["explanation"] = f"{response.get('explanation', '')} {events['explanation']}".strip()
         return response
     except FileNotFoundError as exc:
         print(f"[WARN] Layer A unavailable ({exc}); falling back to VAE generation.")

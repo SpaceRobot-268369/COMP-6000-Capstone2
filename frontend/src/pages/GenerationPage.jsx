@@ -45,6 +45,8 @@ export default function GenerationPage() {
   const activeWeather = weatherLayers
     ? Object.entries(weatherLayers).filter(([, layer]) => layer?.enabled)
     : [];
+  const events = result?.events;
+  const activeEvents = events?.events || [];
 
   return (
     <section className="generation-page">
@@ -189,6 +191,26 @@ export default function GenerationPage() {
                   </ul>
                 ) : (
                   <span> · no wind/rain layer selected</span>
+                )}
+              </div>
+            )}
+
+            {isDone && events && (
+              <div className="metrics-proxy-note">
+                <strong>Layer C events: {events.status}</strong>
+                <span> · {events.activity_level}</span>
+                {activeEvents.length > 0 && (
+                  <ul className="gen-weather-list">
+                    {activeEvents.map((event, index) => (
+                      <li key={`${event.selected?.event_id || event.label}-${index}`}>
+                        {event.label}
+                        {" · "}
+                        confidence {Math.round((event.confidence ?? 0) * 100)}%
+                        {" · "}
+                        at {event.schedule?.start_seconds}s
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             )}
