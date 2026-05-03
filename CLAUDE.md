@@ -272,7 +272,16 @@ COMP-6000-Capstone2/
 > |------|----------|
 > | Architecture and design docs | `.claude/context/` |
 > | Known issues, decisions, notes | `.claude/context/` |
+> | Branch-scoped work logs (ephemeral) | `.claude/context/dev/<branch-slug>/` |
 > | Claude Code settings | `.claude/settings.local.json` |
+
+### Branch-scoped dev logs
+
+`.claude/context/dev/<branch-slug>/` is scratch space for in-progress work on a single branch (change logs, precompute notes, debugging traces). Rules:
+
+- One subfolder per branch — name it after the branch slug (e.g. `dev/layer-a-ambient/`).
+- Delete the subfolder in the same PR that merges the branch, **or** promote any durable insight into a permanent doc under `.claude/context/ai/logs/` (or wherever it fits) before deleting.
+- Do not put branch logs in `~/.claude/.../memory/` — memory is local-only and does not travel with the branch.
 
 ---
 

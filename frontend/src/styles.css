@@ -3493,3 +3493,62 @@ textarea {
     #111111;
   color: #f5f7fb;
 }
+
+/* ─── Layer A dev test page ────────────────────────────────────────────────── */
+.layer-a-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+.layer-a-field > span {
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+.layer-a-input {
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: inherit;
+  font-size: 13px;
+  font-family: inherit;
+}
+.layer-a-input:focus {
+  outline: none;
+  border-color: rgba(120, 200, 230, 0.55);
+}
+.layer-a-json {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  color: inherit;
+}
+
+/* Light theme overrides */
+[data-theme="light"] .layer-a-input {
+  background: #ffffff;
+  border-color: rgba(0, 110, 155, 0.25);
+  color: #0d1a22;
+}
+[data-theme="light"] .layer-a-input:focus {
+  border-color: rgba(0, 122, 170, 0.65);
+  box-shadow: 0 0 0 2px rgba(0, 122, 170, 0.15);
+}
+[data-theme="light"] .layer-a-input option {
+  background: #ffffff;
+  color: #0d1a22;
+}
+[data-theme="light"] .layer-a-field > span {
+  color: rgba(0, 30, 50, 0.6);
+}
+[data-theme="light"] .layer-a-json {
+  background: rgba(0, 0, 0, 0.04);
+  color: #0d1a22;
+  border: 1px solid rgba(0, 110, 155, 0.15);
+}

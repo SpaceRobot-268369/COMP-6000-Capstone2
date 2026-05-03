@@ -51,6 +51,27 @@ export async function generateSoundscape(conditions) {
   return { ...data, mock: false };
 }
 
+// ─── Layer A — Ambient bed (dev test) ─────────────────────────────────────────
+
+/**
+ * Generate a Layer A ambient bed from env parameters.
+ * @param {{diel_bin:string, season:string, hour:number, month:number, duration:number, k:number}} params
+ * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, gain_db:number, sample_rate:number, duration_s:number}>}
+ */
+export async function generateLayerA(params) {
+  const res = await fetch(`${API_BASE}/api/layer_a/generate`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || `Layer A generation failed (${res.status})`);
+  }
+  return res.json();
+}
+
 // ─── Transformation ───────────────────────────────────────────────────────────
 
 /**

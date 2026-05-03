@@ -12,6 +12,7 @@ Desktop.ini
 *.egg-info/
 .Python
 
+
 # Dependencies
 node_modules/
 **/node_modules/
@@ -21,6 +22,7 @@ package-lock.json
 # Environment
 !.env.example
 **/.env.example
+acoustic_ai/venv/
 
 # Logs and caches
 *.log

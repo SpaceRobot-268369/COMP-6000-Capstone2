@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import TransformationPage from "./pages/TransformationPage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
+import LayerATestPage from "./pages/LayerATestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
@@ -71,6 +72,10 @@ export default function App() {
               <span className="nav-icon">≋</span>
               <span>Transformation</span>
             </NavLink>
+            <NavLink to="/dev/layer-a" className={sidebarLinkClass}>
+              <span className="nav-icon">⌬</span>
+              <span>Dev · Layer A</span>
+            </NavLink>
           </nav>
         </div>
 
@@ -113,6 +118,7 @@ export default function App() {
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
+          <Route path="/dev/layer-a" element={<LayerATestPage />} />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}
