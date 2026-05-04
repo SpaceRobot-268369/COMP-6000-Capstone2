@@ -53,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out", type=Path, default=DEFAULT_OUT)
     p.add_argument("--params", type=Path, default=PROJECT_ROOT / "params.yaml")
     p.add_argument("--epochs", type=int, default=None, help="Override params.yaml epochs.")
+    p.add_argument("--resume", type=Path, default=None, help="Path to checkpoint to resume from.")
     p.add_argument("--device", type=str, default=None,
                    help="cpu / cuda / mps. Defaults to cuda > mps > cpu.")
     p.add_argument("--seed", type=int, default=42)
@@ -134,11 +135,24 @@ def main() -> int:
         weight_decay=cfg["weight_decay"],
     )
 
+    start_epoch = 1
+    best_loss = float("inf")
+
+    if args.resume and args.resume.exists():
+        print(f"resuming from {args.resume}")
+        ckpt = torch.load(args.resume, map_location=device)
+        model.load_state_dict(ckpt["model"])
+        ema_model.load_state_dict(ckpt["ema"])
+        if "optimiser" in ckpt:
+            optimiser.load_state_dict(ckpt["optimiser"])
+        start_epoch = ckpt.get("epoch", 0) + 1
+        best_loss = ckpt.get("loss", float("inf"))
+        print(f"  starting from epoch {start_epoch}, best_loss={best_loss:.5f}")
+
     args.out.mkdir(parents=True, exist_ok=True)
 
     # ---- training loop ----
-    best_loss = float("inf")
-    for epoch in range(1, cfg["epochs"] + 1):
+    for epoch in range(start_epoch, cfg["epochs"] + 1):
         model.train()
         epoch_loss = 0.0
         epoch_n = 0
@@ -186,6 +200,7 @@ def main() -> int:
                 {
                     "model": model.state_dict(),
                     "ema": ema_model.state_dict(),
+                    "optimiser": optimiser.state_dict(),
                     "config": cfg,
                     "epoch": epoch,
                     "loss": avg_loss,
@@ -198,6 +213,7 @@ def main() -> int:
         {
             "model": model.state_dict(),
             "ema": ema_model.state_dict(),
+            "optimiser": optimiser.state_dict(),
             "config": cfg,
             "epoch": cfg["epochs"],
             "loss": avg_loss,

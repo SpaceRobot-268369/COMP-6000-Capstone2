@@ -74,10 +74,12 @@ acoustic_ai/checkpoints/vocoder/epoch_*.pt
 # best.pt files are DVC-tracked — pointer files (.dvc) go in git, not the weights
 acoustic_ai/checkpoints/ambient/best.pt
 acoustic_ai/checkpoints/vocoder/best.pt
+acoustic_ai/checkpoints/ambient_diffusion/
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/
 acoustic_ai/data/shared/spectrograms/
+acoustic_ai/data/ambient/latents/
 acoustic_ai/data/module_b/weather_assets/
 acoustic_ai/data/module_c/event_snippets/
 acoustic_ai/data/module_c/birdnet_labels/
@@ -88,6 +90,7 @@ acoustic_ai/hifigan_cache/
 
 # Debug / scratch audio outputs from CLI runs (e.g. run_layer_a.py default)
 debug/
+*.wav
 
 # DVC internal
 /tmp/

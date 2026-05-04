@@ -23,11 +23,11 @@ import torch
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from modules.ambient.diffusion.dataset import COND_COLUMNS         # noqa: E402
-from modules.ambient.diffusion.model import LatentDenoiser         # noqa: E402
-from modules.ambient.diffusion.schedule import NoiseSchedule, ddim_sample  # noqa: E402
+from acoustic_ai.modules.ambient.diffusion.dataset import COND_COLUMNS
+from acoustic_ai.modules.ambient.diffusion.model import LatentDenoiser
+from acoustic_ai.modules.ambient.diffusion.schedule import NoiseSchedule, ddim_sample
 
 SEASONS = ("spring", "summer", "autumn", "winter")
 DIEL = ("dawn", "morning", "afternoon", "night")
@@ -95,7 +95,7 @@ def load_denoiser(ckpt_path: Path, cfg: dict, device: torch.device) -> LatentDen
         hidden_dim=cfg["hidden_dim"],
         num_blocks=cfg["num_blocks"],
     ).to(device)
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     state = ckpt.get("ema") or ckpt.get("model") or ckpt
     model.load_state_dict(state)
     model.eval()
@@ -104,12 +104,15 @@ def load_denoiser(ckpt_path: Path, cfg: dict, device: torch.device) -> LatentDen
 
 def load_vae_decoder(ckpt_path: Path, device: torch.device):
     """Load just the decoder part of the trained SoundscapeModel."""
-    # Imported here to avoid pulling preprocess.SPEC_CFG side-effects until needed.
-    sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai" / "modules" / "ambient"))
-    from model import SoundscapeModel  # type: ignore  # noqa: E402
+    # Add ambient module dir to path so its internal flat imports (e.g. preprocess) work
+    ambient_dir = str(PROJECT_ROOT / "acoustic_ai" / "modules" / "ambient")
+    if ambient_dir not in sys.path:
+        sys.path.insert(0, ambient_dir)
+
+    from acoustic_ai.modules.ambient.model import SoundscapeModel  # noqa: E402
 
     model = SoundscapeModel().to(device)
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     state = ckpt.get("model_state_dict") or ckpt.get("model") or ckpt
     model.load_state_dict(state)
     model.eval()
@@ -120,15 +123,23 @@ def vocode(mel: torch.Tensor, vocoder_ckpt: Path, device: torch.device) -> np.nd
     """mel: (1, n_mels, T) torch tensor in dB. Returns waveform ndarray (samples,)."""
     # Defer import — vocoder may not be available in all environments.
     try:
-        from acoustic_ai.server.inference import mel_to_waveform  # type: ignore
+        from acoustic_ai.server.inference import mel_db_to_wav_ecoacoustic
+        import io
+        import soundfile as sf
     except Exception:  # pragma: no cover
-        # Fallback signature search — keep this lenient since the server module
-        # has been moving around. The intent is documented in plan.md.
         raise RuntimeError(
-            "Could not import vocoder helper. Wire `mel_to_waveform` "
-            "(or equivalent) from server/inference.py to convert mel → wav."
+            "Could not import vocoder helper. Ensure acoustic_ai.server.inference "
+            "is accessible and mel_db_to_wav_ecoacoustic is defined."
         )
-    return mel_to_waveform(mel, vocoder_ckpt, device=device)
+
+    # Convert tensor to numpy (128, T) for the inference helper
+    mel_np = mel.squeeze(0).cpu().numpy()
+
+    # The inference helper returns WAV bytes. We need to decode them back
+    # to a numpy array for peak normalisation and final saving.
+    wav_bytes = mel_db_to_wav_ecoacoustic(mel_np)
+    wav, sr = sf.read(io.BytesIO(wav_bytes))
+    return wav
 
 
 def main() -> int:

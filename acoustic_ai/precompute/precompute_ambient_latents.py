@@ -113,7 +113,8 @@ def build_segment_to_manifest_row(
     same form (relative to project root).
     """
     merged = ambient_index.merge(
-        manifest, how="left", left_on="source_clip", right_on="clip_path"
+        manifest, how="left", left_on="source_clip", right_on="clip_path",
+        suffixes=("_idx", "")
     )
     missing = merged["clip_path"].isna().sum()
     if missing:
@@ -175,22 +176,22 @@ def main() -> int:
     device = pick_device(args.device)
     print(f"device: {device}")
 
-    # Manifest + ambient index
-    print("loading manifest + ambient index...")
-    manifest = pd.read_csv(args.manifest)
-    ambient_index = pd.read_csv(args.index)
-    merged = build_segment_to_manifest_row(ambient_index, manifest)
-    print(f"  {len(merged)} segments joined to manifest")
-
-    # We need SoundscapeDataset *only* for its env-encoding stats + builder.
-    # Pass split="all" so it loads everything for normalisation stats.
-    print("fitting env normalisation stats from training manifest...")
+    # We need SoundscapeDataset for its env-encoding stats + builder.
+    # Pass split="all" so it loads everything for normalisation stats and
+    # performs essential NaN-cleansing on the numeric columns.
+    print("loading manifest and fitting env normalisation stats...")
     env_builder = SoundscapeDataset(
         manifest_path=str(args.manifest),
         project_root=str(PROJECT_ROOT),
         split="all",
         crop_frames=None,
     )
+
+    # Join sanitized manifest to ambient index
+    print("loading ambient index and joining to manifest...")
+    ambient_index = pd.read_csv(args.index)
+    merged = build_segment_to_manifest_row(ambient_index, env_builder.df)
+    print(f"  {len(merged)} segments joined to manifest")
 
     # Load VAE
     print(f"loading VAE checkpoint {args.vae_checkpoint}")

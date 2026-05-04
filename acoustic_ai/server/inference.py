@@ -132,7 +132,7 @@ def mel_db_to_wav_ecoacoustic(mel_db: np.ndarray, sample_rate: int = 22_050) -> 
 
     import io
     import soundfile as sf
-    from modules.ambient.train_vocoder import HiFiGANGenerator, TOP_DB
+    from acoustic_ai.modules.ambient.train_vocoder import HiFiGANGenerator, TOP_DB
 
     # Load generator
     ckpt  = torch.load(VOCODER_CKPT, map_location="cpu", weights_only=False)
