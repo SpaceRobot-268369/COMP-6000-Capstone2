@@ -4,11 +4,15 @@ Given a user env request (diel_bin, season, hour, month), retrieve the k most
 similar cleaned ambient segments by:
   1. Hard filter: diel_bin and season must match.
   2. Soft rank: cosine similarity over [hour_sin, hour_cos, month_sin, month_cos].
-  3. Blend: softmax-weighted crossfade of top-k segments, RMS-matched, tiled to
-     target duration.
+  3. Blend: dispatch to one of two strategies.
+       - "crossfade": softmax-weighted sequential crossfade (method 1, original).
+       - "granular":  overlap-add of short windowed grains drawn from the top-k
+                      pool (method 1A, extended). Better for stationary texture
+                      because it preserves spectral statistics while producing
+                      novel waveforms each request.
 
 Output: LayerResult with audio, gain_db=-3, and metadata (retrieved_clips,
-blend_weights, requested_env).
+blend_weights, blend_method, requested_env).
 """
 
 import csv
@@ -19,9 +23,13 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from granular import GranularSynthesizer
+
 SR = 22_050
 HOP = 512
 FPS = SR / HOP
+
+VALID_METHODS = ("crossfade", "granular")
 
 
 @dataclass
@@ -63,6 +71,11 @@ class AmbientRetriever:
         month: int,
         k: int = 5,
         target_duration_s: float = 60.0,
+        method: str = "granular",
+        grain_ms: float = 200.0,
+        grain_overlap: float = 0.5,
+        pitch_jitter: float = 0.0,
+        seed: int | None = None,
     ) -> LayerResult:
         """Retrieve and blend ambient segments for the requested environment.
 
@@ -73,6 +86,12 @@ class AmbientRetriever:
             month: month (1–12)
             k: top-k segments to blend (default 5)
             target_duration_s: output duration in seconds
+            method: blend strategy — 'granular' (default, method 1A) or
+                'crossfade' (method 1, sequential equal-power crossfade).
+            grain_ms: grain length in ms. Granular only. Default 200.
+            grain_overlap: grain overlap fraction in [0, 1). Granular only.
+            pitch_jitter: per-grain pitch jitter in [0, 0.1). Granular only.
+            seed: RNG seed for granular reproducibility. Granular only.
 
         Returns:
             LayerResult with blended audio, gain_db=-3, metadata.
@@ -80,6 +99,10 @@ class AmbientRetriever:
         Fallback: if hard filter returns < k segments, relax to neighbouring
         diel_bin and set low_confidence=True in metadata.
         """
+        if method not in VALID_METHODS:
+            raise ValueError(
+                f"method must be one of {VALID_METHODS}, got {method!r}"
+            )
         # Hard filter: diel_bin and season must match.
         candidates = [
             r for r in self.rows
@@ -135,10 +158,34 @@ class AmbientRetriever:
             audio, _ = sf.read(seg_path, dtype="float32")
             audios.append(audio)
 
-        # Blend: softmax weights, crossfade, RMS-match, tile to duration.
-        blended = self._blend_segments(
-            audios, top_k_sims, target_duration_s
-        )
+        # Blend: dispatch to crossfade (method 1) or granular (method 1A).
+        weights = self._softmax(top_k_sims)
+        if method == "crossfade":
+            blended = self._blend_segments(
+                audios, top_k_sims, target_duration_s
+            )
+            blend_params: dict = {}
+            n_grains: int | None = None
+        else:  # "granular"
+            granular = GranularSynthesizer(
+                grain_ms=grain_ms,
+                overlap=grain_overlap,
+                pitch_jitter=pitch_jitter,
+                seed=seed,
+            )
+            blended = granular.synthesize(
+                sources=audios,
+                weights=list(weights),
+                target_duration_s=target_duration_s,
+                sample_rate=SR,
+            )
+            blend_params = {
+                "grain_ms": grain_ms,
+                "grain_overlap": grain_overlap,
+                "pitch_jitter": pitch_jitter,
+                "seed": seed,
+            }
+            n_grains = granular.last_n_grains
 
         metadata = {
             "retrieved_clips": [
@@ -154,7 +201,10 @@ class AmbientRetriever:
                 }
                 for i, row in enumerate(top_k_candidates)
             ],
-            "blend_weights": [round(float(w), 3) for w in self._softmax(top_k_sims)],
+            "blend_weights": [round(float(w), 3) for w in weights],
+            "blend_method": method,
+            "blend_params": blend_params,
+            "n_grains": n_grains,
             "requested_env": {
                 "diel_bin": diel_bin,
                 "season": season,

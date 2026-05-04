@@ -40,6 +40,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--month", type=int, required=True, help="Month (1–12)")
     p.add_argument("--duration", type=float, default=60.0, help="Duration in seconds")
     p.add_argument("--k", type=int, default=5, help="Number of segments to blend")
+    p.add_argument(
+        "--method", choices=["granular", "crossfade"], default="granular",
+        help="Blend strategy: 'granular' (method 1A, default) or 'crossfade' (method 1)",
+    )
+    p.add_argument("--grain-ms", type=float, default=200.0,
+                   help="Granular only: grain length in ms (default 200)")
+    p.add_argument("--grain-overlap", type=float, default=0.5,
+                   help="Granular only: grain overlap fraction in [0, 1) (default 0.5)")
+    p.add_argument("--pitch-jitter", type=float, default=0.0,
+                   help="Granular only: per-grain pitch jitter in [0, 0.1) (default 0.0)")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Granular only: RNG seed for reproducibility")
     p.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     p.add_argument("--index", type=Path, default=DEFAULT_INDEX)
     p.add_argument("--segments", type=Path, default=DEFAULT_SEGMENTS)
@@ -87,7 +99,8 @@ def main() -> int:
 
     # Retrieve and blend.
     print(f"retrieving ambient bed: "
-          f"{args.diel_bin}/{args.season} hour={args.hour} month={args.month}")
+          f"{args.diel_bin}/{args.season} hour={args.hour} month={args.month} "
+          f"method={args.method}")
     try:
         result: LayerResult = retriever.retrieve(
             diel_bin=args.diel_bin,
@@ -96,6 +109,11 @@ def main() -> int:
             month=args.month,
             k=args.k,
             target_duration_s=args.duration,
+            method=args.method,
+            grain_ms=args.grain_ms,
+            grain_overlap=args.grain_overlap,
+            pitch_jitter=args.pitch_jitter,
+            seed=args.seed,
         )
     except Exception as e:
         print(f"error retrieving: {e}")

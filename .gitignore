@@ -83,6 +83,9 @@ acoustic_ai/data/module_c/birdnet_labels/
 # HiFi-GAN speech-domain cache (not needed — using ecoacoustic vocoder)
 acoustic_ai/hifigan_cache/
 
+# Debug / scratch audio outputs from CLI runs (e.g. run_layer_a.py default)
+debug/
+
 # DVC internal
 /tmp/
 
