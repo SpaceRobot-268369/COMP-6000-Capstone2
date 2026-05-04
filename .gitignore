@@ -23,6 +23,9 @@ package-lock.json
 !.env.example
 **/.env.example
 acoustic_ai/venv/
+acoustic_ai/.venv/
+.venv/
+venv/
 
 # Logs and caches
 *.log
