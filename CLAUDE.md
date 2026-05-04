@@ -329,6 +329,17 @@ Update docker-compose to expose AI server port
 
 Do **not** reference issue numbers or internal task IDs in the subject line — put that in the body if needed.
 
+### Pre-Commit File Audit
+
+Before every commit, check whether any unintended files are being tracked by git.
+
+1. Run `git status` and inspect the staged and untracked file lists.
+2. If any file appears that should not be committed (large binaries, generated outputs, credentials, editor artefacts, OS files, etc.), **do not commit yet**.
+3. Add the offending path(s) to `.gitignore` (and run `git rm --cached <path>` if the file is already tracked).
+4. Verify `git status` is clean of unintended files before proceeding with the commit.
+
+This check is mandatory — never skip it, even for "quick" commits.
+
 ### Main Branch Protection
 
 - `main` is the stable branch. Only merge via PR.
