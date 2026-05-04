@@ -24,3 +24,25 @@ vocoder:
   max_clips: 500
   batch_size: 8
   lr: 0.0002
+
+# Method 3 — Latent diffusion over the frozen VAE's 256-dim latent.
+# Conditioning is the 12-dim ambient-relevant subset (cyclic time + season
+# one-hot + diel one-hot). Weather/temp/humidity intentionally excluded — they
+# belong to Layers B and C. See:
+#   .claude/context/dev/layer-a-ambient-method-3/plan.md
+diffusion:
+  latent_dim: 256
+  cond_dim: 12              # 4 cyclic + 4 season one-hot + 4 diel one-hot
+  hidden_dim: 512
+  num_blocks: 6
+  num_train_timesteps: 1000
+  schedule: "cosine"
+  prediction: "v"           # v-prediction (Salimans & Ho 2022)
+  num_inference_steps: 50
+  epochs: 200
+  batch_size: 64
+  lr: 2.0e-4
+  weight_decay: 1.0e-4
+  ema_decay: 0.999
+  cond_dropout_p: 0.1       # for classifier-free guidance
+  cfg_scale: 1.5

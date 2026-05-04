@@ -85,8 +85,8 @@ stages:
       size: 3108
     - path: acoustic_ai/precompute/precompute_latents.py
       hash: md5
-      md5: e5f919168808a2d5a4d5e7708be603af
-      size: 6278
+      md5: 6cdc344c802fa07a103363d82c24ddbb
+      size: 6276
     - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
       hash: md5
       md5: 6b75da0685d9463a783adb866491f86c
@@ -95,11 +95,11 @@ stages:
       params.yaml:
         ambient.top_k_retrieval: 10
     outs:
-    - path: acoustic_ai/data/module_a/latents/latent_clips.npy
+    - path: acoustic_ai/data/ambient/latents/latent_clips.npy
       hash: md5
       md5: 5fae731fd6cebba61459789408e176b8
       size: 7012866
-    - path: acoustic_ai/data/module_a/latents/latent_templates.npy
+    - path: acoustic_ai/data/ambient/latents/latent_templates.npy
       hash: md5
       md5: 1a543b2289f29cefdf3da83eea8c67ad
       size: 17501

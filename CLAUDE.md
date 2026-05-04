@@ -200,7 +200,7 @@ If you need to run services outside of Docker:
 **Backend:**
 ```bash
 cd backend
-DATABASE_URL=postgresql://capstone_user:<password>@localhost:5432/capstone_dev PORT=4000 npm run dev
+DATABASE_URL=postgresql://capstone_user:<password>@localhost:5433/capstone_dev PORT=4000 npm run dev
 ```
 
 **Frontend:**
@@ -571,9 +571,9 @@ chmod +x .git/hooks/post-merge
 
 | Service | How | URL |
 |---------|-----|-----|
-| Frontend | Docker or `npm run dev` | `http://localhost:5173` |
+| Frontend | Docker or `npm run dev` | `http://localhost:5174` |
 | Backend | Docker or `npm run dev` | `http://localhost:4000` |
-| PostgreSQL | Docker only | `localhost:5432` |
+| PostgreSQL | Docker only | `localhost:5433` |
 | AI server | **Native only** (GPU/MPS) | `http://localhost:8000` |
 
 **Start postgres + backend + frontend via Docker:**
