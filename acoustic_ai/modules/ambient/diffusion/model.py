@@ -70,6 +70,10 @@ class AdaLNResBlock(nn.Module):
             nn.GELU(),
             nn.Linear(dim * expansion, dim),
         )
+        # Zero-init the output projection so every block starts as identity
+        # (DiT-style initialisation — prevents activation explosion at init).
+        nn.init.zeros_(self.mlp[2].weight)
+        nn.init.zeros_(self.mlp[2].bias)
 
     def forward(self, x: torch.Tensor, cond_emb: torch.Tensor) -> torch.Tensor:
         gamma_beta = self.modulation(cond_emb)             # (B, 2D)

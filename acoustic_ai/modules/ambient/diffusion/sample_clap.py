@@ -221,6 +221,22 @@ def main() -> int:
         print("\n[dry-run] skipping VAE decode + vocoder — pipeline shapes OK")
         return 0
 
+    # ---- De-normalise latents (inverse of SmokeTestDataset per-dim z-score) ----
+    scale_path = (
+        PROJECT_ROOT
+        / "resources" / "site_257_bowra-dry-a"
+        / "smoking_test_dataset" / "precomputed" / "latent_scale.json"
+    )
+    if scale_path.exists():
+        import json
+        scale     = json.loads(scale_path.read_text())
+        lat_mean  = torch.tensor(scale["mean"], dtype=torch.float32, device=device)
+        lat_std   = torch.tensor(scale["std"],  dtype=torch.float32, device=device)
+        latents   = latents * lat_std + lat_mean
+        print(f"  de-normalised latents: mean={latents.mean():.3f}  std={latents.std():.3f}")
+    else:
+        print(f"  [warn] latent_scale.json not found at {scale_path} — skipping de-normalisation")
+
     # ---- VAE decode ----
     print(f"Loading VAE decoder: {args.vae_checkpoint}")
     decoder = load_vae_decoder(args.vae_checkpoint, device)

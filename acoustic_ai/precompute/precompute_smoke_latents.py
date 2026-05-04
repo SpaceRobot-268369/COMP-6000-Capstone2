@@ -289,17 +289,40 @@ def main() -> int:
         w.writeheader()
         w.writerows(index_rows)
 
+    # ---- latent normalisation stats ----
+    # Compute per-dimension mean and std so the diffusion model trains on
+    # zero-mean unit-variance latents (standard LDM practice; prevents
+    # activation explosion when some VAE dims have very large absolute values).
+    lat_mean = latents_arr.mean(axis=0)                        # (256,)
+    lat_std  = np.maximum(latents_arr.std(axis=0), 1e-4)       # (256,) — floor avoids /0
+    import json
+    scale_path = args.out_dir / "latent_scale.json"
+    with open(scale_path, "w") as f:
+        json.dump({
+            "mean": lat_mean.tolist(),
+            "std":  lat_std.tolist(),
+            "global_mean": float(latents_arr.mean()),
+            "global_std":  float(latents_arr.std()),
+        }, f)
+
     ok_count = sum(1 for r in index_rows if r["status"] == "ok")
     print(f"\nDone: {ok_count}/{len(index_rows)} clips encoded successfully")
     print(f"  latents        : {latents_arr.shape}  → {args.out_dir / 'latents.npy'}")
     print(f"  text_embeddings: {text_embs_arr.shape}  → {args.out_dir / 'text_embeddings.npy'}")
+    print(f"  latent_scale   : {scale_path}")
     print(f"  index          : {args.out_dir / 'index.csv'}")
 
-    # Quick stats
-    lat_std = latents_arr.std(axis=0)
-    print(f"\nLatent stats: mean|mu|={np.abs(latents_arr).mean():.3f}, "
-          f"mean-dim-std={lat_std.mean():.3f}, "
+    # Quick stats (on raw latents)
+    print(f"\nLatent stats (raw): "
+          f"min={latents_arr.min():.3f}  max={latents_arr.max():.3f}  "
+          f"global_std={latents_arr.std():.3f}  "
           f"active-dims(std>0.05)={int((lat_std > 0.05).sum())}/{latents_arr.shape[1]}")
+
+    # Verify normalised range
+    lat_norm = (latents_arr - lat_mean) / lat_std
+    print(f"Latent stats (normalised): "
+          f"min={lat_norm.min():.3f}  max={lat_norm.max():.3f}  "
+          f"std={lat_norm.std():.3f}  (expect ≈1)")
 
     emb_norms = np.linalg.norm(text_embs_arr, axis=1)
     print(f"CLAP emb norms: min={emb_norms.min():.3f}  max={emb_norms.max():.3f}  "
