@@ -146,14 +146,29 @@ def load_vocoder(ckpt_path: Path, device: torch.device):
 
 
 def mel_to_wav(mel: torch.Tensor, vocoder, device: torch.device) -> np.ndarray:
-    """mel: (B, 1, n_mels, T) or (B, n_mels, T) [0,1 normalised] → waveform ndarray.
+    """mel: (B, 1, n_mels, T) or (B, n_mels, T) → waveform ndarray.
 
-    The HiFiGAN vocoder was trained on mel_norm = (log_mel_dB + 80) / 80 ∈ [0, 1].
-    Pass the normalised mel directly — do NOT de-normalise to dB first.
+    The HiFiGAN vocoder was trained on `mel_norm = (power_to_db(mel, ref=np.max) + 80) / 80`,
+    so every training-time mel had peak == 1.0 by construction (ref=np.max).
+
+    The VAE decoder however outputs mels that peak around 0.7–0.9 — never reaching 1.0
+    — putting them in a slightly out-of-distribution regime for the vocoder, which
+    responds with low-energy noise (sounds like quiet machinery hum).
+
+    Fix: apply per-clip min-max stretch to [0, 1] before vocoding. This replicates
+    the vocoder's training-time normalisation exactly (peak=1, floor=0).
     """
     # Ensure (B, n_mels, T) — remove the channel dim if present
     if mel.dim() == 4:
         mel = mel.squeeze(1)                                    # (B, 128, T)
+
+    # Per-clip min-max stretch to [0, 1] — match vocoder's training-time mel range.
+    # Compute over (n_mels, T) per batch element so each clip is independently normalised.
+    flat = mel.reshape(mel.shape[0], -1)
+    mn = flat.amin(dim=-1, keepdim=True).unsqueeze(-1)          # (B, 1, 1)
+    mx = flat.amax(dim=-1, keepdim=True).unsqueeze(-1)          # (B, 1, 1)
+    mel = (mel - mn) / (mx - mn + 1e-9)
+    mel = mel.clamp(0.0, 1.0)
 
     with torch.no_grad():
         wav = vocoder(mel.to(device))                           # (B, 1, samples)
