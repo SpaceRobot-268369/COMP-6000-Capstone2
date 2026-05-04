@@ -146,18 +146,17 @@ def load_vocoder(ckpt_path: Path, device: torch.device):
 
 
 def mel_to_wav(mel: torch.Tensor, vocoder, device: torch.device) -> np.ndarray:
-    """mel: (B, 1, n_mels, T) or (B, n_mels, T) → waveform ndarray (samples,)."""
-    from modules.ambient.dataset import MEL_MIN_DB, MEL_MAX_DB  # noqa: E402
+    """mel: (B, 1, n_mels, T) or (B, n_mels, T) [0,1 normalised] → waveform ndarray.
 
+    The HiFiGAN vocoder was trained on mel_norm = (log_mel_dB + 80) / 80 ∈ [0, 1].
+    Pass the normalised mel directly — do NOT de-normalise to dB first.
+    """
     # Ensure (B, n_mels, T) — remove the channel dim if present
     if mel.dim() == 4:
         mel = mel.squeeze(1)                                    # (B, 128, T)
 
-    # De-normalise from [0,1] → dB [−80,0]
-    mel_db = mel * (MEL_MAX_DB - MEL_MIN_DB) + MEL_MIN_DB      # (B, 128, T)
-
     with torch.no_grad():
-        wav = vocoder(mel_db.to(device))                        # (B, 1, samples)
+        wav = vocoder(mel.to(device))                           # (B, 1, samples)
     wav = wav.squeeze().cpu().numpy()                           # (samples,)
     return wav.astype(np.float32)
 
