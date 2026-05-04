@@ -28,6 +28,7 @@ class EventCandidate:
     env_score: float
     context_score: float
     diversity_score: float
+    type_score: float
 
 
 def _to_float(value, default: float = 0.0) -> float:
@@ -228,6 +229,68 @@ def _activity_level(env: dict, activity_rows: list[dict]) -> tuple[str, int, dic
     return level, target_count, model
 
 
+def _event_type(row: dict) -> tuple[str, dict]:
+    label_text = " ".join([
+        str(row.get("label", "")),
+        str(row.get("label_kind", "")),
+        str(row.get("common_name_tags", "")),
+        str(row.get("species_name_tags", "")),
+        str(row.get("other_tags", "")),
+    ]).lower()
+    duration = _to_float(row.get("event_duration_seconds"))
+
+    insect_terms = ("insect", "cicada", "cricket", "katydid", "grasshopper")
+    if any(term in label_text for term in insect_terms):
+        return "insect_like", {
+            "method": "label_duration_heuristic",
+            "signals": ["insect_label_term"],
+        }
+
+    if str(row.get("label_kind", "")).startswith("birdnet_") and row.get("label"):
+        signals = ["birdnet_label"]
+        if duration and duration <= 8.0:
+            signals.append("short_annotated_event")
+        return "bird_like", {
+            "method": "birdnet_label_heuristic",
+            "signals": signals,
+        }
+
+    return "unknown_activity", {
+        "method": "fallback_activity_type",
+        "signals": ["generic_or_score_only_annotation"],
+    }
+
+
+def _type_preference_score(env: dict, row: dict) -> float:
+    event_type, _ = _event_type(row)
+    sample_bin = str(env.get("sample_bin") or row.get("sample_bin") or "").lower()
+    temperature = _to_float(env.get("temperature_c"), _to_float(row.get("temperature_c"), 20.0))
+
+    if sample_bin in {"dawn", "morning"}:
+        preference = {
+            "bird_like": 1.0,
+            "insect_like": 0.65,
+            "unknown_activity": 0.75,
+        }
+    elif sample_bin == "night":
+        preference = {
+            "bird_like": 0.72,
+            "insect_like": 0.95,
+            "unknown_activity": 0.85,
+        }
+    else:
+        preference = {
+            "bird_like": 0.85,
+            "insect_like": 0.8,
+            "unknown_activity": 0.8,
+        }
+
+    score = preference.get(event_type, 0.75)
+    if event_type == "insect_like" and temperature >= 24.0:
+        score += 0.1
+    return _clamp(score)
+
+
 def _select_events(events: list[dict], env: dict, target_count: int, seed: Optional[int]) -> list[EventCandidate]:
     candidates: list[EventCandidate] = []
     label_counts: dict[str, int] = {}
@@ -238,16 +301,26 @@ def _select_events(events: list[dict], env: dict, target_count: int, seed: Optio
             continue
         context_score = _month_context_score(env, row)
         env_score = _env_score(env, row)
+        type_score = _type_preference_score(env, row)
         label = row.get("label") or "biological_activity"
         label_penalty = min(label_counts.get(label, 0) * 0.12, 0.36)
         diversity_score = 1.0 - label_penalty
         total = (
-            0.35 * confidence_score
-            + 0.30 * context_score
-            + 0.20 * env_score
-            + 0.15 * diversity_score
+            0.32 * confidence_score
+            + 0.27 * context_score
+            + 0.18 * env_score
+            + 0.13 * diversity_score
+            + 0.10 * type_score
         )
-        candidates.append(EventCandidate(row, total, confidence_score, env_score, context_score, diversity_score))
+        candidates.append(EventCandidate(
+            row,
+            total,
+            confidence_score,
+            env_score,
+            context_score,
+            diversity_score,
+            type_score,
+        ))
         label_counts[label] = label_counts.get(label, 0) + 1
 
     if not candidates or target_count <= 0:
@@ -275,29 +348,167 @@ def _select_events(events: list[dict], env: dict, target_count: int, seed: Optio
     return selected
 
 
-def _scheduled_start(index: int, count: int, duration_seconds: float, seed: Optional[int]) -> float:
-    rng = random.Random(None if seed is None else seed + index * 101)
+def _duration_for_event(candidate: EventCandidate) -> float:
+    return min(_to_float(candidate.row.get("event_duration_seconds"), 3.0), 12.0)
+
+
+def _minimum_spacing(count: int, duration_seconds: float) -> float:
     if count <= 1:
-        base = duration_seconds * 0.5
-    else:
-        base = duration_seconds * (index + 1) / (count + 1)
-    jitter = rng.uniform(-duration_seconds * 0.08, duration_seconds * 0.08)
-    return round(_clamp(base + jitter, 2.0, max(2.0, duration_seconds - 3.0)), 2)
+        return 0.0
+    if duration_seconds < 20:
+        return 2.5
+    return 4.0 if count <= 3 else 3.0
+
+
+def _poisson_like_starts(count: int, duration_seconds: float, seed: Optional[int]) -> list[float]:
+    if count <= 0:
+        return []
+
+    rng = random.Random(seed)
+    earliest = 2.0
+    latest = max(earliest, duration_seconds - 3.0)
+    min_spacing = _minimum_spacing(count, duration_seconds)
+
+    if count == 1:
+        start = rng.uniform(duration_seconds * 0.25, duration_seconds * 0.75)
+        return [round(_clamp(start, earliest, latest), 2)]
+
+    usable = max(latest - earliest, min_spacing * (count - 1))
+    best: list[float] = []
+    best_score = -1.0
+    for _ in range(80):
+        intervals = [rng.expovariate(1.0) for _ in range(count + 1)]
+        total = sum(intervals) or 1.0
+        cursor = earliest
+        starts = []
+        for gap in intervals[1:]:
+            cursor += (gap / total) * usable
+            starts.append(cursor)
+            if len(starts) == count:
+                break
+
+        starts.sort()
+        adjusted = []
+        for start in starts:
+            if adjusted:
+                start = max(start, adjusted[-1] + min_spacing)
+            adjusted.append(start)
+
+        overflow = adjusted[-1] - latest
+        if overflow > 0:
+            adjusted = [start - overflow for start in adjusted]
+        adjusted = [_clamp(start, earliest, latest) for start in adjusted]
+        gaps = [b - a for a, b in zip(adjusted, adjusted[1:])]
+        if gaps and min(gaps) < min_spacing - 0.05:
+            continue
+
+        irregularity = (max(gaps) - min(gaps)) if gaps else 0.0
+        edge_margin = min(adjusted[0] - earliest, latest - adjusted[-1])
+        score = irregularity + 0.15 * edge_margin
+        if score > best_score:
+            best = adjusted
+            best_score = score
+
+    if not best:
+        span = latest - earliest
+        best = [earliest + span * (index + 1) / (count + 1) for index in range(count)]
+
+    return [round(start, 2) for start in best]
+
+
+def _avoid_adjacent_label_repeats(candidates: list[EventCandidate]) -> list[EventCandidate]:
+    remaining = list(candidates)
+    ordered: list[EventCandidate] = []
+    previous_label = ""
+
+    while remaining:
+        pick_index = 0
+        for index, candidate in enumerate(remaining):
+            label = candidate.row.get("label") or "biological_activity"
+            if label != previous_label:
+                pick_index = index
+                break
+        candidate = remaining.pop(pick_index)
+        ordered.append(candidate)
+        previous_label = candidate.row.get("label") or "biological_activity"
+
+    return ordered
+
+
+def _sample_bin_gain_adjustment(sample_bin: str) -> float:
+    sample_bin = sample_bin.lower()
+    if sample_bin == "night":
+        return 1.5
+    if sample_bin == "dawn":
+        return 0.75
+    if sample_bin == "morning":
+        return 0.25
+    return -0.5
+
+
+def _context_gain(candidate: EventCandidate, env: dict, event_count: int) -> tuple[float, dict]:
+    wind_speed = _to_float(env.get("wind_speed_ms"))
+    wind_max = _to_float(env.get("wind_max_ms"), wind_speed)
+    precipitation = max(
+        _to_float(env.get("precipitation_mm")),
+        _to_float(env.get("precipitation_daily_mm")) / 12.0,
+    )
+    humidity = _to_float(env.get("humidity_pct"), 50.0)
+    sample_bin = str(env.get("sample_bin") or candidate.row.get("sample_bin") or "")
+
+    base_gain = -10.5 if candidate.confidence_score >= 0.75 else -12.5
+    confidence_adjustment = (candidate.confidence_score - 0.65) * 2.0
+    wind_adjustment = -_clamp(max(wind_speed, wind_max * 0.75) / 10.0) * 4.0
+    rain_adjustment = -_clamp(precipitation / 4.0) * 5.0
+    humidity_adjustment = 0.5 if humidity >= 70 and precipitation <= 0.5 else 0.0
+    bin_adjustment = _sample_bin_gain_adjustment(sample_bin)
+    density_adjustment = -0.5 * max(event_count - 2, 0)
+
+    gain_db = _clamp(
+        base_gain
+        + confidence_adjustment
+        + wind_adjustment
+        + rain_adjustment
+        + humidity_adjustment
+        + bin_adjustment
+        + density_adjustment,
+        -22.0,
+        -7.0,
+    )
+
+    model = {
+        "method": "context_aware_rule_mixing_hint",
+        "base_gain_db": round(base_gain, 2),
+        "confidence_adjustment_db": round(confidence_adjustment, 2),
+        "wind_adjustment_db": round(wind_adjustment, 2),
+        "rain_adjustment_db": round(rain_adjustment, 2),
+        "humidity_adjustment_db": round(humidity_adjustment, 2),
+        "sample_bin_adjustment_db": round(bin_adjustment, 2),
+        "density_adjustment_db": round(density_adjustment, 2),
+    }
+    return round(gain_db, 2), model
 
 
 def _event_metadata(candidate: EventCandidate, index: int, count: int,
-                    duration_seconds: float, seed: Optional[int]) -> dict:
+                    scheduled_start: float, env: dict) -> dict:
     row = candidate.row
+    duration = _duration_for_event(candidate)
+    gain_db, gain_model = _context_gain(candidate, env, count)
+    event_type, type_model = _event_type(row)
     return {
         "enabled": True,
         "label": row.get("label") or "biological_activity",
         "label_kind": row.get("label_kind") or "generic_activity",
+        "event_type": event_type,
         "source": row.get("source") or "BirdNET-derived annotation",
         "confidence": round(_clamp(candidate.score), 3),
         "birdnet_score": round(candidate.confidence_score, 3),
         "env_score": round(candidate.env_score, 3),
         "context_score": round(candidate.context_score, 3),
-        "gain_db": -9.0 if candidate.confidence_score >= 0.75 else -12.0,
+        "type_score": round(candidate.type_score, 3),
+        "type_model": type_model,
+        "gain_db": gain_db,
+        "gain_model": gain_model,
         "selected": {
             "event_id": row.get("event_id"),
             "clip_path": row.get("clip_path"),
@@ -312,8 +523,9 @@ def _event_metadata(candidate: EventCandidate, index: int, count: int,
             "sample_bin": row.get("sample_bin"),
         },
         "schedule": {
-            "start_seconds": _scheduled_start(index, count, duration_seconds, seed),
-            "duration_seconds": min(_to_float(row.get("event_duration_seconds"), 3.0), 12.0),
+            "start_seconds": scheduled_start,
+            "duration_seconds": duration,
+            "spacing_policy": "poisson_like_min_gap",
         },
     }
 
@@ -354,10 +566,16 @@ def prepare_event_layers(env: dict, seed: Optional[int] = None,
         }
 
     selected = _select_events(events, env, target_count, seed)
+    selected = _avoid_adjacent_label_repeats(selected)
+    starts = _poisson_like_starts(len(selected), output_duration_seconds, seed)
     event_meta = [
-        _event_metadata(candidate, index, len(selected), output_duration_seconds, seed)
+        _event_metadata(candidate, index, len(selected), starts[index], env)
         for index, candidate in enumerate(selected)
     ]
+    event_type_counts: dict[str, int] = {}
+    for event in event_meta:
+        event_type = event.get("event_type") or "unknown_activity"
+        event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
 
     status = "prepared" if event_meta else "no_matching_events"
     explanation = (
@@ -380,6 +598,11 @@ def prepare_event_layers(env: dict, seed: Optional[int] = None,
             "prepared_only": True,
             "event_count": len(event_meta),
             "avoid_species_claims": True,
+            "scheduling_policy": "poisson_like_spacing_with_minimum_gap",
+            "minimum_spacing_seconds": _minimum_spacing(len(event_meta), output_duration_seconds),
+            "gain_policy": "context_aware_environmental_attenuation",
+            "event_type_policy": "lightweight_label_and_context_control",
+            "event_type_counts": event_type_counts,
         },
         "explanation": explanation,
     }
