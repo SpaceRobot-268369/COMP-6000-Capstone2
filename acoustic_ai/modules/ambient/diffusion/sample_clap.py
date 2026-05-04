@@ -123,17 +123,17 @@ def load_vae_decoder(ckpt_path: Path, device: torch.device):
 
 def load_vocoder(ckpt_path: Path, device: torch.device):
     """Load the HiFi-GAN vocoder checkpoint."""
-    from modules.ambient.train_vocoder import HiFiGAN        # noqa: E402
+    from modules.ambient.train_vocoder import HiFiGANGenerator  # noqa: E402
     import yaml
-    from modules.ambient.preprocess import SPEC_CFG          # noqa: E402
+    from modules.ambient.preprocess import SPEC_CFG              # noqa: E402
 
     params_path = PROJECT_ROOT / "params.yaml"
     voc_cfg     = yaml.safe_load(open(params_path))["vocoder"]
 
-    generator = HiFiGAN(
-        in_channels    =voc_cfg.get("n_mels", SPEC_CFG["n_mels"]),
-        base_channels  =voc_cfg.get("base_channels", 128),
-        upsample_rates =voc_cfg.get("upsample_rates", [8, 8, 4, 2]),
+    generator = HiFiGANGenerator(
+        n_mels        =voc_cfg.get("n_mels", SPEC_CFG["n_mels"]),
+        base_channels =voc_cfg.get("base_channels", 128),
+        upsample_rates=voc_cfg.get("upsample_rates", [8, 8, 4, 2]),
     ).to(device)
 
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -146,14 +146,18 @@ def load_vocoder(ckpt_path: Path, device: torch.device):
 
 
 def mel_to_wav(mel: torch.Tensor, vocoder, device: torch.device) -> np.ndarray:
-    """mel: (1, n_mels, T) → waveform ndarray."""
+    """mel: (B, 1, n_mels, T) or (B, n_mels, T) → waveform ndarray (samples,)."""
     from modules.ambient.dataset import MEL_MIN_DB, MEL_MAX_DB  # noqa: E402
 
+    # Ensure (B, n_mels, T) — remove the channel dim if present
+    if mel.dim() == 4:
+        mel = mel.squeeze(1)                                    # (B, 128, T)
+
     # De-normalise from [0,1] → dB [−80,0]
-    mel_db = mel * (MEL_MAX_DB - MEL_MIN_DB) + MEL_MIN_DB      # (1, 128, T)
+    mel_db = mel * (MEL_MAX_DB - MEL_MIN_DB) + MEL_MIN_DB      # (B, 128, T)
 
     with torch.no_grad():
-        wav = vocoder(mel_db.to(device))                        # (1, 1, samples)
+        wav = vocoder(mel_db.to(device))                        # (B, 1, samples)
     wav = wav.squeeze().cpu().numpy()                           # (samples,)
     return wav.astype(np.float32)
 
