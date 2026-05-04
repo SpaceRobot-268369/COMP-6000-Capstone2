@@ -23,6 +23,7 @@ package-lock.json
 !.env.example
 **/.env.example
 acoustic_ai/venv/
+acoustic_ai/.venv/
 
 # Logs and caches
 *.log
@@ -68,9 +69,11 @@ resources/site_257_bowra-dry-a/site_257_all_items.json
 # Acoustic AI — model checkpoints (DVC-tracked, not git)
 acoustic_ai/checkpoints/ambient/epoch_*.pt
 acoustic_ai/checkpoints/vocoder/epoch_*.pt
-# best.pt files are DVC-tracked — pointer files (.dvc) go in git, not the weights
+# best.pt / last.pt are DVC-tracked — pointer files (.dvc) go in git, not the weights
 acoustic_ai/checkpoints/ambient/best.pt
 acoustic_ai/checkpoints/vocoder/best.pt
+acoustic_ai/checkpoints/ambient_diffusion/
+acoustic_ai/checkpoints/ambient_diffusion_clap/
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/
@@ -78,10 +81,14 @@ acoustic_ai/data/shared/spectrograms/
 acoustic_ai/data/module_b/weather_assets/
 acoustic_ai/data/module_c/event_snippets/
 acoustic_ai/data/module_c/birdnet_labels/
-# latent npy files will be DVC-tracked once dvc add is run
+acoustic_ai/data/ambient/latents/
 
 # HiFi-GAN speech-domain cache (not needed — using ecoacoustic vocoder)
 acoustic_ai/hifigan_cache/
+
+# Debug and scratch output
+debug/
+*.wav
 
 # DVC internal
 /tmp/
