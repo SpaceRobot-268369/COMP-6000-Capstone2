@@ -29,6 +29,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -180,6 +181,44 @@ def mel_to_wav(mel: torch.Tensor, vocoder, device: torch.device) -> np.ndarray:
     return wav.astype(np.float32)
 
 
+def render_mel(mel: np.ndarray, out_path: Path, title: str) -> None:
+    from modules.ambient.preprocess import SPEC_CFG  # noqa: E402
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    frames = mel.shape[-1]
+    duration = frames * SPEC_CFG["hop_length"] / SPEC_CFG["sample_rate"]
+    fig, ax = plt.subplots(figsize=(10, 3))
+    img = ax.imshow(
+        mel,
+        aspect="auto",
+        origin="lower",
+        extent=[0, duration, 0, SPEC_CFG["n_mels"]],
+        cmap="magma",
+    )
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("mel bin")
+    ax.set_title(title)
+    fig.colorbar(img, ax=ax, label="normalised mel")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+
+
+def audio_stats(wav: np.ndarray, sample_rate: int) -> dict:
+    return {
+        "sample_rate": sample_rate,
+        "duration_s": float(len(wav) / sample_rate),
+        "min": float(wav.min()),
+        "max": float(wav.max()),
+        "mean": float(wav.mean()),
+        "rms": float(np.sqrt(np.mean(np.square(wav)))),
+        "peak": float(np.max(np.abs(wav))),
+    }
+
+
 def main() -> int:
     args = parse_args()
     device = pick_device(args.device)
@@ -289,6 +328,7 @@ def main() -> int:
         out_p.parent.mkdir(parents=True, exist_ok=True)
 
         wav = mel_to_wav(mels[i : i + 1], vocoder, device)     # (samples,)
+        mel_np = mels[i].squeeze().detach().cpu().numpy().astype(np.float32)
 
         # Light peak normalisation
         peak = float(np.abs(wav).max() + 1e-9)
@@ -296,8 +336,35 @@ def main() -> int:
             wav /= peak
 
         sf.write(str(out_p), wav, sr)
+        mel_npy = out_p.with_suffix(".mel.npy")
+        mel_png = out_p.with_name(f"{out_p.stem}_mel.png")
+        meta_p = out_p.with_name(f"{out_p.stem}_metadata.json")
+        np.save(mel_npy, mel_np)
+        render_mel(mel_np, mel_png, f"CLAP diffusion mel - sample {i:02d}")
+        meta_p.write_text(
+            json.dumps(
+                {
+                    "prompt": prompt,
+                    "seed": args.seed,
+                    "cfg_scale": cfg_scale,
+                    "steps": num_steps,
+                    "checkpoint": str(args.checkpoint),
+                    "vae_checkpoint": str(args.vae_checkpoint),
+                    "vocoder_checkpoint": str(args.vocoder_checkpoint),
+                    "audio": audio_stats(wav, sr),
+                    "mel_shape": list(mel_np.shape),
+                    "artifacts": {
+                        "wav": str(out_p),
+                        "mel_npy": str(mel_npy),
+                        "mel_png": str(mel_png),
+                    },
+                },
+                indent=2,
+            )
+        )
         dur = len(wav) / sr
         print(f"  [{i+1}/{len(prompts)}] {out_p}  ({dur:.1f}s @ {sr} Hz)")
+        print(f"        mel: {mel_png}")
         print(f"        prompt: {prompt[:80]}")
 
     return 0

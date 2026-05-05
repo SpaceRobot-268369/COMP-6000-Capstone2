@@ -54,8 +54,8 @@ export async function generateSoundscape(conditions) {
 // ─── Layer A — Ambient bed (dev test) ─────────────────────────────────────────
 
 /**
- * Generate a Layer A ambient bed from env parameters.
- * @param {{diel_bin:string, season:string, hour:number, month:number, duration:number, k:number}} params
+ * Generate a Layer A ambient bed from the fixed smoke-test prompt.
+ * @param {{seed?:number}} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, gain_db:number, sample_rate:number, duration_s:number}>}
  */
 export async function generateLayerA(params) {

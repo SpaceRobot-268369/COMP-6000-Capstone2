@@ -243,6 +243,64 @@ default. Do not normalize to `0.05` RMS; that over-amplifies background recorder
 noise and can produce pulsing, machine-like samples. Use raw audio first, or only
 mild normalization with `--normalize_audio --target_rms 0.005`.
 
+Current working Layer A AudioLDM2 checkpoint:
+`acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`. This is the user-validated
+smoke model as of 2026-05-06; it works well for quiet, environmental-like
+ambient beds with only minor issues. Sample with
+`--lora_dir checkpoints/audioldm2-lora-raw-smoke`, low guidance around `2.0`,
+and prompts that explicitly exclude foreground events, music, and machinery.
+Do not use `audioldm2-lora-rms005-smoke` for quality testing.
+
+Because this smoke model was trained on a very small dataset, Layer A dev
+generation must keep the prompt and model parameters fixed. The frontend may
+only expose a non-negative integer `seed`; the Express backend should forward
+only `{ seed }`; the FastAPI AI server owns the fixed prompt, checkpoint,
+guidance, step count, audio length, RMS, and high-pass settings. Keep returning
+these values in metadata for debugging.
+
+Layer A seed semantics: the seed initializes the diffusion model's random
+starting noise. Same model + same prompt + same parameters + same seed should
+reproduce effectively the same audio on the same code path/device; changing the
+seed gives a different variation. Use non-negative integer seeds; the practical
+portable range is `0` to `2147483647`. Seed is not temperature. This AudioLDM2
+path does not expose temperature; the main generation controls are prompt,
+checkpoint, guidance scale, inference steps, audio length, and seed.
+
+Branch status: this branch is one attempted Layer A implementation. It has
+succeeded for the smoke test, but if it is merged into `main`, update all broader
+architecture, pipeline, and handoff docs so they describe AudioLDM2 LoRA as the
+main Layer A path consistently rather than as a branch-local validation attempt.
+
+Layer A AudioLDM2 smoke-test workflow:
+```bash
+cd acoustic_ai
+./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
+  --manifest_path ../resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv \
+  --output_dir checkpoints/audioldm2-lora-raw-smoke \
+  --batch_size 1 \
+  --num_epochs 5 \
+  --learning_rate 1e-5
+
+for seed in 42 43 44; do
+  ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
+    --prompt "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery" \
+    --lora_dir checkpoints/audioldm2-lora-raw-smoke \
+    --run_name spring_night_raw_smoke_seed${seed} \
+    --seed ${seed} \
+    --num_inference_steps 100 \
+    --guidance_scale 2.0 \
+    --output_target_rms 0.0015 \
+    --highpass_hz 80
+done
+```
+This generates three WAV/PNG/JSON bundles under
+`debug/layer_a/audioldm2/samples/spring_night_raw_smoke_seed{42,43,44}/`.
+`sample_audioldm2.py` and the dev frontend/backend response both render Layer A
+spectrogram PNGs through `modules.ambient.diffusion.layer_a_visualization`, using
+the same log-mel parameters and image settings. If they diverge, check that both
+services are restarted and that the compared WAVs were generated with the same
+seed/model/prompt/settings.
+
 ---
 
 ## Project File Structure

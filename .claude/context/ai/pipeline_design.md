@@ -19,7 +19,11 @@ speculative soundscape = ambient site bed
 
 **Purpose:** continuous ecoacoustic background texture (insects, low-level ambience, site tone). **Must not contain events** — bird calls, vehicles, helicopters belong in Layer C, weather in Layer B. Mixing events into the bed double-counts them and breaks layer separation.
 
-**MVP implementation:** retrieval-first over a *cleaned ambient-only segment pool*.
+**Current implementation under validation:** AudioLDM2 LoRA generation. Current working checkpoint: `acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`, with base model `cvssp/audioldm2`. User validation on 2026-05-06: works well for quiet environmental ambience with only minor issues. Keep generated beds low-volume, mostly stationary, and event-free; sample with low guidance around `2.0` and the fixed smoke-test prompt that excludes foreground events, music, and machinery. Because the smoke dataset is tiny, the dev frontend/backend path must not accept user prompts yet: expose only a non-negative integer seed, and let FastAPI own the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; same seed should reproduce effectively the same result on the same code path. Seed is not temperature, and temperature is not exposed. Do not use the deprecated `audioldm2-lora-rms005-smoke` checkpoint for quality testing. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
+
+**Branch note:** this is one attempted Layer A implementation that succeeded for the smoke test on this branch. If merged into `main`, align all architecture, pipeline, and handoff docs so AudioLDM2 LoRA is described consistently as the main Layer A path.
+
+**Previous MVP implementation:** retrieval-first over a *cleaned ambient-only segment pool*.
 
 Stage 1 — offline data cleaning (precompute), **audio-only and content-agnostic**:
 

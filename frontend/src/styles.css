@@ -3505,6 +3505,11 @@ textarea {
   opacity: 0.7;
   text-transform: uppercase;
 }
+.layer-a-field > small {
+  color: rgba(245, 247, 251, 0.58);
+  font-size: 11px;
+  line-height: 1.45;
+}
 .layer-a-input {
   padding: 8px 10px;
   background: rgba(0, 0, 0, 0.25);
@@ -3530,6 +3535,66 @@ textarea {
   color: inherit;
 }
 
+.layer-a-grid {
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  align-items: start;
+}
+
+.layer-a-grid .generation-sidebar-card {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.layer-a-grid .generation-output-card {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.layer-a-grid .generation-canvas-card {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.layer-a-grid .generation-canvas {
+  min-height: 680px;
+}
+
+.layer-a-progress {
+  padding: 12px 0 2px;
+}
+
+.layer-a-progress .gen-progress-line strong {
+  color: #d7fbff;
+}
+
+.layer-a-progress .gen-progress-line p {
+  letter-spacing: 0;
+}
+
+.layer-a-progress .gen-progress-track {
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.layer-a-progress .gen-progress-track i {
+  inset: 0 auto 0 0;
+  min-width: 4px;
+  border-radius: inherit;
+  transition: width 420ms ease;
+}
+
+.layer-a-processing {
+  width: min(560px, calc(100% - 48px));
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+}
+
+.layer-a-processing .layer-a-progress {
+  width: 100%;
+  padding: 0;
+}
+
 /* Light theme overrides */
 [data-theme="light"] .layer-a-input {
   background: #ffffff;
@@ -3547,8 +3612,32 @@ textarea {
 [data-theme="light"] .layer-a-field > span {
   color: rgba(0, 30, 50, 0.6);
 }
+[data-theme="light"] .layer-a-field > small {
+  color: rgba(13, 26, 34, 0.66);
+}
 [data-theme="light"] .layer-a-json {
   background: rgba(0, 0, 0, 0.04);
   color: #0d1a22;
   border: 1px solid rgba(0, 110, 155, 0.15);
+}
+
+[data-theme="light"] .layer-a-progress .gen-progress-line strong {
+  color: #004060;
+}
+
+@media (max-width: 980px) {
+  .layer-a-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .layer-a-grid .generation-sidebar-card,
+  .layer-a-grid .generation-output-card,
+  .layer-a-grid .generation-canvas-card {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .layer-a-grid .generation-canvas {
+    min-height: 420px;
+  }
 }

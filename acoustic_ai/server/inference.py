@@ -17,6 +17,7 @@ as the training manifest (temperature_c, humidity_pct, season, etc.).
 from __future__ import annotations
 
 import math
+import io
 from pathlib import Path
 from typing import Optional
 
@@ -33,6 +34,17 @@ DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
 TEMPLATES_PATH    = _AI_ROOT / "data" / "ambient" / "latents" / "latent_templates.npy"
 CLIPS_PATH        = _AI_ROOT / "data" / "ambient" / "latents" / "latent_clips.npy"
 VOCODER_CKPT      = _AI_ROOT / "checkpoints" / "vocoder" / "best.pt"
+AUDIOLDM2_BASE_MODEL = "cvssp/audioldm2"
+AUDIOLDM2_LAYER_A_LORA_DIR = _AI_ROOT / "checkpoints" / "audioldm2-lora-raw-smoke"
+LAYER_A_FIXED_PROMPT = (
+    "quiet spring night ambient soundscape, Bowra dry woodland, Australia, "
+    "distant environmental bed, no foreground events, no music, no machinery"
+)
+LAYER_A_OUTPUT_RMS = 0.0015
+LAYER_A_HIGHPASS_HZ = 80.0
+LAYER_A_GUIDANCE_SCALE = 2.0
+LAYER_A_INFERENCE_STEPS = 100
+LAYER_A_AUDIO_LENGTH_S = 10.0
 
 
 # ---------------------------------------------------------------------------
@@ -412,8 +424,8 @@ def _get_audioldm2_pipeline():
     
     device = _get_device()
     torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
-    pretrained_model_name = "cvssp/audioldm2"
-    lora_dir = _AI_ROOT / "checkpoints" / "audioldm2-lora"
+    pretrained_model_name = AUDIOLDM2_BASE_MODEL
+    lora_dir = AUDIOLDM2_LAYER_A_LORA_DIR
     
     print(f"[INFO] Loading AudioLDM2 pipeline from {pretrained_model_name}...")
     pipeline = AudioLDM2Pipeline.from_pretrained(
@@ -497,6 +509,128 @@ def _env_dict_to_prompt(env_dict: dict) -> str:
     ]
     
     return ", ".join(parts)
+
+
+def _audio_stats(audio: np.ndarray, sample_rate: int) -> dict:
+    audio = np.asarray(audio, dtype=np.float32)
+    return {
+        "sample_rate": sample_rate,
+        "duration_s": float(audio.shape[0] / sample_rate),
+        "min": float(audio.min()),
+        "max": float(audio.max()),
+        "mean": float(audio.mean()),
+        "rms": float(np.sqrt(np.mean(np.square(audio)))),
+        "peak": float(np.max(np.abs(audio))),
+        "clip_pct": float(np.mean(np.abs(audio) >= 0.999) * 100.0),
+    }
+
+
+def _highpass_audio(audio: np.ndarray, sample_rate: int, cutoff_hz: float) -> np.ndarray:
+    if cutoff_hz <= 0:
+        return audio.astype(np.float32, copy=False)
+
+    from scipy import signal
+
+    sos = signal.butter(4, cutoff_hz, btype="highpass", fs=sample_rate, output="sos")
+    return signal.sosfiltfilt(sos, audio).astype(np.float32)
+
+
+def _match_audio_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
+    if target_rms <= 0:
+        return audio.astype(np.float32, copy=False)
+
+    audio = audio.astype(np.float32, copy=False)
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    if not np.isfinite(rms) or rms <= 1e-8:
+        return audio
+
+    audio = audio * (target_rms / rms)
+    peak = float(np.max(np.abs(audio)))
+    if np.isfinite(peak) and peak > 0.95:
+        audio = audio * (0.95 / peak)
+    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+
+
+def _postprocess_layer_a_audio(audio: np.ndarray, sample_rate: int) -> tuple[np.ndarray, dict]:
+    before = _audio_stats(audio, sample_rate)
+    processed = _highpass_audio(audio, sample_rate, LAYER_A_HIGHPASS_HZ)
+    processed = _match_audio_rms(processed, LAYER_A_OUTPUT_RMS)
+    return processed, {
+        "highpass_hz": LAYER_A_HIGHPASS_HZ,
+        "output_target_rms": LAYER_A_OUTPUT_RMS,
+        "before": before,
+        "after": _audio_stats(processed, sample_rate),
+    }
+
+
+def _waveform_to_melspec_at_sr(waveform: np.ndarray, sample_rate: int) -> np.ndarray:
+    from modules.ambient.diffusion.layer_a_visualization import waveform_to_layer_a_mel_db
+
+    return waveform_to_layer_a_mel_db(waveform, sample_rate)
+
+
+def _wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
+    import soundfile as sf
+
+    buf = io.BytesIO()
+    sf.write(buf, audio, sample_rate, subtype="PCM_16", format="WAV")
+    buf.seek(0)
+    return buf.read()
+
+
+def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarray, bytes, dict]:
+    """Generate the dev Layer A ambient bed with a fixed smoke-test prompt.
+
+    The prompt is intentionally locked while the Layer A model is trained only on
+    the tiny smoke dataset. User-specified prompts should not be accepted here.
+    """
+    device = _get_device()
+    pipeline = _get_audioldm2_pipeline()
+
+    rng = torch.Generator(device)
+    if seed is not None:
+        rng.manual_seed(seed)
+    else:
+        rng.seed()
+
+    print(f"[INFO] Generating Layer A with fixed prompt: '{LAYER_A_FIXED_PROMPT}'")
+    raw_audio = pipeline(
+        LAYER_A_FIXED_PROMPT,
+        num_inference_steps=LAYER_A_INFERENCE_STEPS,
+        audio_length_in_s=LAYER_A_AUDIO_LENGTH_S,
+        guidance_scale=LAYER_A_GUIDANCE_SCALE,
+        generator=rng,
+    ).audios[0]
+
+    sample_rate = int(pipeline.vocoder.config.sampling_rate)
+    audio, postprocess = _postprocess_layer_a_audio(raw_audio, sample_rate)
+    mel_db = _waveform_to_melspec_at_sr(audio, sample_rate)
+    wav_bytes = _wav_bytes(audio, sample_rate)
+
+    metadata = {
+        "generator": "audioldm2_lora",
+        "model_status": "branch_smoke_test_success",
+        "prompt_locked": True,
+        "fixed_prompt": LAYER_A_FIXED_PROMPT,
+        "pretrained_model_name": AUDIOLDM2_BASE_MODEL,
+        "lora_dir": str(AUDIOLDM2_LAYER_A_LORA_DIR),
+        "checkpoint_exists": AUDIOLDM2_LAYER_A_LORA_DIR.exists(),
+        "seed": seed,
+        "num_inference_steps": LAYER_A_INFERENCE_STEPS,
+        "audio_length_in_s": LAYER_A_AUDIO_LENGTH_S,
+        "guidance_scale": LAYER_A_GUIDANCE_SCALE,
+        "spectrogram_renderer": "modules.ambient.diffusion.layer_a_visualization",
+        "spectrogram_type": "log_mel",
+        "audio": _audio_stats(audio, sample_rate),
+        "postprocess": postprocess,
+        "notes": [
+            "Layer A dev endpoint is locked to the smoke-test prompt.",
+            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
+            "Deprecated checkpoint audioldm2-lora-rms005-smoke should not be used for quality testing.",
+        ],
+    }
+
+    return mel_db, wav_bytes, metadata
 
 
 def generate_ambient_audio(

@@ -21,6 +21,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai"))
 
 from debug_paths import DEBUG_ROOT  # noqa: E402
+from modules.ambient.diffusion.layer_a_visualization import (  # noqa: E402
+    render_layer_a_mel_png_bytes,
+    waveform_to_layer_a_mel_db,
+)
 
 DEFAULT_OUTPUT_DIR = DEBUG_ROOT / "layer_a" / "audioldm2" / "samples"
 
@@ -90,34 +94,12 @@ def _resolve_output_path(args: argparse.Namespace) -> Path:
 
 
 def _render_spectrogram(audio: np.ndarray, sample_rate: int, path: Path) -> None:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    freqs, times, zxx = signal.stft(
-        audio,
-        fs=sample_rate,
-        nperseg=1024,
-        noverlap=512,
-        boundary=None,
+    mel_db = waveform_to_layer_a_mel_db(audio, sample_rate)
+    png_bytes = render_layer_a_mel_png_bytes(
+        mel_db,
+        duration_s=float(audio.shape[0] / sample_rate),
     )
-    power_db = 20 * np.log10(np.maximum(np.abs(zxx), 1e-8))
-
-    fig, ax = plt.subplots(figsize=(10, 3))
-    img = ax.imshow(
-        power_db,
-        aspect="auto",
-        origin="lower",
-        extent=[times.min() if len(times) else 0, times.max() if len(times) else 0, freqs.min(), freqs.max()],
-        cmap="magma",
-    )
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("frequency (Hz)")
-    ax.set_title("AudioLDM2 generated ambient sample")
-    fig.colorbar(img, ax=ax, label="dB")
-    fig.tight_layout()
-    fig.savefig(path, dpi=120)
-    plt.close(fig)
+    path.write_bytes(png_bytes)
 
 
 def _audio_stats(audio: np.ndarray, sample_rate: int) -> dict:
@@ -229,6 +211,8 @@ def main():
                 "audio_length_in_s": args.audio_length_in_s,
                 "guidance_scale": args.guidance_scale,
                 "seed": args.seed,
+                "spectrogram_renderer": "modules.ambient.diffusion.layer_a_visualization",
+                "spectrogram_type": "log_mel",
                 "audio": _audio_stats(audio, sample_rate),
                 "postprocess": postprocess,
                 "artifacts": {

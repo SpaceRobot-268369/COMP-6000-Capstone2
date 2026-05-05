@@ -235,10 +235,12 @@ app.post("/api/generation", requireAuth, async (req, res) => {
 
 app.post("/api/layer_a/generate", requireAuth, async (req, res) => {
   try {
+    const requestedSeed = Number(req.body?.seed);
+    const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : 42;
     const r = await fetch(`${AI_SERVER}/layer_a/generate`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify({ seed }),
     });
     const body = await r.json();
     res.status(r.status).json(body);

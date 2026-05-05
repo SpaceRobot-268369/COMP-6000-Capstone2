@@ -1,26 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { generateLayerA } from "../lib/api.js";
 
-const DIEL_BINS = ["dawn", "morning", "afternoon", "night"];
-const SEASONS   = ["spring", "summer", "autumn", "winter"];
-
-const DURATION_MIN = 5;
-const DURATION_MAX = 120;  // hard cap — 2 min keeps WAV/PNG payloads sane
-
 const DEFAULT_PARAMS = {
-  diel_bin: "dawn",
-  season:   "spring",
-  hour:     6,
-  month:    9,
-  duration: 60,
-  k:        5,
+  seed: 42,
 };
+
+const FIXED_LAYER_A_PROMPT =
+  "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery";
+
+const CURRENT_CHECKPOINT = "audioldm2-lora-raw-smoke";
 
 export default function LayerATestPage() {
   const [params,   setParams]   = useState({ ...DEFAULT_PARAMS });
   const [status,   setStatus]   = useState("idle"); // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (status === "loading") {
+      const startedAt = Date.now();
+      setProgress(6);
+      const timer = window.setInterval(() => {
+        const elapsedS = (Date.now() - startedAt) / 1000;
+        const next = Math.min(92, 6 + (1 - Math.exp(-elapsedS / 18)) * 88);
+        setProgress((current) => Math.max(current, Math.round(next)));
+      }, 500);
+      return () => window.clearInterval(timer);
+    }
+
+    if (status === "done") {
+      setProgress(100);
+      return undefined;
+    }
+
+    setProgress(0);
+    return undefined;
+  }, [status]);
 
   function update(key, value) {
     setParams((p) => ({ ...p, [key]: value }));
@@ -31,17 +47,8 @@ export default function LayerATestPage() {
     setErrorMsg("");
     setResult(null);
     try {
-      const duration = Math.max(
-        DURATION_MIN,
-        Math.min(DURATION_MAX, Number(params.duration) || DURATION_MIN),
-      );
       const data = await generateLayerA({
-        diel_bin: params.diel_bin,
-        season:   params.season,
-        hour:     Number(params.hour),
-        month:    Number(params.month),
-        duration,
-        k:        Number(params.k),
+        seed: Number(params.seed) || 42,
       });
       setResult(data);
       setStatus("done");
@@ -64,76 +71,48 @@ export default function LayerATestPage() {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
-    downloadDataUrl(url, `layer_a_explanation_${params.diel_bin}_${params.season}.json`);
+    downloadDataUrl(url, `layer_a_audioldm2_seed${params.seed}_metadata.json`);
     URL.revokeObjectURL(url);
   }
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${params.diel_bin}_${params.season}_h${params.hour}_m${params.month}`;
+  const tag       = `audioldm2_seed${params.seed || 42}`;
+  const progressText = getProgressText(progress, status);
 
   return (
     <section className="generation-page">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS</p>
-          <span>Layer A — Ambient Bed Test</span>
+          <span>Layer A — Ambient AI Test</span>
         </div>
       </header>
 
-      <div className="generation-grid">
+      <div className="generation-grid layer-a-grid">
         {/* ── Left: input parameters ── */}
         <aside className="panel generation-sidebar-card">
           <div className="generation-card-head">
-            <h2>Request Parameters</h2>
-            <p>Environment for retrieval</p>
+            <h2>Smoke Model</h2>
+            <p>Fixed AudioLDM2 Layer A run</p>
           </div>
 
           <div className="generation-sidebar-body" style={{ display: "grid", gap: 14 }}>
-            <LabeledSelect
-              label="Diel bin"
-              value={params.diel_bin}
-              options={DIEL_BINS}
-              onChange={(v) => update("diel_bin", v)}
-            />
-            <LabeledSelect
-              label="Season"
-              value={params.season}
-              options={SEASONS}
-              onChange={(v) => update("season", v)}
-            />
+            <div className="gen-info-block">
+              <p>Checkpoint</p>
+              <code>{CURRENT_CHECKPOINT}</code>
+            </div>
+            <div className="gen-info-block">
+              <p>Fixed prompt</p>
+              <code>{FIXED_LAYER_A_PROMPT}</code>
+            </div>
             <LabeledNumber
-              label="Hour (0–23)"
-              value={params.hour}
+              label="Seed"
+              value={params.seed}
               min={0}
-              max={23}
-              onChange={(v) => update("hour", v)}
-            />
-            <LabeledNumber
-              label="Month (1–12)"
-              value={params.month}
-              min={1}
-              max={12}
-              onChange={(v) => update("month", v)}
-            />
-            <LabeledNumber
-              label={`Duration (s, ${DURATION_MIN}–${DURATION_MAX})`}
-              value={params.duration}
-              min={DURATION_MIN}
-              max={DURATION_MAX}
-              step={5}
-              onChange={(v) => {
-                const n = Number(v);
-                if (Number.isNaN(n)) return update("duration", v);
-                update("duration", Math.max(DURATION_MIN, Math.min(DURATION_MAX, n)));
-              }}
-            />
-            <LabeledNumber
-              label="Top-k blend"
-              value={params.k}
-              min={1}
-              max={10}
-              onChange={(v) => update("k", v)}
+              max={2147483647}
+              hint="Seed controls the random starting noise. Use any whole number from 0 to 2,147,483,647; same seed repeats the same variation with the same model settings."
+              onChange={(v) => update("seed", v)}
             />
 
             <button
@@ -143,8 +122,12 @@ export default function LayerATestPage() {
               disabled={isLoading}
               style={{ marginTop: 4 }}
             >
-              {isLoading ? "Retrieving…" : "▶ Run Layer A"}
+              {isLoading ? "Generating..." : "Generate Layer A"}
             </button>
+
+            {(isLoading || isDone) && (
+              <ProgressBlock progress={progress} label={progressText} />
+            )}
 
             {errorMsg && (
               <p className="analysis-error" style={{ marginTop: 8 }}>
@@ -174,16 +157,18 @@ export default function LayerATestPage() {
                   opacity: 0.6,
                 }}
               >
-                <p style={{ fontSize: 13, letterSpacing: 1 }}>
-                  Set parameters and run Layer A to view outputs
+                <p style={{ fontSize: 13, letterSpacing: 0 }}>
+                  Generate the fixed Layer A smoke model to view outputs
                 </p>
               </div>
             )}
 
             {isLoading && (
               <div className="gen-computing-overlay">
-                <div className="gen-computing-ring" />
-                <p>Retrieving + blending segments…</p>
+                <div className="layer-a-processing">
+                  <div className="gen-computing-ring" />
+                  <ProgressBlock progress={progress} label={progressText} />
+                </div>
               </div>
             )}
 
@@ -198,8 +183,8 @@ export default function LayerATestPage() {
                       style={{ width: "100%" }}
                     />
                     <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                      {result.sample_rate} Hz · {result.duration_s.toFixed(1)} s · gain{" "}
-                      {result.gain_db} dB
+                      {result.sample_rate} Hz · {result.duration_s.toFixed(1)} s · seed{" "}
+                      {result.metadata?.seed ?? params.seed}
                     </p>
                   </ReviewSection>
                 )}
@@ -237,7 +222,7 @@ export default function LayerATestPage() {
         <aside className="panel generation-output-card">
           <div className="generation-card-head">
             <h2>Outputs</h2>
-            <p>Scrutinization triplet</p>
+            <p>WAV, mel-spectrogram, metadata</p>
           </div>
 
           <div className="generation-output-body">
@@ -246,28 +231,24 @@ export default function LayerATestPage() {
                 <div className="gen-file-icon">▤</div>
                 <div>
                   <span>Run tag</span>
-                  <strong>{isDone ? tag.toUpperCase() : "—"}</strong>
+                  <strong>{isDone ? tag.toUpperCase() : "-"}</strong>
                 </div>
               </div>
             </article>
 
-            {isDone && result?.metadata?.low_confidence && (
+            {isDone && result?.metadata?.prompt_locked && (
               <p className="mock-badge">
-                Low confidence — diel bin was relaxed to find enough segments
+                Fixed prompt active - user prompts disabled
               </p>
             )}
 
-            {isDone && result?.metadata?.retrieved_clips && (
+            {isDone && result?.metadata?.audio && (
               <div className="gen-info-block">
-                <p>Retrieved clips ({result.metadata.retrieved_clips.length})</p>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.6 }}>
-                  {result.metadata.retrieved_clips.map((c, i) => (
-                    <li key={c.clip_id}>
-                      <code>{c.clip_id}</code> · sim {c.cosine_similarity} · w{" "}
-                      {result.metadata.blend_weights[i]}
-                    </li>
-                  ))}
-                </ul>
+                <p>Audio stats</p>
+                <code>
+                  RMS {result.metadata.audio.rms.toFixed(4)} · peak{" "}
+                  {result.metadata.audio.peak.toFixed(4)}
+                </code>
               </div>
             )}
 
@@ -278,7 +259,7 @@ export default function LayerATestPage() {
               onClick={() =>
                 downloadDataUrl(
                   `data:audio/wav;base64,${result.audio_b64}`,
-                  `layer_a_bed_${tag}.wav`,
+                  `layer_a_${tag}.wav`,
                 )
               }
             >
@@ -292,7 +273,7 @@ export default function LayerATestPage() {
               onClick={() =>
                 downloadDataUrl(
                   `data:image/png;base64,${result.image_b64}`,
-                  `layer_a_spec_${tag}.png`,
+                  `layer_a_${tag}_spectrogram.png`,
                 )
               }
             >
@@ -314,26 +295,7 @@ export default function LayerATestPage() {
   );
 }
 
-function LabeledSelect({ label, value, options, onChange }) {
-  return (
-    <label className="layer-a-field">
-      <span>{label}</span>
-      <select
-        className="layer-a-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function LabeledNumber({ label, value, min, max, step = 1, onChange }) {
+function LabeledNumber({ label, value, min, max, step = 1, hint, onChange }) {
   return (
     <label className="layer-a-field">
       <span>{label}</span>
@@ -346,7 +308,38 @@ function LabeledNumber({ label, value, min, max, step = 1, onChange }) {
         step={step}
         onChange={(e) => onChange(e.target.value)}
       />
+      {hint && <small>{hint}</small>}
     </label>
+  );
+}
+
+function getProgressText(progress, status) {
+  if (status === "done") return "Complete";
+  if (progress < 18) return "Preparing fixed prompt";
+  if (progress < 38) return "Loading smoke LoRA";
+  if (progress < 72) return "Denoising ambient bed";
+  if (progress < 94) return "Rendering WAV and spectrogram";
+  return "Finalizing";
+}
+
+function ProgressBlock({ progress, label }) {
+  return (
+    <div className="gen-progress-block layer-a-progress" aria-live="polite">
+      <div className="gen-progress-line">
+        <strong>{Math.round(progress)}%</strong>
+        <p>{label}</p>
+      </div>
+      <div
+        className="gen-progress-track"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={Math.round(progress)}
+        aria-label="Layer A generation progress"
+      >
+        <i style={{ width: `${Math.max(4, Math.min(100, progress))}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -357,7 +350,7 @@ function ReviewSection({ title, children }) {
         style={{
           margin: "0 0 8px",
           fontSize: 12,
-          letterSpacing: 1.2,
+          letterSpacing: 0,
           textTransform: "uppercase",
           opacity: 0.75,
         }}
@@ -368,4 +361,3 @@ function ReviewSection({ title, children }) {
     </section>
   );
 }
-
