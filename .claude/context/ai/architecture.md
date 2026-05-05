@@ -128,7 +128,9 @@ The server must run natively (not in Docker) to use the Apple GPU (MPS):
 
 ```bash
 cd acoustic_ai
-uvicorn server:app --reload --port 8000
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m uvicorn server.server:app --reload --port 8000
 ```
 
 Backend connects to `http://localhost:8000` (or `http://host.docker.internal:8000` from Docker).

@@ -5,9 +5,17 @@
 Config: `services/dev/docker-compose.yml`
 Env: `services/dev/.env`
 
-Start all:
+Start PostgreSQL, backend, and frontend:
 ```bash
 docker compose -f services/dev/docker-compose.yml up
+```
+
+Start the AI server separately and natively so it can use local GPU/MPS:
+```bash
+cd acoustic_ai
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m uvicorn server.server:app --reload --port 8000
 ```
 
 | Service | Source | Port | Purpose | Status |
@@ -15,7 +23,7 @@ docker compose -f services/dev/docker-compose.yml up
 | `frontend` | `frontend/` (Vite + React) | 5173 | UI — Analysis, Generation, Transformation pages | Scaffold done |
 | `backend` | `backend/` (Express.js) | 4000 | REST API — auth + future AI endpoints | Auth done |
 | `postgres` | postgres:16-alpine | 5432 | Primary database (users, metadata, experiments) | Running |
-| `acoustic_ai` | python:3.11-slim | — | Python AI container, workspace at `/workspace` | Placeholder only |
+| `acoustic_ai` | native Python (`acoustic_ai/`) | 8000 | FastAPI AI inference server for analysis, generation, and Layer A | Run separately |
 
 ---
 

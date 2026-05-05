@@ -57,7 +57,7 @@ services:
   # acoustic_ai and acoustic_ai_server are intentionally removed.
   # The AI server must run natively on macOS to access the Apple GPU (MPS).
   # Start it with:
-  #   cd acoustic_ai && uvicorn server:app --reload --port 8000
+  #   cd acoustic_ai && source .venv/bin/activate && python -m uvicorn server.server:app --reload --port 8000
 
 volumes:
   backend_node_modules:
