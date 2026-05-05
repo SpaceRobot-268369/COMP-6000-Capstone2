@@ -8,6 +8,8 @@ It does not train a species classifier or generate species calls from scratch.
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -489,12 +491,101 @@ def _context_gain(candidate: EventCandidate, env: dict, event_count: int) -> tup
     return round(gain_db, 2), model
 
 
+def _stable_event_variation_seed(candidate: EventCandidate, env: dict, seed: Optional[int],
+                                 scheduled_start: float, event_type: str) -> int:
+    row = candidate.row
+    payload = {
+        "seed": seed,
+        "event_id": row.get("event_id"),
+        "clip_path": row.get("clip_path"),
+        "recording_id": row.get("recording_id"),
+        "clip_index": row.get("clip_index"),
+        "scheduled_start": round(scheduled_start, 2),
+        "event_type": event_type,
+        "env": {
+            key: env.get(key)
+            for key in (
+                "month",
+                "month_range",
+                "sample_bin",
+                "hour_local",
+                "temperature_c",
+                "humidity_pct",
+                "wind_speed_ms",
+                "precipitation_mm",
+                "days_since_rain",
+            )
+        },
+    }
+    raw = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    return int(hashlib.sha256(raw).hexdigest()[:12], 16)
+
+
+def _event_transform_plan(candidate: EventCandidate, env: dict, seed: Optional[int],
+                          scheduled_start: float, event_type: str,
+                          duration: float) -> dict:
+    row = candidate.row
+    variation_seed = _stable_event_variation_seed(candidate, env, seed, scheduled_start, event_type)
+    rng = random.Random(variation_seed)
+
+    source_start = _to_float(row.get("event_start_in_clip_seconds"))
+    source_end = _to_float(row.get("event_end_in_clip_seconds"), source_start + duration)
+    source_duration = max(source_end - source_start, duration, 0.5)
+    trim_room = max(0.0, min(0.4, source_duration * 0.08))
+    source_offset = source_start + rng.uniform(0.0, trim_room)
+
+    wind_speed = _to_float(env.get("wind_speed_ms"))
+    precipitation = max(
+        _to_float(env.get("precipitation_mm")),
+        _to_float(env.get("precipitation_daily_mm")) / 12.0,
+    )
+    weather_pressure = _clamp(wind_speed / 10.0 + precipitation / 8.0)
+
+    if event_type == "bird_like":
+        pitch_span = 0.25
+        stretch_lo, stretch_hi = 0.985, 1.015
+        highpass_base = (900, 1400)
+        lowpass_base = (7200, 9800)
+    elif event_type == "insect_like":
+        pitch_span = 0.15
+        stretch_lo, stretch_hi = 0.98, 1.02
+        highpass_base = (1800, 3200)
+        lowpass_base = (8500, 11000)
+    else:
+        pitch_span = 0.2
+        stretch_lo, stretch_hi = 0.98, 1.02
+        highpass_base = (600, 1400)
+        lowpass_base = (6500, 10000)
+
+    target_duration = _clamp(duration * rng.uniform(0.96, 1.04), 0.5, 12.0)
+    gain_variation = rng.uniform(-1.0, 1.0) - 0.6 * weather_pressure
+    pan = rng.uniform(-0.18, 0.18)
+
+    return {
+        "source_offset_sec": round(source_offset, 2),
+        "target_duration_sec": round(target_duration, 2),
+        "gain_variation_db": round(_clamp(gain_variation, -2.0, 1.5), 2),
+        "time_stretch": round(rng.uniform(stretch_lo, stretch_hi), 4),
+        "pitch_shift_semitones": round(rng.uniform(-pitch_span, pitch_span), 3),
+        "highpass_hz": int(round(rng.uniform(*highpass_base))),
+        "lowpass_hz": int(round(rng.uniform(*lowpass_base))),
+        "fade_in_sec": round(rng.uniform(0.04, 0.18), 3),
+        "fade_out_sec": round(rng.uniform(0.08, 0.28), 3),
+        "pan": round(pan, 3),
+        "variation_seed": variation_seed,
+        "planning_note": (
+            "Subtle seed-controlled transform hints only; source event audio is not generated or processed here."
+        ),
+    }
+
+
 def _event_metadata(candidate: EventCandidate, index: int, count: int,
-                    scheduled_start: float, env: dict) -> dict:
+                    scheduled_start: float, env: dict, seed: Optional[int]) -> dict:
     row = candidate.row
     duration = _duration_for_event(candidate)
     gain_db, gain_model = _context_gain(candidate, env, count)
     event_type, type_model = _event_type(row)
+    transform = _event_transform_plan(candidate, env, seed, scheduled_start, event_type, duration)
     return {
         "enabled": True,
         "label": row.get("label") or "biological_activity",
@@ -509,6 +600,7 @@ def _event_metadata(candidate: EventCandidate, index: int, count: int,
         "type_model": type_model,
         "gain_db": gain_db,
         "gain_model": gain_model,
+        "transform": transform,
         "selected": {
             "event_id": row.get("event_id"),
             "clip_path": row.get("clip_path"),
@@ -569,7 +661,7 @@ def prepare_event_layers(env: dict, seed: Optional[int] = None,
     selected = _avoid_adjacent_label_repeats(selected)
     starts = _poisson_like_starts(len(selected), output_duration_seconds, seed)
     event_meta = [
-        _event_metadata(candidate, index, len(selected), starts[index], env)
+        _event_metadata(candidate, index, len(selected), starts[index], env, seed)
         for index, candidate in enumerate(selected)
     ]
     event_type_counts: dict[str, int] = {}

@@ -8,6 +8,8 @@ selects suitable wind and rain layer candidates for later mixing.
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import math
 import random
 from dataclasses import dataclass
@@ -263,18 +265,111 @@ def _gain_for(kind: str, intensity: str, strength: float) -> float:
     return round(lo + (hi - lo) * _clamp(strength), 2)
 
 
+def _stable_transform_seed(kind: str, env: dict, candidate: WeatherCandidate,
+                           seed: Optional[int]) -> int:
+    seed_payload = {
+        "kind": kind,
+        "seed": seed,
+        "clip_path": str(candidate.path.relative_to(PROJECT_ROOT)),
+        "recording_id": candidate.row.get("recording_id"),
+        "clip_index": candidate.row.get("clip_index"),
+        "env": {
+            key: env.get(key)
+            for key in (
+                "wind_speed_ms",
+                "wind_direction_deg",
+                "wind_max_ms",
+                "precipitation_mm",
+                "precipitation_daily_mm",
+                "days_since_rain",
+                "humidity_pct",
+                "month",
+                "month_range",
+                "sample_bin",
+            )
+        },
+    }
+    raw = json.dumps(seed_payload, sort_keys=True, default=str).encode("utf-8")
+    return int(hashlib.sha256(raw).hexdigest()[:12], 16)
+
+
+def _transform_plan(kind: str, candidate: Optional[WeatherCandidate],
+                    target_intensity: str, target_strength: float, env: dict,
+                    seed: Optional[int], target_duration_sec: float = 30.0) -> Optional[dict]:
+    if candidate is None or target_intensity == "none":
+        return None
+
+    variation_seed = _stable_transform_seed(kind, env, candidate, seed)
+    rng = random.Random(variation_seed)
+    row = candidate.row
+    clip_duration = max(_to_float(row.get("clip_duration_seconds"), 300.0), 0.0)
+    safe_duration = max(target_duration_sec, 1.0)
+    max_offset = max(0.0, clip_duration - safe_duration)
+    start_offset = rng.uniform(0.0, max_offset) if max_offset > 0 else 0.0
+    loop_required = clip_duration < safe_duration
+
+    strength = _clamp(target_strength)
+    if kind == "wind":
+        gain_jitter = 0.8 + 1.8 * strength
+        time_stretch = rng.uniform(0.985 - 0.015 * strength, 1.015 + 0.015 * strength)
+        highpass_hz = round(rng.uniform(70, 130) - 35 * strength)
+        lowpass_hz = round(rng.uniform(5200, 8200) - 1200 * strength)
+        density_scale = round(0.85 + 0.30 * strength + rng.uniform(-0.04, 0.04), 3)
+        fade_in = rng.uniform(1.5, 3.5)
+        fade_out = rng.uniform(2.0, 4.5)
+    else:
+        gain_jitter = 0.7 + 1.5 * strength
+        time_stretch = rng.uniform(0.99 - 0.01 * strength, 1.01 + 0.01 * strength)
+        highpass_hz = round(rng.uniform(260, 520) + 80 * strength)
+        lowpass_hz = round(rng.uniform(8500, 11200))
+        density_scale = round(0.75 + 0.55 * strength + rng.uniform(-0.05, 0.05), 3)
+        fade_in = rng.uniform(0.8, 2.0)
+        fade_out = rng.uniform(1.0, 2.5)
+
+    gain_variation = rng.uniform(-gain_jitter, gain_jitter)
+
+    return {
+        "start_offset_sec": round(start_offset, 2),
+        "target_duration_sec": round(safe_duration, 2),
+        "loop_required": loop_required,
+        "gain_variation_db": round(gain_variation, 2),
+        "time_stretch": round(_clamp(time_stretch, 0.96, 1.04), 4),
+        "highpass_hz": max(20, int(highpass_hz)),
+        "lowpass_hz": max(1000, int(lowpass_hz)),
+        "fade_in_sec": round(fade_in, 2),
+        "fade_out_sec": round(fade_out, 2),
+        "density_scale": round(_clamp(density_scale, 0.5, 1.5), 3),
+        "variation_seed": variation_seed,
+        "planning_note": (
+            "Subtle seed-controlled transform hints only; audio processing is deferred to Layer D."
+        ),
+    }
+
+
 def _layer_metadata(kind: str, candidate: Optional[WeatherCandidate], target_intensity: str,
-                    target_strength: float) -> dict:
+                    target_strength: float, env: Optional[dict] = None,
+                    seed: Optional[int] = None,
+                    target_duration_sec: float = 30.0) -> dict:
     if candidate is None:
         return {
             "enabled": False,
             "target_intensity": target_intensity,
             "selected": None,
+            "transform": None,
             "confidence": 0.0,
             "gain_db": -60.0,
         }
 
     row = candidate.row
+    transform = _transform_plan(
+        kind,
+        candidate,
+        target_intensity,
+        target_strength,
+        env or {},
+        seed,
+        target_duration_sec,
+    )
     return {
         "enabled": True,
         "target_intensity": target_intensity,
@@ -284,6 +379,7 @@ def _layer_metadata(kind: str, candidate: Optional[WeatherCandidate], target_int
         "env_score": round(candidate.env_score, 3),
         "context_score": round(candidate.context_score, 3),
         "gain_db": _gain_for(kind, target_intensity, target_strength),
+        "transform": transform,
         "selected": {
             "clip_path": str(candidate.path.relative_to(PROJECT_ROOT)),
             "recording_id": row.get("recording_id"),
@@ -302,7 +398,8 @@ def _layer_metadata(kind: str, candidate: Optional[WeatherCandidate], target_int
 
 
 def prepare_weather_layers(env: dict, seed: Optional[int] = None,
-                           manifest_path: Path = DEFAULT_ASSET_MANIFEST) -> dict:
+                           manifest_path: Path = DEFAULT_ASSET_MANIFEST,
+                           target_duration_sec: float = 30.0) -> dict:
     """Return Layer B weather layer plan and retrieval metadata."""
     assets = load_weather_assets(manifest_path)
     wind_intensity, wind_strength = _target_wind_intensity(env)
@@ -325,8 +422,16 @@ def prepare_weather_layers(env: dict, seed: Optional[int] = None,
 
     wind = _select_layer("wind", env, wind_intensity, wind_strength, assets, seed)
     rain = _select_layer("rain", env, rain_intensity, rain_strength, assets, None if seed is None else seed + 17)
-    wind_meta = _layer_metadata("wind", wind, wind_intensity, wind_strength)
-    rain_meta = _layer_metadata("rain", rain, rain_intensity, rain_strength)
+    wind_meta = _layer_metadata("wind", wind, wind_intensity, wind_strength, env, seed, target_duration_sec)
+    rain_meta = _layer_metadata(
+        "rain",
+        rain,
+        rain_intensity,
+        rain_strength,
+        env,
+        None if seed is None else seed + 17,
+        target_duration_sec,
+    )
     enabled = [name for name, meta in (("wind", wind_meta), ("rain", rain_meta)) if meta["enabled"]]
 
     if not enabled and wind_intensity == "none" and rain_intensity == "none":
@@ -352,8 +457,10 @@ def prepare_weather_layers(env: dict, seed: Optional[int] = None,
         "layers": {"wind": wind_meta, "rain": rain_meta},
         "mix_hints": {
             "prepared_only": True,
+            "transform_planning_only": True,
             "wind_gain_db": wind_meta["gain_db"],
             "rain_gain_db": rain_meta["gain_db"],
+            "target_duration_sec": round(max(target_duration_sec, 1.0), 2),
         },
         "explanation": explanation,
     }
