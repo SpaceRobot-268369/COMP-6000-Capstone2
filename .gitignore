@@ -74,6 +74,7 @@ acoustic_ai/checkpoints/ambient/best.pt
 acoustic_ai/checkpoints/vocoder/best.pt
 acoustic_ai/checkpoints/ambient_diffusion/
 acoustic_ai/checkpoints/ambient_diffusion_clap/
+acoustic_ai/checkpoints/audioldm2-lora*/
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/
@@ -89,6 +90,7 @@ acoustic_ai/hifigan_cache/
 # Debug and scratch output
 debug/
 *.wav
+acoustic_ai/=*
 
 # DVC internal
 /tmp/

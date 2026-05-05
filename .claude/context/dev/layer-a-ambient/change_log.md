@@ -217,8 +217,8 @@ Fallback: if hard filter returns < 5,
   A2O annotated event in the ~22 annotated recordings.
 - BirdNET fire-rate audit over retained segments — used to tune the MAD
   threshold if too lenient.
-- Per-request scrutinization triplet (`debug/layer_a_bed.wav`,
-  `debug/layer_a_spec.png`, JSON) per `layer_verification_formats.md`.
+- Per-request scrutinization triplet (`debug/layer_a/retrieval/layer_a_bed.wav`,
+  `debug/layer_a/retrieval/layer_a_spec.png`, JSON) per `layer_verification_formats.md`.
 - Behavioural tests: dawn/winter vs afternoon/summer should retrieve
   disjoint sets and sound different. Same request 5× should be
   deterministic.

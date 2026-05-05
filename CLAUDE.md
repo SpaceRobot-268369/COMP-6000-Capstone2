@@ -212,9 +212,36 @@ VITE_API_URL=http://localhost:4000 npm run dev
 **AI server** (required for GPU access):
 ```bash
 cd acoustic_ai
-pip install -r requirements.txt
-uvicorn server.server:app --reload --port 8000
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m uvicorn server.server:app --reload --port 8000
 ```
+
+**AI training / inference Python environment:**
+Always use the project virtual environment at `acoustic_ai/.venv`. Do not use
+Homebrew/global `python3`, `pip`, `accelerate`, or `uvicorn` for AI commands;
+that can load incompatible torch/torchaudio builds.
+
+From project root:
+```bash
+cd acoustic_ai
+source .venv/bin/activate
+which python      # should print .../acoustic_ai/.venv/bin/python
+which accelerate  # should print .../acoustic_ai/.venv/bin/accelerate
+```
+
+Equivalent no-activation form:
+```bash
+cd acoustic_ai
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py --help
+./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py --help
+```
+
+For AudioLDM2 Layer A smoke tests, keep the Bowra field recordings quiet by
+default. Do not normalize to `0.05` RMS; that over-amplifies background recorder
+noise and can produce pulsing, machine-like samples. Use raw audio first, or only
+mild normalization with `--normalize_audio --target_rms 0.005`.
 
 ---
 
@@ -542,7 +569,9 @@ chmod +x .git/hooks/post-merge
 
 ### Python (AI Module)
 
-- Python 3.10+
+- Python 3.11 via `acoustic_ai/.venv`
+- Run AI commands with `source acoustic_ai/.venv/bin/activate` or explicit `acoustic_ai/.venv/bin/...`
+- Do not use system/Homebrew `python3`, `pip`, `accelerate`, or `uvicorn` for AI training/inference
 - Format with `black`, lint with `ruff`
 - All scripts in `script/` must be runnable standalone with `python3 script/name.py --args`
 - Precompute scripts in `acoustic_ai/precompute/` are one-off — document inputs/outputs at the top of each file
@@ -595,8 +624,9 @@ docker compose -f services/dev/docker-compose.yml up
 **Start AI server natively** (required for Apple Silicon MPS / CUDA):
 ```bash
 cd acoustic_ai
-pip install -r requirements.txt
-uvicorn server:app --reload --port 8000
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m uvicorn server.server:app --reload --port 8000
 ```
 
 ---

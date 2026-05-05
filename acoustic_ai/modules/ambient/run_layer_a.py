@@ -8,11 +8,12 @@ Usage (from project root):
     --diel-bin dawn --season spring --hour 6 --month 3 --duration 120
 
   python3 acoustic_ai/modules/ambient/run_layer_a.py \\
-    --diel-bin afternoon --season summer --hour 14 --month 1 --out-dir debug/test
+    --diel-bin afternoon --season summer --hour 14 --month 1 --out-dir debug/layer_a/retrieval/test
 """
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -25,9 +26,13 @@ from retrieval import AmbientRetriever, LayerResult
 from preprocess import SPEC_CFG, waveform_to_melspec
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai"))
+
+from debug_paths import DEBUG_ROOT  # noqa: E402
+
 DEFAULT_INDEX = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_index.csv"
 DEFAULT_SEGMENTS = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_segments"
-DEFAULT_OUT = PROJECT_ROOT / "debug" / "layer_a"
+DEFAULT_OUT = DEBUG_ROOT / "layer_a" / "retrieval"
 
 
 def parse_args() -> argparse.Namespace:

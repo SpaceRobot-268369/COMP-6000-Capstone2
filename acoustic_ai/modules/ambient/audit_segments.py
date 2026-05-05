@@ -1,7 +1,7 @@
 """Audit the cleaned ambient segment pool.
 
 Pulls a stratified random sample from `data/ambient/ambient_index.csv`,
-copies the WAV files into `debug/ambient_audit/` and renders one mel
+copies the WAV files into `debug/layer_a/ambient_audit/` and renders one mel
 spectrogram per segment. Use this to listen + look before trusting the
 pool downstream.
 
@@ -33,12 +33,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from debug_paths import DEBUG_ROOT  # noqa: E402
 from modules.ambient.preprocess import SPEC_CFG, load_audio, waveform_to_melspec  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DEFAULT_INDEX = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_index.csv"
 DEFAULT_SEGMENTS = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_segments"
-DEFAULT_OUT = PROJECT_ROOT / "debug" / "ambient_audit"
+DEFAULT_OUT = DEBUG_ROOT / "layer_a" / "ambient_audit"
 
 
 def parse_args() -> argparse.Namespace:

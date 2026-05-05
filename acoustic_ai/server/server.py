@@ -30,8 +30,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.inference import (
-    encode_clip, generate_spectrogram, estimate_env_conditions,
-    mel_db_to_wav, mel_db_to_wav_hifigan, mel_db_to_wav_ecoacoustic,
+    encode_clip, generate_ambient_audio, estimate_env_conditions,
     DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
 )
 
@@ -189,37 +188,12 @@ def generation(body: EnvFeatures):
     env_dict = body.model_dump(exclude={"noise_std", "seed"})
 
     try:
-        mel_db = generate_spectrogram(env_dict, noise_std=body.noise_std, seed=body.seed)
+        mel_db, wav_bytes = generate_ambient_audio(env_dict, noise_std=body.noise_std, seed=body.seed)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}")
 
     png_b64 = _mel_to_png_b64(mel_db)
 
-    # Vocoder priority:
-    #   1. Ecoacoustic HiFi-GAN (fine-tuned on site 257, 128-bin 22kHz) — best quality
-    #   2. Speech HiFi-GAN (SpeechT5, 80-bin 16kHz + interp)             — Stage 2 fallback
-    #   3. Griffin-Lim (no neural model required)                          — last resort
-    if VOCODER_CKPT.exists():
-        try:
-            wav_bytes = mel_db_to_wav_ecoacoustic(mel_db)
-            print("[INFO] Ecoacoustic vocoder succeeded.")
-        except Exception as exc:
-            print(f"[WARN] Ecoacoustic vocoder failed ({exc}), trying speech HiFi-GAN.")
-            wav_bytes = None
-    else:
-        wav_bytes = None
-
-    if wav_bytes is None:
-        try:
-            wav_bytes = mel_db_to_wav_hifigan(mel_db)
-            print("[INFO] Speech HiFi-GAN vocoding succeeded.")
-        except Exception as exc:
-            print(f"[WARN] Speech HiFi-GAN failed ({exc}), falling back to Griffin-Lim.")
-            try:
-                wav_bytes = mel_db_to_wav(mel_db)
-            except Exception as exc2:
-                wav_bytes = b""
-                print(f"[WARN] Griffin-Lim also failed: {exc2}")
     audio_b64 = base64.b64encode(wav_bytes).decode("utf-8") if wav_bytes else ""
 
     return {

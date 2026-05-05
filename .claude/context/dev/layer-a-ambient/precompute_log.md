@@ -144,7 +144,7 @@ minimum. This is the densest possible diel bin, and the gate handles it well.
 
 ## Next Steps
 
-1. **Audit:** Listen to 30 stratified samples from `debug/ambient_audit/`.
+1. **Audit:** Listen to 30 stratified samples from `debug/layer_a/ambient_audit/`.
    Pass criterion: ≥27/30 sound like pure ambience (no identifiable events).
 
 2. **If audit passes:** Track in DVC, commit, proceed to Step 5 (write retrieval).

@@ -14,13 +14,13 @@ Full pipeline:
 Usage:
     python3 acoustic_ai/modules/ambient/diffusion/sample_clap.py \\
         --prompt "spring night, ambient soundscape, Bowra dry woodland, Australia, cool 15C" \\
-        --out outputs/generated_spring_night.wav
+        --out debug/layer_a/clap_diffusion/samples/generated_spring_night.wav
 
     # Multiple prompts in one pass:
     python3 acoustic_ai/modules/ambient/diffusion/sample_clap.py \\
         --prompt "spring night, ambient soundscape, Bowra dry woodland, Australia, cool 15C" \\
                  "spring night, ambient soundscape, Bowra dry woodland, Australia, warm 20C" \\
-        --out outputs/sample_a.wav outputs/sample_b.wav
+        --out debug/layer_a/clap_diffusion/samples/sample_a.wav debug/layer_a/clap_diffusion/samples/sample_b.wav
 
     # Dry-run — just prints shapes, does not write files:
     python3 acoustic_ai/modules/ambient/diffusion/sample_clap.py --prompt "..." --dry-run
@@ -40,6 +40,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai"))
 sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai" / "modules" / "ambient"))
 
+from debug_paths import DEBUG_ROOT                                      # noqa: E402
 from modules.ambient.diffusion.clap_encoder import ClapTextEncoder     # noqa: E402
 from modules.ambient.diffusion.model import LatentDenoiser              # noqa: E402
 from modules.ambient.diffusion.schedule import NoiseSchedule, ddim_sample  # noqa: E402
@@ -50,6 +51,7 @@ DEFAULT_CLAP_CKPT = (
 )
 DEFAULT_VAE_CKPT = PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "ambient" / "best.pt"
 DEFAULT_VOC_CKPT = PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "vocoder" / "best.pt"
+DEFAULT_SAMPLE_DIR = DEBUG_ROOT / "layer_a" / "clap_diffusion" / "samples"
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,6 +60,8 @@ def parse_args() -> argparse.Namespace:
                    help="One or more text prompts.")
     p.add_argument("--out",      nargs="+", required=False, default=None,
                    help="Output WAV path(s). Must match number of prompts if given.")
+    p.add_argument("--out-dir", type=Path, default=DEFAULT_SAMPLE_DIR,
+                   help="Directory for default generated WAV files.")
     p.add_argument("--checkpoint",     type=Path, default=DEFAULT_CLAP_CKPT)
     p.add_argument("--vae-checkpoint", type=Path, default=DEFAULT_VAE_CKPT)
     p.add_argument("--vocoder-checkpoint", type=Path, default=DEFAULT_VOC_CKPT)
@@ -186,7 +190,7 @@ def main() -> int:
     # Validate output paths
     if not args.dry_run:
         if args.out is None:
-            args.out = [f"generated_{i:02d}.wav" for i in range(len(prompts))]
+            args.out = [str(args.out_dir / f"generated_{i:02d}.wav") for i in range(len(prompts))]
         if len(args.out) != len(prompts):
             print(f"[error] --out count ({len(args.out)}) != --prompt count ({len(prompts)})")
             return 1

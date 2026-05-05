@@ -18,8 +18,8 @@ Two distinct concerns:
 ```json
 {
   "layer": "ambient",
-  "audio_path": "debug/layer_a_bed.wav",
-  "spectrogram_path": "debug/layer_a_spec.png",
+  "audio_path": "debug/layer_a/retrieval/layer_a_bed.wav",
+  "spectrogram_path": "debug/layer_a/retrieval/layer_a_spec.png",
   "retrieved_clips": [
     {
       "clip_id": "1234567_012",
@@ -45,8 +45,8 @@ Two distinct concerns:
 ```json
 {
   "layer": "weather",
-  "audio_path": "debug/layer_b_weather.wav",
-  "spectrogram_path": "debug/layer_b_spec.png",
+  "audio_path": "debug/layer_b/weather/layer_b_weather.wav",
+  "spectrogram_path": "debug/layer_b/weather/layer_b_spec.png",
   "wind": {
     "intensity_label": "light",
     "asset_used": "wind/light/clip_003.wav",
@@ -74,8 +74,8 @@ Two distinct concerns:
 ```json
 {
   "layer": "events",
-  "audio_path": "debug/layer_c_events.wav",
-  "timeline_path": "debug/layer_c_timeline.png",
+  "audio_path": "debug/layer_c/events/layer_c_events.wav",
+  "timeline_path": "debug/layer_c/events/layer_c_timeline.png",
   "events": [
     {
       "label": "Pied Butcherbird",
@@ -160,5 +160,5 @@ class LayerBundle:
 ## Design Notes
 
 - **Module D is a deterministic function.** It never re-runs inference — it only mixes. This hard separation means bugs in D cannot taint per-module debugging.
-- **Scrutinization bundles write to `debug/`.** They are never loaded at runtime; they exist only for inspection during development and verification.
+- **Scrutinization bundles write to project-root `debug/`.** They are never loaded at runtime; they exist only for inspection during development and verification.
 - **`metadata` in each `LayerResult` maps directly to the explanation JSON fields** defined in `pipeline_design.md` (`ambient_source_clips`, `weather_layers`, `event_layers`, etc.). D assembles the final explanation by merging all three `metadata` dicts.
