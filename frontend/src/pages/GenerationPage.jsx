@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AudioSpectrogramPreview from "../components/AudioSpectrogramPreview.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
 import EnvControls, { DEFAULT_CONDITIONS, monthLabel } from "../components/EnvControls.jsx";
 import { generateSoundscape } from "../lib/api.js";
@@ -33,10 +34,13 @@ export default function GenerationPage() {
 
   const isGenerating = status === "generating";
   const isDone       = status === "done";
-  const audioMime    = result?.audio_mime || "audio/wav";
-  const audioExt     = result?.audio_ext || "wav";
-  const audioSrc     = result?.audio_b64 ? `data:${audioMime};base64,${result.audio_b64}` : null;
+  const audioB64     = result?.final_audio_b64 || result?.audio_b64;
+  const audioMime    = result?.final_audio_mime || result?.audio_mime || "audio/wav";
+  const audioExt     = result?.final_audio_ext || result?.audio_ext || "wav";
+  const audioSrc     = audioB64 ? `data:${audioMime};base64,${audioB64}` : null;
+  const spectrogramB64 = result?.final_image_b64 || result?.image_b64 || result?.spectrogram?.image_b64;
   const selectedClip = result?.selected?.clip_path;
+  const selectedClipName = selectedClip ? selectedClip.split("/").pop() : "";
   const isLayerA     = result?.mode === "layer_a_ambient_bed";
   const conditionMonth = monthLabel(conditions.month);
   const selectedMonth  = result?.selected?.month ? monthLabel(result.selected.month) : conditionMonth;
@@ -47,6 +51,7 @@ export default function GenerationPage() {
     : [];
   const events = result?.events;
   const activeEvents = events?.events || [];
+  const mixer = result?.mixer;
 
   return (
     <section className="generation-page">
@@ -86,12 +91,18 @@ export default function GenerationPage() {
         {/* ── Centre: canvas / status ── */}
         <main className="panel generation-canvas-card">
           <div className="generation-canvas">
-            {isDone && result?.image_b64 ? (
+            {isDone && spectrogramB64 ? (
               <img
-                src={`data:image/png;base64,${result.image_b64}`}
-                alt="Generated mel-spectrogram"
+                src={`data:image/png;base64,${spectrogramB64}`}
+                alt="Final mixed audio mel spectrogram"
                 className="gen-spectrogram-img"
               />
+            ) : isDone && audioSrc ? (
+              <AudioSpectrogramPreview src={audioSrc} />
+            ) : isDone ? (
+              <div className="gen-truthful-empty">
+                Final mixed audio spectrogram unavailable.
+              </div>
             ) : (
               <>
                 <div className="gen-wave gen-wave-back" />
@@ -169,8 +180,8 @@ export default function GenerationPage() {
             )}
 
             {isDone && selectedClip && (
-              <p className="mock-badge">
-                Layer A selected: {selectedClip.split("/").slice(-2).join("/")}
+              <p className="mock-badge gen-selected-clip" title={selectedClip}>
+                Layer A selected: {selectedClipName}
               </p>
             )}
 
@@ -215,6 +226,23 @@ export default function GenerationPage() {
               </div>
             )}
 
+            {isDone && mixer && (
+              <div className="metrics-proxy-note">
+                <strong>Layer D mixer: {mixer.included_layers?.length ? "mixed" : "empty"}</strong>
+                <span> · {mixer.target_duration_sec}s · {mixer.sample_rate} Hz</span>
+                {mixer.included_layers?.length > 0 && (
+                  <ul className="gen-weather-list">
+                    {mixer.included_layers.map((layer, index) => (
+                      <li key={`${layer}-${index}`}>{layer}</li>
+                    ))}
+                  </ul>
+                )}
+                {mixer.limitations?.length > 0 && (
+                  <span> · {mixer.limitations.length} limitation(s)</span>
+                )}
+              </div>
+            )}
+
             {isDone && result?.explanation && (
               <p className="metrics-proxy-note">{result.explanation}</p>
             )}
@@ -228,13 +256,13 @@ export default function GenerationPage() {
               {isGenerating ? "Generating…" : "▣ Generate Soundscape"}
             </button>
 
-            {isDone && result?.image_b64 && (
+            {isDone && spectrogramB64 && (
               <button
                 type="button"
                 className="gen-secondary-btn"
                 onClick={() => {
                   const a = document.createElement("a");
-                  a.href = `data:image/png;base64,${result.image_b64}`;
+                  a.href = `data:image/png;base64,${spectrogramB64}`;
                   a.download = `spectrogram_${conditionMonth}_${conditions.sample_bin}.png`;
                   a.click();
                 }}
@@ -243,7 +271,7 @@ export default function GenerationPage() {
               </button>
             )}
 
-            {isDone && result?.audio_b64 && (
+            {isDone && audioB64 && (
               <button
                 type="button"
                 className="gen-secondary-btn"

@@ -302,10 +302,10 @@ textarea {
 
 .panel-hero {
   grid-column: 1 / -1;
-  min-height: 250px;
+  min-height: 150px;
   display: grid;
   place-items: center;
-  padding: 28px;
+  padding: 18px 24px;
   text-align: center;
   border-style: dashed;
   background:
@@ -314,20 +314,20 @@ textarea {
 }
 
 .upload-icon {
-  width: 66px;
-  height: 66px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.1);
   color: #c0f6ff;
-  font-size: 1.7rem;
+  font-size: 1.2rem;
 }
 
 .hero-upload h2 {
-  margin: 0 0 10px;
-  font-size: clamp(1.55rem, 2.4vw, 2.35rem);
+  margin: 0 0 6px;
+  font-size: clamp(1.2rem, 1.7vw, 1.65rem);
   letter-spacing: 0.08em;
 }
 
@@ -342,7 +342,7 @@ textarea {
 
 .hero-upload p {
   margin: 0;
-  font-size: 0.96rem;
+  font-size: 0.86rem;
   text-transform: uppercase;
 }
 
@@ -1395,7 +1395,8 @@ textarea {
 
 .generation-page {
   display: grid;
-  gap: 18px;
+  gap: 14px;
+  padding-bottom: 132px;
 }
 
 .generation-topbar {
@@ -1428,33 +1429,49 @@ textarea {
 
 .generation-grid {
   display: grid;
-  grid-template-columns: 268px minmax(0, 1fr) 268px;
-  gap: 18px;
+  grid-template-columns: minmax(300px, 320px) minmax(0, 1fr) minmax(330px, 360px);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
 }
 
 .generation-sidebar-card,
 .generation-output-card {
-  overflow: hidden;
+  min-width: 0;
   background: rgba(10, 12, 14, 0.82);
 }
 
+.generation-sidebar-card {
+  overflow: hidden;
+}
+
+.generation-output-card {
+  overflow: hidden;
+  max-height: none;
+  padding-bottom: 0;
+}
+
+.generation-canvas-card {
+  min-width: 0;
+}
+
 .generation-card-head {
-  padding: 24px 22px 18px;
+  padding: 18px 20px 14px;
   background: rgba(255, 255, 255, 0.04);
 }
 
 .generation-card-head h2 {
   margin: 0;
   color: #d2f6ff;
-  font-size: 1.05rem;
-  letter-spacing: 0.16em;
+  font-size: clamp(0.88rem, 0.9vw, 1.02rem);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .generation-card-head p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: rgba(255, 255, 255, 0.42);
-  font-size: 0.84rem;
+  font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1462,13 +1479,14 @@ textarea {
 .generation-sidebar-body,
 .generation-output-body {
   display: grid;
-  gap: 24px;
-  padding: 22px;
+  gap: 16px;
+  padding: 18px 20px;
+  min-width: 0;
 }
 
 .gen-control {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .gen-control-head,
@@ -1479,8 +1497,13 @@ textarea {
 .gen-file-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
+  min-width: 0;
+}
+
+.gen-control-head {
+  justify-content: space-between;
 }
 
 .gen-control-head span,
@@ -1491,6 +1514,21 @@ textarea {
   font-size: 0.9rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.generation-sidebar-card .time-bin-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.generation-sidebar-card .time-bin-pill {
+  min-height: 42px;
+  padding: 7px 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  white-space: normal;
+  overflow-wrap: normal;
 }
 
 .gen-control-head strong {
@@ -1565,8 +1603,8 @@ textarea {
 
 .generation-canvas-card {
   display: grid;
-  gap: 24px;
-  padding: 18px 18px 26px;
+  gap: 14px;
+  padding: 18px;
   background:
     radial-gradient(circle at bottom center, rgba(59, 241, 255, 0.05), transparent 32%),
     rgba(13, 16, 17, 0.92);
@@ -1574,23 +1612,53 @@ textarea {
 
 .generation-canvas {
   position: relative;
-  min-height: 580px;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-height: min(52vh, 520px);
+  min-height: 300px;
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 65%, rgba(34, 228, 255, 0.08), transparent 35%),
     #03080b;
 }
 
-/* When a spectrogram image is present, let the canvas height follow the image */
 .generation-canvas:has(.gen-spectrogram-img) {
-  min-height: unset;
+  min-height: 300px;
 }
 
 .gen-spectrogram-img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   border-radius: 8px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.gen-audio-spectrogram {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  background: #02070a;
+}
+
+.gen-audio-spectrogram canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+
+.gen-audio-spectrogram span,
+.gen-truthful-empty {
+  color: rgba(200, 240, 255, 0.58);
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .gen-wave {
@@ -1650,14 +1718,14 @@ textarea {
 .generation-caption {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 8px;
   text-align: center;
 }
 
 .generation-caption h1 {
   margin: 0;
-  max-width: 12ch;
-  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  max-width: 22ch;
+  font-size: clamp(1.35rem, 2.1vw, 2rem);
   line-height: 1.08;
   text-transform: uppercase;
 }
@@ -1669,8 +1737,8 @@ textarea {
 }
 
 .generation-caption-row i {
-  width: 58px;
-  height: 6px;
+  width: 42px;
+  height: 4px;
   background: #c7f4ff;
 }
 
@@ -1684,18 +1752,18 @@ textarea {
 
 .gen-progress-block {
   display: grid;
-  gap: 12px;
+  gap: 9px;
 }
 
 .gen-progress-line strong {
-  font-size: 2rem;
+  font-size: clamp(1.25rem, 1.7vw, 1.75rem);
 }
 
 .gen-progress-line p {
   margin: 0;
   color: #76dde8;
-  font-size: 0.92rem;
-  letter-spacing: 0.1em;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -1707,45 +1775,75 @@ textarea {
 
 .gen-file-card {
   display: grid;
-  gap: 18px;
-  padding: 20px;
+  grid-template-columns: minmax(96px, 0.9fr) minmax(0, 1fr);
+  grid-template-areas: "bars meta";
+  align-items: center;
+  column-gap: 12px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.05);
+  min-width: 0;
 }
 
 .gen-file-icon {
-  width: 50px;
-  height: 50px;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  color: #9deef9;
+  display: none;
 }
 
 .gen-file-head strong {
+  display: block;
   color: #f1f7f9;
-  font-size: 0.98rem;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.gen-file-head > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.gen-file-head {
+  grid-area: meta;
+  display: grid;
+  align-items: center;
+  justify-content: stretch;
+  gap: 4px;
+}
+
+.gen-file-head span {
+  font-size: 0.7rem;
+  line-height: 1.1;
 }
 
 .gen-render-bars {
+  grid-area: bars;
   display: flex;
   align-items: end;
-  gap: 5px;
-  height: 74px;
+  gap: 3px;
+  height: 58px;
+  min-width: 0;
+  padding: 8px 8px 6px;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .gen-render-bars i {
-  width: 9px;
+  flex: 1 1 5px;
+  min-width: 3px;
+  max-width: 8px;
   background: linear-gradient(180deg, rgba(182, 242, 250, 0.7), rgba(212, 250, 255, 0.95));
 }
 
 .gen-primary-btn,
 .gen-secondary-btn {
-  min-height: 56px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
   border: 1px solid rgba(179, 240, 250, 0.2);
   color: #d7f9ff;
   font: inherit;
-  font-size: 0.96rem;
-  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
   text-transform: uppercase;
   cursor: pointer;
   border-radius: 4px;
@@ -1753,6 +1851,13 @@ textarea {
     opacity 0.14s ease, border-color 0.18s ease;
   position: relative;
   overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.gen-selected-clip {
+  font-size: 0.66rem;
+  line-height: 1.25;
 }
 
 .gen-primary-btn,
@@ -1996,6 +2101,26 @@ textarea {
   color: #c7f4ff;
   font-size: 0.78rem;
   text-decoration: none;
+}
+
+@media (max-width: 1220px) {
+  .generation-grid {
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  }
+
+  .generation-output-card {
+    grid-column: 1 / -1;
+  }
+
+  .generation-output-body {
+    grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr) minmax(220px, 1fr);
+    align-items: start;
+  }
+
+  .generation-output-body > .metrics-proxy-note,
+  .generation-output-body > .mock-badge {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -2315,13 +2440,15 @@ textarea {
 
 .mock-badge {
   margin: 0;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border: 1px solid rgba(255, 193, 7, 0.25);
   background: rgba(255, 193, 7, 0.07);
   color: rgba(255, 220, 100, 0.85);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .analysis-error {
@@ -2340,7 +2467,7 @@ textarea {
 .upload-loaded {
   display: grid;
   place-items: center;
-  gap: 14px;
+  gap: 9px;
   text-align: center;
 }
 
@@ -2352,12 +2479,12 @@ textarea {
 
 .upload-file-info strong {
   color: #d2f6ff;
-  font-size: 1.05rem;
+  font-size: 0.96rem;
 }
 
 .upload-file-info span {
   color: rgba(255, 255, 255, 0.42);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .upload-actions {
@@ -2367,13 +2494,13 @@ textarea {
 }
 
 .analyse-btn {
-  min-height: 52px;
-  padding: 0 28px;
+  min-height: 42px;
+  padding: 0 22px;
   border: 0;
   background: linear-gradient(90deg, #91ebf6, #b7f7e0);
   color: #07131a;
   font: inherit;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2389,13 +2516,13 @@ textarea {
 }
 
 .upload-change-btn {
-  min-height: 52px;
-  padding: 0 20px;
+  min-height: 42px;
+  padding: 0 16px;
   border: 1px solid rgba(177, 242, 255, 0.2);
   background: transparent;
   color: #c4f3ff;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
@@ -2409,13 +2536,17 @@ textarea {
   overflow: hidden;
 }
 
+.spectrogram-live::before {
+  display: none;
+}
+
 .spectrogram-canvas {
   width: 100%;
   height: 250px;
   object-fit: fill;
   display: block;
   transition: opacity 0.4s ease;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 
 .spectrogram-overlay {
@@ -2558,7 +2689,6 @@ textarea {
 .player-copy strong,
 .player-copy p,
 .upload-file-info strong,
-.gen-file-head strong,
 .sidebar-user-name,
 .project-primary strong,
 .transform-meta-card strong {
@@ -3332,11 +3462,13 @@ textarea {
 /* ─── Metrics: proxy note ────────────────────────────────────────────────────── */
 
 .metrics-proxy-note {
-  margin: 14px 0 0;
+  margin: 10px 0 0;
   color: rgba(255, 255, 255, 0.36);
-  font-size: 0.75rem;
-  letter-spacing: 0.07em;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
   font-style: italic;
+  overflow-wrap: anywhere;
 }
 
 .gen-weather-list {
@@ -3346,6 +3478,7 @@ textarea {
 
 .gen-weather-list li {
   margin: 4px 0;
+  overflow-wrap: anywhere;
 }
 
 [data-theme="light"] .metrics-proxy-note { color: rgba(0, 30, 50, 0.38); }

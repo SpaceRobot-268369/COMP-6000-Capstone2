@@ -39,6 +39,7 @@ from inference import (
 from layer_a import generate_layer_a_response
 from layer_b import prepare_weather_layers
 from layer_c import prepare_event_layers
+from layer_d import mix_generation_layers
 
 
 def month_range_for_month(month: float) -> str:
@@ -50,6 +51,183 @@ def month_range_for_month(month: float) -> str:
     if 6 <= m <= 8:
         return "June-August"
     return "September-November"
+
+
+def _clip01(value: float) -> float:
+    return float(np.clip(float(value), 0.0, 1.0))
+
+
+def _level(value: float, light: float, strong: float, labels: tuple[str, str, str]) -> str:
+    if value >= strong:
+        return labels[2]
+    if value >= light:
+        return labels[1]
+    return labels[0]
+
+
+def _analysis_spectrogram_png_b64(mel_db: np.ndarray) -> str:
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0)
+        ax.set_xlabel("Time frames")
+        ax.set_ylabel("Mel bins")
+        ax.set_title("Analysis Mel-Spectrogram")
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=100)
+        plt.close(fig)
+        buf.seek(0)
+        return base64.b64encode(buf.read()).decode("utf-8")
+    except Exception:
+        return ""
+
+
+def basic_audio_fallback_analysis(audio_path: str) -> dict:
+    """Return explainable analysis that does not require a trained checkpoint."""
+    import librosa
+
+    from preprocess import SPEC_CFG, waveform_to_melspec
+
+    sample_rate = SPEC_CFG["sample_rate"]
+    waveform, sr = librosa.load(audio_path, sr=sample_rate, mono=True, duration=300.0)
+    if waveform.size == 0:
+        raise ValueError("Uploaded audio contains no readable samples.")
+
+    duration_sec = float(waveform.size / sr)
+    rms = librosa.feature.rms(y=waveform, frame_length=SPEC_CFG["n_fft"], hop_length=SPEC_CFG["hop_length"])[0]
+    rms_mean = float(np.mean(rms))
+    rms_db = float(20.0 * np.log10(rms_mean + 1e-8))
+    peak = float(np.max(np.abs(waveform)))
+    zcr = float(np.mean(librosa.feature.zero_crossing_rate(waveform)[0]))
+    centroid = float(np.mean(librosa.feature.spectral_centroid(y=waveform, sr=sr)[0]))
+    bandwidth = float(np.mean(librosa.feature.spectral_bandwidth(y=waveform, sr=sr)[0]))
+    rolloff = float(np.mean(librosa.feature.spectral_rolloff(y=waveform, sr=sr, roll_percent=0.85)[0]))
+    flatness = float(np.mean(librosa.feature.spectral_flatness(y=waveform)[0]))
+    onset_env = librosa.onset.onset_strength(y=waveform, sr=sr, hop_length=SPEC_CFG["hop_length"])
+    onset_frames = librosa.onset.onset_detect(
+        onset_envelope=onset_env,
+        sr=sr,
+        hop_length=SPEC_CFG["hop_length"],
+        units="frames",
+        backtrack=False,
+    )
+    transient_rate = float(len(onset_frames) / max(duration_sec, 1e-6))
+    onset_density = _clip01(transient_rate / 3.0)
+
+    stft = np.abs(librosa.stft(waveform, n_fft=SPEC_CFG["n_fft"], hop_length=SPEC_CFG["hop_length"])) ** 2
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=SPEC_CFG["n_fft"])
+    total_energy = float(np.sum(stft) + 1e-8)
+    low_ratio = float(np.sum(stft[freqs < 500.0]) / total_energy)
+    mid_ratio = float(np.sum(stft[(freqs >= 500.0) & (freqs < 4000.0)]) / total_energy)
+    high_ratio = float(np.sum(stft[freqs >= 4000.0]) / total_energy)
+    low_high_ratio = float(low_ratio / (high_ratio + 1e-8))
+
+    loudness_norm = _clip01((rms_db + 55.0) / 45.0)
+    brightness = _clip01((centroid - 600.0) / 4200.0)
+    brightness_label = _level(brightness, 0.35, 0.65, ("dark", "balanced", "bright"))
+    sound_density = _clip01(loudness_norm * 0.45 + flatness * 1.65 + onset_density * 0.35)
+    activity_index = _clip01(onset_density * 0.55 + high_ratio * 0.65 + mid_ratio * 0.25 + loudness_norm * 0.15)
+    wind_index = _clip01((low_ratio * 1.9 + mid_ratio * 0.25 + (1.0 - onset_density) * 0.25) * (0.35 + loudness_norm))
+    rain_index = _clip01(high_ratio * 1.35 + flatness * 2.6 + zcr * 0.25 + sound_density * 0.45)
+    bio_index = _clip01(onset_density * 0.70 + high_ratio * 0.60 + mid_ratio * 0.20 - flatness * 0.35)
+    time_hint_score = _clip01(bio_index * 0.65 + brightness * 0.25 + onset_density * 0.25)
+    time_hint = "dawn/morning" if time_hint_score >= 0.55 else "night" if brightness < 0.22 and activity_index < 0.35 else "day/afternoon"
+    mel_db = waveform_to_melspec(waveform)
+
+    acoustic_features = {
+        "duration_sec": round(duration_sec, 2),
+        "sample_rate": int(sr),
+        "rms_db": round(rms_db, 2),
+        "peak_amplitude": round(peak, 4),
+        "zero_crossing_rate": round(zcr, 4),
+        "spectral_centroid_hz": round(centroid, 2),
+        "spectral_bandwidth_hz": round(bandwidth, 2),
+        "spectral_rolloff_hz": round(rolloff, 2),
+        "spectral_flatness": round(flatness, 4),
+        "transient_rate_per_sec": round(transient_rate, 4),
+        "onset_density": round(onset_density, 4),
+        "low_energy_ratio": round(low_ratio, 4),
+        "mid_energy_ratio": round(mid_ratio, 4),
+        "high_energy_ratio": round(high_ratio, 4),
+        "low_high_energy_ratio": round(low_high_ratio, 4),
+        "sound_density": round(sound_density, 3),
+        "brightness": round(brightness, 3),
+        "brightness_label": brightness_label,
+        "activity_level": _level(activity_index, 0.35, 0.65, ("low", "moderate", "high")),
+        "activity_score": round(activity_index, 3),
+        "wind_texture_proxy": round(wind_index, 3),
+        "rain_texture_proxy": round(rain_index, 3),
+    }
+
+    wind_level = _level(wind_index, 0.35, 0.62, ("none", "light", "strong"))
+    rain_level = _level(rain_index, 0.38, 0.68, ("none", "light", "dense"))
+    activity_level = _level(activity_index, 0.35, 0.65, ("low", "moderate", "high"))
+    heuristic_environment = {
+        "wind": {
+            "level": wind_level,
+            "confidence": round(wind_index, 3),
+            "explanation": (
+                f"{wind_level.capitalize()} wind likelihood from low-frequency sustained energy "
+                f"({low_ratio:.2f}) and low transient density ({onset_density:.2f})."
+            ),
+        },
+        "rain": {
+            "level": rain_level,
+            "confidence": round(rain_index, 3),
+            "explanation": (
+                f"{rain_level.capitalize()} rain likelihood from high-frequency energy "
+                f"({high_ratio:.2f}), spectral flatness ({flatness:.2f}), and dense texture."
+            ),
+        },
+        "activity": {
+            "level": activity_level,
+            "confidence": round(activity_index, 3),
+            "biological_activity_score": round(bio_index, 3),
+            "explanation": (
+                f"{activity_level.capitalize()} activity from onset density "
+                f"({onset_density:.2f}) plus mid/high-frequency burst energy."
+            ),
+        },
+        "time_of_day_hint": {
+            "label": time_hint,
+            "confidence": round(time_hint_score, 3),
+            "explanation": (
+                "Estimated from brightness and biological activity patterns only; "
+                "not derived from recording metadata."
+            ),
+        },
+    }
+
+    estimated_conditions = {
+        "wind_speed_ms": round(0.5 + wind_index * 5.5, 2),
+        "wind_max_ms": round(1.0 + wind_index * 8.0, 2),
+        "precipitation_mm": round(max(0.0, rain_index - 0.28) * 7.0, 2),
+        "precipitation_daily_mm": round(max(0.0, rain_index - 0.22) * 10.0, 2),
+        "humidity_pct": round(42.0 + rain_index * 38.0, 2),
+        "days_since_rain": round(max(0.0, 7.0 * (1.0 - rain_index)), 2),
+        "confidence": 0.25,
+        "inference_method": "basic_audio_feature_fallback",
+        "wind": wind_level,
+        "rain": rain_level,
+        "activity": activity_level,
+        "time_of_day_hint": time_hint,
+    }
+
+    return {
+        "acoustic_features": acoustic_features,
+        "heuristic_environment": heuristic_environment,
+        "estimated_conditions": estimated_conditions,
+        "spectrogram": {
+            "image_b64": _analysis_spectrogram_png_b64(mel_db),
+            "shape": list(mel_db.shape),
+            "mime": "image/png",
+        },
+    }
 
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
@@ -97,7 +275,16 @@ class EnvFeatures(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "checkpoint": str(DEFAULT_CKPT), "exists": DEFAULT_CKPT.exists()}
+    checkpoint_exists = DEFAULT_CKPT.exists()
+    return {
+        "ok": True,
+        "checkpoint": str(DEFAULT_CKPT),
+        "exists": checkpoint_exists,
+        "analysis_modes": {
+            "vae_latent": checkpoint_exists,
+            "basic_audio_fallback": True,
+        },
+    }
 
 
 @app.post("/analysis")
@@ -129,9 +316,6 @@ async def analysis(
     Accepts multipart/form-data with a 'file' field (.wav or .webm.wav).
     Returns the 256-dim latent vector as a JSON array.
     """
-    if not DEFAULT_CKPT.exists():
-        raise HTTPException(status_code=503, detail="Model checkpoint not found.")
-
     env_dict = {
         "temperature_c": temperature_c, "humidity_pct": humidity_pct,
         "wind_speed_ms": wind_speed_ms, "precipitation_mm": precipitation_mm,
@@ -154,6 +338,43 @@ async def analysis(
         tmp.write(await file.read())
         tmp_path = tmp.name
 
+    base_analysis: dict = {}
+    try:
+        base_analysis = basic_audio_fallback_analysis(tmp_path)
+    except Exception as exc:
+        print(f"[WARN] Basic audio analysis failed: {exc}")
+
+    if not DEFAULT_CKPT.exists():
+        if not base_analysis:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise HTTPException(status_code=422, detail="Basic audio analysis failed.")
+
+        try:
+            fallback = base_analysis
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Basic audio analysis failed: {exc}")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+        return {
+            "ok": True,
+            "analysis_mode": "basic_fallback",
+            "checkpoint_available": False,
+            "checkpoint": str(DEFAULT_CKPT),
+            "latent_dim": 0,
+            "latent": [],
+            "estimated_conditions": fallback["estimated_conditions"],
+            "acoustic_features": fallback["acoustic_features"],
+            "heuristic_environment": fallback["heuristic_environment"],
+            "spectrogram": fallback["spectrogram"],
+            "limitations": [
+                "VAE checkpoint is unavailable, so no learned latent embedding was computed.",
+                "Environmental values are low-confidence audio-feature proxies, not NASA-aligned nearest-neighbour estimates.",
+                "Species-specific labels are not produced in Analysis mode.",
+            ],
+            "summary": "Basic Analysis Mode completed without VAE latent analysis.",
+        }
+
     try:
         latent = encode_clip(tmp_path, env_dict)
     except Exception as exc:
@@ -173,9 +394,15 @@ async def analysis(
 
     return {
         "ok":                    True,
+        "analysis_mode":         "vae_latent",
+        "checkpoint_available":  True,
         "latent_dim":            len(latent),
         "latent":                latent.tolist(),
         "estimated_conditions":  estimated_conditions,
+        "acoustic_features":     base_analysis.get("acoustic_features", {}),
+        "heuristic_environment": base_analysis.get("heuristic_environment", {}),
+        "spectrogram":           base_analysis.get("spectrogram", {}),
+        "limitations":           [],
     }
 
 
@@ -195,14 +422,34 @@ def generation(body: EnvFeatures):
         response = generate_layer_a_response(layer_a_env, seed=body.seed)
         weather = prepare_weather_layers(env_dict, seed=body.seed)
         events = prepare_event_layers(env_dict, seed=body.seed)
+        mixed = mix_generation_layers(response, weather, events)
+        ambient_audio = {
+            "audio_b64": response.get("audio_b64", ""),
+            "audio_mime": response.get("audio_mime", ""),
+            "audio_ext": response.get("audio_ext", ""),
+        }
         response["weather"] = weather
         response["events"] = events
+        response["ambient_audio"] = ambient_audio
+        response["final_audio_b64"] = mixed["final_audio_b64"]
+        response["final_audio_mime"] = mixed["final_audio_mime"]
+        response["final_audio_ext"] = mixed["final_audio_ext"]
+        response["final_image_b64"] = mixed.get("final_image_b64", "")
+        response["mixer"] = mixed["mixer"]
+        response["audio_b64"] = mixed["final_audio_b64"] or response.get("audio_b64", "")
+        response["audio_mime"] = mixed["final_audio_mime"] if mixed["final_audio_b64"] else response.get("audio_mime")
+        response["audio_ext"] = mixed["final_audio_ext"] if mixed["final_audio_b64"] else response.get("audio_ext")
+        if mixed.get("final_image_b64"):
+            response["image_b64"] = mixed["final_image_b64"]
         response.setdefault("layer_status", {})["weather_layer"] = weather["status"]
         response.setdefault("layer_status", {})["species_event_layer"] = events["status"]
+        response.setdefault("layer_status", {})["mixer"] = mixed["status"]
         if weather["status"] == "prepared":
             response["explanation"] = f"{response.get('explanation', '')} {weather['explanation']}".strip()
         if events["status"] == "prepared":
             response["explanation"] = f"{response.get('explanation', '')} {events['explanation']}".strip()
+        if mixed["status"] == "mixed":
+            response["explanation"] = f"{response.get('explanation', '')} {mixed['explanation']}".strip()
         return response
     except FileNotFoundError as exc:
         print(f"[WARN] Layer A unavailable ({exc}); falling back to VAE generation.")

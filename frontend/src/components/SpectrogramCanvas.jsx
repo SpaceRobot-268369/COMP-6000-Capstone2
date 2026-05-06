@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-const FFT_SIZE  = 256;   // must be power-of-2; 128 bins output
-const MAX_COLS  = 400;   // time frames to draw
-const MIN_DB    = -80;
+const FFT_SIZE  = 1024;
+const HOP_SIZE  = 512;
+const MEL_BANDS = 128;
+const MAX_COLS  = 520;
+const DYNAMIC_RANGE_DB = 80;
 
 // ─── Radix-2 FFT (in-place) ───────────────────────────────────────────────────
 function fft(re, im) {
@@ -38,37 +40,75 @@ function fft(re, im) {
   }
 }
 
+function hzToMel(hz) {
+  return 2595 * Math.log10(1 + hz / 700);
+}
+
+function melToHz(mel) {
+  return 700 * (10 ** (mel / 2595) - 1);
+}
+
+function buildMelFilters(sampleRate) {
+  const nyquist = sampleRate / 2;
+  const minMel = hzToMel(50);
+  const maxMel = hzToMel(Math.min(11000, nyquist));
+  const melPoints = Array.from({ length: MEL_BANDS + 2 }, (_, i) =>
+    minMel + (i / (MEL_BANDS + 1)) * (maxMel - minMel)
+  );
+  const binPoints = melPoints.map(mel => {
+    const hz = melToHz(mel);
+    return Math.max(0, Math.min(FFT_SIZE / 2, Math.floor((hz / sampleRate) * FFT_SIZE)));
+  });
+
+  return Array.from({ length: MEL_BANDS }, (_, band) => {
+    const left = binPoints[band];
+    const center = Math.max(left + 1, binPoints[band + 1]);
+    const right = Math.max(center + 1, binPoints[band + 2]);
+    const weights = [];
+
+    for (let bin = left; bin <= right && bin <= FFT_SIZE / 2; bin += 1) {
+      let weight = 0;
+      if (bin <= center) weight = (bin - left) / Math.max(1, center - left);
+      else weight = (right - bin) / Math.max(1, right - center);
+      if (weight > 0) weights.push([bin, weight]);
+    }
+
+    return weights;
+  });
+}
+
 // ─── Colour map (dark → cyan → white, matching design palette) ───────────────
-function dbToRgb(db) {
-  const t = Math.max(0, Math.min(1, (db - MIN_DB) / -MIN_DB));
+function energyToRgb(norm) {
+  const t = Math.max(0, Math.min(1, norm));
   if (t < 0.45) {
     const s = t / 0.45;
-    return [0, Math.round(s * 80), Math.round(s * 100)];
+    return [0, Math.round(s * 72), Math.round(s * 95)];
   }
   if (t < 0.75) {
     const s = (t - 0.45) / 0.3;
-    return [0, Math.round(80 + s * 160), Math.round(100 + s * 130)];
+    return [0, Math.round(72 + s * 155), Math.round(95 + s * 128)];
   }
   const s = (t - 0.75) / 0.25;
-  return [Math.round(s * 230), Math.round(240 + s * 15), Math.round(230 + s * 25)];
+  return [Math.round(s * 225), Math.round(227 + s * 28), Math.round(223 + s * 32)];
 }
 
-// ─── Build spectrogram matrix from raw PCM ────────────────────────────────────
-function buildSpectrogram(samples, sampleRate) {
-  const totalFrames = Math.floor(samples.length / FFT_SIZE);
+// ─── Build mel-style log-energy spectrogram from raw PCM ──────────────────────
+function buildMelSpectrogram(samples, sampleRate) {
+  const totalFrames = Math.max(1, Math.floor((samples.length - FFT_SIZE) / HOP_SIZE));
   const step        = Math.max(1, Math.floor(totalFrames / MAX_COLS));
   const numCols     = Math.min(MAX_COLS, Math.ceil(totalFrames / step));
-  const numRows     = FFT_SIZE / 2;
+  const numRows     = MEL_BANDS;
+  const filters     = buildMelFilters(sampleRate);
 
-  // Hann window coefficients
   const hann = Float32Array.from({ length: FFT_SIZE }, (_, i) =>
     0.5 * (1 - Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)))
   );
 
   const matrix = new Float32Array(numCols * numRows);
+  let maxDb = -Infinity;
 
   for (let col = 0; col < numCols; col++) {
-    const offset = col * step * FFT_SIZE;
+    const offset = col * step * HOP_SIZE;
     const re = new Float32Array(FFT_SIZE);
     const im = new Float32Array(FFT_SIZE);
 
@@ -78,12 +118,27 @@ function buildSpectrogram(samples, sampleRate) {
 
     fft(re, im);
 
-    for (let row = 0; row < numRows; row++) {
-      const mag = Math.sqrt(re[row] * re[row] + im[row] * im[row]) / FFT_SIZE;
-      const db  = mag > 1e-10 ? Math.max(MIN_DB, 20 * Math.log10(mag)) : MIN_DB;
-      // store rows bottom-to-top (low freq at bottom)
-      matrix[(numRows - 1 - row) * numCols + col] = db;
+    const power = new Float32Array(FFT_SIZE / 2 + 1);
+    for (let bin = 0; bin <= FFT_SIZE / 2; bin += 1) {
+      power[bin] = (re[bin] * re[bin] + im[bin] * im[bin]) / FFT_SIZE;
     }
+
+    for (let band = 0; band < numRows; band += 1) {
+      let energy = 0;
+      let weightSum = 0;
+      for (const [bin, weight] of filters[band]) {
+        energy += power[bin] * weight;
+        weightSum += weight;
+      }
+      const db = 10 * Math.log10(energy / Math.max(weightSum, 1e-8) + 1e-12);
+      matrix[(numRows - 1 - band) * numCols + col] = db;
+      if (db > maxDb) maxDb = db;
+    }
+  }
+
+  const floorDb = maxDb - DYNAMIC_RANGE_DB;
+  for (let i = 0; i < matrix.length; i += 1) {
+    matrix[i] = Math.max(0, Math.min(1, (matrix[i] - floorDb) / DYNAMIC_RANGE_DB));
   }
 
   return { matrix, numCols, numRows };
@@ -91,7 +146,7 @@ function buildSpectrogram(samples, sampleRate) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 /**
- * Renders a real log-mel-style spectrogram from an uploaded audio File.
+ * Renders a real mel-style log-energy spectrogram from an uploaded audio File.
  * Falls back to the decorative static view when no file is provided.
  */
 export default function SpectrogramCanvas({ file }) {
@@ -114,7 +169,7 @@ export default function SpectrogramCanvas({ file }) {
         if (cancelled) return;
 
         const samples = audioBuffer.getChannelData(0);
-        const { matrix, numCols, numRows } = buildSpectrogram(samples, audioBuffer.sampleRate);
+        const { matrix, numCols, numRows } = buildMelSpectrogram(samples, audioBuffer.sampleRate);
 
         if (cancelled) return;
 
@@ -128,7 +183,7 @@ export default function SpectrogramCanvas({ file }) {
         const px    = imgData.data;
 
         for (let i = 0; i < numCols * numRows; i++) {
-          const [r, g, b] = dbToRgb(matrix[i]);
+          const [r, g, b] = energyToRgb(matrix[i]);
           const base = i * 4;
           px[base]     = r;
           px[base + 1] = g;
