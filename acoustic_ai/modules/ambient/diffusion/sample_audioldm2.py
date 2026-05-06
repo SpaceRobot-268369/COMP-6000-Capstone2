@@ -85,12 +85,16 @@ def _slugify(value: str, max_len: int = 64) -> str:
     return value[:max_len] or "prompt"
 
 
+def _lora_slug(lora_dir: str) -> str:
+    return _slugify(Path(lora_dir).name, max_len=80)
+
+
 def _resolve_output_path(args: argparse.Namespace) -> Path:
     if args.output_path:
         return Path(args.output_path)
 
     run_name = args.run_name or f"{_slugify(args.prompt)}__seed_{args.seed:04d}"
-    return args.output_dir / run_name / "generated_ambient.wav"
+    return args.output_dir / _lora_slug(args.lora_dir) / run_name / "generated_ambient.wav"
 
 
 def _render_spectrogram(audio: np.ndarray, sample_rate: int, path: Path) -> None:

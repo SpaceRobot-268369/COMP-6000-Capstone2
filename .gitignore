@@ -45,17 +45,15 @@ coverage/
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
 
-# Resource downloads — raw source data (DVC-tracked)
-resources/site_257_bowra-dry-a/downloaded_clips/
-resources/site_257_bowra-dry-a/downloaded_annotations/
-resources/site_257_bowra-dry-a/site_257_all_items.csv
-resources/site_257_bowra-dry-a/site_257_all_items.json
-resources/site_257_bowra-dry-a/smoking_test_dataset/clips/*/mel_spectrogram.npy
-resources/site_257_bowra-dry-a/smoking_test_dataset/clips/*/mel_spectrogram.png
-# Keep the three small CSVs in git
+# Resources - keep generated/source data out of git by default
+resources/**
+!resources/
+!resources/site_257_bowra-dry-a/
+!resources/site_257_bowra-dry-a/site_257_all_items.json
+!resources/site_257_bowra-dry-a/site_257_training_manifest.csv
 !resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
-!resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+!resources/site_257_bowra-dry-a/site_257_all_items.csv
 
 # IDE and editors
 .idea/
@@ -77,6 +75,8 @@ acoustic_ai/checkpoints/vocoder/best.pt
 acoustic_ai/checkpoints/ambient_diffusion/
 acoustic_ai/checkpoints/ambient_diffusion_clap/
 acoustic_ai/checkpoints/audioldm2-lora*/
+!acoustic_ai/checkpoints/audioldm2-lora-insects-smoke/
+!acoustic_ai/checkpoints/audioldm2-lora-insects-smoke/**
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/

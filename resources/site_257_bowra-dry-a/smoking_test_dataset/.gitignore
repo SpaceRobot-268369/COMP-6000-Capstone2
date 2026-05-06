@@ -1,8 +1,0 @@
-# Extracted audio segments — regenerate with:
-#   python3 script/dataset/build_smoking_test_dataset.py
-clips/*/audio.wav
-
-# Precomputed latents + CLAP embeddings — regenerate with:
-#   python3 acoustic_ai/precompute/precompute_smoke_latents.py
-precomputed/latents.npy
-precomputed/text_embeddings.npy

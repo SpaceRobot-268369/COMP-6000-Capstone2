@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.inference import (
     encode_clip, generate_ambient_audio, estimate_env_conditions,
-    generate_layer_a_ambient_audio,
+    generate_layer_a_ambient_audio, generate_layer_a_smoke_test_audio,
     DEFAULT_CKPT, CLIPS_PATH,
 )
 
@@ -209,6 +209,41 @@ def layer_a_generate(body: LayerARequest):
     """
     try:
         mel_db, wav_bytes, metadata = generate_layer_a_ambient_audio(seed=body.seed)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
+
+    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
+    png_b64 = _layer_a_mel_to_png_b64(mel_db, metadata["audio"]["duration_s"])
+
+    return {
+        "ok":         True,
+        "audio_b64":  audio_b64,
+        "image_b64":  png_b64,
+        "metadata":   metadata,
+        "gain_db":    0.0,
+        "sample_rate": metadata["audio"]["sample_rate"],
+        "duration_s": metadata["audio"]["duration_s"],
+    }
+
+
+@app.post("/layer_a/smoke_test_1/generate")
+def layer_a_smoke_test_1_generate(body: LayerARequest):
+    """Generate Layer A smoke test 1 with the spring-night LoRA."""
+    return _layer_a_smoke_test_response("smoke_test_1", body.seed)
+
+
+@app.post("/layer_a/smoke_test_2/generate")
+def layer_a_smoke_test_2_generate(body: LayerARequest):
+    """Generate Layer A smoke test 2 with the insect/cicada LoRA."""
+    return _layer_a_smoke_test_response("smoke_test_2", body.seed)
+
+
+def _layer_a_smoke_test_response(smoke_test_id: str, seed: Optional[int]):
+    try:
+        mel_db, wav_bytes, metadata = generate_layer_a_smoke_test_audio(
+            smoke_test_id,
+            seed=seed,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
 

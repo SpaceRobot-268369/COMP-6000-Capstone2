@@ -45,6 +45,36 @@ LAYER_A_HIGHPASS_HZ = 80.0
 LAYER_A_GUIDANCE_SCALE = 2.0
 LAYER_A_INFERENCE_STEPS = 100
 LAYER_A_AUDIO_LENGTH_S = 10.0
+LAYER_A_SMOKE_TESTS = {
+    "smoke_test_1": {
+        "label": "Dev - Layer A - Smoking Test 1 (spring night)",
+        "model_status": "smoke_test_1_success",
+        "prompt": LAYER_A_FIXED_PROMPT,
+        "lora_dir": AUDIOLDM2_LAYER_A_LORA_DIR,
+        "dataset": "resources/site_257_bowra-dry-a/smoking_test_dataset",
+        "notes": [
+            "Layer A dev endpoint is locked to the spring-night smoke-test prompt.",
+            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
+            "Deprecated checkpoint audioldm2-lora-rms005-smoke should not be used for quality testing.",
+        ],
+    },
+    "smoke_test_2": {
+        "label": "Dev - Layer A - Smoking Test 2",
+        "model_status": "smoke_test_2_insects_success",
+        "prompt": (
+            "summer afternoon insect-rich ambient soundscape, cicada and insect texture, "
+            "Bowra dry woodland, Australia, dry hot air, distant environmental bed, "
+            "no birds, no foreground events, no music, no machinery, no strong wind"
+        ),
+        "lora_dir": _AI_ROOT / "checkpoints" / "audioldm2-lora-insects-smoke",
+        "dataset": "resources/site_257_bowra-dry-a/smoking_test2_insects_dataset",
+        "notes": [
+            "Layer A dev endpoint is locked to the insect/cicada smoke-test prompt.",
+            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
+            "Training data excludes annotated event overlaps and strong-wind rows.",
+        ],
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -411,12 +441,12 @@ def _nearest_neighbour_latent(
 # ---------------------------------------------------------------------------
 # AudioLDM2 Pipeline Cache
 # ---------------------------------------------------------------------------
-_audioldm2_pipeline = None
+_audioldm2_pipelines = {}
 
-def _get_audioldm2_pipeline():
-    global _audioldm2_pipeline
-    if _audioldm2_pipeline is not None:
-        return _audioldm2_pipeline
+def _get_audioldm2_pipeline(lora_dir: Path = AUDIOLDM2_LAYER_A_LORA_DIR):
+    cache_key = str(lora_dir.resolve())
+    if cache_key in _audioldm2_pipelines:
+        return _audioldm2_pipelines[cache_key]
 
     from diffusers import AudioLDM2Pipeline
     from peft import PeftModel
@@ -425,8 +455,6 @@ def _get_audioldm2_pipeline():
     device = _get_device()
     torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
     pretrained_model_name = AUDIOLDM2_BASE_MODEL
-    lora_dir = AUDIOLDM2_LAYER_A_LORA_DIR
-    
     print(f"[INFO] Loading AudioLDM2 pipeline from {pretrained_model_name}...")
     pipeline = AudioLDM2Pipeline.from_pretrained(
         pretrained_model_name, 
@@ -447,8 +475,8 @@ def _get_audioldm2_pipeline():
     else:
         print(f"[WARN] LoRA weights not found at {lora_dir}. Using base model.")
         
-    _audioldm2_pipeline = pipeline
-    return _audioldm2_pipeline
+    _audioldm2_pipelines[cache_key] = pipeline
+    return pipeline
 
 
 def _env_dict_to_prompt(env_dict: dict) -> str:
@@ -578,14 +606,24 @@ def _wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
     return buf.read()
 
 
-def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarray, bytes, dict]:
+def generate_layer_a_smoke_test_audio(
+    smoke_test_id: str = "smoke_test_1",
+    seed: Optional[int] = None,
+) -> tuple[np.ndarray, bytes, dict]:
     """Generate the dev Layer A ambient bed with a fixed smoke-test prompt.
 
     The prompt is intentionally locked while the Layer A model is trained only on
     the tiny smoke dataset. User-specified prompts should not be accepted here.
     """
+    if smoke_test_id not in LAYER_A_SMOKE_TESTS:
+        raise ValueError(f"Unknown Layer A smoke test: {smoke_test_id}")
+
+    config = LAYER_A_SMOKE_TESTS[smoke_test_id]
+    prompt = config["prompt"]
+    lora_dir = config["lora_dir"]
+
     device = _get_device()
-    pipeline = _get_audioldm2_pipeline()
+    pipeline = _get_audioldm2_pipeline(lora_dir)
 
     rng = torch.Generator(device)
     if seed is not None:
@@ -593,9 +631,9 @@ def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarr
     else:
         rng.seed()
 
-    print(f"[INFO] Generating Layer A with fixed prompt: '{LAYER_A_FIXED_PROMPT}'")
+    print(f"[INFO] Generating Layer A {smoke_test_id} with fixed prompt: '{prompt}'")
     raw_audio = pipeline(
-        LAYER_A_FIXED_PROMPT,
+        prompt,
         num_inference_steps=LAYER_A_INFERENCE_STEPS,
         audio_length_in_s=LAYER_A_AUDIO_LENGTH_S,
         guidance_scale=LAYER_A_GUIDANCE_SCALE,
@@ -609,12 +647,15 @@ def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarr
 
     metadata = {
         "generator": "audioldm2_lora",
-        "model_status": "branch_smoke_test_success",
+        "smoke_test_id": smoke_test_id,
+        "label": config["label"],
+        "model_status": config["model_status"],
         "prompt_locked": True,
-        "fixed_prompt": LAYER_A_FIXED_PROMPT,
+        "fixed_prompt": prompt,
         "pretrained_model_name": AUDIOLDM2_BASE_MODEL,
-        "lora_dir": str(AUDIOLDM2_LAYER_A_LORA_DIR),
-        "checkpoint_exists": AUDIOLDM2_LAYER_A_LORA_DIR.exists(),
+        "lora_dir": str(lora_dir),
+        "checkpoint_exists": lora_dir.exists(),
+        "dataset": config["dataset"],
         "seed": seed,
         "num_inference_steps": LAYER_A_INFERENCE_STEPS,
         "audio_length_in_s": LAYER_A_AUDIO_LENGTH_S,
@@ -623,14 +664,14 @@ def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarr
         "spectrogram_type": "log_mel",
         "audio": _audio_stats(audio, sample_rate),
         "postprocess": postprocess,
-        "notes": [
-            "Layer A dev endpoint is locked to the smoke-test prompt.",
-            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
-            "Deprecated checkpoint audioldm2-lora-rms005-smoke should not be used for quality testing.",
-        ],
+        "notes": config["notes"],
     }
 
     return mel_db, wav_bytes, metadata
+
+
+def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarray, bytes, dict]:
+    return generate_layer_a_smoke_test_audio("smoke_test_1", seed=seed)
 
 
 def generate_ambient_audio(
@@ -655,7 +696,7 @@ def generate_ambient_audio(
     from modules.ambient.preprocess import waveform_to_melspec
     
     device = _get_device()
-    pipeline = _get_audioldm2_pipeline()
+    pipeline = _get_audioldm2_pipeline(AUDIOLDM2_LAYER_A_LORA_DIR)
 
     prompt = _env_dict_to_prompt(env_dict)
     print(f"[INFO] Generating audio for prompt: '{prompt}'")

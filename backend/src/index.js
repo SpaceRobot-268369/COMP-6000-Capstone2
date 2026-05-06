@@ -234,10 +234,22 @@ app.post("/api/generation", requireAuth, async (req, res) => {
 });
 
 app.post("/api/layer_a/generate", requireAuth, async (req, res) => {
+  await proxyLayerAGeneration(req, res, "/layer_a/generate", "Layer A proxy failed:");
+});
+
+app.post("/api/layer_a/smoke_test_1/generate", requireAuth, async (req, res) => {
+  await proxyLayerAGeneration(req, res, "/layer_a/smoke_test_1/generate", "Layer A smoke test 1 proxy failed:");
+});
+
+app.post("/api/layer_a/smoke_test_2/generate", requireAuth, async (req, res) => {
+  await proxyLayerAGeneration(req, res, "/layer_a/smoke_test_2/generate", "Layer A smoke test 2 proxy failed:");
+});
+
+async function proxyLayerAGeneration(req, res, aiPath, logLabel) {
   try {
     const requestedSeed = Number(req.body?.seed);
     const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : 42;
-    const r = await fetch(`${AI_SERVER}/layer_a/generate`, {
+    const r = await fetch(`${AI_SERVER}${aiPath}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ seed }),
@@ -245,10 +257,10 @@ app.post("/api/layer_a/generate", requireAuth, async (req, res) => {
     const body = await r.json();
     res.status(r.status).json(body);
   } catch (err) {
-    console.error("Layer A proxy failed:", err);
+    console.error(logLabel, err);
     res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
   }
-});
+}
 
 app.get("/", (_req, res) => {
   res.json({ service: "backend", status: "running" });

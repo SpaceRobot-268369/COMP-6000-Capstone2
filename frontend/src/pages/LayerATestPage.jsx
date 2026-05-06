@@ -1,16 +1,39 @@
 import { useEffect, useState } from "react";
-import { generateLayerA } from "../lib/api.js";
+import { generateLayerASmokeTest1, generateLayerASmokeTest2 } from "../lib/api.js";
 
 const DEFAULT_PARAMS = {
   seed: 42,
 };
 
-const FIXED_LAYER_A_PROMPT =
-  "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery";
+const SMOKE_TEST_CONFIGS = {
+  springNight: {
+    pageTitle: "Dev - Layer A - Smoking Test 1 (spring night)",
+    cardTitle: "Smoking Test 1",
+    cardSubtitle: "Spring night fixed AudioLDM2 Layer A run",
+    checkpoint: "audioldm2-lora-raw-smoke",
+    prompt:
+      "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery",
+    emptyText: "Generate the fixed Layer A spring-night smoke model to view outputs",
+    buttonText: "Generate Smoking Test 1",
+    filenamePrefix: "layer_a_smoke_test_1",
+    generate: generateLayerASmokeTest1,
+  },
+  insects: {
+    pageTitle: "Dev - Layer A - Smoking Test 2",
+    cardTitle: "Smoking Test 2",
+    cardSubtitle: "Insect and cicada fixed AudioLDM2 Layer A run",
+    checkpoint: "audioldm2-lora-insects-smoke",
+    prompt:
+      "summer afternoon insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, dry hot air, distant environmental bed, no birds, no foreground events, no music, no machinery, no strong wind",
+    emptyText: "Generate the fixed Layer A insect/cicada smoke model to view outputs",
+    buttonText: "Generate Smoking Test 2",
+    filenamePrefix: "layer_a_smoke_test_2",
+    generate: generateLayerASmokeTest2,
+  },
+};
 
-const CURRENT_CHECKPOINT = "audioldm2-lora-raw-smoke";
-
-export default function LayerATestPage() {
+export default function LayerATestPage({ variant = "springNight" }) {
+  const config = SMOKE_TEST_CONFIGS[variant] ?? SMOKE_TEST_CONFIGS.springNight;
   const [params,   setParams]   = useState({ ...DEFAULT_PARAMS });
   const [status,   setStatus]   = useState("idle"); // idle | loading | done | error
   const [result,   setResult]   = useState(null);
@@ -47,7 +70,7 @@ export default function LayerATestPage() {
     setErrorMsg("");
     setResult(null);
     try {
-      const data = await generateLayerA({
+      const data = await config.generate({
         seed: Number(params.seed) || 42,
       });
       setResult(data);
@@ -71,13 +94,13 @@ export default function LayerATestPage() {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
-    downloadDataUrl(url, `layer_a_audioldm2_seed${params.seed}_metadata.json`);
+    downloadDataUrl(url, `${config.filenamePrefix}_seed${params.seed}_metadata.json`);
     URL.revokeObjectURL(url);
   }
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `audioldm2_seed${params.seed || 42}`;
+  const tag       = `${config.checkpoint}_seed${params.seed || 42}`;
   const progressText = getProgressText(progress, status);
 
   return (
@@ -85,7 +108,7 @@ export default function LayerATestPage() {
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS</p>
-          <span>Layer A — Ambient AI Test</span>
+          <span>{config.pageTitle}</span>
         </div>
       </header>
 
@@ -93,18 +116,18 @@ export default function LayerATestPage() {
         {/* ── Left: input parameters ── */}
         <aside className="panel generation-sidebar-card">
           <div className="generation-card-head">
-            <h2>Smoke Model</h2>
-            <p>Fixed AudioLDM2 Layer A run</p>
+            <h2>{config.cardTitle}</h2>
+            <p>{config.cardSubtitle}</p>
           </div>
 
           <div className="generation-sidebar-body" style={{ display: "grid", gap: 14 }}>
             <div className="gen-info-block">
               <p>Checkpoint</p>
-              <code>{CURRENT_CHECKPOINT}</code>
+              <code>{config.checkpoint}</code>
             </div>
             <div className="gen-info-block">
               <p>Fixed prompt</p>
-              <code>{FIXED_LAYER_A_PROMPT}</code>
+              <code>{config.prompt}</code>
             </div>
             <LabeledNumber
               label="Seed"
@@ -122,7 +145,7 @@ export default function LayerATestPage() {
               disabled={isLoading}
               style={{ marginTop: 4 }}
             >
-              {isLoading ? "Generating..." : "Generate Layer A"}
+              {isLoading ? "Generating..." : config.buttonText}
             </button>
 
             {(isLoading || isDone) && (
@@ -158,7 +181,7 @@ export default function LayerATestPage() {
                 }}
               >
                 <p style={{ fontSize: 13, letterSpacing: 0 }}>
-                  Generate the fixed Layer A smoke model to view outputs
+                  {config.emptyText}
                 </p>
               </div>
             )}
@@ -173,7 +196,7 @@ export default function LayerATestPage() {
             )}
 
             {isDone && (
-              <div style={{ display: "grid", gap: 18 }}>
+              <div className="layer-a-result-stack">
                 {/* Audio */}
                 {result?.audio_b64 && (
                   <ReviewSection title="♪ Audio">
@@ -195,12 +218,7 @@ export default function LayerATestPage() {
                     <img
                       src={`data:image/png;base64,${result.image_b64}`}
                       alt="Layer A mel-spectrogram"
-                      style={{
-                        width: "100%",
-                        height: "auto",
-                        display: "block",
-                        borderRadius: 6,
-                      }}
+                      className="gen-spectrogram-img layer-a-spectrogram-img"
                     />
                   </ReviewSection>
                 )}
@@ -259,7 +277,7 @@ export default function LayerATestPage() {
               onClick={() =>
                 downloadDataUrl(
                   `data:audio/wav;base64,${result.audio_b64}`,
-                  `layer_a_${tag}.wav`,
+                  `${config.filenamePrefix}_${tag}.wav`,
                 )
               }
             >
@@ -273,7 +291,7 @@ export default function LayerATestPage() {
               onClick={() =>
                 downloadDataUrl(
                   `data:image/png;base64,${result.image_b64}`,
-                  `layer_a_${tag}_spectrogram.png`,
+                  `${config.filenamePrefix}_${tag}_spectrogram.png`,
                 )
               }
             >

@@ -243,13 +243,20 @@ default. Do not normalize to `0.05` RMS; that over-amplifies background recorder
 noise and can produce pulsing, machine-like samples. Use raw audio first, or only
 mild normalization with `--normalize_audio --target_rms 0.005`.
 
-Current working Layer A AudioLDM2 checkpoint:
+Current working Layer A AudioLDM2 smoke test 1 checkpoint:
 `acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`. This is the user-validated
-smoke model as of 2026-05-06; it works well for quiet, environmental-like
-ambient beds with only minor issues. Sample with
+spring-night smoke model as of 2026-05-06; it works well for quiet,
+environmental-like ambient beds with only minor issues. Sample with
 `--lora_dir checkpoints/audioldm2-lora-raw-smoke`, low guidance around `2.0`,
 and prompts that explicitly exclude foreground events, music, and machinery.
 Do not use `audioldm2-lora-rms005-smoke` for quality testing.
+
+Layer A smoke test 2 uses an insect/cicada-focused dataset at
+`resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/`. This dataset is
+manually audited after filtering and may contain fewer than 50 clips. It excludes
+segments overlapping downloaded annotation events and strong-wind rows. Train it
+to `acoustic_ai/checkpoints/audioldm2-lora-insects-smoke` and keep its generated
+samples separate from smoke test 1 outputs.
 
 Because this smoke model was trained on a very small dataset, Layer A dev
 generation must keep the prompt and model parameters fixed. The frontend may
@@ -294,12 +301,45 @@ for seed in 42 43 44; do
 done
 ```
 This generates three WAV/PNG/JSON bundles under
-`debug/layer_a/audioldm2/samples/spring_night_raw_smoke_seed{42,43,44}/`.
+`debug/layer_a/audioldm2/samples/audioldm2-lora-raw-smoke/spring_night_raw_smoke_seed{42,43,44}/`.
 `sample_audioldm2.py` and the dev frontend/backend response both render Layer A
 spectrogram PNGs through `modules.ambient.diffusion.layer_a_visualization`, using
 the same log-mel parameters and image settings. If they diverge, check that both
 services are restarted and that the compared WAVs were generated with the same
 seed/model/prompt/settings.
+
+Layer A AudioLDM2 smoke-test-2 workflow (insect/cicada):
+```bash
+cd acoustic_ai
+
+# Train the smoke-test-2 LoRA on the manually audited insect/cicada dataset.
+./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
+  --manifest_path ../resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/manifest.csv \
+  --output_dir checkpoints/audioldm2-lora-insects-smoke \
+  --batch_size 1 \
+  --num_epochs 5 \
+  --learning_rate 1e-5
+
+# Generate audit samples. The sampler automatically writes under:
+# debug/layer_a/audioldm2/samples/audioldm2-lora-insects-smoke/<run_name>/
+for seed in 42 43 44; do
+  ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
+    --prompt "summer afternoon insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, dry hot air, distant environmental bed, no birds, no foreground events, no music, no machinery, no strong wind" \
+    --lora_dir checkpoints/audioldm2-lora-insects-smoke \
+    --run_name insects_smoke_seed${seed} \
+    --seed ${seed} \
+    --num_inference_steps 100 \
+    --guidance_scale 2.0 \
+    --output_target_rms 0.0015 \
+    --highpass_hz 80
+done
+```
+This generates bundles under
+`debug/layer_a/audioldm2/samples/audioldm2-lora-insects-smoke/insects_smoke_seed{42,43,44}/`.
+Generated AudioLDM2 outputs from different LoRA checkpoints must remain in
+separate checkpoint-named folders under `debug/layer_a/audioldm2/samples/`.
+Do not pass a shared `--output_dir` for multiple LoRA checkpoints unless it still
+keeps checkpoint-named subfolders.
 
 ---
 
@@ -325,7 +365,9 @@ COMP-6000-Capstone2/
 │   │   └── analysis/            # Analysis module data
 │   ├── checkpoints/
 │   │   ├── ambient/best.pt      # VAE checkpoint (DVC)
-│   │   └── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
+│   │   ├── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
+│   │   ├── audioldm2-lora-raw-smoke/      # Layer A smoke test 1 LoRA
+│   │   └── audioldm2-lora-insects-smoke/  # Layer A smoke test 2 LoRA
 │   └── server/                  # FastAPI server
 │       ├── server.py            # FastAPI entry point
 │       └── inference.py         # Inference helpers
@@ -334,8 +376,14 @@ COMP-6000-Capstone2/
 │       ├── site_257_filtered_items.csv    (git)
 │       ├── site_257_env_data.csv          (git)
 │       ├── site_257_training_manifest.csv (git)
+│       ├── smoking_test_dataset/          # Layer A smoke test 1, spring night
+│       ├── smoking_test2_insects_dataset/ # Layer A smoke test 2, insect/cicada
 │       ├── downloaded_clips/              (DVC, 125 GB)
 │       └── downloaded_annotations/        (DVC)
+├── debug/
+│   └── layer_a/audioldm2/samples/
+│       ├── audioldm2-lora-raw-smoke/      # Smoke test 1 generated bundles
+│       └── audioldm2-lora-insects-smoke/  # Smoke test 2 generated bundles
 ├── services/dev/                # Docker Compose (postgres + backend + frontend only)
 ├── script/                      # Data download scripts
 ├── dvc.yaml                     # DVC pipeline stages
