@@ -44,6 +44,9 @@ resources/site_257_bowra-dry-a/*
 !resources/site_257_bowra-dry-a/event_snippet_manifest.csv
 !resources/site_257_bowra-dry-a/activity_label_manifest.csv
 
+# Local optional Layer B embedding artifacts
+resources/site_257_bowra-dry-a/weather_embedding_index*.npz
+
 
 # IDE and editors
 .idea/
