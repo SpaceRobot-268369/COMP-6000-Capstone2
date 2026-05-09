@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Iterable
 
 import requests
+import boto3
 
 BASE_MEDIA_URL = "https://api.acousticobservatory.org/audio_recordings/{recording_id}/media.webm"
 MAX_CLIP_SECONDS = 300.0
@@ -34,6 +35,7 @@ def parse_args() -> argparse.Namespace:
     default_output = (
         project_root / "resources" / "site_257_bowra-dry-a" / "downloaded_clips"
     )
+    default_report_dir = Path("/workspace/logs")
 
     parser = argparse.ArgumentParser(
         description=(
@@ -71,6 +73,13 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_WORKERS,
         help="Number of parallel worker processes for clip downloads (default: 10).",
     )
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        default=default_report_dir,
+        help="Directory to write download report CSV/MD files.",
+    )
+
     return parser.parse_args()
 
 
@@ -122,6 +131,9 @@ def download_segment(
     tmp_path = output_path.with_suffix(output_path.suffix + ".part")
     last_error = ""
 
+    s3 = boto3.client("s3")
+    bucket_name = "eco-acoustic-data.store.adelaideuni.cloud"
+
     for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
         try:
             response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
@@ -130,6 +142,7 @@ def download_segment(
             if not response.content:
                 raise ValueError("response content is empty")
 
+            # 1. 先保留原来的本地写入逻辑，方便测试和回滚
             output_path.parent.mkdir(parents=True, exist_ok=True)
             tmp_path.write_bytes(response.content)
             if tmp_path.stat().st_size == 0:
@@ -138,6 +151,18 @@ def download_segment(
             tmp_path.replace(output_path)
             if output_path.stat().st_size == 0:
                 raise ValueError("final file is zero-byte")
+
+            # 2. 同时上传到 S3 object storage
+            s3_key = (
+                f"training_dataset/site_257/"
+                f"{recording_id}/{output_path.name}"
+            )
+
+            s3.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=response.content,
+            )
 
             return True, attempt, ""
         except Exception as exc:
@@ -148,6 +173,7 @@ def download_segment(
                 output_path.unlink()
 
     return False, MAX_DOWNLOAD_ATTEMPTS, last_error
+
 
 
 def download_job(job: tuple[int, str, int, float, float, str, str]) -> tuple[bool, int, str, int, str]:
@@ -197,8 +223,10 @@ def main() -> None:
         raise FileNotFoundError(f"CSV not found: {args.csv_path}")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    args.report_dir.mkdir(parents=True, exist_ok=True)
 
     jobs: list[tuple[int, str, int, float, float, str, str]] = []
+
     for item_count, row in iter_selected_rows(args.csv_path, args.start_item, args.end_item):
         item_id = (row.get("id") or "").strip()
         duration_raw = (row.get("duration_seconds") or "").strip()
@@ -206,6 +234,7 @@ def main() -> None:
         if not item_id:
             print(f"[SKIP] count {item_count}: missing id")
             continue
+
         if not duration_raw:
             print(f"[SKIP] count {item_count} item {item_id}: missing duration_seconds")
             continue
@@ -219,23 +248,28 @@ def main() -> None:
             continue
 
         item_folder = args.output_dir / f"site_257_item_{item_id}"
+
         if item_folder.exists():
             print(f"[SKIP] count {item_count} item {item_id}: folder exists ({item_folder})")
             continue
 
         segments = build_segments(duration_seconds, MAX_CLIP_SECONDS)
+
         if not segments:
             print(f"[SKIP] count {item_count} item {item_id}: non-positive duration")
             continue
 
         item_folder.mkdir(parents=True, exist_ok=False)
+
         print(
-            f"[ITEM] count {item_count} item {item_id}: duration={duration_seconds:.3f}s clips={len(segments)}"
+            f"[ITEM] count {item_count} item {item_id}: "
+            f"duration={duration_seconds:.3f}s clips={len(segments)}"
         )
 
         for clip_num, (start_offset, end_offset) in enumerate(segments, start=1):
             clip_name = f"site_257_item_{item_id}_clip_{clip_num:03d}.webm"
             clip_path = item_folder / clip_name
+
             jobs.append(
                 (
                     item_count,
@@ -256,44 +290,98 @@ def main() -> None:
 
     success_count = 0
     failure_count = 0
+
     failed_items: dict[tuple[int, str], set[int]] = defaultdict(set)
     worker_exception_count = 0
+
+    failed_rows: list[dict[str, str]] = []
+
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         futures = [pool.submit(download_job, job) for job in jobs]
+
         for future in as_completed(futures):
             try:
                 ok, item_count, item_id, clip_num, message = future.result()
+
             except Exception as exc:
                 failure_count += 1
                 worker_exception_count += 1
+
                 print(f"[FAIL] worker exception: {exc}")
+
+                failed_rows.append(
+                    {
+                        "item_count": "unknown",
+                        "item_id": "unknown",
+                        "clip_num": "unknown",
+                        "error": str(exc),
+                    }
+                )
+
                 continue
 
             print(message)
+
             if ok:
                 success_count += 1
+
             else:
                 failure_count += 1
+
                 failed_items[(item_count, item_id)].add(clip_num)
 
+                failed_rows.append(
+                    {
+                        "item_count": str(item_count),
+                        "item_id": item_id,
+                        "clip_num": f"{clip_num:03d}",
+                        "error": message,
+                    }
+                )
+
     print(
-        f"[DONE] completed downloads: success={success_count} failed={failure_count} total={len(jobs)}"
+        f"[DONE] completed downloads: "
+        f"success={success_count} failed={failure_count} total={len(jobs)}"
     )
 
-    if failed_items or worker_exception_count:
+    report_csv = args.report_dir / "download_failed.csv"
+
+    if failed_rows:
         print("[REPORT] Failed items:")
+
         for item_count, item_id in sorted(failed_items):
             clip_nums = sorted(failed_items[(item_count, item_id)])
             clip_nums_text = ", ".join(f"{clip_num:03d}" for clip_num in clip_nums)
+
             print(
                 f"[REPORT] count {item_count} item {item_id}: "
                 f"failed_clips={len(clip_nums)} ({clip_nums_text})"
             )
+
         if worker_exception_count:
             print(
                 f"[REPORT] worker exceptions={worker_exception_count} "
                 "(clip details unavailable for these failures)"
             )
+
+        with report_csv.open("w", newline="") as csvfile:
+            writer = csv.DictWriter(
+                csvfile,
+                fieldnames=[
+                    "item_count",
+                    "item_id",
+                    "clip_num",
+                    "error",
+                ],
+            )
+
+            writer.writeheader()
+
+            for row in failed_rows:
+                writer.writerow(row)
+
+        print(f"[REPORT] wrote failure CSV: {report_csv}")
+
     else:
         print("[REPORT] No failed items.")
 
