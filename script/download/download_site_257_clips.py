@@ -249,26 +249,27 @@ def main() -> None:
 
         item_folder = args.output_dir / f"site_257_item_{item_id}"
 
-        if item_folder.exists():
-            print(f"[SKIP] count {item_count} item {item_id}: folder exists ({item_folder})")
-            continue
-
         segments = build_segments(duration_seconds, MAX_CLIP_SECONDS)
 
         if not segments:
             print(f"[SKIP] count {item_count} item {item_id}: non-positive duration")
             continue
 
-        item_folder.mkdir(parents=True, exist_ok=False)
+        item_folder.mkdir(parents=True, exist_ok=True)
 
         print(
             f"[ITEM] count {item_count} item {item_id}: "
             f"duration={duration_seconds:.3f}s clips={len(segments)}"
         )
 
+        scheduled_count = 0
+
         for clip_num, (start_offset, end_offset) in enumerate(segments, start=1):
             clip_name = f"site_257_item_{item_id}_clip_{clip_num:03d}.webm"
             clip_path = item_folder / clip_name
+
+            if clip_path.exists() and clip_path.stat().st_size > 0:
+                continue
 
             jobs.append(
                 (
@@ -281,6 +282,10 @@ def main() -> None:
                     str(clip_path),
                 )
             )
+            scheduled_count += 1
+
+        if scheduled_count == 0:
+            print(f"[SKIP] count {item_count} item {item_id}: all clips already exist")
 
     if not jobs:
         print("[DONE] No clips scheduled for download.")
