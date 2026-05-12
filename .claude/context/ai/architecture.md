@@ -11,7 +11,7 @@ acoustic_ai/
 ├── modules/
 │   ├── ambient/     — Module A: ambient bed (VAE encoder + retrieval)
 │   ├── weather/     — Module B: weather sound engine (asset mixing)
-│   ├── events/      — Module C: species/event layer (annotation + scheduler)
+│   ├── events/      — Module C: species/event layer (AudioGen LoRA generative)
 │   ├── mixer/       — Module D: layer combiner + explanation output
 │   └── analysis/    — Module E: analysis explainer (detectors)
 ├── precompute/      — One-off preprocessing scripts
@@ -29,7 +29,7 @@ acoustic_ai/
 User env request
     └── Module A: retrieve ambient bed clips (NN search in latent_clips.npy)
     └── Module B: select + mix weather assets (wind/rain intensity → gain/EQ)
-    └── Module C: schedule event snippets (season/time/env → event timeline)
+    └── Module C: generate event clips with AudioGen LoRA (per-species/context LoRAs, conditioned by env/time → event timeline)
     └── Module D: combine layers → WAV + spectrogram + explanation JSON
 ```
 
@@ -82,14 +82,31 @@ Intensity mapping:
 
 ### Module C — Species/Event Layer (`modules/events/`)
 
+**Approach:** **Generative**, using **AudioGen LoRA** fine-tuned per species (and optionally per diel/seasonal context) on top of the `facebook/audiogen-medium` base model. AudioGen is chosen over AudioLDM2 for this layer because:
+- Token-based (EnCodec) representation preserves transients better than mel→HiFi-GAN
+- Trained on AudioSet's environmental/animal labels — the base model already has owl, songbird, insect priors
+- Native short-clip operating range (1–10 s) matches Layer C event durations
+- LoRA fine-tuning is supported via PEFT on the transformer attention layers
+
 | File | Role |
 |---|---|
-| `annotation_audit.py` | Audit A2O annotation CSVs, produce event index [PLACEHOLDER] |
-| `event_index.py` | Extract event snippets from clips [PLACEHOLDER] |
-| `scheduler.py` | Timeline event placement [PLACEHOLDER] |
+| `annotation_audit.py` | Audit A2O annotation CSVs → per-species training manifests [PLACEHOLDER] |
+| `dataset.py` | Manifest → 16 kHz mono clips + captions for AudioGen training [PLACEHOLDER] |
+| `train_audiogen.py` | LoRA fine-tune AudioGen on a per-species manifest [PLACEHOLDER] |
+| `sample_audiogen.py` | Generate event clips from a LoRA + prompt + duration + seed [PLACEHOLDER] |
+| `scheduler.py` | Timeline event placement (which LoRAs fire, when, at what density) [PLACEHOLDER] |
 
-**Data:** `data/events/annotation_event_index.csv`, `event_snippets/`, `birdnet_labels/` (DVC-tracked)
-**Pre-condition:** annotation_audit.py must run before any Module C training.
+**Base model:** `facebook/audiogen-medium` (1.5B params, 16 kHz mono)
+**Checkpoints:** `checkpoints/audiogen-lora-<species>-<context>/` per LoRA (DVC-tracked)
+**Training data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
+
+**Pre-condition:** annotation_audit.py must run before any Module C training, to produce per-species manifests filtered by score, duration, and diel context.
+
+**Smoke test:** Single LoRA on Southern Boobook nocturnal calls — see `pipeline_design.md` Layer C section for the smoke-test selection policy and hyperparameters.
+
+**Sample-rate boundary:** AudioGen output is 16 kHz mono. Module D mixer must resample 16 kHz → 22,050 Hz at the layer boundary before overlaying on the ambient bed.
+
+**Tooling note:** AudioGen lives in Meta's `audiocraft` repo (not HuggingFace `diffusers`). Use a separate Python environment (`acoustic_ai/.venv-audiogen`) to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
 
 ### Module D — Mixer (`modules/mixer/`)
 
@@ -110,14 +127,46 @@ No dedicated training data. Uses Module A latents, Module B asset index, Module 
 
 ---
 
+## Generative Model Strategy
+
+### Current stage (MVP and smoke tests)
+
+Layers A and C use frozen large base models with LoRA adapters:
+
+| Layer | Base model | Adapter | Status |
+|-------|-----------|---------|--------|
+| A — Ambient | `cvssp/audioldm2` (~1.5B params, latent diffusion) | LoRA fine-tuned on ~50 Bowra clips | Smoke test 1 passed (spring night); smoke test 2 in progress (insect/cicada) |
+| C — Events | `facebook/audiogen-medium` (~1.5B params, autoregressive transformer + EnCodec) | Per-species LoRA (40–80 clips each) | Smoke test pending (Southern Boobook nocturnal) |
+
+LoRA adds ~0.1–0.5% extra parameters on top of frozen base weights. The full base model is loaded at inference time (6–8 GB VRAM each).
+
+### Future product-level consideration
+
+Migration from base model + LoRA to **distilled own models** is under consideration for a future production deployment. The goal is to reduce inference VRAM footprint and latency. This is not pursued during the MVP or research prototype stages.
+
+Distillation approaches per layer:
+- **Layer A:** consistency distillation (LCM) or progressive distillation — compresses 100+ DDIM steps → 4 steps (~25× speedup); optionally shrinks the U-Net backbone.
+- **Layer C:** sequence-level knowledge distillation into a smaller transformer; EnCodec codec can be reused.
+
+Pursue distillation only when all three conditions are met:
+1. The LoRA path is proven to produce high-quality results across multiple species and seasonal contexts (not just smoke tests).
+2. Deployment latency or VRAM cost is a demonstrated user-facing bottleneck.
+3. The team has sufficient ecoacoustic data and ML research capacity without stalling product work.
+
+If latency becomes a bottleneck before full distillation is feasible, the preferred intermediate step is **LCM step-reduction on Layer A only** — Layer C per-species LoRAs should remain as-is, since adding a species by retraining a generalist student is not cost-effective.
+
+> Full risk and trade-off analysis: `.claude/context/ai/distillation_strategy.md`
+
+---
+
 ## Data Ownership
 
 | Module | Reads | Produces |
 |---|---|---|
 | A | `resources/downloaded_clips/`, `data/shared/spectrograms/` | `data/ambient/latents/` |
 | B | `resources/downloaded_clips/` (curation), `data/shared/wavs/` | `data/weather/weather_assets/` |
-| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/events/annotation_event_index.csv`, `event_snippets/` |
-| D | `data/ambient/latents/`, `data/weather/weather_assets/`, `data/events/event_snippets/` | ephemeral WAV + JSON per request |
+| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/events/<species>/manifest.csv` + extracted snippets, `checkpoints/audiogen-lora-<species>-<context>/` |
+| D | `data/ambient/latents/`, `data/weather/weather_assets/`, AudioGen LoRA outputs (resampled 16 → 22.05 kHz) | ephemeral WAV + JSON per request |
 | E | `data/ambient/latents/`, `data/weather/asset_index.csv`, `data/events/annotation_event_index.csv` | ephemeral analysis report |
 
 ---

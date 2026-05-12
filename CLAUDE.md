@@ -63,7 +63,7 @@ speculative soundscape = ambient site bed (Module A)
 ```
 env conditions → Module A: ambient retrieval (NN search in latent_clips.npy)
               → Module B: weather asset mixing (wind/rain → gain/EQ)
-              → Module C: event scheduling (annotation/BirdNET snippets)
+              → Module C: event generation via AudioGen LoRA (per-species LoRAs over `facebook/audiogen-medium`, 16 kHz → resampled to 22.05 kHz at the mixer boundary)
               → Module D: layer combiner → WAV + spectrogram + explanation JSON
 ```
 
@@ -81,7 +81,7 @@ uploaded audio → Module E: ambient similarity (VAE latent NN)
 |---|---|---|---|
 | A — Ambient | VAE encoder + NN retrieval for ambient bed | VAE trained (30 epochs) | `acoustic_ai/modules/ambient/` |
 | B — Weather | Curated wind/rain assets + parameter mixing | Placeholder | `acoustic_ai/modules/weather/` |
-| C — Events | Annotation audit + event snippets + scheduler | Placeholder | `acoustic_ai/modules/events/` |
+| C — Events | **Generative — AudioGen LoRA per species** (base: `facebook/audiogen-medium`) + scheduler. Annotation audit produces per-species training manifests. | Placeholder (smoke test pending: Southern Boobook nocturnal) | `acoustic_ai/modules/events/` |
 | D — Mixer | Combine A+B+C → WAV + explanation JSON | Placeholder | `acoustic_ai/modules/mixer/` |
 | E — Analysis | Ambient similarity + weather + event detectors | Partial (A working) | `acoustic_ai/modules/analysis/` |
 
@@ -90,9 +90,12 @@ Checkpoint: `acoustic_ai/checkpoints/vocoder/best.pt` (DVC-tracked).
 
 **VAE checkpoint:** `acoustic_ai/checkpoints/ambient/best.pt` (DVC-tracked).
 
+**Generative model strategy:** Layers A and C currently use frozen large base models (`cvssp/audioldm2` and `facebook/audiogen-medium`) with LoRA adapters for the MVP and smoke tests. For a future product-level deployment, migration to distilled own models is under consideration — this would reduce inference VRAM and latency but carries significant data, quality, and engineering risks. Pursue distillation only once (1) the LoRA path is proven across multiple species and contexts, (2) latency or VRAM is a demonstrated user-facing bottleneck, and (3) the team has capacity. Full risk and trade-off analysis: `.claude/context/ai/distillation_strategy.md`.
+
 > Full details: `.claude/context/ai/architecture.md`
 > Pipeline design: `.claude/context/ai/pipeline_design.md`
 > Decision log: `.claude/context/ai/logs/mvp_decision_log.md`
+> Distillation strategy: `.claude/context/ai/distillation_strategy.md`
 
 ### Environmental Variables
 temperature, humidity, wind speed/direction, rainfall, time of day, season, geographic site
@@ -258,6 +261,39 @@ segments overlapping downloaded annotation events and strong-wind rows. Train it
 to `acoustic_ai/checkpoints/audioldm2-lora-insects-smoke` and keep its generated
 samples separate from smoke test 1 outputs.
 
+Layer C smoke test 1 uses a small exact-event bird-call dataset at
+`resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/`. Use the full
+annotation CSV archive only as an index; do not download the full per-event
+segment archive. For this smoke stage, train or validate bird vocal events only,
+because the current annotation dataset contains only bird species detections.
+Treat event types as species-level classes. The default smoke set uses two event
+types with 50 segments each: `Southern Boobook` / `Ninox boobook` for nocturnal
+owl calls, and `Splendid Fairywren` / `Malurus splendens` for common
+dawn/diurnal passerine calls. Select from `BirdNET.results.csv` with score
+`>= 0.9`, raw event duration `1.0-10.0 s`, event-type-specific diel preference,
+distinct recordings where possible, and the standard `+/-3.0 s` event buffer.
+Exclude insects/cicadas, frogs, mammals, weather events, wind gusts,
+human/vehicle/anthropogenic sounds, and generic `Unknown` from this annotation
+source. Those need separate Layer B assets, another detector, or a later
+annotation pass.
+
+Layer C smoke-test-1 event segment workflow:
+```bash
+python3 script/dataset/build_layer_c_smoke_manifest.py \
+  --output resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/manifest.csv \
+  --event-type boobook \
+  --event-type splendid_fairywren \
+  --segments-per-type 50
+
+python3 script/download/download_site_257_event_segments.py \
+  --event-manifest resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/manifest.csv \
+  --output-dir resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/segments \
+  --min-score 0.9 \
+  --min-duration 1.0 \
+  --max-duration 10.0 \
+  --workers 2
+```
+
 Because this smoke model was trained on a very small dataset, Layer A dev
 generation must keep the prompt and model parameters fixed. The frontend may
 only expose a non-negative integer `seed`; the Express backend should forward
@@ -353,7 +389,7 @@ COMP-6000-Capstone2/
 │   ├── modules/
 │   │   ├── ambient/             # Module A: VAE + retrieval
 │   │   ├── weather/             # Module B: weather assets + mixing
-│   │   ├── events/              # Module C: annotation + event scheduling
+│   │   ├── events/              # Module C: AudioGen LoRA per species + scheduler
 │   │   ├── mixer/               # Module D: layer combiner
 │   │   └── analysis/            # Module E: analysis explainer
 │   ├── precompute/              # One-off data prep scripts
@@ -361,13 +397,14 @@ COMP-6000-Capstone2/
 │   │   ├── shared/              # Shared wavs + spectrograms
 │   │   ├── ambient/latents/     # Latent clip database
 │   │   ├── weather/             # Weather assets + asset_index.csv
-│   │   ├── events/              # Event index + snippets
+│   │   ├── events/              # Per-species manifests + extracted snippets (AudioGen training data)
 │   │   └── analysis/            # Analysis module data
 │   ├── checkpoints/
 │   │   ├── ambient/best.pt      # VAE checkpoint (DVC)
 │   │   ├── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
-│   │   ├── audioldm2-lora-raw-smoke/      # Layer A smoke test 1 LoRA
-│   │   └── audioldm2-lora-insects-smoke/  # Layer A smoke test 2 LoRA
+│   │   ├── audioldm2-lora-raw-smoke/       # Layer A smoke test 1 LoRA
+│   │   ├── audioldm2-lora-insects-smoke/   # Layer A smoke test 2 LoRA
+│   │   └── audiogen-lora-<species>-<ctx>/  # Layer C per-species LoRAs (e.g. audiogen-lora-boobook-smoke)
 │   └── server/                  # FastAPI server
 │       ├── server.py            # FastAPI entry point
 │       └── inference.py         # Inference helpers
@@ -381,9 +418,11 @@ COMP-6000-Capstone2/
 │       ├── downloaded_clips/              (DVC, 125 GB)
 │       └── downloaded_annotations/        (DVC)
 ├── debug/
-│   └── layer_a/audioldm2/samples/
-│       ├── audioldm2-lora-raw-smoke/      # Smoke test 1 generated bundles
-│       └── audioldm2-lora-insects-smoke/  # Smoke test 2 generated bundles
+│   ├── layer_a/audioldm2/samples/
+│   │   ├── audioldm2-lora-raw-smoke/      # Smoke test 1 generated bundles
+│   │   └── audioldm2-lora-insects-smoke/  # Smoke test 2 generated bundles
+│   └── layer_c/audiogen/samples/
+│       └── audiogen-lora-<species>-<ctx>/ # Per-species LoRA generated bundles
 ├── services/dev/                # Docker Compose (postgres + backend + frontend only)
 ├── script/                      # Data download scripts
 ├── dvc.yaml                     # DVC pipeline stages
@@ -564,7 +603,7 @@ Git tracks code and small text files. DVC tracks large binary artifacts. They wo
 
 ```
 git commit  →  .dvc pointer files committed (tiny text, ~100 bytes each)
-               actual binary data stored in local cache (~/.dvc-store/capstone2)
+               actual binary data stored in S3 (s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache/)
 
 git checkout <branch>  →  post-checkout hook fires
                            dvc checkout runs automatically
@@ -584,15 +623,38 @@ All four hooks were installed by `dvc install` and fire without any manual step:
 | `git commit` | `pre-commit` | warns if tracked data was modified but not staged with `dvc add` |
 | `git push` | `pre-push` | `dvc push` — copies new/changed artifacts into local cache before code push |
 
-### Local Cache
+### DVC Remote — S3
 
-All data is stored outside the repo:
+The shared DVC remote lives on S3:
 
 ```
-~/.dvc-store/capstone2/   ← local DVC cache (set in .dvc/config)
+s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache/
+```
+
+Region: `ap-southeast-2`. The bucket also hosts human-browsable prefixes for source data, blessed checkpoints, and training logs:
+
+| Prefix | Contents |
+|---|---|
+| `dataset/metadata/` | Small CSVs (also git-tracked) |
+| `dataset/original/` | Raw A2O downloads (~125 GB FLAC pool, annotations) — DVC, cold tier |
+| `dataset/training_dataset/<layer>/<stage>/` | Curated per-experiment subsets (smoke / mvp / product) — DVC, hot tier |
+| `dvc-cache/` | DVC content-addressed blobs (`dvc push/pull` only) |
+| `release/<layer>/<run>-v<N>/` | Blessed checkpoints + metrics + audit samples |
+| `logs/<layer>/<run>/<date>/` | Training logs, TB events, debug bundles |
+
+DVC must be scoped to the `dvc-cache/` prefix (not the bucket root) so the opaque hash tree doesn't pollute the readable prefixes.
+
+**Configure once per machine:**
+```bash
+python3 -m dvc remote add -d s3 \
+  s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache
+python3 -m dvc remote modify s3 region ap-southeast-2
+python3 -m dvc remote modify s3 profile capstone2
 ```
 
 DVC deduplicates by content hash — a file used on two branches is stored once. Branches share the cache.
+
+> Full bucket layout, lifecycle rules, dual-tracking policy for the raw pool vs. curated training subsets, and `aws s3 sync` mirror commands: `.claude/context/data/s3_bucket_layout.md`
 
 ### Typical Branch Workflow
 
@@ -648,14 +710,14 @@ make ai                # start AI server locally on port 8000
 On a new machine, after `git clone`:
 
 ```bash
-# 1. Install DVC
-pip3 install dvc
+# 1. Install DVC with S3 support
+pip3 install 'dvc[s3]'
 
-# 2. Configure the local cache path (must match where data was pushed)
-python3 -m dvc remote add local_cache /path/to/your/dvc-store/capstone2
-python3 -m dvc remote default local_cache
+# 2. Configure AWS credentials for the shared S3 remote
+#    Add a [capstone2] profile to ~/.aws/credentials with project IAM keys.
+#    The remote itself is already declared in .dvc/config — no `dvc remote add` needed.
 
-# 3. Pull all tracked data
+# 3. Pull all tracked data from S3
 python3 -m dvc pull
 
 # 4. Re-install git hooks (hooks live in .git/, not committed)
@@ -747,6 +809,7 @@ Full architecture details live in `.claude/context/` in the repo:
 | Generation & analysis pipeline design | `.claude/context/ai/pipeline_design.md` |
 | MVP decision log | `.claude/context/ai/logs/mvp_decision_log.md` |
 | Data alignment & env features | `.claude/context/data/data_reference.md` |
+| S3 bucket layout & DVC remote | `.claude/context/data/s3_bucket_layout.md` |
 | Generation quality analysis | `.claude/context/data/logs/generation_quality_analysis.md` |
 | Known data issues | `.claude/context/issues/known_issues.md` |
 | Analysis test cases | `.claude/context/testing/analysis_test_cases.md` |

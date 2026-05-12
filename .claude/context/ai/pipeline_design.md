@@ -90,20 +90,57 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 
 **Purpose:** add biologically meaningful events plausible for the requested env/time context.
 
-**Pre-condition:** annotation audit must complete before event model design.
-Run `modules/events/annotation_audit.py` and review `data/events/annotation_label_report.md`.
+**Approach: Generative — AudioGen LoRA, per species (and optionally per diel/seasonal context).**
 
-**Decision gates after audit:**
+We fine-tune `facebook/audiogen-medium` with LoRA adapters on per-species snippet manifests built from A2O / BirdNET annotations. AudioGen is chosen over AudioLDM2 for events specifically because its token-based EnCodec representation preserves transients (the leading edge of a call), its training corpus already contains AudioSet animal/environmental labels, and its native operating range matches event clip durations. Retrieval and DSP variation are kept as fallbacks if a given species LoRA fails the smoke-test bar.
 
-| Audit result | Layer C design |
+**Pre-condition:** annotation audit must complete before training any LoRA.
+Run `modules/events/annotation_audit.py` and review `data/events/annotation_label_report.md` to produce per-species manifests filtered by score, duration, and diel context.
+
+**Per-species selection policy (apply in order):**
+
+| Filter | Rule |
 |---|---|
-| Many reliable species labels | Train species/event classifier |
-| Few species labels, many BirdNET events | BirdNET pseudo-label retrieval |
-| Mostly score-only events | Binary activity layer only |
-| Labels highly imbalanced | Retrieval + rule-based scheduling |
+| 1. Species | `common_name_tags` or `other_tags` matches target species |
+| 2. Confidence | `score ≥ 0.85` (BirdNET imports only; manual Raven annotations always kept) |
+| 3. Duration | `1.0 ≤ event_duration_seconds ≤ 6.0` |
+| 4. Diel context | event-start hour falls in the target diel bin (e.g. 22:00–05:00 AEST for nocturnal species) |
+| 5. Year | exclude 2021–2022 (A2O archive gap); prefer 2023–2024 |
+| 6. Per-recording cap | ≤ 3 snippets per `audio_recording_id` to avoid overfitting to one individual |
+| 7. Random sample | seed=42, sample ~150 candidates |
+| 8. Manual audit | listen + reject overlap, wind, multi-species → target **40–80 keepers** |
 
-**Code:** `modules/events/annotation_audit.py`, `modules/events/event_index.py`, `modules/events/scheduler.py` [PLACEHOLDERS]
-**Data:** `data/events/annotation_event_index.csv`, `data/events/event_snippets/`
+**Smoke test (single LoRA, Southern Boobook nocturnal):**
+
+| Setting | Value |
+|---|---|
+| Base model | `facebook/audiogen-medium` |
+| Dataset size | 60–100 audited clips, 16 kHz mono, 3–6 s, single isolated calls |
+| Captions | short natural language, varied (e.g. "Southern Boobook owl two-note call at night, distant", "close Boobook call quiet woodland night") |
+| LoRA rank `r` | 8 (alpha 16); target modules `q_proj`, `v_proj` |
+| Epochs | 10–15 |
+| Batch size | 1 (gradient accumulation 4–8) |
+| Learning rate | 1e-4 (warmup ~50 steps) |
+| Precision | fp16 on CUDA, fp32 on MPS (MPS fp16 unreliable) |
+| Inference duration | 3–5 s |
+| Sampling | top-k 250, temperature 1.0, CFG 3.0 |
+| Seeds for audit | 42–51 (10 seeds; higher rejection rate than ambient → cherry-pick) |
+| Output checkpoint | `acoustic_ai/checkpoints/audiogen-lora-boobook-smoke/` |
+| Output samples | `debug/layer_c/audiogen/samples/audiogen-lora-boobook-smoke/boobook_smoke_seed{42..51}/` |
+
+**Pass/fail criterion (smoke):** at least 4 of 10 seeds produce a clip in which the two-note "boo-book" structure is identifiable in the first 3 s with no obvious EnCodec warble; end-to-end training + sampling completes without intervention.
+
+**MVP scope:** 5–15 per-species LoRAs across diel bins (target ~10 species covering ~95% of high-confidence detections at this site). Storage budget ≈ 50 MB per LoRA → ~500 MB on DVC.
+
+**Sample-rate boundary:** AudioGen output is **16 kHz mono**. Module D mixer must resample 16 → 22,050 Hz before overlaying on the ambient bed. Apply a fixed event-layer attenuation (≈ −12 dB) at the mixer because AudioGen output is naturally hotter than the ambient bed.
+
+**Prompt style:** AudioGen responds to short, declarative captions — not to AudioLDM2-style "no X, no Y" negation lists. Use negative prompts via classifier-free guidance instead.
+
+**Tooling:** Meta's `audiocraft` + PEFT. Use a separate environment at `acoustic_ai/.venv-audiogen` to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
+
+**Code:** `modules/events/annotation_audit.py`, `modules/events/dataset.py`, `modules/events/train_audiogen.py`, `modules/events/sample_audiogen.py`, `modules/events/scheduler.py` [PLACEHOLDERS]
+**Data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
+**Checkpoints:** `checkpoints/audiogen-lora-<species>-<context>/` per LoRA (DVC-tracked)
 
 ---
 

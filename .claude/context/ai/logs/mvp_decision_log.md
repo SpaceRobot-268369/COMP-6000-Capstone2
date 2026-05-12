@@ -738,3 +738,58 @@ transforming, and mixing these layers according to the requested environmental s
 | Ecological plausibility | Species/events are plausible for the selected season/time/env context. |
 | Explainability | API can report which clips/assets/events were selected and why. |
 | Demo stability | Generation works reliably without depending on fragile latent random sampling. |
+
+---
+
+## 2026-05-07 — Layer C goes generative; AudioGen LoRA chosen as the base model
+
+**Decision:** Layer C is upgraded from a curated "annotation audit + retrieval + scheduler" path to a **generative path** using **AudioGen LoRA** (`facebook/audiogen-medium`, fine-tuned per species and optionally per diel context).
+
+### Why this changed
+
+The original Layer C plan treated annotated events as a snippet library indexed by metadata, with a scheduler picking real recordings to overlay on the ambient bed. Re-evaluation against the project's research framing (speculative soundscape generation, modal flexibility, future env-conditioning) shows that retrieval is sufficient for an MVP demo but does not deliver the novelty/variation that distinguishes a generative system from a sample player. Going generative for Layer C gives the project:
+
+- Per-species variation that doesn't repeat real recordings verbatim
+- A natural extension surface for env conditioning at the prompt level
+- Symmetry with Layer A's generative path (both layers now sit on diffusion/transformer LoRAs over pretrained backbones)
+
+### Why AudioGen rather than AudioLDM2
+
+| Criterion | AudioLDM2 | Stable Audio Open | AudioGen |
+|---|---|---|---|
+| Audio representation | Mel + HiFi-GAN vocoder | Waveform-aware latent | EnCodec discrete tokens |
+| Transient quality | Smeared (vocoder bottleneck) | Good | **Best for short structured events** |
+| Training corpus fit | Broad (music-leaning) | Music + sound design | **AudioSet animal/environmental labels** |
+| Native length | ~10 s | up to ~47 s | 1–10 s — **matches event window** |
+| LoRA support | `diffusers` | `diffusers` | PEFT on transformer attention |
+
+AudioLDM2 LoRA — successful for Layer A ambient — is poorly suited for events because mel→HiFi-GAN smears the leading-edge transients that define a call's identity, and a 10 s default audio window is mostly silence around a 2–4 s event. AudioGen's token-based generation preserves transients, the base model already has owl/songbird priors from AudioSet, and its 1–10 s window matches Layer C's event durations natively. Stable Audio Open is a strong runner-up but its training corpus is more music-oriented; deferred unless AudioGen underperforms.
+
+### Trade-offs accepted
+
+- New tooling: `audiocraft` (Meta) + PEFT, separate from the `diffusers` stack used for Layer A. A second venv at `acoustic_ai/.venv-audiogen` is required to avoid torch/torchaudio conflicts.
+- Sample-rate boundary: AudioGen is 16 kHz native; Module D must resample to 22.05 kHz at the layer boundary.
+- Per-species LoRA management: storage and training cost scale with library size. Mitigated by capping MVP scope at ~10 species and ~50 MB per LoRA.
+- MPS training stability is uncertain on Apple Silicon — fallback plan is brief CUDA rental for training runs if MPS fails. Inference on MPS is fine.
+
+### Smoke test plan
+
+- Single LoRA: **Southern Boobook nocturnal** (14k+ annotations, stereotyped two-note call, pairs naturally with the validated spring-night ambient bed)
+- 60–100 audited clips, 16 kHz mono, 3–6 s, varied short captions
+- LoRA rank 8, LR 1e-4, 10–15 epochs, batch 1 + grad accum 4–8
+- 10 seeds at duration 3–5 s, top-k 250, temp 1.0, CFG 3.0
+- Pass criterion: ≥4/10 seeds with identifiable two-note structure and no EnCodec warble
+- Output: `checkpoints/audiogen-lora-boobook-smoke/` and `debug/layer_c/audiogen/samples/...`
+
+### Fallbacks
+
+If AudioGen LoRA fails the smoke-test bar across seeds, the fallback ladder is:
+1. Stable Audio Open LoRA (cleaner transients, music-leaning training data)
+2. Hybrid: real annotation snippets + DSP variation (pitch ±2 semitones, time-stretch ±10%, IR reverb) — high realism, low novelty
+3. Pure retrieval (the original plan) — kept warm as a guaranteed-working baseline
+
+### Files updated in this decision
+
+- `.claude/context/ai/architecture.md` — Module C section and data-ownership table
+- `.claude/context/ai/pipeline_design.md` — Layer C section
+- `CLAUDE.md` — AI Module Details table, generation pipeline description

@@ -24,6 +24,7 @@ package-lock.json
 **/.env.example
 acoustic_ai/venv/
 acoustic_ai/.venv/
+acoustic_ai/.venv-*/
 
 # Logs and caches
 *.log
@@ -54,6 +55,8 @@ resources/**
 !resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
 !resources/site_257_bowra-dry-a/site_257_all_items.csv
+!resources/site_257_bowra-dry-a/all_items_annotation/
+!resources/site_257_bowra-dry-a/all_items_annotation/README.md
 
 # IDE and editors
 .idea/

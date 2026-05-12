@@ -31,8 +31,8 @@ ANNOTATIONS_URL = (
 )
 
 # Hard-coded portal login (JSON field is "email" per API docs; username-style logins work).
-A2O_LOGIN_EMAIL = "liting"
-A2O_PASSWORD = "88888888"
+A2O_LOGIN_EMAIL = "Murphyy"
+A2O_PASSWORD = "12345678"
 
 REQUEST_TIMEOUT = (60, 120)
 MAX_ATTEMPTS = 5
