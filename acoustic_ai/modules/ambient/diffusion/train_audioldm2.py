@@ -33,7 +33,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune AudioLDM2 using LoRA")
     parser.add_argument("--pretrained_model_name", type=str, default="cvssp/audioldm2")
     parser.add_argument("--manifest_path", type=str, required=True)
-    parser.add_argument("--output_dir", type=str, default="checkpoints/audioldm2-lora")
+    parser.add_argument("--output_dir", type=str, required=True,
+                        help="Candidate dir, e.g. model/candidates/<member>/layer-a-audioldm2-<run-id>")
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--learning_rate", type=float, default=1e-4)

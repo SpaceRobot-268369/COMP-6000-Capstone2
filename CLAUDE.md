@@ -86,9 +86,9 @@ uploaded audio → Module E: ambient similarity (VAE latent NN)
 | E — Analysis | Ambient similarity + weather + event detectors | Partial (A working) | `acoustic_ai/modules/analysis/` |
 
 **Vocoder:** Ecoacoustic HiFi-GAN trained on Site 257 audio (128-bin, 22,050 Hz).
-Checkpoint: `acoustic_ai/checkpoints/vocoder/best.pt` (DVC-tracked).
+Checkpoint: `model/production/vocoder/best.pt` (DVC-tracked).
 
-**VAE checkpoint:** `acoustic_ai/checkpoints/ambient/best.pt` (DVC-tracked).
+**VAE checkpoint:** `model/production/ambient-vae/best.pt` (DVC-tracked).
 
 **Generative model strategy:** Layers A and C currently use frozen large base models (`cvssp/audioldm2` and `facebook/audiogen-medium`) with LoRA adapters for the MVP and smoke tests. For a future product-level deployment, migration to distilled own models is under consideration — this would reduce inference VRAM and latency but carries significant data, quality, and engineering risks. Pursue distillation only once (1) the LoRA path is proven across multiple species and contexts, (2) latency or VRAM is a demonstrated user-facing bottleneck, and (3) the team has capacity. Full risk and trade-off analysis: `.claude/context/ai/distillation_strategy.md`.
 
@@ -247,10 +247,10 @@ noise and can produce pulsing, machine-like samples. Use raw audio first, or onl
 mild normalization with `--normalize_audio --target_rms 0.005`.
 
 Current working Layer A AudioLDM2 smoke test 1 checkpoint:
-`acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`. This is the user-validated
+`model/candidates/lucas/layer-a-audioldm2-raw-smoke`. This is the user-validated
 spring-night smoke model as of 2026-05-06; it works well for quiet,
 environmental-like ambient beds with only minor issues. Sample with
-`--lora_dir checkpoints/audioldm2-lora-raw-smoke`, low guidance around `2.0`,
+`--lora_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke`, low guidance around `2.0`,
 and prompts that explicitly exclude foreground events, music, and machinery.
 Do not use `audioldm2-lora-rms005-smoke` for quality testing.
 
@@ -258,7 +258,7 @@ Layer A smoke test 2 uses an insect/cicada-focused dataset at
 `resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/`. This dataset is
 manually audited after filtering and may contain fewer than 50 clips. It excludes
 segments overlapping downloaded annotation events and strong-wind rows. Train it
-to `acoustic_ai/checkpoints/audioldm2-lora-insects-smoke` and keep its generated
+to `model/candidates/lucas/layer-a-audioldm2-insects-smoke` and keep its generated
 samples separate from smoke test 1 outputs.
 
 Layer C smoke test 1 uses a small exact-event bird-call dataset at
@@ -319,7 +319,7 @@ Layer A AudioLDM2 smoke-test workflow:
 cd acoustic_ai
 ./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
   --manifest_path ../resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv \
-  --output_dir checkpoints/audioldm2-lora-raw-smoke \
+  --output_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
   --batch_size 1 \
   --num_epochs 5 \
   --learning_rate 1e-5
@@ -327,7 +327,7 @@ cd acoustic_ai
 for seed in 42 43 44; do
   ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
     --prompt "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery" \
-    --lora_dir checkpoints/audioldm2-lora-raw-smoke \
+    --lora_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
     --run_name spring_night_raw_smoke_seed${seed} \
     --seed ${seed} \
     --num_inference_steps 100 \
@@ -351,7 +351,7 @@ cd acoustic_ai
 # Train the smoke-test-2 LoRA on the manually audited insect/cicada dataset.
 ./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
   --manifest_path ../resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/manifest.csv \
-  --output_dir checkpoints/audioldm2-lora-insects-smoke \
+  --output_dir model/candidates/lucas/layer-a-audioldm2-insects-smoke \
   --batch_size 1 \
   --num_epochs 5 \
   --learning_rate 1e-5
@@ -361,7 +361,7 @@ cd acoustic_ai
 for seed in 42 43 44; do
   ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
     --prompt "summer afternoon insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, dry hot air, distant environmental bed, no birds, no foreground events, no music, no machinery, no strong wind" \
-    --lora_dir checkpoints/audioldm2-lora-insects-smoke \
+    --lora_dir model/candidates/lucas/layer-a-audioldm2-insects-smoke \
     --run_name insects_smoke_seed${seed} \
     --seed ${seed} \
     --num_inference_steps 100 \
@@ -399,15 +399,16 @@ COMP-6000-Capstone2/
 │   │   ├── weather/             # Weather assets + asset_index.csv
 │   │   ├── events/              # Per-species manifests + extracted snippets (AudioGen training data)
 │   │   └── analysis/            # Analysis module data
-│   ├── checkpoints/
-│   │   ├── ambient/best.pt      # VAE checkpoint (DVC)
-│   │   ├── vocoder/best.pt      # HiFi-GAN checkpoint (DVC)
-│   │   ├── audioldm2-lora-raw-smoke/       # Layer A smoke test 1 LoRA
-│   │   ├── audioldm2-lora-insects-smoke/   # Layer A smoke test 2 LoRA
-│   │   └── audiogen-lora-<species>-<ctx>/  # Layer C per-species LoRAs (e.g. audiogen-lora-boobook-smoke)
 │   └── server/                  # FastAPI server
 │       ├── server.py            # FastAPI entry point
 │       └── inference.py         # Inference helpers
+├── model/                       # All model checkpoints (DVC-tracked)
+│   ├── production/                          # Blessed checkpoints used by inference
+│   │   ├── ambient-vae/best.pt              # VAE
+│   │   └── vocoder/best.pt                  # HiFi-GAN
+│   └── candidates/<member>/<run-id>/        # Per-member experiment checkpoints
+│       # e.g. candidates/lucas/layer-a-audioldm2-raw-smoke/
+│       # e.g. candidates/lucas/layer-c-audiogen-boobook-smoke/
 ├── resources/                   # Raw source data (DVC-tracked)
 │   └── site_257_bowra-dry-a/
 │       ├── site_257_filtered_items.csv    (git)
@@ -538,11 +539,11 @@ DVC tracks large binary artifacts (audio clips, spectrograms, model checkpoints,
 |----------|------|-----|
 | Downloaded audio clips | `resources/site_257_bowra-dry-a/downloaded_clips/` | 43+ GB of `.webm` files |
 | Downloaded annotations | `resources/site_257_bowra-dry-a/downloaded_annotations/` | Sparse CSV files |
-| VAE checkpoint | `acoustic_ai/checkpoints/ambient/best.pt` | 213 MB |
-| Vocoder checkpoint | `acoustic_ai/checkpoints/vocoder/best.pt` | 11 MB |
-| Per-clip latent database | `acoustic_ai/data/module_a/latents/latent_clips.npy` | Per-clip VAE latents |
-| Weather assets | `acoustic_ai/data/module_b/weather_assets/` | Curated wind/rain clips |
-| Event snippets | `acoustic_ai/data/module_c/event_snippets/` | Extracted annotation clips |
+| VAE checkpoint | `model/production/ambient-vae/best.pt` | 213 MB |
+| Vocoder checkpoint | `model/production/vocoder/best.pt` | 11 MB |
+| Per-clip latent database | `acoustic_ai/data/ambient/latents/latent_clips.npy` | Per-clip VAE latents |
+| Weather assets | `acoustic_ai/data/weather/weather_assets/` | Curated wind/rain clips |
+| Event snippets | `acoustic_ai/data/events/event_snippets/` | Extracted annotation clips |
 
 ### What is Tracked by Git (not DVC)
 
@@ -551,7 +552,7 @@ DVC tracks large binary artifacts (audio clips, spectrograms, model checkpoints,
 | `resources/site_257_bowra-dry-a/site_257_filtered_items.csv` | Small metadata file |
 | `resources/site_257_bowra-dry-a/site_257_env_data.csv` | Small env data table |
 | `resources/site_257_bowra-dry-a/site_257_training_manifest.csv` | Small manifest |
-| `acoustic_ai/data/module_b/asset_index.csv` | Asset index headers |
+| `acoustic_ai/data/weather/asset_index.csv` | Asset index headers |
 | All `.dvc` pointer files | Pointers to DVC-tracked artifacts |
 | `dvc.yaml` | Pipeline stage definitions |
 | `params.yaml` | Tracked hyperparameters |
@@ -684,9 +685,9 @@ Defines reproducible stages. `dvc repro` re-runs only stages whose deps or param
 | Stage | Command | Key outputs |
 |---|---|---|
 | `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
-| `train_vae` | `modules/ambient/train.py` | `checkpoints/ambient/best.pt` |
+| `train_vae` | `modules/ambient/train.py` | `model/production/ambient-vae/best.pt` |
 | `precompute_latents` | `precompute/precompute_latents.py` | `data/ambient/latents/latent_clips.npy`, `latent_templates.npy` |
-| `train_vocoder` | `modules/ambient/train_vocoder.py` | `checkpoints/vocoder/best.pt` |
+| `train_vocoder` | `modules/ambient/train_vocoder.py` | `model/production/vocoder/best.pt` |
 
 Hyperparameters that affect which stages re-run are tracked in `params.yaml`.
 Compare params between branches: `python3 -m dvc params diff main`.

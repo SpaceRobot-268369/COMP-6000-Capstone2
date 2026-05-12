@@ -13,13 +13,13 @@ We are switching the foundational approach for generating the "ambient site bed"
 3. **Data**: The model uses the existing `smoking_test_dataset` (`resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv`).
 
 ## Current Working Checkpoint
-- Current checkpoint: `acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`
+- Current checkpoint: `model/candidates/lucas/layer-a-audioldm2-raw-smoke`
 - Base model: `cvssp/audioldm2`
 - Sample output bundle: `debug/layer_a/audioldm2/samples/spring_night_raw_smoke_seed42/`
 - Status: user validation says this model works well for Layer A ambient beds, with only minor issues.
 - Branch status: this branch is one attempted Layer A implementation, and it has succeeded for the smoke test. If this branch is merged into `main`, update the broader architecture, pipeline, and handoff docs so they consistently describe AudioLDM2 LoRA as the main Layer A path rather than a branch-local validation attempt.
 - Expected sound: quiet environmental ambience similar to the sample data, low volume, mostly stationary, without foreground events or obvious generated-machine texture.
-- Deprecated checkpoint: `acoustic_ai/checkpoints/audioldm2-lora-rms005-smoke`. Do not use it for quality testing; it was trained with `--target_rms 0.05`, which over-amplified quiet recordings and produced pulsing/machine-like artifacts.
+- Deprecated checkpoint: `model/candidates/lucas/layer-a-audioldm2-rms005-smoke`. Do not use it for quality testing; it was trained with `--target_rms 0.05`, which over-amplified quiet recordings and produced pulsing/machine-like artifacts.
 
 ## Fixed Dev Generation Contract
 - The smoke model was trained on a very small dataset, so Layer A dev generation is intentionally narrow.
@@ -58,7 +58,7 @@ Use this workflow to reproduce the successful Layer A smoke-test model from
    cd acoustic_ai
    ./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
      --manifest_path ../resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv \
-     --output_dir checkpoints/audioldm2-lora-raw-smoke \
+     --output_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
      --batch_size 1 \
      --num_epochs 5 \
      --learning_rate 1e-5
@@ -74,7 +74,7 @@ Use this workflow to reproduce the successful Layer A smoke-test model from
    for seed in 42 43 44; do
      ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
        --prompt "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery" \
-       --lora_dir checkpoints/audioldm2-lora-raw-smoke \
+       --lora_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
        --run_name spring_night_raw_smoke_seed${seed} \
        --seed ${seed} \
        --num_inference_steps 100 \

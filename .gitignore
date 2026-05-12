@@ -69,17 +69,14 @@ resources/**
 *.local
 .env.*.local
 
-# Acoustic AI — model checkpoints (DVC-tracked, not git)
-acoustic_ai/checkpoints/ambient/epoch_*.pt
-acoustic_ai/checkpoints/vocoder/epoch_*.pt
-# best.pt / last.pt are DVC-tracked — pointer files (.dvc) go in git, not the weights
-acoustic_ai/checkpoints/ambient/best.pt
-acoustic_ai/checkpoints/vocoder/best.pt
-acoustic_ai/checkpoints/ambient_diffusion/
-acoustic_ai/checkpoints/ambient_diffusion_clap/
-acoustic_ai/checkpoints/audioldm2-lora*/
-!acoustic_ai/checkpoints/audioldm2-lora-insects-smoke/
-!acoustic_ai/checkpoints/audioldm2-lora-insects-smoke/**
+# Model checkpoints
+# Layout: model/{candidates/<member>/<run-id>, production/<role>}/
+# Binaries (.pt, .safetensors, .bin, .ckpt) belong in DVC, not git.
+# Only metadata (.dvc pointers, README, *.json, *.yaml) is committed.
+model/**/*.pt
+model/**/*.safetensors
+model/**/*.bin
+model/**/*.ckpt
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/

@@ -24,7 +24,7 @@ Current MVP focus:
 | Backend | Express API exists | Auth endpoints and AI proxy routes exist. Auth is temporarily disabled in `requireAuth`. |
 | AI server | FastAPI server exists | `acoustic_ai/server.py` exposes `/health`, `/analysis`, and `/generation`. |
 | Dataset | Site 257 Bowra Dry-A MVP sample exists | 287 recordings, 6,148 usable clips, environmental data aligned. |
-| Model checkpoint | VAE checkpoint exists | `acoustic_ai/checkpoints/best.pt`. |
+| Model checkpoint | VAE checkpoint exists | `model/best.pt`. |
 | Latent database | Per-clip latent DB exists | `acoustic_ai/latent_clips.npy`. |
 | Vocoder | Ecoacoustic HiFi-GAN checkpoint exists | `acoustic_ai/vocoder_checkpoints/best.pt`. |
 
@@ -779,7 +779,7 @@ AudioLDM2 LoRA — successful for Layer A ambient — is poorly suited for event
 - LoRA rank 8, LR 1e-4, 10–15 epochs, batch 1 + grad accum 4–8
 - 10 seeds at duration 3–5 s, top-k 250, temp 1.0, CFG 3.0
 - Pass criterion: ≥4/10 seeds with identifiable two-note structure and no EnCodec warble
-- Output: `checkpoints/audiogen-lora-boobook-smoke/` and `debug/layer_c/audiogen/samples/...`
+- Output: `model/candidates/lucas/layer-c-audiogen-boobook-smoke/` and `debug/layer_c/audiogen/samples/...`
 
 ### Fallbacks
 

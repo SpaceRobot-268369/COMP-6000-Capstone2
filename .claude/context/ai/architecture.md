@@ -58,11 +58,11 @@ Uploaded audio clip
 | `train_vocoder.py` | Ecoacoustic HiFi-GAN training |
 | `retrieval.py` | NN retrieval logic [PLACEHOLDER] |
 
-**Checkpoint:** `checkpoints/ambient/best.pt` (213 MB, DVC-tracked)
-**Vocoder:** `checkpoints/vocoder/best.pt` (11 MB, DVC-tracked)
+**Checkpoint:** `model/production/ambient-vae/best.pt` (213 MB, DVC-tracked)
+**Vocoder:** `model/production/vocoder/best.pt` (11 MB, DVC-tracked)
 **Latents:** `data/ambient/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
 
-**Current status:** Layer A generation is being validated with AudioLDM2 LoRA on this branch. This is one attempted Layer A implementation and has succeeded for the smoke test. The current user-validated smoke checkpoint is `checkpoints/audioldm2-lora-raw-smoke`, based on `cvssp/audioldm2`; it works well for quiet, environmental-like ambient beds with only minor issues. Keep output low-volume and mostly stationary. The dev path is fixed-prompt because the smoke dataset is tiny: the frontend should expose only a non-negative integer seed, the backend should forward only `{ seed }`, and FastAPI owns the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; the same seed should reproduce effectively the same audio on the same code path. Seed is not temperature, and temperature is not exposed here. The failed high-RMS checkpoint `checkpoints/audioldm2-lora-rms005-smoke` is deprecated because it produced pulsing/machine-like artifacts after over-amplifying quiet field recordings. If this branch is merged into `main`, update the broader docs so AudioLDM2 LoRA is described consistently as the main Layer A path. The trained VAE is retained for transformation mode and Module E analysis only; it is not on the Layer A generation path. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
+**Current status:** Layer A generation is being validated with AudioLDM2 LoRA on this branch. This is one attempted Layer A implementation and has succeeded for the smoke test. The current user-validated smoke checkpoint is `model/candidates/lucas/layer-a-audioldm2-raw-smoke`, based on `cvssp/audioldm2`; it works well for quiet, environmental-like ambient beds with only minor issues. Keep output low-volume and mostly stationary. The dev path is fixed-prompt because the smoke dataset is tiny: the frontend should expose only a non-negative integer seed, the backend should forward only `{ seed }`, and FastAPI owns the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; the same seed should reproduce effectively the same audio on the same code path. Seed is not temperature, and temperature is not exposed here. The failed high-RMS checkpoint `model/candidates/lucas/layer-a-audioldm2-rms005-smoke` is deprecated because it produced pulsing/machine-like artifacts after over-amplifying quiet field recordings. If this branch is merged into `main`, update the broader docs so AudioLDM2 LoRA is described consistently as the main Layer A path. The trained VAE is retained for transformation mode and Module E analysis only; it is not on the Layer A generation path. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
 
 **Layer A data dependency:** the cleaned segment pool (`data/ambient/ambient_segments/` + `ambient_index.csv`) must be built by `precompute/build_ambient_index.py` before retrieval can run. Cleaning is **audio-only and content-agnostic** — events are an open class (birds, vehicles, frogs, helicopters, voices, unknown), but ambient is locally stationary, so the gate flags frames that deviate > 3·MAD from a per-clip rolling-median baseline of mel/RMS/centroid/flatness/flux/ZCR features. After ±0.5 s dilation, contiguous unmasked spans ≥ 20 s are kept and sliced into 20–60 s segments (target 30 s) so runtime crossfades are minimal. BirdNET and A2O annotations are run as **post-hoc audits** over retained segments, not as gates. Retrieval matches on `diel_bin` + `season` + (`hour`, `month`) cyclic encoding only — temp/humidity/wind/rain are excluded because they belong to Layers B and C.
 
@@ -97,7 +97,7 @@ Intensity mapping:
 | `scheduler.py` | Timeline event placement (which LoRAs fire, when, at what density) [PLACEHOLDER] |
 
 **Base model:** `facebook/audiogen-medium` (1.5B params, 16 kHz mono)
-**Checkpoints:** `checkpoints/audiogen-lora-<species>-<context>/` per LoRA (DVC-tracked)
+**Checkpoints:** `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` per LoRA (DVC-tracked)
 **Training data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
 
 **Pre-condition:** annotation_audit.py must run before any Module C training, to produce per-species manifests filtered by score, duration, and diel context.
@@ -165,7 +165,7 @@ If latency becomes a bottleneck before full distillation is feasible, the prefer
 |---|---|---|
 | A | `resources/downloaded_clips/`, `data/shared/spectrograms/` | `data/ambient/latents/` |
 | B | `resources/downloaded_clips/` (curation), `data/shared/wavs/` | `data/weather/weather_assets/` |
-| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/events/<species>/manifest.csv` + extracted snippets, `checkpoints/audiogen-lora-<species>-<context>/` |
+| C | `resources/downloaded_annotations/`, `resources/downloaded_clips/` | `data/events/<species>/manifest.csv` + extracted snippets, `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` |
 | D | `data/ambient/latents/`, `data/weather/weather_assets/`, AudioGen LoRA outputs (resampled 16 → 22.05 kHz) | ephemeral WAV + JSON per request |
 | E | `data/ambient/latents/`, `data/weather/asset_index.csv`, `data/events/annotation_event_index.csv` | ephemeral analysis report |
 

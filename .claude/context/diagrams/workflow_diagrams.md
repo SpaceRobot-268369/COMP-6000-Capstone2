@@ -109,7 +109,7 @@ site_257_training_manifest.csv
          │
          │  acoustic_ai/train.py  --beta-kl 0.01
          ▼
-acoustic_ai/checkpoints/
+model/production/ambient-vae/
   epoch_001.pt ... epoch_030.pt       ← per-epoch checkpoints
   best.pt                             ← lowest val loss checkpoint
                                          (val loss ≈ 0.003580, KL ≈ 0.05/element)

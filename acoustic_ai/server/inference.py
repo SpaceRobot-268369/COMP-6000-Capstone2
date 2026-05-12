@@ -29,13 +29,13 @@ import torch
 # ---------------------------------------------------------------------------
 _AI_ROOT          = Path(__file__).resolve().parent.parent
 PROJECT_ROOT      = _AI_ROOT.parent
-CHECKPOINT_DIR    = _AI_ROOT / "checkpoints" / "ambient"
+CHECKPOINT_DIR    = PROJECT_ROOT / "model" / "production" / "ambient-vae"
 DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
 TEMPLATES_PATH    = _AI_ROOT / "data" / "ambient" / "latents" / "latent_templates.npy"
 CLIPS_PATH        = _AI_ROOT / "data" / "ambient" / "latents" / "latent_clips.npy"
-VOCODER_CKPT      = _AI_ROOT / "checkpoints" / "vocoder" / "best.pt"
+VOCODER_CKPT      = PROJECT_ROOT / "model" / "production" / "vocoder" / "best.pt"
 AUDIOLDM2_BASE_MODEL = "cvssp/audioldm2"
-AUDIOLDM2_LAYER_A_LORA_DIR = _AI_ROOT / "checkpoints" / "audioldm2-lora-raw-smoke"
+AUDIOLDM2_LAYER_A_LORA_DIR = PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-audioldm2-raw-smoke"
 LAYER_A_FIXED_PROMPT = (
     "quiet spring night ambient soundscape, Bowra dry woodland, Australia, "
     "distant environmental bed, no foreground events, no music, no machinery"
@@ -66,7 +66,7 @@ LAYER_A_SMOKE_TESTS = {
             "Bowra dry woodland, Australia, dry hot air, distant environmental bed, "
             "no birds, no foreground events, no music, no machinery, no strong wind"
         ),
-        "lora_dir": _AI_ROOT / "checkpoints" / "audioldm2-lora-insects-smoke",
+        "lora_dir": PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-audioldm2-insects-smoke",
         "dataset": "resources/site_257_bowra-dry-a/smoking_test2_insects_dataset",
         "notes": [
             "Layer A dev endpoint is locked to the insect/cicada smoke-test prompt.",
@@ -157,9 +157,9 @@ def mel_db_to_wav_ecoacoustic(mel_db: np.ndarray, sample_rate: int = 22_050) -> 
     """Convert a (128, T) dB-scale mel-spectrogram to WAV using the fine-tuned
     ecoacoustic HiFi-GAN vocoder trained on site 257 audio.
 
-    Requires acoustic_ai/vocoder_checkpoints/best.pt to exist (produced by
-    running train_vocoder.py).  Raises FileNotFoundError if not available so
-    the caller can fall back gracefully.
+    Requires model/production/vocoder/best.pt to exist (produced by running
+    train_vocoder.py). Raises FileNotFoundError if not available so the caller
+    can fall back gracefully.
 
     Args:
         mel_db      : (128, T) array in dB scale [-80, 0]

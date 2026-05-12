@@ -19,7 +19,7 @@ speculative soundscape = ambient site bed
 
 **Purpose:** continuous ecoacoustic background texture (insects, low-level ambience, site tone). **Must not contain events** — bird calls, vehicles, helicopters belong in Layer C, weather in Layer B. Mixing events into the bed double-counts them and breaks layer separation.
 
-**Current implementation under validation:** AudioLDM2 LoRA generation. Current working checkpoint: `acoustic_ai/checkpoints/audioldm2-lora-raw-smoke`, with base model `cvssp/audioldm2`. User validation on 2026-05-06: works well for quiet environmental ambience with only minor issues. Keep generated beds low-volume, mostly stationary, and event-free; sample with low guidance around `2.0` and the fixed smoke-test prompt that excludes foreground events, music, and machinery. Because the smoke dataset is tiny, the dev frontend/backend path must not accept user prompts yet: expose only a non-negative integer seed, and let FastAPI own the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; same seed should reproduce effectively the same result on the same code path. Seed is not temperature, and temperature is not exposed. Do not use the deprecated `audioldm2-lora-rms005-smoke` checkpoint for quality testing. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
+**Current implementation under validation:** AudioLDM2 LoRA generation. Current working checkpoint: `model/candidates/lucas/layer-a-audioldm2-raw-smoke`, with base model `cvssp/audioldm2`. User validation on 2026-05-06: works well for quiet environmental ambience with only minor issues. Keep generated beds low-volume, mostly stationary, and event-free; sample with low guidance around `2.0` and the fixed smoke-test prompt that excludes foreground events, music, and machinery. Because the smoke dataset is tiny, the dev frontend/backend path must not accept user prompts yet: expose only a non-negative integer seed, and let FastAPI own the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; same seed should reproduce effectively the same result on the same code path. Seed is not temperature, and temperature is not exposed. Do not use the deprecated `audioldm2-lora-rms005-smoke` checkpoint for quality testing. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
 
 **Branch note:** this is one attempted Layer A implementation that succeeded for the smoke test on this branch. If merged into `main`, align all architecture, pipeline, and handoff docs so AudioLDM2 LoRA is described consistently as the main Layer A path.
 
@@ -125,7 +125,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 | Inference duration | 3–5 s |
 | Sampling | top-k 250, temperature 1.0, CFG 3.0 |
 | Seeds for audit | 42–51 (10 seeds; higher rejection rate than ambient → cherry-pick) |
-| Output checkpoint | `acoustic_ai/checkpoints/audiogen-lora-boobook-smoke/` |
+| Output checkpoint | `model/candidates/lucas/layer-c-audiogen-boobook-smoke/` |
 | Output samples | `debug/layer_c/audiogen/samples/audiogen-lora-boobook-smoke/boobook_smoke_seed{42..51}/` |
 
 **Pass/fail criterion (smoke):** at least 4 of 10 seeds produce a clip in which the two-note "boo-book" structure is identifiable in the first 3 s with no obvious EnCodec warble; end-to-end training + sampling completes without intervention.
@@ -140,7 +140,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 
 **Code:** `modules/events/annotation_audit.py`, `modules/events/dataset.py`, `modules/events/train_audiogen.py`, `modules/events/sample_audiogen.py`, `modules/events/scheduler.py` [PLACEHOLDERS]
 **Data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
-**Checkpoints:** `checkpoints/audiogen-lora-<species>-<context>/` per LoRA (DVC-tracked)
+**Checkpoints:** `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` per LoRA (DVC-tracked)
 
 ---
 
