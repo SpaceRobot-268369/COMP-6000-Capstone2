@@ -44,8 +44,8 @@ PRECOMPUTED_DIR = (
     / "resources" / "site_257_bowra-dry-a"
     / "smoking_test_dataset" / "precomputed"
 )
-DEFAULT_OUT = PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "ambient_diffusion_clap"
-PARAMS_PATH = PROJECT_ROOT / "params.yaml"
+DEFAULT_OUT = PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-ambient-diffusion-clap"
+PARAMS_PATH = DEFAULT_OUT / "params.yaml"
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,7 +81,7 @@ def update_ema(ema: torch.nn.Module, model: torch.nn.Module, decay: float) -> No
 def main() -> int:
     args = parse_args()
     raw_cfg = yaml.safe_load(open(args.params))
-    cfg = raw_cfg.get("diffusion_clap", raw_cfg.get("diffusion", {}))
+    cfg = {**raw_cfg.get("training", {}), **raw_cfg.get("inference", {})}
     if args.epochs is not None:
         cfg["epochs"] = args.epochs
 

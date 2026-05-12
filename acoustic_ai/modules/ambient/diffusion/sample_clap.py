@@ -48,10 +48,10 @@ from modules.ambient.diffusion.schedule import NoiseSchedule, ddim_sample  # noq
 
 
 DEFAULT_CLAP_CKPT = (
-    PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "ambient_diffusion_clap" / "best.pt"
+    PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-ambient-diffusion-clap" / "best.pt"
 )
-DEFAULT_VAE_CKPT = PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "ambient" / "best.pt"
-DEFAULT_VOC_CKPT = PROJECT_ROOT / "acoustic_ai" / "checkpoints" / "vocoder" / "best.pt"
+DEFAULT_VAE_CKPT = PROJECT_ROOT / "model" / "production" / "ambient-vae" / "best.pt"
+DEFAULT_VOC_CKPT = PROJECT_ROOT / "model" / "production" / "vocoder" / "best.pt"
 DEFAULT_SAMPLE_DIR = DEBUG_ROOT / "layer_a" / "clap_diffusion" / "samples"
 
 

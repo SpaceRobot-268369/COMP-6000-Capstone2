@@ -1,0 +1,27 @@
+# Layer A AudioLDM2 LoRA — summer-afternoon insect/cicada ambient (smoke test 2)
+# Trained on the manually-audited insect dataset (~50 clips, may be fewer).
+# Used by inference.py for Dev > Smoke 2.
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/manifest.csv
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 1.0e-5
+  normalize_audio: false
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+inference:
+  prompt: >-
+    summer afternoon insect-rich ambient soundscape, cicada and insect texture,
+    Bowra dry woodland, Australia, dry hot air, distant environmental bed,
+    no birds, no foreground events, no music, no machinery, no strong wind
+  num_inference_steps: 100
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80

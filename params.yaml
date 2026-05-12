@@ -25,22 +25,6 @@ vocoder:
   batch_size: 8
   lr: 0.0002
 
-# CLAP-conditioned latent diffusion (Method X smoke test)
-# Conditioning: 512-dim CLAP text embedding (laion/clap-htsat-unfused)
-# Dataset: 50 spring/night/September clips from smoking_test_dataset/
-diffusion_clap:
-  latent_dim: 256
-  cond_dim: 512            # CLAP text embedding dim
-  hidden_dim: 512
-  num_blocks: 6
-  num_train_timesteps: 1000
-  schedule: cosine
-  prediction: v
-  num_inference_steps: 50
-  epochs: 500              # intentional overfit on 50 clips for smoke test
-  batch_size: 16
-  lr: 0.0002
-  weight_decay: 0.0001
-  ema_decay: 0.999
-  cond_dropout_p: 0.1
-  cfg_scale: 3.0           # higher than env-cond model; text guidance is stronger
+# Per-candidate hyperparameters live with the candidate, e.g.
+#   model/candidates/<member>/<run-id>/params.yaml
+# Only stages declared in dvc.yaml (currently `ambient` and `vocoder`) go here.

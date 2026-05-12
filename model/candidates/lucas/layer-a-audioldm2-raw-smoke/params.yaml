@@ -1,0 +1,25 @@
+# Layer A AudioLDM2 LoRA — spring-night Bowra ambient (smoke test 1)
+# User-validated on 2026-05-06. Used by inference.py for Dev > Smoke 1.
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 1.0e-5
+  normalize_audio: false   # raw field-recording levels preserved
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+inference:
+  prompt: >-
+    quiet spring night ambient soundscape, Bowra dry woodland, Australia,
+    distant environmental bed, no foreground events, no music, no machinery
+  num_inference_steps: 100
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80
