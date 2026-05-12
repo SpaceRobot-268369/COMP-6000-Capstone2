@@ -645,13 +645,7 @@ Region: `ap-southeast-2`. The bucket also hosts human-browsable prefixes for sou
 
 DVC must be scoped to the `dvc-cache/` prefix (not the bucket root) so the opaque hash tree doesn't pollute the readable prefixes.
 
-**Configure once per machine:**
-```bash
-python3 -m dvc remote add -d s3 \
-  s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache
-python3 -m dvc remote modify s3 region ap-southeast-2
-python3 -m dvc remote modify s3 profile capstone2
-```
+The S3 remote is already declared in `.dvc/config` — you do not need to add it again. Each machine only needs to (1) install DVC with S3 support, and (2) have the `[capstone2]` AWS profile in `~/.aws/credentials` and `~/.aws/config`. See "Fresh Clone Setup" below for the exact commands.
 
 DVC deduplicates by content hash — a file used on two branches is stored once. Branches share the cache.
 
@@ -711,26 +705,39 @@ make ai                # start AI server locally on port 8000
 On a new machine, after `git clone`:
 
 ```bash
-# 1. Install DVC with S3 support
-pip3 install 'dvc[s3]'
+# 1. Install DVC + S3 driver libs. Two-step is recommended because the bundled
+#    'dvc[s3]' extra triggers a long pip resolver backtracking loop on macOS.
+pip3 install --user dvc
+pip3 install --user --upgrade boto3 s3fs aiobotocore fsspec
+#    Verify (both must succeed without error):
+dvc --version
+python3 -c "import boto3, s3fs; from fsspec.callbacks import DEFAULT_CALLBACK; print('ok')"
 
-# 2. Configure AWS credentials for the shared S3 remote
+# 2. Make sure `dvc` is on PATH. macOS pip3 --user installs go to
+#    ~/Library/Python/<ver>/bin — that directory may not be on PATH by default.
+echo 'export PATH="$HOME/Library/Python/3.9/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+which dvc                # should print ~/Library/Python/3.9/bin/dvc
+
+# 3. Configure AWS credentials.
 #    Add a [capstone2] profile to ~/.aws/credentials with project IAM keys.
-#    The remote itself is already declared in .dvc/config — no `dvc remote add` needed.
+#    Add a [profile capstone2] block to ~/.aws/config with region=ap-southeast-2.
+#    Verify:
+aws sts get-caller-identity --profile capstone2
+aws s3 ls s3://eco-acoustic-data.store.adelaideuni.cloud/ --profile capstone2
 
-# 3. Pull all tracked data from S3
-python3 -m dvc pull
+# 4. The S3 remote is already declared in .dvc/config — no `dvc remote add` needed.
+#    Pull all tracked data from S3.
+dvc pull
 
-# 4. Re-install git hooks (hooks live in .git/, not committed)
-python3 -m dvc install
-# Fix hooks to use python3 -m dvc (if dvc is not on PATH)
-sed -i '' 's/exec dvc /exec python3 -m dvc /g' .git/hooks/pre-commit .git/hooks/pre-push .git/hooks/post-checkout
-# Add post-merge hook manually
-echo '#!/bin/sh\npython3 -m dvc git-hook post-checkout $@' > .git/hooks/post-merge
-chmod +x .git/hooks/post-merge
+# 5. Re-install git hooks (hooks live in .git/, not committed).
+dvc install
 ```
 
-> **Note:** `dvc` may not be on `PATH` on macOS when installed via `pip3`. All commands in this project use `python3 -m dvc` explicitly. The git hooks are patched to do the same (see above).
+> **Notes**
+> - The Python interpreter that owns `dvc` is whatever your `pip3 --user` install resolves to. On stock macOS this is `/Library/Developer/CommandLineTools/usr/bin/python3` (Python 3.9.6). If `import boto3` fails inside `dvc`, you installed S3 deps into the wrong Python — check `head -1 $(which dvc)` to see which interpreter dvc actually uses, then `<that-python> -m pip install --user boto3 s3fs aiobotocore fsspec`.
+> - DVC and its S3 deps live at user-site, **not** in `acoustic_ai/.venv`. Git hooks call `dvc` and must work without venv activation.
+> - If a fresh `dvc pull` fails with `cannot import name 'DEFAULT_CALLBACK' from 'fsspec.callbacks'`, your `fsspec` is pinned to an old version by a transitive dep — run `pip3 install --user --upgrade fsspec s3fs aiobotocore` to bring them all current.
 
 ---
 
