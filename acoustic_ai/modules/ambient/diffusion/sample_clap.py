@@ -50,8 +50,8 @@ from modules.ambient.diffusion.schedule import NoiseSchedule, ddim_sample  # noq
 DEFAULT_CLAP_CKPT = (
     PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-ambient-diffusion-clap" / "best.pt"
 )
-DEFAULT_VAE_CKPT = PROJECT_ROOT / "model" / "production" / "ambient-vae" / "best.pt"
-DEFAULT_VOC_CKPT = PROJECT_ROOT / "model" / "production" / "vocoder" / "best.pt"
+DEFAULT_VAE_CKPT = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vae-site257-30epoch" / "best.pt"
+DEFAULT_VOC_CKPT = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vocoder-hifigan-site257" / "best.pt"
 DEFAULT_SAMPLE_DIR = DEBUG_ROOT / "layer_a" / "clap_diffusion" / "samples"
 
 

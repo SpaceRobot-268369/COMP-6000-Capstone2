@@ -13,8 +13,9 @@ from elsewhere, it moves here and CLAUDE.md links to it.
 | `ai/` | AI module architecture, pipeline design, distillation strategy, transition logs |
 | `ai/runbooks/` | Step-by-step training + sampling workflows for each smoke test or candidate run |
 | `ai/logs/` | Long-form decision logs (MVP, transitions) |
-| `data/` | Data alignment, S3 bucket layout, DVC workflow, generation-quality analysis |
+| `data/` | Data alignment and generation-quality analysis |
 | `data/logs/` | Detailed analysis runs |
+| `dev_specifications/` | Git, DVC, S3, and other developer workflow specifications |
 | `setup/` | Service topology, hardware requirements, local dev setup |
 | `testing/` | Analysis test cases, layer verification formats |
 | `issues/` | Known data issues, won't-fix lists |
@@ -46,9 +47,16 @@ from elsewhere, it moves here and CLAUDE.md links to it.
 | Topic | File |
 |---|---|
 | Data alignment & env features | [data/data_reference.md](data/data_reference.md) |
-| S3 bucket layout & DVC remote | [data/s3_bucket_layout.md](data/s3_bucket_layout.md) |
-| DVC workflow (git+dvc, hooks, fresh-clone) | [data/dvc_workflow.md](data/dvc_workflow.md) |
 | Generation quality analysis | [data/logs/generation_quality_analysis.md](data/logs/generation_quality_analysis.md) |
+
+### Dev Specifications
+
+| Topic | File |
+|---|---|
+| DVC workflow (git+dvc, hooks, fresh-clone) | [dev_specifications/dvc_workflow.md](dev_specifications/dvc_workflow.md) |
+| S3 bucket layout & DVC remote | [dev_specifications/s3_bucket_layout.md](dev_specifications/s3_bucket_layout.md) |
+| Git workflow (full) | [dev_specifications/git_workflow.md](dev_specifications/git_workflow.md) |
+| Model README standard | [dev_specifications/model_readme_standard.md](dev_specifications/model_readme_standard.md) |
 
 ### Setup
 
@@ -65,4 +73,3 @@ from elsewhere, it moves here and CLAUDE.md links to it.
 | Analysis test cases | [testing/analysis_test_cases.md](testing/analysis_test_cases.md) |
 | Layer verification & handoff formats | [testing/layer_verification_formats.md](testing/layer_verification_formats.md) |
 | Workflow diagrams | [diagrams/workflow_diagrams.md](diagrams/workflow_diagrams.md) |
-| Git workflow (full) | [git_workflow.md](git_workflow.md) |

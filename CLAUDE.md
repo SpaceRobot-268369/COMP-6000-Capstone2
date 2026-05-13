@@ -40,6 +40,7 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 |------|----------|
 | Architecture / design docs | `.claude/context/<topic>/` |
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
+| Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev_specifications/` |
 | Setup (services, hardware) | `.claude/context/setup/` |
 | Branch-scoped dev logs (ephemeral) | `.claude/context/dev/<branch-slug>/` |
 | Settings | `.claude/settings.local.json` |
@@ -52,21 +53,26 @@ Branch-scoped dev logs in `.claude/context/dev/<branch-slug>/` must be deleted i
 
 Always use `acoustic_ai/.venv` for AI training and inference (`./acoustic_ai/.venv/bin/python`, `./acoustic_ai/.venv/bin/accelerate`, etc.). Do **not** use system / Homebrew `python3`, `pip`, `accelerate`, or `uvicorn` — they load incompatible torch/torchaudio builds.
 
-DVC and its S3 deps are the exception: they live at user-site (`pip3 install --user ...`), **not** in the venv. Git hooks call `dvc` and must work without venv activation. See [.claude/context/data/dvc_workflow.md](.claude/context/data/dvc_workflow.md).
+DVC and its S3 deps are the exception: they live at user-site (`pip3 install --user ...`), **not** in the venv. Git hooks call `dvc` and must work without venv activation. See [.claude/context/dev_specifications/dvc_workflow.md](.claude/context/dev_specifications/dvc_workflow.md).
 
 ### Model checkpoint layout
 
 ```
 model/
-├── production/<role>/best.pt        # blessed checkpoints (DVC-tracked)
-└── candidates/<member>/<run-id>/    # per-experiment checkpoints (DVC-tracked)
+├── candidates/<member>/<run-id>/    # per-experiment checkpoints (DVC-tracked)
+└── production/<role>/               # promoted checkpoint slots, created only after sign-off
 ```
+
+At this stage of the project, **nothing is in production**. Every trained
+checkpoint — including the VAE and vocoder used by the current inference path
+— is a candidate. A `model/production/<role>/` slot will be created only after
+an explicit promotion decision (validation, sign-off, release tagging).
 
 Rules (team workflow):
 - One folder per member, one folder per run — never overwrite another member's candidates.
-- Train into `candidates/<member>/...`, not `production/`.
-- Each candidate ships with `params.yaml` + `README.md` + `.dvc` pointer; add `metrics.json` once evals exist.
-- Production promotion: copy a candidate's binary to `production/<role>/` and update the DVC pointer.
+- Train into `candidates/<member>/...`.
+- Each model folder under `model/candidates/...` or `model/production/...` ships with `README.md` + DVC pointer(s); candidate folders also ship with `params.yaml`, and add `metrics.json` once evals exist.
+- Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/dev_specifications/model_readme_standard.md](.claude/context/dev_specifications/model_readme_standard.md); keep the audit section empty until developers provide evaluation notes or review findings.
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
@@ -95,7 +101,7 @@ Seed is **not** temperature — it initializes the diffusion noise. Same seed + 
 Types: `feat`, `fix`, `data`, `model`, `infra`, `refactor`, `docs`, `exp`.
 Example: `model/lucas/layer-c-event-attemp-1`.
 
-Commit subjects use imperative mood, ≤72 chars, no issue numbers in the subject. Full conventions: [.claude/context/git_workflow.md](.claude/context/git_workflow.md).
+Commit subjects use imperative mood, ≤72 chars, no issue numbers in the subject. Full conventions: [.claude/context/dev_specifications/git_workflow.md](.claude/context/dev_specifications/git_workflow.md).
 
 ### Pre-commit file audit
 
@@ -130,7 +136,7 @@ Commands, env vars, ports: [.claude/context/setup/services.md](.claude/context/s
 - Binaries (checkpoints, audio archives, latents) live in S3 — `s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache/` (region `ap-southeast-2`, profile `capstone2`).
 - Git stores only `.dvc` pointer files.
 - Remote is already declared in `.dvc/config`; new machines just need the install + AWS profile.
-- Full workflow (fresh-clone, daily commands, candidate discipline, troubleshooting): [.claude/context/data/dvc_workflow.md](.claude/context/data/dvc_workflow.md).
+- Full workflow (fresh-clone, daily commands, candidate discipline, troubleshooting): [.claude/context/dev_specifications/dvc_workflow.md](.claude/context/dev_specifications/dvc_workflow.md).
 
 ---
 
@@ -146,13 +152,14 @@ Quick links:
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
-| DVC + S3 workflow | [.claude/context/data/dvc_workflow.md](.claude/context/data/dvc_workflow.md) |
+| DVC + S3 workflow | [.claude/context/dev_specifications/dvc_workflow.md](.claude/context/dev_specifications/dvc_workflow.md) |
+| Model README standard | [.claude/context/dev_specifications/model_readme_standard.md](.claude/context/dev_specifications/model_readme_standard.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
-| S3 bucket layout | [.claude/context/data/s3_bucket_layout.md](.claude/context/data/s3_bucket_layout.md) |
+| S3 bucket layout | [.claude/context/dev_specifications/s3_bucket_layout.md](.claude/context/dev_specifications/s3_bucket_layout.md) |
 | MVP dataset (site 257) | [.claude/skills/sample_mvp_dataset.md](.claude/skills/sample_mvp_dataset.md) |
 | Known data issues | [.claude/context/issues/known_issues.md](.claude/context/issues/known_issues.md) |
 | Services / hardware | [.claude/context/setup/](.claude/context/setup/) |
-| Git workflow (full) | [.claude/context/git_workflow.md](.claude/context/git_workflow.md) |
+| Git workflow (full) | [.claude/context/dev_specifications/git_workflow.md](.claude/context/dev_specifications/git_workflow.md) |
 
 ---
 

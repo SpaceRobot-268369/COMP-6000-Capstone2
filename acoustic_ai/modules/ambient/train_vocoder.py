@@ -18,7 +18,7 @@ Usage (from project root):
   python3 acoustic_ai/modules/ambient/train_vocoder.py --epochs 100 --max-clips 500
 
 Output:
-  model/production/vocoder/best.pt   ← used by inference.py
+  model/candidates/lucas/vocoder-hifigan-site257/best.pt   ← used by inference.py
 
 Estimated training time (Mac M-series):
   100 epochs × 500 clips × 30 s crops ≈ 2–3 hours
@@ -39,7 +39,7 @@ from torch.utils.data import DataLoader, Dataset
 
 PROJECT_ROOT     = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_PATH    = PROJECT_ROOT / "resources" / "site_257_bowra-dry-a" / "site_257_training_manifest.csv"
-VOCODER_CKPT_DIR = Path(__file__).resolve().parents[3] / "model" / "production" / "vocoder"
+VOCODER_CKPT_DIR = Path(__file__).resolve().parents[3] / "model" / "candidates" / "lucas" / "vocoder-hifigan-site257"
 
 
 # ---------------------------------------------------------------------------

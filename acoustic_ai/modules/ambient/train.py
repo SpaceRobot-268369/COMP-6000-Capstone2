@@ -3,7 +3,7 @@
 Usage (from project root):
   python3 acoustic_ai/modules/ambient/train.py
   python3 acoustic_ai/modules/ambient/train.py --epochs 30 --batch-size 8 --lr 1e-4
-  python3 acoustic_ai/modules/ambient/train.py --resume model/production/ambient-vae/epoch_05.pt
+  python3 acoustic_ai/modules/ambient/train.py --resume model/candidates/lucas/vae-site257-30epoch/epoch_05.pt
 
 VAE loss:
   loss = MSE(recon, input) + beta_kl * KL(q(z|x) || N(0,I))
@@ -13,8 +13,8 @@ VAE loss:
   Increase beta_kl (e.g. 0.01) for a more structured latent space at the
   cost of slightly higher reconstruction loss.
 
-Checkpoints are saved to model/production/ambient-vae/ after every epoch.
-Best checkpoint (lowest val loss) is also saved as best.pt.
+Checkpoints are saved to model/candidates/lucas/vae-site257-30epoch/ after
+every epoch. Best checkpoint (lowest val loss) is also saved as best.pt.
 """
 
 import argparse
@@ -37,7 +37,7 @@ from .preprocess import SPEC_CFG
 # ---------------------------------------------------------------------------
 PROJECT_ROOT   = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_PATH  = PROJECT_ROOT / "resources" / "site_257_bowra-dry-a" / "site_257_training_manifest.csv"
-CHECKPOINT_DIR = Path(__file__).resolve().parents[3] / "model" / "production" / "ambient-vae"
+CHECKPOINT_DIR = Path(__file__).resolve().parents[3] / "model" / "candidates" / "lucas" / "vae-site257-30epoch"
 
 
 # ---------------------------------------------------------------------------

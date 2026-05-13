@@ -30,8 +30,8 @@ git checkout <branch>  →  post-checkout hook fires
 |---|---|---|
 | Downloaded audio clips | `resources/site_257_bowra-dry-a/downloaded_clips/` | 43+ GB |
 | Downloaded annotations | `resources/site_257_bowra-dry-a/downloaded_annotations/` | sparse CSVs |
-| VAE checkpoint | `model/production/ambient-vae/best.pt` | 213 MB |
-| Vocoder checkpoint | `model/production/vocoder/best.pt` | 11 MB |
+| VAE checkpoint | `model/candidates/lucas/vae-site257-30epoch/best.pt` | 213 MB |
+| Vocoder checkpoint | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` | 11 MB |
 | Per-clip latent database | `acoustic_ai/data/ambient/latents/latent_clips.npy` | tens of MB |
 | Weather assets | `acoustic_ai/data/weather/weather_assets/` | curated wind/rain clips |
 | Event snippets | `acoustic_ai/data/events/event_snippets/` | extracted annotation clips |
@@ -90,14 +90,21 @@ stage X". Instead refresh the lock via:
 dvc commit -f <stage-name>   # records current MD5 without rerunning the stage
 ```
 
-## Candidate-checkpoint discipline (team rule)
+## Model-checkpoint discipline (team rule)
 
 Per the team workflow, every candidate run lives under
-`model/candidates/<member>/<run-id>/` and ships with:
+`model/candidates/<member>/<run-id>/`. Promoted model slots live under
+`model/production/<role>/` only after explicit validation, sign-off, and release
+tagging.
+
+Every model checkpoint folder ships with:
 
 - `.dvc` pointer for the binary checkpoint(s)
+- `README.md` — model log / model card following [model_readme_standard.md](model_readme_standard.md)
+
+Candidate folders also ship with:
+
 - `params.yaml` — training + inference hyperparameters
-- `README.md` — model card (purpose, dataset, scope, validated use)
 - `metrics.json` — when evals exist (TODO for current candidates)
 - `training_metadata.json` — when the training script writes it (e.g. AudioGen LoRA)
 
@@ -186,9 +193,9 @@ params changed.
 | Stage | Command | Key outputs |
 |---|---|---|
 | `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
-| `train_vae` | `modules/ambient/train.py` | `model/production/ambient-vae/best.pt` |
+| `train_vae` | `modules/ambient/train.py` | `model/candidates/lucas/vae-site257-30epoch/best.pt` |
 | `precompute_latents` | `precompute/precompute_latents.py` | `data/ambient/latents/latent_clips.npy`, `latent_templates.npy` |
-| `train_vocoder` | `modules/ambient/train_vocoder.py` | `model/production/vocoder/best.pt` |
+| `train_vocoder` | `modules/ambient/train_vocoder.py` | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` |
 
 Hyperparameters that affect stage reruns are tracked in root `params.yaml`.
 Compare params between branches: `dvc params diff main`.

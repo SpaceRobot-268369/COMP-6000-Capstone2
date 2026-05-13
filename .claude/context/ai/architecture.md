@@ -58,8 +58,8 @@ Uploaded audio clip
 | `train_vocoder.py` | Ecoacoustic HiFi-GAN training |
 | `retrieval.py` | NN retrieval logic [PLACEHOLDER] |
 
-**Checkpoint:** `model/production/ambient-vae/best.pt` (213 MB, DVC-tracked)
-**Vocoder:** `model/production/vocoder/best.pt` (11 MB, DVC-tracked)
+**Checkpoint:** `model/candidates/lucas/vae-site257-30epoch/best.pt` (213 MB, DVC-tracked)
+**Vocoder:** `model/candidates/lucas/vocoder-hifigan-site257/best.pt` (11 MB, DVC-tracked)
 **Latents:** `data/ambient/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
 
 **Current status:** Layer A generation is being validated with AudioLDM2 LoRA on this branch. This is one attempted Layer A implementation and has succeeded for the smoke test. The current user-validated smoke checkpoint is `model/candidates/lucas/layer-a-audioldm2-raw-smoke`, based on `cvssp/audioldm2`; it works well for quiet, environmental-like ambient beds with only minor issues. Keep output low-volume and mostly stationary. The dev path is fixed-prompt because the smoke dataset is tiny: the frontend should expose only a non-negative integer seed, the backend should forward only `{ seed }`, and FastAPI owns the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; the same seed should reproduce effectively the same audio on the same code path. Seed is not temperature, and temperature is not exposed here. The failed high-RMS checkpoint `model/candidates/lucas/layer-a-audioldm2-rms005-smoke` is deprecated because it produced pulsing/machine-like artifacts after over-amplifying quiet field recordings. If this branch is merged into `main`, update the broader docs so AudioLDM2 LoRA is described consistently as the main Layer A path. The trained VAE is retained for transformation mode and Module E analysis only; it is not on the Layer A generation path. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.

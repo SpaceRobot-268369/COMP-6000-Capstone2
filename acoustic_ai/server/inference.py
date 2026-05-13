@@ -29,11 +29,11 @@ import torch
 # ---------------------------------------------------------------------------
 _AI_ROOT          = Path(__file__).resolve().parent.parent
 PROJECT_ROOT      = _AI_ROOT.parent
-CHECKPOINT_DIR    = PROJECT_ROOT / "model" / "production" / "ambient-vae"
+CHECKPOINT_DIR    = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vae-site257-30epoch"
 DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
 TEMPLATES_PATH    = _AI_ROOT / "data" / "ambient" / "latents" / "latent_templates.npy"
 CLIPS_PATH        = _AI_ROOT / "data" / "ambient" / "latents" / "latent_clips.npy"
-VOCODER_CKPT      = PROJECT_ROOT / "model" / "production" / "vocoder" / "best.pt"
+VOCODER_CKPT      = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vocoder-hifigan-site257" / "best.pt"
 AUDIOLDM2_BASE_MODEL = "cvssp/audioldm2"
 AUDIOLDM2_LAYER_A_LORA_DIR = PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-audioldm2-raw-smoke"
 LAYER_A_FIXED_PROMPT = (
@@ -157,9 +157,9 @@ def mel_db_to_wav_ecoacoustic(mel_db: np.ndarray, sample_rate: int = 22_050) -> 
     """Convert a (128, T) dB-scale mel-spectrogram to WAV using the fine-tuned
     ecoacoustic HiFi-GAN vocoder trained on site 257 audio.
 
-    Requires model/production/vocoder/best.pt to exist (produced by running
-    train_vocoder.py). Raises FileNotFoundError if not available so the caller
-    can fall back gracefully.
+    Requires model/candidates/lucas/vocoder-hifigan-site257/best.pt to exist
+    (produced by running train_vocoder.py). Raises FileNotFoundError if not
+    available so the caller can fall back gracefully.
 
     Args:
         mel_db      : (128, T) array in dB scale [-80, 0]
