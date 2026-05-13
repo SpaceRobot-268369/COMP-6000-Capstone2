@@ -17,6 +17,7 @@ as the training manifest (temperature_c, humidity_pct, season, etc.).
 from __future__ import annotations
 
 import math
+import io
 from pathlib import Path
 from typing import Optional
 
@@ -28,11 +29,52 @@ import torch
 # ---------------------------------------------------------------------------
 _AI_ROOT          = Path(__file__).resolve().parent.parent
 PROJECT_ROOT      = _AI_ROOT.parent
-CHECKPOINT_DIR    = _AI_ROOT / "checkpoints" / "ambient"
+CHECKPOINT_DIR    = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vae-site257-30epoch"
 DEFAULT_CKPT      = CHECKPOINT_DIR / "best.pt"
 TEMPLATES_PATH    = _AI_ROOT / "data" / "ambient" / "latents" / "latent_templates.npy"
 CLIPS_PATH        = _AI_ROOT / "data" / "ambient" / "latents" / "latent_clips.npy"
-VOCODER_CKPT      = _AI_ROOT / "checkpoints" / "vocoder" / "best.pt"
+VOCODER_CKPT      = PROJECT_ROOT / "model" / "candidates" / "lucas" / "vocoder-hifigan-site257" / "best.pt"
+AUDIOLDM2_BASE_MODEL = "cvssp/audioldm2"
+AUDIOLDM2_LAYER_A_LORA_DIR = PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-audioldm2-raw-smoke"
+LAYER_A_FIXED_PROMPT = (
+    "quiet spring night ambient soundscape, Bowra dry woodland, Australia, "
+    "distant environmental bed, no foreground events, no music, no machinery"
+)
+LAYER_A_OUTPUT_RMS = 0.0015
+LAYER_A_HIGHPASS_HZ = 80.0
+LAYER_A_GUIDANCE_SCALE = 2.0
+LAYER_A_INFERENCE_STEPS = 100
+LAYER_A_AUDIO_LENGTH_S = 10.0
+LAYER_A_SMOKE_TESTS = {
+    "smoke_test_1": {
+        "label": "Dev - Layer A - Smoking Test 1 (spring night)",
+        "model_status": "smoke_test_1_success",
+        "prompt": LAYER_A_FIXED_PROMPT,
+        "lora_dir": AUDIOLDM2_LAYER_A_LORA_DIR,
+        "dataset": "resources/site_257_bowra-dry-a/smoking_test_dataset",
+        "notes": [
+            "Layer A dev endpoint is locked to the spring-night smoke-test prompt.",
+            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
+            "Deprecated checkpoint audioldm2-lora-rms005-smoke should not be used for quality testing.",
+        ],
+    },
+    "smoke_test_2": {
+        "label": "Dev - Layer A - Smoking Test 2",
+        "model_status": "smoke_test_2_insects_success",
+        "prompt": (
+            "summer afternoon insect-rich ambient soundscape, cicada and insect texture, "
+            "Bowra dry woodland, Australia, dry hot air, distant environmental bed, "
+            "no birds, no foreground events, no music, no machinery, no strong wind"
+        ),
+        "lora_dir": PROJECT_ROOT / "model" / "candidates" / "lucas" / "layer-a-audioldm2-insects-smoke",
+        "dataset": "resources/site_257_bowra-dry-a/smoking_test2_insects_dataset",
+        "notes": [
+            "Layer A dev endpoint is locked to the insect/cicada smoke-test prompt.",
+            "No user-specified prompts are accepted while the model is trained on the small smoke dataset.",
+            "Training data excludes annotated event overlaps and strong-wind rows.",
+        ],
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -115,9 +157,9 @@ def mel_db_to_wav_ecoacoustic(mel_db: np.ndarray, sample_rate: int = 22_050) -> 
     """Convert a (128, T) dB-scale mel-spectrogram to WAV using the fine-tuned
     ecoacoustic HiFi-GAN vocoder trained on site 257 audio.
 
-    Requires acoustic_ai/vocoder_checkpoints/best.pt to exist (produced by
-    running train_vocoder.py).  Raises FileNotFoundError if not available so
-    the caller can fall back gracefully.
+    Requires model/candidates/lucas/vocoder-hifigan-site257/best.pt to exist
+    (produced by running train_vocoder.py). Raises FileNotFoundError if not
+    available so the caller can fall back gracefully.
 
     Args:
         mel_db      : (128, T) array in dB scale [-80, 0]
@@ -396,68 +438,303 @@ def _nearest_neighbour_latent(
     return latents[top_idx].mean(axis=0)            # (latent_dim,)
 
 
-def generate_spectrogram(
+# ---------------------------------------------------------------------------
+# AudioLDM2 Pipeline Cache
+# ---------------------------------------------------------------------------
+_audioldm2_pipelines = {}
+
+def _get_audioldm2_pipeline(lora_dir: Path = AUDIOLDM2_LAYER_A_LORA_DIR):
+    cache_key = str(lora_dir.resolve())
+    if cache_key in _audioldm2_pipelines:
+        return _audioldm2_pipelines[cache_key]
+
+    from diffusers import AudioLDM2Pipeline
+    from peft import PeftModel
+    from transformers import GPT2LMHeadModel
+    
+    device = _get_device()
+    torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
+    pretrained_model_name = AUDIOLDM2_BASE_MODEL
+    print(f"[INFO] Loading AudioLDM2 pipeline from {pretrained_model_name}...")
+    pipeline = AudioLDM2Pipeline.from_pretrained(
+        pretrained_model_name, 
+        torch_dtype=torch_dtype
+    )
+    
+    pipeline.language_model = GPT2LMHeadModel.from_pretrained(
+        pretrained_model_name,
+        subfolder="language_model",
+        torch_dtype=torch_dtype,
+    )
+    
+    pipeline = pipeline.to(device)
+    
+    if lora_dir.exists():
+        print(f"[INFO] Injecting LoRA weights from {lora_dir}...")
+        pipeline.unet = PeftModel.from_pretrained(pipeline.unet, str(lora_dir))
+    else:
+        print(f"[WARN] LoRA weights not found at {lora_dir}. Using base model.")
+        
+    _audioldm2_pipelines[cache_key] = pipeline
+    return pipeline
+
+
+def _env_dict_to_prompt(env_dict: dict) -> str:
+    """Format the environmental dictionary into a text prompt for AudioLDM2."""
+    season = str(env_dict.get("season", "")).strip().lower()
+    time_of_day = str(env_dict.get("sample_bin", "")).strip().lower()
+    temp_c = env_dict.get("temperature_c", 20.0)
+    humidity = env_dict.get("humidity_pct", 50.0)
+    wind_speed = env_dict.get("wind_speed_ms", 0.0)
+    
+    # Map time of day
+    if time_of_day == "dawn":
+        time_desc = "early morning dawn"
+    elif time_of_day == "morning":
+        time_desc = "morning"
+    elif time_of_day == "afternoon":
+        time_desc = "afternoon"
+    elif time_of_day == "night":
+        time_desc = "night"
+    else:
+        time_desc = "daytime"
+        
+    # Map temperature
+    if temp_c < 10:
+        temp_desc = f"cold ({temp_c:.1f}°C)"
+    elif temp_c < 20:
+        temp_desc = f"cool ({temp_c:.1f}°C)"
+    elif temp_c < 30:
+        temp_desc = f"warm ({temp_c:.1f}°C)"
+    else:
+        temp_desc = f"hot ({temp_c:.1f}°C)"
+        
+    # Map humidity
+    if humidity < 40:
+        hum_desc = "dry air"
+    elif humidity < 70:
+        hum_desc = "moderate humidity"
+    else:
+        hum_desc = "humid"
+        
+    # Map wind
+    if wind_speed < 1:
+        wind_desc = "calm"
+    elif wind_speed < 4:
+        wind_desc = "light breeze"
+    elif wind_speed < 8:
+        wind_desc = "breezy"
+    else:
+        wind_desc = "windy"
+
+    parts = [
+        f"{season} {time_desc}",
+        "ambient soundscape",
+        "Bowra dry woodland, Australia",
+        temp_desc,
+        hum_desc,
+        wind_desc
+    ]
+    
+    return ", ".join(parts)
+
+
+def _audio_stats(audio: np.ndarray, sample_rate: int) -> dict:
+    audio = np.asarray(audio, dtype=np.float32)
+    return {
+        "sample_rate": sample_rate,
+        "duration_s": float(audio.shape[0] / sample_rate),
+        "min": float(audio.min()),
+        "max": float(audio.max()),
+        "mean": float(audio.mean()),
+        "rms": float(np.sqrt(np.mean(np.square(audio)))),
+        "peak": float(np.max(np.abs(audio))),
+        "clip_pct": float(np.mean(np.abs(audio) >= 0.999) * 100.0),
+    }
+
+
+def _highpass_audio(audio: np.ndarray, sample_rate: int, cutoff_hz: float) -> np.ndarray:
+    if cutoff_hz <= 0:
+        return audio.astype(np.float32, copy=False)
+
+    from scipy import signal
+
+    sos = signal.butter(4, cutoff_hz, btype="highpass", fs=sample_rate, output="sos")
+    return signal.sosfiltfilt(sos, audio).astype(np.float32)
+
+
+def _match_audio_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
+    if target_rms <= 0:
+        return audio.astype(np.float32, copy=False)
+
+    audio = audio.astype(np.float32, copy=False)
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    if not np.isfinite(rms) or rms <= 1e-8:
+        return audio
+
+    audio = audio * (target_rms / rms)
+    peak = float(np.max(np.abs(audio)))
+    if np.isfinite(peak) and peak > 0.95:
+        audio = audio * (0.95 / peak)
+    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+
+
+def _postprocess_layer_a_audio(audio: np.ndarray, sample_rate: int) -> tuple[np.ndarray, dict]:
+    before = _audio_stats(audio, sample_rate)
+    processed = _highpass_audio(audio, sample_rate, LAYER_A_HIGHPASS_HZ)
+    processed = _match_audio_rms(processed, LAYER_A_OUTPUT_RMS)
+    return processed, {
+        "highpass_hz": LAYER_A_HIGHPASS_HZ,
+        "output_target_rms": LAYER_A_OUTPUT_RMS,
+        "before": before,
+        "after": _audio_stats(processed, sample_rate),
+    }
+
+
+def _waveform_to_melspec_at_sr(waveform: np.ndarray, sample_rate: int) -> np.ndarray:
+    from modules.ambient.diffusion.layer_a_visualization import waveform_to_layer_a_mel_db
+
+    return waveform_to_layer_a_mel_db(waveform, sample_rate)
+
+
+def _wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
+    import soundfile as sf
+
+    buf = io.BytesIO()
+    sf.write(buf, audio, sample_rate, subtype="PCM_16", format="WAV")
+    buf.seek(0)
+    return buf.read()
+
+
+def generate_layer_a_smoke_test_audio(
+    smoke_test_id: str = "smoke_test_1",
+    seed: Optional[int] = None,
+) -> tuple[np.ndarray, bytes, dict]:
+    """Generate the dev Layer A ambient bed with a fixed smoke-test prompt.
+
+    The prompt is intentionally locked while the Layer A model is trained only on
+    the tiny smoke dataset. User-specified prompts should not be accepted here.
+    """
+    if smoke_test_id not in LAYER_A_SMOKE_TESTS:
+        raise ValueError(f"Unknown Layer A smoke test: {smoke_test_id}")
+
+    config = LAYER_A_SMOKE_TESTS[smoke_test_id]
+    prompt = config["prompt"]
+    lora_dir = config["lora_dir"]
+
+    device = _get_device()
+    pipeline = _get_audioldm2_pipeline(lora_dir)
+
+    rng = torch.Generator(device)
+    if seed is not None:
+        rng.manual_seed(seed)
+    else:
+        rng.seed()
+
+    print(f"[INFO] Generating Layer A {smoke_test_id} with fixed prompt: '{prompt}'")
+    raw_audio = pipeline(
+        prompt,
+        num_inference_steps=LAYER_A_INFERENCE_STEPS,
+        audio_length_in_s=LAYER_A_AUDIO_LENGTH_S,
+        guidance_scale=LAYER_A_GUIDANCE_SCALE,
+        generator=rng,
+    ).audios[0]
+
+    sample_rate = int(pipeline.vocoder.config.sampling_rate)
+    audio, postprocess = _postprocess_layer_a_audio(raw_audio, sample_rate)
+    mel_db = _waveform_to_melspec_at_sr(audio, sample_rate)
+    wav_bytes = _wav_bytes(audio, sample_rate)
+
+    metadata = {
+        "generator": "audioldm2_lora",
+        "smoke_test_id": smoke_test_id,
+        "label": config["label"],
+        "model_status": config["model_status"],
+        "prompt_locked": True,
+        "fixed_prompt": prompt,
+        "pretrained_model_name": AUDIOLDM2_BASE_MODEL,
+        "lora_dir": str(lora_dir),
+        "checkpoint_exists": lora_dir.exists(),
+        "dataset": config["dataset"],
+        "seed": seed,
+        "num_inference_steps": LAYER_A_INFERENCE_STEPS,
+        "audio_length_in_s": LAYER_A_AUDIO_LENGTH_S,
+        "guidance_scale": LAYER_A_GUIDANCE_SCALE,
+        "spectrogram_renderer": "modules.ambient.diffusion.layer_a_visualization",
+        "spectrogram_type": "log_mel",
+        "audio": _audio_stats(audio, sample_rate),
+        "postprocess": postprocess,
+        "notes": config["notes"],
+    }
+
+    return mel_db, wav_bytes, metadata
+
+
+def generate_layer_a_ambient_audio(seed: Optional[int] = None) -> tuple[np.ndarray, bytes, dict]:
+    return generate_layer_a_smoke_test_audio("smoke_test_1", seed=seed)
+
+
+def generate_ambient_audio(
     env_dict: dict,
-    checkpoint: Path = DEFAULT_CKPT,
     noise_std: float = 0.3,
     seed: Optional[int] = None,
-) -> np.ndarray:
-    """Generate a mel-spectrogram from environmental conditions.
-
-    Priority:
-      1. Per-clip nearest-neighbour (latent_clips.npy) — uses all env features
-      2. Group template (latent_templates.npy) — uses only season × sample_bin
-      3. Pure N(0,1) sample — no grounding
+) -> tuple[np.ndarray, bytes]:
+    """Generate ambient audio from environmental conditions using AudioLDM2.
 
     Args:
         env_dict   : environmental feature dict
-        checkpoint : path to .pt checkpoint
-        noise_std  : std of noise added to the anchor latent (controls variety)
+        noise_std  : unused for AudioLDM2 (kept for API compatibility)
         seed       : optional random seed for reproducibility
 
     Returns:
-        numpy array of shape (128, T) in dB scale [-80, 0]
+        tuple containing:
+          - mel_db: numpy array of shape (128, T) in dB scale
+          - wav_bytes: generated WAV file as raw bytes
     """
+    import io
+    import soundfile as sf
+    from modules.ambient.preprocess import waveform_to_melspec
+    
     device = _get_device()
-    model  = _load_model(checkpoint, device)
-    clips  = _load_clips()
+    pipeline = _get_audioldm2_pipeline(AUDIOLDM2_LAYER_A_LORA_DIR)
 
-    rng = torch.Generator()
+    prompt = _env_dict_to_prompt(env_dict)
+    print(f"[INFO] Generating audio for prompt: '{prompt}'")
+    
+    rng = torch.Generator(device)
     if seed is not None:
         rng.manual_seed(seed)
-
-    latent_dim = model.fusion.latent_dim
-
-    if clips is not None:
-        # Build the same env feature vector the dataset uses at training time
-        env_tensor = _build_env_tensor(env_dict)          # (1, env_dim)
-        env_vec    = env_tensor.squeeze(0).numpy()        # (env_dim,)
-        mean_z     = _nearest_neighbour_latent(env_vec, clips)
-    elif TEMPLATES_PATH.exists():
-        templates  = _load_templates()
-        season     = str(env_dict.get("season", "")).strip().lower()
-        sample_bin = str(env_dict.get("sample_bin", "")).strip().lower()
-        key        = f"{season}|{sample_bin}"
-        if key in templates:
-            mean_z = templates[key]
-        else:
-            matches = [v for k, v in templates.items() if k.endswith(f"|{sample_bin}")]
-            mean_z  = np.mean(matches, axis=0) if matches else np.mean(list(templates.values()), axis=0)
     else:
-        mean_z = None
+        rng.seed()
 
-    if mean_z is not None:
-        mean_tensor = torch.FloatTensor(mean_z).unsqueeze(0).to(device)
-        noise       = torch.randn(1, latent_dim, generator=rng).to(device) * noise_std
-        z           = mean_tensor + noise
-    else:
-        z = torch.randn(1, latent_dim, generator=rng).to(device)
+    # Generate the audio
+    # audio output is a numpy array of shape (time,) at 16000 Hz
+    audio = pipeline(
+        prompt,
+        num_inference_steps=100,  # reduced from 200 for faster inference in API
+        audio_length_in_s=10.0,
+        guidance_scale=3.5,
+        generator=rng,
+    ).audios[0]
 
-    with torch.no_grad():
-        mel_norm = model.decoder(z)               # (1, 1, 128, T)
+    # AudioLDM2 generates at 16kHz. 
+    audioldm_sr = 16000
+    target_sr = 22050
+    
+    # Resample to 22050 Hz to match project defaults
+    import librosa
+    audio_resampled = librosa.resample(audio, orig_sr=audioldm_sr, target_sr=target_sr)
+    
+    # Save to WAV bytes
+    buf = io.BytesIO()
+    sf.write(buf, audio_resampled, target_sr, format="WAV")
+    buf.seek(0)
+    wav_bytes = buf.read()
+    
+    # Compute mel spectrogram using project defaults
+    mel_db = waveform_to_melspec(audio_resampled)
 
-    mel_norm = mel_norm.squeeze().cpu().numpy()   # (128, T)
-    return _denormalise(mel_norm)
+    return mel_db, wav_bytes
 
 
 # ---------------------------------------------------------------------------
@@ -486,6 +763,7 @@ if __name__ == "__main__":
         "season": "spring", "sample_bin": "afternoon",
     }
 
-    mel = generate_spectrogram(dummy_env, seed=42)
+    mel, wav = generate_ambient_audio(dummy_env, seed=42)
     print(f"Generated  : shape={mel.shape}  min={mel.min():.1f}  max={mel.max():.1f} dB")
+    print(f"Generated audio bytes: {len(wav)} bytes")
     print("OK — inference module working.")

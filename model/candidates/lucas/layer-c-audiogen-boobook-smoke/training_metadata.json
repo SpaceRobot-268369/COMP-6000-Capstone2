@@ -1,0 +1,10 @@
+{
+  "pretrained_model_name": "facebook/audiogen-medium",
+  "manifest_path": "../resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/prepared_manifest_boobook.csv",
+  "num_epochs": 5,
+  "batch_size": 1,
+  "learning_rate": 1e-05,
+  "sample_rate": 16000,
+  "frame_rate": 50,
+  "note": "Recovered metadata after JSON serialization crash at end of training (int64 not serializable). Adapter weights and config saved successfully before the crash."
+}

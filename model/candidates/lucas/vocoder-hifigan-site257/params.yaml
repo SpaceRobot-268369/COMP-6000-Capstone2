@@ -1,0 +1,15 @@
+# Vocoder — HiFi-GAN, site 257
+# Snapshot of the `vocoder:` block in root params.yaml at the time this
+# checkpoint was produced. The DVC pipeline stage `train_vocoder` reads from
+# root params.yaml; if root drifts and the stage reruns, this snapshot
+# documents the run that produced the current best.pt.
+
+training:
+  base_channels: 128
+  upsample_rates: [8, 8, 4, 2]
+  n_mels: 128
+  sample_rate: 22050
+  epochs: 100
+  max_clips: 500
+  batch_size: 8
+  lr: 0.0002

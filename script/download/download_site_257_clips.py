@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Download site 257 audio clips from CSV with chunking and retries."""
 # Run from repository root:
-# python3 script/download_site_257_clips.py --start-item 1 --end-item 200
+# python3 script/download/download_site_257_clips.py --start-item 1 --end-item 200
 # Optional concurrency override:
-# python3 script/download_site_257_clips.py --start-item 1 --end-item 200 --workers 10
+# python3 script/download/download_site_257_clips.py --start-item 1 --end-item 200 --workers 10
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed

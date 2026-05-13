@@ -15,10 +15,10 @@ Dependencies:
   pip install requests astral
 
 Run from repository root:
-  python3 script/fetch_nasa_env_data.py
-  python3 script/fetch_nasa_env_data.py --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv
-  python3 script/fetch_nasa_env_data.py --output resources/site_257_bowra-dry-a/site_257_env_data.csv
-  python3 script/fetch_nasa_env_data.py --ndvi
+  python3 script/env/fetch_nasa_env_data.py
+  python3 script/env/fetch_nasa_env_data.py --csv-path resources/site_257_bowra-dry-a/site_257_filtered_items.csv
+  python3 script/env/fetch_nasa_env_data.py --output resources/site_257_bowra-dry-a/site_257_env_data.csv
+  python3 script/env/fetch_nasa_env_data.py --ndvi
 """
 
 import argparse

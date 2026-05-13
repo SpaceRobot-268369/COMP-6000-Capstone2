@@ -1,0 +1,16 @@
+# Layer C AudioGen LoRA — Southern Boobook nocturnal call (smoke test 1)
+# Per-species event-generation LoRA. 16 kHz native (resampled at mixer boundary).
+# Reconstructed from training_metadata.json (saved before a JSON serialization
+# crash at the end of training; adapter weights and config saved successfully).
+
+training:
+  base_model: facebook/audiogen-medium
+  manifest: resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/prepared_manifest_boobook.csv
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 1.0e-5
+  sample_rate: 16000
+  frame_rate: 50
+
+# Inference defaults not yet documented — populate after the first validated
+# generation run.

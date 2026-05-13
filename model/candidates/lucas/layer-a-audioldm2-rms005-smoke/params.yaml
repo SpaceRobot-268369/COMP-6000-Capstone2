@@ -1,0 +1,20 @@
+# Layer A AudioLDM2 LoRA — DEPRECATED high-RMS variant
+# Status: FAILED — over-amplifies quiet field recordings, produces pulsing /
+# machine-like artifacts. Do not use for quality testing. Retained as a
+# documented negative result; future training must keep target_rms low.
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 1.0e-5
+  normalize_audio: true
+  target_rms: 0.05         # ← the problematic setting; too loud for quiet beds
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+# No documented inference profile — checkpoint is deprecated.

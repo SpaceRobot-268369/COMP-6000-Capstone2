@@ -51,6 +51,39 @@ export async function generateSoundscape(conditions) {
   return { ...data, mock: false };
 }
 
+// ─── Layer A — Ambient bed (dev test) ─────────────────────────────────────────
+
+/**
+ * Generate a Layer A ambient bed from the fixed smoke-test prompt.
+ * @param {{seed?:number}} params
+ * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, gain_db:number, sample_rate:number, duration_s:number}>}
+ */
+export async function generateLayerA(params) {
+  return generateLayerASmokeTest("smoke_test_1", params);
+}
+
+export async function generateLayerASmokeTest1(params) {
+  return generateLayerASmokeTest("smoke_test_1", params);
+}
+
+export async function generateLayerASmokeTest2(params) {
+  return generateLayerASmokeTest("smoke_test_2", params);
+}
+
+async function generateLayerASmokeTest(smokeTestId, params) {
+  const res = await fetch(`${API_BASE}/api/layer_a/${smokeTestId}/generate`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || `Layer A generation failed (${res.status})`);
+  }
+  return res.json();
+}
+
 // ─── Transformation ───────────────────────────────────────────────────────────
 
 /**

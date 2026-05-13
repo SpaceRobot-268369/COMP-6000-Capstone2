@@ -5,9 +5,9 @@ Logs in with POST /security, then fetches each recording's annotations from
 GET /audio_recordings/:id/audio_events/download.csv?startOffset=0&endOffset=<duration>
 
 Run from repository root, for example:
-  python3 script/download_site_257_annotations.py --start-item 1 --end-item 100
-  python3 script/download_site_257_annotations.py --start-item 1 --end-item 100 --workers 4
-  python3 script/download_site_257_annotations.py --recording-id 4951 4952
+  python3 script/download/download_site_257_annotations.py --start-item 1 --end-item 100
+  python3 script/download/download_site_257_annotations.py --start-item 1 --end-item 100 --workers 4
+  python3 script/download/download_site_257_annotations.py --recording-id 4951 4952
 
 Existing annotation files are skipped by default. Use --force to re-download.
 
@@ -31,8 +31,8 @@ ANNOTATIONS_URL = (
 )
 
 # Hard-coded portal login (JSON field is "email" per API docs; username-style logins work).
-A2O_LOGIN_EMAIL = "liting"
-A2O_PASSWORD = "88888888"
+A2O_LOGIN_EMAIL = "Murphyy"
+A2O_PASSWORD = "12345678"
 
 REQUEST_TIMEOUT = (60, 120)
 MAX_ATTEMPTS = 5

@@ -1,0 +1,381 @@
+import { useEffect, useState } from "react";
+import { generateLayerASmokeTest1, generateLayerASmokeTest2 } from "../lib/api.js";
+
+const DEFAULT_PARAMS = {
+  seed: 42,
+};
+
+const SMOKE_TEST_CONFIGS = {
+  springNight: {
+    pageTitle: "Dev - Layer A - Smoking Test 1 (spring night)",
+    cardTitle: "Smoking Test 1",
+    cardSubtitle: "Spring night fixed AudioLDM2 Layer A run",
+    checkpoint: "audioldm2-lora-raw-smoke",
+    prompt:
+      "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery",
+    emptyText: "Generate the fixed Layer A spring-night smoke model to view outputs",
+    buttonText: "Generate Smoking Test 1",
+    filenamePrefix: "layer_a_smoke_test_1",
+    generate: generateLayerASmokeTest1,
+  },
+  insects: {
+    pageTitle: "Dev - Layer A - Smoking Test 2",
+    cardTitle: "Smoking Test 2",
+    cardSubtitle: "Insect and cicada fixed AudioLDM2 Layer A run",
+    checkpoint: "audioldm2-lora-insects-smoke",
+    prompt:
+      "summer afternoon insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, dry hot air, distant environmental bed, no birds, no foreground events, no music, no machinery, no strong wind",
+    emptyText: "Generate the fixed Layer A insect/cicada smoke model to view outputs",
+    buttonText: "Generate Smoking Test 2",
+    filenamePrefix: "layer_a_smoke_test_2",
+    generate: generateLayerASmokeTest2,
+  },
+};
+
+export default function LayerATestPage({ variant = "springNight" }) {
+  const config = SMOKE_TEST_CONFIGS[variant] ?? SMOKE_TEST_CONFIGS.springNight;
+  const [params,   setParams]   = useState({ ...DEFAULT_PARAMS });
+  const [status,   setStatus]   = useState("idle"); // idle | loading | done | error
+  const [result,   setResult]   = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (status === "loading") {
+      const startedAt = Date.now();
+      setProgress(6);
+      const timer = window.setInterval(() => {
+        const elapsedS = (Date.now() - startedAt) / 1000;
+        const next = Math.min(92, 6 + (1 - Math.exp(-elapsedS / 18)) * 88);
+        setProgress((current) => Math.max(current, Math.round(next)));
+      }, 500);
+      return () => window.clearInterval(timer);
+    }
+
+    if (status === "done") {
+      setProgress(100);
+      return undefined;
+    }
+
+    setProgress(0);
+    return undefined;
+  }, [status]);
+
+  function update(key, value) {
+    setParams((p) => ({ ...p, [key]: value }));
+  }
+
+  async function handleRun() {
+    setStatus("loading");
+    setErrorMsg("");
+    setResult(null);
+    try {
+      const data = await config.generate({
+        seed: Number(params.seed) || 42,
+      });
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      setErrorMsg(err.message);
+      setStatus("error");
+    }
+  }
+
+  function downloadDataUrl(href, filename) {
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = filename;
+    a.click();
+  }
+
+  function downloadJson() {
+    if (!result?.metadata) return;
+    const blob = new Blob([JSON.stringify(result.metadata, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    downloadDataUrl(url, `${config.filenamePrefix}_seed${params.seed}_metadata.json`);
+    URL.revokeObjectURL(url);
+  }
+
+  const isLoading = status === "loading";
+  const isDone    = status === "done";
+  const tag       = `${config.checkpoint}_seed${params.seed || 42}`;
+  const progressText = getProgressText(progress, status);
+
+  return (
+    <section className="generation-page">
+      <header className="generation-topbar">
+        <div className="generation-brandline">
+          <p className="eyebrow">DEVELOPER TOOLS</p>
+          <span>{config.pageTitle}</span>
+        </div>
+      </header>
+
+      <div className="generation-grid layer-a-grid">
+        {/* ── Left: input parameters ── */}
+        <aside className="panel generation-sidebar-card">
+          <div className="generation-card-head">
+            <h2>{config.cardTitle}</h2>
+            <p>{config.cardSubtitle}</p>
+          </div>
+
+          <div className="generation-sidebar-body" style={{ display: "grid", gap: 14 }}>
+            <div className="gen-info-block">
+              <p>Checkpoint</p>
+              <code>{config.checkpoint}</code>
+            </div>
+            <div className="gen-info-block">
+              <p>Fixed prompt</p>
+              <code>{config.prompt}</code>
+            </div>
+            <LabeledNumber
+              label="Seed"
+              value={params.seed}
+              min={0}
+              max={2147483647}
+              hint="Seed controls the random starting noise. Use any whole number from 0 to 2,147,483,647; same seed repeats the same variation with the same model settings."
+              onChange={(v) => update("seed", v)}
+            />
+
+            <button
+              type="button"
+              className="gen-primary-btn"
+              onClick={handleRun}
+              disabled={isLoading}
+              style={{ marginTop: 4 }}
+            >
+              {isLoading ? "Generating..." : config.buttonText}
+            </button>
+
+            {(isLoading || isDone) && (
+              <ProgressBlock progress={progress} label={progressText} />
+            )}
+
+            {errorMsg && (
+              <p className="analysis-error" style={{ marginTop: 8 }}>
+                {errorMsg}
+              </p>
+            )}
+          </div>
+        </aside>
+
+        {/* ── Centre: viewer ── */}
+        <main className="panel generation-canvas-card">
+          <div
+            className="generation-canvas"
+            style={{
+              display: "block",
+              padding: isDone ? 20 : 0,
+              overflow: "auto",
+            }}
+          >
+            {!isDone && !isLoading && (
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: 0.6,
+                }}
+              >
+                <p style={{ fontSize: 13, letterSpacing: 0 }}>
+                  {config.emptyText}
+                </p>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="gen-computing-overlay">
+                <div className="layer-a-processing">
+                  <div className="gen-computing-ring" />
+                  <ProgressBlock progress={progress} label={progressText} />
+                </div>
+              </div>
+            )}
+
+            {isDone && (
+              <div className="layer-a-result-stack">
+                {/* Audio */}
+                {result?.audio_b64 && (
+                  <ReviewSection title="♪ Audio">
+                    <audio
+                      controls
+                      src={`data:audio/wav;base64,${result.audio_b64}`}
+                      style={{ width: "100%" }}
+                    />
+                    <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+                      {result.sample_rate} Hz · {result.duration_s.toFixed(1)} s · seed{" "}
+                      {result.metadata?.seed ?? params.seed}
+                    </p>
+                  </ReviewSection>
+                )}
+
+                {/* Spectrogram */}
+                {result?.image_b64 && (
+                  <ReviewSection title="▤ Mel-Spectrogram">
+                    <img
+                      src={`data:image/png;base64,${result.image_b64}`}
+                      alt="Layer A mel-spectrogram"
+                      className="gen-spectrogram-img layer-a-spectrogram-img"
+                    />
+                  </ReviewSection>
+                )}
+
+                {/* JSON metadata */}
+                {result?.metadata && (
+                  <ReviewSection title="{ } Metadata">
+                    <pre className="layer-a-json">
+                      {JSON.stringify(result.metadata, null, 2)}
+                    </pre>
+                  </ReviewSection>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* ── Right: outputs / downloads / summary ── */}
+        <aside className="panel generation-output-card">
+          <div className="generation-card-head">
+            <h2>Outputs</h2>
+            <p>WAV, mel-spectrogram, metadata</p>
+          </div>
+
+          <div className="generation-output-body">
+            <article className="gen-file-card">
+              <div className="gen-file-head">
+                <div className="gen-file-icon">▤</div>
+                <div>
+                  <span>Run tag</span>
+                  <strong>{isDone ? tag.toUpperCase() : "-"}</strong>
+                </div>
+              </div>
+            </article>
+
+            {isDone && result?.metadata?.prompt_locked && (
+              <p className="mock-badge">
+                Fixed prompt active - user prompts disabled
+              </p>
+            )}
+
+            {isDone && result?.metadata?.audio && (
+              <div className="gen-info-block">
+                <p>Audio stats</p>
+                <code>
+                  RMS {result.metadata.audio.rms.toFixed(4)} · peak{" "}
+                  {result.metadata.audio.peak.toFixed(4)}
+                </code>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="gen-secondary-btn"
+              disabled={!isDone || !result?.audio_b64}
+              onClick={() =>
+                downloadDataUrl(
+                  `data:audio/wav;base64,${result.audio_b64}`,
+                  `${config.filenamePrefix}_${tag}.wav`,
+                )
+              }
+            >
+              ↓ Download WAV
+            </button>
+
+            <button
+              type="button"
+              className="gen-secondary-btn"
+              disabled={!isDone || !result?.image_b64}
+              onClick={() =>
+                downloadDataUrl(
+                  `data:image/png;base64,${result.image_b64}`,
+                  `${config.filenamePrefix}_${tag}_spectrogram.png`,
+                )
+              }
+            >
+              ↓ Download Spectrogram (PNG)
+            </button>
+
+            <button
+              type="button"
+              className="gen-secondary-btn"
+              disabled={!isDone}
+              onClick={downloadJson}
+            >
+              ↓ Download Metadata (JSON)
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function LabeledNumber({ label, value, min, max, step = 1, hint, onChange }) {
+  return (
+    <label className="layer-a-field">
+      <span>{label}</span>
+      <input
+        className="layer-a-input"
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {hint && <small>{hint}</small>}
+    </label>
+  );
+}
+
+function getProgressText(progress, status) {
+  if (status === "done") return "Complete";
+  if (progress < 18) return "Preparing fixed prompt";
+  if (progress < 38) return "Loading smoke LoRA";
+  if (progress < 72) return "Denoising ambient bed";
+  if (progress < 94) return "Rendering WAV and spectrogram";
+  return "Finalizing";
+}
+
+function ProgressBlock({ progress, label }) {
+  return (
+    <div className="gen-progress-block layer-a-progress" aria-live="polite">
+      <div className="gen-progress-line">
+        <strong>{Math.round(progress)}%</strong>
+        <p>{label}</p>
+      </div>
+      <div
+        className="gen-progress-track"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={Math.round(progress)}
+        aria-label="Layer A generation progress"
+      >
+        <i style={{ width: `${Math.max(4, Math.min(100, progress))}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ReviewSection({ title, children }) {
+  return (
+    <section>
+      <h3
+        style={{
+          margin: "0 0 8px",
+          fontSize: 12,
+          letterSpacing: 0,
+          textTransform: "uppercase",
+          opacity: 0.75,
+        }}
+      >
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}

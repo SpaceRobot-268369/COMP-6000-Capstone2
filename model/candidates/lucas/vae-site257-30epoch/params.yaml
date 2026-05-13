@@ -1,0 +1,24 @@
+# Layer-A VAE — site 257, 30 epochs
+# Snapshot of the `ambient:` block in root params.yaml at the time this
+# checkpoint was produced. The DVC pipeline stage `train_vae` still reads
+# from root params.yaml; if root drifts and the stage reruns, this snapshot
+# is what documents the run that produced the current best.pt.
+
+training:
+  latent_dim: 256
+  embed_dim: 512
+  beta_kl: 0.01
+  n_mels: 128
+  sample_rate: 22050
+  n_fft: 1024
+  hop_length: 512
+  fmin: 50
+  fmax: 11000
+  crop_seconds: 30.0
+  noise_std: 0.3
+  epochs: 30
+  batch_size: 16
+  lr: 0.0001
+
+inference:
+  top_k_retrieval: 10       # how many neighbours averaged in NN retrieval

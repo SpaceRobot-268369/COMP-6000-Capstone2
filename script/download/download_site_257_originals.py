@@ -5,9 +5,9 @@ Logs in with POST /security (see baw-server API auth), then streams each file fr
 GET /audio_recordings/:id/original.
 
 Run from repository root, for example:
-  python3 script/download_site_257_originals.py --start-item 1 --end-item 5
-  python3 script/download_site_257_originals.py --start-item 1 --end-item 10 --workers 4
-  python3 script/download_site_257_originals.py --recording-id 4951 4952 --workers 2
+  python3 script/download/download_site_257_originals.py --start-item 1 --end-item 5
+  python3 script/download/download_site_257_originals.py --start-item 1 --end-item 10 --workers 4
+  python3 script/download/download_site_257_originals.py --recording-id 4951 4952 --workers 2
 
 Existing originals are skipped by default (CSV canonical_file_name or *_<id>.flac on disk).
 Use --force to download again.

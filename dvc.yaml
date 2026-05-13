@@ -30,9 +30,9 @@ stages:
           - ambient.batch_size
           - ambient.lr
     outs:
-      - acoustic_ai/checkpoints/ambient/best.pt:
+      - model/candidates/lucas/vae-site257-30epoch/best.pt:
           cache: true
-    # metrics: acoustic_ai/checkpoints/ambient/metrics.json  # add when train.py writes this file
+    # metrics: model/candidates/lucas/vae-site257-30epoch/metrics.json  # add when train.py writes this file
 
   precompute_latents:
     cmd: python3 acoustic_ai/precompute/precompute_latents.py
@@ -41,7 +41,7 @@ stages:
       - acoustic_ai/modules/ambient/model.py
       - acoustic_ai/modules/ambient/dataset.py
       - acoustic_ai/modules/ambient/preprocess.py
-      - acoustic_ai/checkpoints/ambient/best.pt
+      - model/candidates/lucas/vae-site257-30epoch/best.pt
       - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
     params:
       - params.yaml:
@@ -68,6 +68,6 @@ stages:
           - vocoder.batch_size
           - vocoder.lr
     outs:
-      - acoustic_ai/checkpoints/vocoder/best.pt:
+      - model/candidates/lucas/vocoder-hifigan-site257/best.pt:
           cache: true
-    # metrics: acoustic_ai/checkpoints/vocoder/metrics.json  # add when train_vocoder.py writes this file
+    # metrics: model/candidates/lucas/vocoder-hifigan-site257/metrics.json  # add when train_vocoder.py writes this file

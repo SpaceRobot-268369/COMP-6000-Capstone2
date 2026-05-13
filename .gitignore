@@ -12,6 +12,7 @@ Desktop.ini
 *.egg-info/
 .Python
 
+
 # Dependencies
 node_modules/
 **/node_modules/
@@ -21,6 +22,9 @@ package-lock.json
 # Environment
 !.env.example
 **/.env.example
+acoustic_ai/venv/
+acoustic_ai/.venv/
+acoustic_ai/.venv-*/
 
 # Logs and caches
 *.log
@@ -42,15 +46,17 @@ coverage/
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
 
-# Resource downloads — raw source data (DVC-tracked)
-resources/site_257_bowra-dry-a/downloaded_clips/
-resources/site_257_bowra-dry-a/downloaded_annotations/
-resources/site_257_bowra-dry-a/site_257_all_items.csv
-resources/site_257_bowra-dry-a/site_257_all_items.json
-# Keep the three small CSVs in git
+# Resources - keep generated/source data out of git by default
+resources/**
+!resources/
+!resources/site_257_bowra-dry-a/
+!resources/site_257_bowra-dry-a/site_257_all_items.json
+!resources/site_257_bowra-dry-a/site_257_training_manifest.csv
 !resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
-!resources/site_257_bowra-dry-a/site_257_training_manifest.csv
+!resources/site_257_bowra-dry-a/site_257_all_items.csv
+!resources/site_257_bowra-dry-a/all_items_annotation/
+!resources/site_257_bowra-dry-a/all_items_annotation/README.md
 
 # IDE and editors
 .idea/
@@ -63,12 +69,14 @@ resources/site_257_bowra-dry-a/site_257_all_items.json
 *.local
 .env.*.local
 
-# Acoustic AI — model checkpoints (DVC-tracked, not git)
-acoustic_ai/checkpoints/ambient/epoch_*.pt
-acoustic_ai/checkpoints/vocoder/epoch_*.pt
-# best.pt files are DVC-tracked — pointer files (.dvc) go in git, not the weights
-acoustic_ai/checkpoints/ambient/best.pt
-acoustic_ai/checkpoints/vocoder/best.pt
+# Model checkpoints
+# Layout: model/{candidates/<member>/<run-id>, production/<role>}/
+# Binaries (.pt, .safetensors, .bin, .ckpt) belong in DVC, not git.
+# Only metadata (.dvc pointers, README, *.json, *.yaml) is committed.
+model/**/*.pt
+model/**/*.safetensors
+model/**/*.bin
+model/**/*.ckpt
 
 # Acoustic AI — large computed data artifacts (DVC-tracked, not git)
 acoustic_ai/data/shared/wavs/
@@ -76,10 +84,15 @@ acoustic_ai/data/shared/spectrograms/
 acoustic_ai/data/module_b/weather_assets/
 acoustic_ai/data/module_c/event_snippets/
 acoustic_ai/data/module_c/birdnet_labels/
-# latent npy files will be DVC-tracked once dvc add is run
+acoustic_ai/data/ambient/latents/
 
 # HiFi-GAN speech-domain cache (not needed — using ecoacoustic vocoder)
 acoustic_ai/hifigan_cache/
+
+# Debug and scratch output
+debug/
+*.wav
+acoustic_ai/=*
 
 # DVC internal
 /tmp/

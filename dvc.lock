@@ -43,8 +43,8 @@ stages:
       size: 3108
     - path: acoustic_ai/modules/ambient/train.py
       hash: md5
-      md5: d3b40a2d9d348b83cc6ff426c6677ffe
-      size: 11010
+      md5: 6513e1651695d0a0447a586992e13cb9
+      size: 11007
     - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
       hash: md5
       md5: 6b75da0685d9463a783adb866491f86c
@@ -60,7 +60,7 @@ stages:
         ambient.lr: 0.0001
         ambient.n_mels: 128
     outs:
-    - path: acoustic_ai/checkpoints/ambient/best.pt
+    - path: model/candidates/lucas/vae-site257-30epoch/best.pt
       hash: md5
       md5: e56373ed30bbcd2225f8e0d4241e7af6
       size: 223252925
@@ -108,8 +108,8 @@ stages:
     deps:
     - path: acoustic_ai/modules/ambient/train_vocoder.py
       hash: md5
-      md5: 4caf8d934c5b1a8fea2ed37b702cdd05
-      size: 16848
+      md5: 11556e6a1a9326731491919146e5209a
+      size: 16840
     - path: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
       hash: md5
       md5: 6b75da0685d9463a783adb866491f86c
@@ -129,7 +129,7 @@ stages:
         - 4
         - 2
     outs:
-    - path: acoustic_ai/checkpoints/vocoder/best.pt
+    - path: model/candidates/lucas/vocoder-hifigan-site257/best.pt
       hash: md5
       md5: 898eec9d50b253bb4909f5be38f33f09
       size: 11806077

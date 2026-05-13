@@ -72,7 +72,7 @@ be retained as the source of truth.
 
 ## Implementation
 
-The sampling logic lives in `script/sample_mvp_dataset.py`. It:
+The sampling logic lives in `script/dataset/sample_mvp_dataset.py`. It:
 
 1. Reads `resources/site_257_bowra-dry-a/site_257_all_items.csv`
 2. Parses `recorded_date` (UTC ISO-8601) and converts to AEST
@@ -88,20 +88,20 @@ The sampling logic lives in `script/sample_mvp_dataset.py`. It:
 
 ```bash
 # From project root
-python3 script/sample_mvp_dataset.py
+python3 script/dataset/sample_mvp_dataset.py
 
 # Preview without writing output
-python3 script/sample_mvp_dataset.py --dry-run
+python3 script/dataset/sample_mvp_dataset.py --dry-run
 
 # Custom seed or output path
-python3 script/sample_mvp_dataset.py --seed 7 --output resources/site_257_bowra-dry-a/site_257_mvp_sample.csv
+python3 script/dataset/sample_mvp_dataset.py --seed 7 --output resources/site_257_bowra-dry-a/site_257_mvp_sample.csv
 ```
 
 ### Then download the sampled files
 
 ```bash
 # Download using the sampled CSV (all rows, 10 parallel workers)
-python3 script/download_site_257_originals.py \
+python3 script/download/download_site_257_originals.py \
   --csv-path resources/site_257_bowra-dry-a/site_257_mvp_sample.csv \
   --start-item 1 \
   --end-item 9999 \

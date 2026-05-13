@@ -30,10 +30,12 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.inference import (
-    encode_clip, generate_spectrogram, estimate_env_conditions,
-    mel_db_to_wav, mel_db_to_wav_hifigan, mel_db_to_wav_ecoacoustic,
-    DEFAULT_CKPT, VOCODER_CKPT, CLIPS_PATH,
+    encode_clip, generate_ambient_audio, estimate_env_conditions,
+    generate_layer_a_ambient_audio, generate_layer_a_smoke_test_audio,
+    DEFAULT_CKPT, CLIPS_PATH,
 )
+
+from modules.ambient.diffusion.layer_a_visualization import render_layer_a_mel_png_bytes
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
 
@@ -174,37 +176,12 @@ def generation(body: EnvFeatures):
     env_dict = body.model_dump(exclude={"noise_std", "seed"})
 
     try:
-        mel_db = generate_spectrogram(env_dict, noise_std=body.noise_std, seed=body.seed)
+        mel_db, wav_bytes = generate_ambient_audio(env_dict, noise_std=body.noise_std, seed=body.seed)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}")
 
     png_b64 = _mel_to_png_b64(mel_db)
 
-    # Vocoder priority:
-    #   1. Ecoacoustic HiFi-GAN (fine-tuned on site 257, 128-bin 22kHz) — best quality
-    #   2. Speech HiFi-GAN (SpeechT5, 80-bin 16kHz + interp)             — Stage 2 fallback
-    #   3. Griffin-Lim (no neural model required)                          — last resort
-    if VOCODER_CKPT.exists():
-        try:
-            wav_bytes = mel_db_to_wav_ecoacoustic(mel_db)
-            print("[INFO] Ecoacoustic vocoder succeeded.")
-        except Exception as exc:
-            print(f"[WARN] Ecoacoustic vocoder failed ({exc}), trying speech HiFi-GAN.")
-            wav_bytes = None
-    else:
-        wav_bytes = None
-
-    if wav_bytes is None:
-        try:
-            wav_bytes = mel_db_to_wav_hifigan(mel_db)
-            print("[INFO] Speech HiFi-GAN vocoding succeeded.")
-        except Exception as exc:
-            print(f"[WARN] Speech HiFi-GAN failed ({exc}), falling back to Griffin-Lim.")
-            try:
-                wav_bytes = mel_db_to_wav(mel_db)
-            except Exception as exc2:
-                wav_bytes = b""
-                print(f"[WARN] Griffin-Lim also failed: {exc2}")
     audio_b64 = base64.b64encode(wav_bytes).decode("utf-8") if wav_bytes else ""
 
     return {
@@ -213,6 +190,80 @@ def generation(body: EnvFeatures):
         "image_b64": png_b64,
         "audio_b64": audio_b64,
     }
+
+
+# ---------------------------------------------------------------------------
+# Layer A — Ambient bed (dev test endpoint)
+# ---------------------------------------------------------------------------
+
+class LayerARequest(BaseModel):
+    seed: Optional[int] = 42
+
+
+@app.post("/layer_a/generate")
+def layer_a_generate(body: LayerARequest):
+    """Generate Layer A with the trained AudioLDM2 LoRA smoke-test model.
+
+    The prompt and checkpoint are fixed at this stage because the model has only
+    been validated on the tiny smoke dataset.
+    """
+    try:
+        mel_db, wav_bytes, metadata = generate_layer_a_ambient_audio(seed=body.seed)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
+
+    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
+    png_b64 = _layer_a_mel_to_png_b64(mel_db, metadata["audio"]["duration_s"])
+
+    return {
+        "ok":         True,
+        "audio_b64":  audio_b64,
+        "image_b64":  png_b64,
+        "metadata":   metadata,
+        "gain_db":    0.0,
+        "sample_rate": metadata["audio"]["sample_rate"],
+        "duration_s": metadata["audio"]["duration_s"],
+    }
+
+
+@app.post("/layer_a/smoke_test_1/generate")
+def layer_a_smoke_test_1_generate(body: LayerARequest):
+    """Generate Layer A smoke test 1 with the spring-night LoRA."""
+    return _layer_a_smoke_test_response("smoke_test_1", body.seed)
+
+
+@app.post("/layer_a/smoke_test_2/generate")
+def layer_a_smoke_test_2_generate(body: LayerARequest):
+    """Generate Layer A smoke test 2 with the insect/cicada LoRA."""
+    return _layer_a_smoke_test_response("smoke_test_2", body.seed)
+
+
+def _layer_a_smoke_test_response(smoke_test_id: str, seed: Optional[int]):
+    try:
+        mel_db, wav_bytes, metadata = generate_layer_a_smoke_test_audio(
+            smoke_test_id,
+            seed=seed,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
+
+    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
+    png_b64 = _layer_a_mel_to_png_b64(mel_db, metadata["audio"]["duration_s"])
+
+    return {
+        "ok":         True,
+        "audio_b64":  audio_b64,
+        "image_b64":  png_b64,
+        "metadata":   metadata,
+        "gain_db":    0.0,
+        "sample_rate": metadata["audio"]["sample_rate"],
+        "duration_s": metadata["audio"]["duration_s"],
+    }
+
+
+def _layer_a_mel_to_png_b64(mel_db: np.ndarray, duration_s: float) -> str:
+    png_bytes = render_layer_a_mel_png_bytes(mel_db, duration_s)
+    return base64.b64encode(png_bytes).decode("utf-8")
 
 
 # ---------------------------------------------------------------------------

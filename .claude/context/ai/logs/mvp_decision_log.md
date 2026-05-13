@@ -24,7 +24,7 @@ Current MVP focus:
 | Backend | Express API exists | Auth endpoints and AI proxy routes exist. Auth is temporarily disabled in `requireAuth`. |
 | AI server | FastAPI server exists | `acoustic_ai/server.py` exposes `/health`, `/analysis`, and `/generation`. |
 | Dataset | Site 257 Bowra Dry-A MVP sample exists | 287 recordings, 6,148 usable clips, environmental data aligned. |
-| Model checkpoint | VAE checkpoint exists | `acoustic_ai/checkpoints/best.pt`. |
+| Model checkpoint | VAE checkpoint exists | `model/best.pt`. |
 | Latent database | Per-clip latent DB exists | `acoustic_ai/latent_clips.npy`. |
 | Vocoder | Ecoacoustic HiFi-GAN checkpoint exists | `acoustic_ai/vocoder_checkpoints/best.pt`. |
 
@@ -282,15 +282,21 @@ Purpose:
 
 Recommended MVP implementation:
 
-- Use retrieval first.
-- Given user conditions, find similar real clips by season, sample bin, and environmental vector.
-- Use the retrieved audio directly or use VAE reconstruction/transformation only as a secondary option.
+- Use retrieval first, but **not over the raw downloaded clips** — those contain bird calls, vehicles, helicopters, and other events that belong in Layer C. Retrieving full clips as the bed double-counts events and breaks layer separation.
+- Build a **cleaned ambient-only segment pool** as a precompute step. Cleaning is **audio-only and content-agnostic**, driven by two facts:
+  - A2O annotations are sparse and asymmetric (presence ⇒ event, absence ⇏ no event), so they cannot serve as a gating signal.
+  - Events are an open class. We can never enumerate every category (species, helicopters, vehicles, frogs, voices, unknown). But every event shares one property: it deviates from its own clip's stationary baseline.
+- The gate is therefore a **per-clip anomaly detector**: compute frame features (mel, RMS, centroid, flatness, flux, ZCR), maintain a 30 s rolling median + MAD baseline, mark frames where any feature deviates > 3·MAD as anomalous, dilate ± 0.5 s, then keep contiguous unmasked spans ≥ 20 s and slice them into segments of 20–60 s (target 30 s). Long segments mean runtime crossfades are at most ~1 s and inaudible.
+- A neural species detector (BirdNET) is deliberately **not** in the gate — it only knows species in its training set and is deaf to other event types, which is the wrong failure mode for a permissive gate. BirdNET and annotations are demoted to post-hoc audits over retained segments, used to tune the MAD threshold rather than to filter.
+- At runtime, retrieve from this cleaned pool with a two-step rule. **Hard filter** on `diel_bin` and `season` — categorical mismatches sound wrong regardless of numeric proximity. **Soft rank** by cosine similarity on `[hour_sin, hour_cos, month_sin, month_cos]` only: time-of-day and seasonal *position* within the bin. Top-k=5, softmax-weighted crossfade blend.
+- Temp/humidity/wind/rain are deliberately **excluded** from the Layer A retrieval key. Wind and rain are direct acoustic signals owned by Layer B. Temperature and humidity affect species/insect behaviour and so flow through Layer C. The ambient bed itself is driven by time and season; pulling weather variables into the key would either double-count (with B) or pull in similarity that is irrelevant to ambient character (with C).
+- VAE reconstruction is **not** on the Layer A path. The existing VAE was trained on event-contaminated full clips, so its latent manifold is not "ambient-only". Keep it for transformation mode and Module E analysis.
 
 Why:
 
-- This gives realistic audio immediately.
-- It avoids asking the VAE to invent a whole soundscape from weak conditioning.
-- It remains research-valid because the bed is selected based on environmental similarity.
+- Layered separation only works if Layer A actually contains *only* ambience. Anything else makes Layer C double-count and makes the explanation JSON dishonest.
+- Retrieval over cleaned segments + crossfade has zero lossy steps (no decoder, no vocoder), so audio quality is bounded by the source recordings rather than by the model.
+- Selection remains research-valid and explainable: each retrieved segment carries its source clip ID, env vector, and similarity score.
 
 Comparison:
 
@@ -732,3 +738,58 @@ transforming, and mixing these layers according to the requested environmental s
 | Ecological plausibility | Species/events are plausible for the selected season/time/env context. |
 | Explainability | API can report which clips/assets/events were selected and why. |
 | Demo stability | Generation works reliably without depending on fragile latent random sampling. |
+
+---
+
+## 2026-05-07 — Layer C goes generative; AudioGen LoRA chosen as the base model
+
+**Decision:** Layer C is upgraded from a curated "annotation audit + retrieval + scheduler" path to a **generative path** using **AudioGen LoRA** (`facebook/audiogen-medium`, fine-tuned per species and optionally per diel context).
+
+### Why this changed
+
+The original Layer C plan treated annotated events as a snippet library indexed by metadata, with a scheduler picking real recordings to overlay on the ambient bed. Re-evaluation against the project's research framing (speculative soundscape generation, modal flexibility, future env-conditioning) shows that retrieval is sufficient for an MVP demo but does not deliver the novelty/variation that distinguishes a generative system from a sample player. Going generative for Layer C gives the project:
+
+- Per-species variation that doesn't repeat real recordings verbatim
+- A natural extension surface for env conditioning at the prompt level
+- Symmetry with Layer A's generative path (both layers now sit on diffusion/transformer LoRAs over pretrained backbones)
+
+### Why AudioGen rather than AudioLDM2
+
+| Criterion | AudioLDM2 | Stable Audio Open | AudioGen |
+|---|---|---|---|
+| Audio representation | Mel + HiFi-GAN vocoder | Waveform-aware latent | EnCodec discrete tokens |
+| Transient quality | Smeared (vocoder bottleneck) | Good | **Best for short structured events** |
+| Training corpus fit | Broad (music-leaning) | Music + sound design | **AudioSet animal/environmental labels** |
+| Native length | ~10 s | up to ~47 s | 1–10 s — **matches event window** |
+| LoRA support | `diffusers` | `diffusers` | PEFT on transformer attention |
+
+AudioLDM2 LoRA — successful for Layer A ambient — is poorly suited for events because mel→HiFi-GAN smears the leading-edge transients that define a call's identity, and a 10 s default audio window is mostly silence around a 2–4 s event. AudioGen's token-based generation preserves transients, the base model already has owl/songbird priors from AudioSet, and its 1–10 s window matches Layer C's event durations natively. Stable Audio Open is a strong runner-up but its training corpus is more music-oriented; deferred unless AudioGen underperforms.
+
+### Trade-offs accepted
+
+- New tooling: `audiocraft` (Meta) + PEFT, separate from the `diffusers` stack used for Layer A. A second venv at `acoustic_ai/.venv-audiogen` is required to avoid torch/torchaudio conflicts.
+- Sample-rate boundary: AudioGen is 16 kHz native; Module D must resample to 22.05 kHz at the layer boundary.
+- Per-species LoRA management: storage and training cost scale with library size. Mitigated by capping MVP scope at ~10 species and ~50 MB per LoRA.
+- MPS training stability is uncertain on Apple Silicon — fallback plan is brief CUDA rental for training runs if MPS fails. Inference on MPS is fine.
+
+### Smoke test plan
+
+- Single LoRA: **Southern Boobook nocturnal** (14k+ annotations, stereotyped two-note call, pairs naturally with the validated spring-night ambient bed)
+- 60–100 audited clips, 16 kHz mono, 3–6 s, varied short captions
+- LoRA rank 8, LR 1e-4, 10–15 epochs, batch 1 + grad accum 4–8
+- 10 seeds at duration 3–5 s, top-k 250, temp 1.0, CFG 3.0
+- Pass criterion: ≥4/10 seeds with identifiable two-note structure and no EnCodec warble
+- Output: `model/candidates/lucas/layer-c-audiogen-boobook-smoke/` and `debug/layer_c/audiogen/samples/...`
+
+### Fallbacks
+
+If AudioGen LoRA fails the smoke-test bar across seeds, the fallback ladder is:
+1. Stable Audio Open LoRA (cleaner transients, music-leaning training data)
+2. Hybrid: real annotation snippets + DSP variation (pitch ±2 semitones, time-stretch ±10%, IR reverb) — high realism, low novelty
+3. Pure retrieval (the original plan) — kept warm as a guaranteed-working baseline
+
+### Files updated in this decision
+
+- `.claude/context/ai/architecture.md` — Module C section and data-ownership table
+- `.claude/context/ai/pipeline_design.md` — Layer C section
+- `CLAUDE.md` — AI Module Details table, generation pipeline description
