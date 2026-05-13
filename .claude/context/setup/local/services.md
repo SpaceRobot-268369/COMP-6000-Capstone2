@@ -55,6 +55,16 @@ brew install docker          # Docker Desktop handles compose
 # or install Docker Desktop from https://www.docker.com/products/docker-desktop/
 ```
 
+**DVC** must be installed at user-site (not in the venv) so git hooks can call
+it without venv activation:
+
+```bash
+pip3 install --user 'dvc[s3]'
+```
+
+See [.claude/context/dev/dvc_workflow.md](../../dev/dvc_workflow.md) for the
+full DVC + S3 setup (AWS profile, remote config, daily commands).
+
 ## Running individual services natively (when not using Docker)
 
 Rare — only when iterating outside Docker. The Docker path is canonical.

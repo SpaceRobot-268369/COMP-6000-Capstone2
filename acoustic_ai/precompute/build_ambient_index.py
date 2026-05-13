@@ -7,8 +7,7 @@ mark any frame deviating > 3·MAD as anomalous → dilate ± 0.5 s → take
 contiguous unmasked spans ≥ 20 s → slice into 20–60 s segments.
 
 Annotations and BirdNET are deliberately not used here — they run as
-post-hoc audits over the retained segments, not as gates. Rationale and
-full design in .claude/context/dev/layer_a_change_log.md.
+post-hoc audits over the retained segments, not as gates.
 
 Usage (from project root):
   python3 acoustic_ai/precompute/build_ambient_index.py

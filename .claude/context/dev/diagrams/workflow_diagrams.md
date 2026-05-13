@@ -7,13 +7,13 @@
 ```
 Australian Acoustic Observatory (A2O)
          │
-         │  script/sample_mvp_dataset.py
+         │  script/dataset/sample_mvp_dataset.py
          │  (diel stratified sampling, seed=42)
          ▼
 resources/site_257_bowra-dry-a/
   site_257_filtered_items.csv         ← 287 recordings, 4 diel bins
          │
-         │  script/download_site_257_clips.py
+         │  script/download/download_site_257_clips.py
          │  (parallel HTTP download, max 10 retries)
          ▼
 resources/.../downloaded_clips/
@@ -33,14 +33,14 @@ resources/.../downloaded_clips/
 
 NASA POWER API (hourly + daily)
          │
-         │  script/fetch_nasa_env_data.py
+         │  script/env/fetch_nasa_env_data.py
          │  (per-recording UTC timestamp lookup)
          ▼
   site_257_env_data.csv               ← 287 rows × 20 env columns
 
          ┌──────────────────────┐
          │ filtered_items.csv   │
-         │ env_data.csv         │──► script/build_training_manifest.py
+         │ env_data.csv         │──► script/dataset/build_training_manifest.py
          │ downloaded_clips/    │
          └──────────────────────┘
                     │

@@ -12,8 +12,8 @@ MAX_CLIP_SECONDS=300 segmentation used by download_site_257_clips.py.
 Output: resources/site_257_bowra-dry-a/site_257_training_manifest.csv
 
 Usage:
-  python3 script/build_training_manifest.py
-  python3 script/build_training_manifest.py --dry-run
+  python3 script/dataset/build_training_manifest.py
+  python3 script/dataset/build_training_manifest.py --dry-run
 """
 
 import argparse

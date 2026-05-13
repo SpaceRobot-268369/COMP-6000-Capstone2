@@ -19,9 +19,9 @@ Output adds two columns to the source schema:
   sample_local_date YYYY-MM-DD (AEST)
 
 Usage:
-  python3 script/sample_mvp_dataset.py
-  python3 script/sample_mvp_dataset.py --dry-run
-  python3 script/sample_mvp_dataset.py --seed 7 --output path/to/out.csv
+  python3 script/dataset/sample_mvp_dataset.py
+  python3 script/dataset/sample_mvp_dataset.py --dry-run
+  python3 script/dataset/sample_mvp_dataset.py --seed 7 --output path/to/out.csv
 """
 
 import argparse
