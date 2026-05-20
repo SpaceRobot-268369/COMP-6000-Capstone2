@@ -64,6 +64,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   └── logs/
     │       ├── mvp_decision_log.md
     │       └── audioldm2_transition_log.md
+    ├── layer-b/                           # Layer B weather asset policy
+    │   └── weather_asset_policy.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
     │   ├── known_issues.md
@@ -95,6 +97,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 |---|---|
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
+| Layer B weather asset policy | [.claude/context/layer-b/weather_asset_policy.md](.claude/context/layer-b/weather_asset_policy.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
