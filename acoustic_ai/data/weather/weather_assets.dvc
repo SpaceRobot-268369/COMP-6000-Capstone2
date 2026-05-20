@@ -1,0 +1,6 @@
+outs:
+- md5: ac0e741060ab2705c5728f8b3a8a2854.dir
+  size: 15545208
+  nfiles: 12
+  hash: md5
+  path: weather_assets
