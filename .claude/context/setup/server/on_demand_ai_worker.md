@@ -135,6 +135,51 @@ interactive and are likely stuck if they run for tens of minutes.
 Use a single configured project timezone for scheduled warnings; default to
 Australia/Adelaide unless deployment chooses a different timezone explicitly.
 
+### Discord message format
+
+All Discord messages follow this pattern so humans can scan severity at a
+glance and so the source (sample vs. real) is never ambiguous:
+
+```
+<emoji> <one-line title — what happened>
+<key>: <value>
+<key>: <value>
+...
+action / next step (when applicable)
+```
+
+Rules:
+
+- First line is `<emoji> <title>`. Use one severity emoji from the table below.
+- Body lines are `key: value` pairs separated by ` · ` when short, or one per
+  line when long. Keep it copy-pasteable plain text inside a fenced code block.
+- Timestamps use Australia/Adelaide (ACST/ACDT) and ISO-ish `YYYY-MM-DD HH:MM:SS`.
+- Always include `worker_id` when a worker is running, and `current_job_id` /
+  `current_job_type` when a job is in flight.
+- End with an `action:` or `auto-action:` line whenever the message implies
+  the bot or a human should do something.
+- **Sample / test messages must be prefixed with `[SAMPLE]`** on the title
+  line so they cannot be mistaken for a real production alert.
+
+Severity emoji legend:
+
+| Emoji | Meaning | Channel |
+|---|---|---|
+| 🟢 | Booting | general |
+| ✅ | Ready / healthy | general |
+| 🌙 | Shutdown initiated | general |
+| ⚫ | Stopped | general |
+| 💤 | Idle (soft) | warning |
+| ⏱️ / ⏳ | Runtime / budget notice | warning |
+| ⚠️ | Warning — needs attention | warning |
+| 🛑 | Auto-stop / hard limit hit | warning |
+| 🚨 | Escalation / urgent | warning |
+| 🌒 | Midnight check | warning |
+
+Emojis are allowed (and encouraged) in Discord messages from these bots even
+though the rest of the project avoids emojis. This exception applies only to
+bot output posted to Discord.
+
 Open TODOs:
 
 - Decide Discord webhook owner for `shinypokemon-bot-general` and
