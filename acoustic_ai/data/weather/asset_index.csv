@@ -1,1 +1,9 @@
 clip_path,layer,intensity,recording_id,season,sample_bin,notes
+acoustic_ai/data/weather/wind/wind_forest_trees.wav,wind,medium,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/wind/wind_trees_rustling.wav,wind,light,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/wind/windy_forest.wav,wind,strong,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/rain/light_forest_rain.wav,rain,light,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/rain/rainforest_rain.wav,rain,medium,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/rain/rain_on_leaf.wav,rain,light,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/thunder/rain_thunder.wav,thunder,medium,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/thunder/thunderstorm_ambience.wav,thunder,strong,freesound,unknown,unknown,curated_mvp
