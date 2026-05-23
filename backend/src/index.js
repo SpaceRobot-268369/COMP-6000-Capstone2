@@ -69,10 +69,9 @@ async function verifyPassword(password, storedHash) {
 }
 
 function requireAuth(req, res, next) {
-  // AUTH TEMPORARILY DISABLED — re-enable before production
-  // if (!req.session?.userId) {
-  //   return res.status(401).json({ ok: false, message: "Not authenticated." });
-  // }
+  if (!req.session?.userId) {
+    return res.status(401).json({ ok: false, message: "Not authenticated." });
+  }
   next();
 }
 

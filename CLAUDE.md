@@ -84,7 +84,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── local/
     │   │   └── services.md                # Local-mac service topology, ports, env vars
     │   └── server/
-    │       └── on_demand_ai_worker.md     # Server A/B job orchestration topology
+    │       ├── on_demand_ai_worker.md     # Server A/B job orchestration topology
+    │       └── server_a_deployment.md      # Server A production deployment runbook
     └── branches/                          # Ephemeral per-branch scratch (<branch-slug>/)
                                            # Deleted in the merge PR, or content promoted first.
 ```
@@ -112,6 +113,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Workflow diagrams | [.claude/context/dev/diagrams/workflow_diagrams.md](.claude/context/dev/diagrams/workflow_diagrams.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
+| Server A deployment runbook | [.claude/context/setup/server/server_a_deployment.md](.claude/context/setup/server/server_a_deployment.md) |
 | Training data filtering policy (site 257 MVP sample) | [.claude/skills/training_data_filtering_policy.md](.claude/skills/training_data_filtering_policy.md) |
 
 ---
