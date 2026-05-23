@@ -44,6 +44,70 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions (expire);
 
 -- ============================================================
+-- Jobs / workers
+-- MVP on-demand AI worker bridge. These tables are also ensured
+-- by backend startup because this init script only runs when a new
+-- PostgreSQL data directory is created.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS jobs (
+    id               BIGSERIAL PRIMARY KEY,
+    job_type         TEXT        NOT NULL CHECK (job_type IN ('generation', 'training')),
+    layer            TEXT        NOT NULL DEFAULT 'unknown',
+    status           TEXT        NOT NULL DEFAULT 'queued',
+    priority         INTEGER     NOT NULL DEFAULT 100,
+    created_by       TEXT,
+    repo_branch      TEXT,
+    command          TEXT,
+    params_json      JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    output_path      TEXT,
+    expected_artifacts JSONB     NOT NULL DEFAULT '[]'::jsonb,
+    claimed_by       TEXT,
+    lease_until      TIMESTAMPTZ,
+    heartbeat_at     TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    started_at       TIMESTAMPTZ,
+    completed_at     TIMESTAMPTZ,
+    error_message    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_status_priority ON jobs (status, priority, created_at);
+CREATE INDEX IF NOT EXISTS idx_jobs_claimed_by      ON jobs (claimed_by);
+CREATE INDEX IF NOT EXISTS idx_jobs_lease_until     ON jobs (lease_until);
+
+CREATE TABLE IF NOT EXISTS workers (
+    worker_id     TEXT PRIMARY KEY,
+    status        TEXT        NOT NULL DEFAULT 'unknown',
+    current_job_id BIGINT     REFERENCES jobs(id) ON DELETE SET NULL,
+    metadata_json JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    heartbeat_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS job_events (
+    id            BIGSERIAL PRIMARY KEY,
+    job_id        BIGINT      NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    worker_id     TEXT,
+    status        TEXT,
+    message       TEXT,
+    metadata_json JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_events_job_id_created_at ON job_events (job_id, created_at);
+
+CREATE TABLE IF NOT EXISTS job_artifacts (
+    id            BIGSERIAL PRIMARY KEY,
+    job_id        BIGINT      NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    kind          TEXT        NOT NULL,
+    path          TEXT        NOT NULL,
+    metadata_json JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_artifacts_job_id ON job_artifacts (job_id);
+
+-- ============================================================
 -- Seed — test account (password: test1234)
 -- ============================================================
 INSERT INTO users (username, email, password_hash)
