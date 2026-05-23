@@ -142,6 +142,70 @@ Verified locally on 2026-05-23:
 - Backend reached PostgreSQL successfully.
 - The compose stack was stopped with `docker compose down` after verification.
 
+## Server A Verification
+
+Verified on Server A (`spacerobot-268369`) on 2026-05-23:
+
+- Host OS is Ubuntu 24.04.2 LTS.
+- Docker 29.1.3 installed.
+- Docker Compose 2.40.3 installed.
+- `ubuntu` user is in the `docker` group and can run Docker without `sudo`.
+- Deployment branch `infra/songke/server-a-deployment` was cloned to:
+
+```text
+/home/ubuntu/COMP-6000-Capstone2-app
+```
+
+- The branch is at:
+
+```text
+267f851 infra: add server a production deployment skeleton
+```
+
+- Production `.env` was created from `services/prod/.env.example`.
+- `docker compose config` passed on Server A.
+- `docker compose up -d --build` successfully started:
+
+```text
+postgres   healthy
+backend    running
+frontend   running
+nginx      running on 0.0.0.0:80
+```
+
+- Server-side checks passed:
+
+```bash
+curl -i http://localhost/api/health
+curl -I http://localhost/
+```
+
+- `/api/health` returned HTTP 200 with `ok: true` and `db: connected`.
+- `/` returned HTTP 200 through nginx.
+
+Public HTTP access is not available yet because external TCP connections to
+port 80 are blocked by RONIN/cloud network security rules. Server A itself is
+listening on port 80 and `ufw` is inactive, so the remaining blocker is outside
+the VM.
+
+Temporary access works through SSH local port forwarding from the developer
+machine:
+
+```bash
+ssh -L 8080:localhost:80 spacerobot-268369
+```
+
+Then open:
+
+```text
+http://localhost:8080
+http://localhost:8080/api/health
+```
+
+This only exposes the site to the local developer machine while the SSH session
+is open. Public access still requires RONIN/admin configuration for inbound
+HTTP 80 and HTTPS 443.
+
 ## Production Auth Note
 
 In production, the Express session cookie is marked `secure` because
