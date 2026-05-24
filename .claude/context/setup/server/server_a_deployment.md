@@ -58,6 +58,7 @@ POSTGRES_DB=capstone_prod
 
 BACKEND_PORT=4000
 SESSION_SECRET=<new-production-secret>
+SESSION_COOKIE_SECURE=true
 JWT_SECRET=<new-production-secret>
 APP_SECRET=<new-production-secret>
 FRONTEND_URL=https://<server-a-domain>
@@ -208,10 +209,18 @@ HTTP 80 and HTTPS 443.
 
 ## Production Auth Note
 
-In production, the Express session cookie is marked `secure` because
-`NODE_ENV=production`. HTTP-only checks can verify `/api/health`, but login and
-authenticated browser flows require HTTPS so the browser will store and send the
-session cookie.
+In production, the Express session cookie is marked `secure` by default because
+`NODE_ENV=production`. Keep `SESSION_COOKIE_SECURE=true` for HTTPS deployment.
+
+For temporary HTTP-only smoke tests through localhost or SSH port forwarding,
+set this in `services/prod/.env` and restart the backend:
+
+```env
+SESSION_COOKIE_SECURE=false
+```
+
+HTTP-only checks can always verify `/api/health`, but login and authenticated
+browser flows need either HTTPS or this temporary smoke-test override.
 
 ## Restart and Stop
 

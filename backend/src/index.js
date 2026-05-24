@@ -8,6 +8,9 @@ import pg from "pg";
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE
+  ? process.env.SESSION_COOKIE_SECURE === "true"
+  : process.env.NODE_ENV === "production";
 
 const PgSession = connectPgSimple(session);
 
@@ -27,7 +30,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookieSecure,
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
