@@ -75,6 +75,32 @@ function requireAuth(req, res, next) {
   next();
 }
 
+const JOB_TYPES = new Set(["generation", "training"]);
+
+function serializeJob(row) {
+  return {
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    priority: row.priority,
+    payload: row.payload,
+    result: row.result,
+    artifact_uri: row.artifact_uri,
+    log_uri: row.log_uri,
+    error_message: row.error_message,
+    claimed_by: row.claimed_by,
+    claimed_at: row.claimed_at,
+    heartbeat_at: row.heartbeat_at,
+    started_at: row.started_at,
+    finished_at: row.finished_at,
+    attempt_count: row.attempt_count,
+    max_attempts: row.max_attempts,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -174,6 +200,61 @@ app.get("/api/me", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ ok: false, message: "User not found." });
     res.json({ ok: true, user: rows[0] });
   } catch (err) {
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Job routes
+// ---------------------------------------------------------------------------
+app.post("/api/jobs", requireAuth, async (req, res) => {
+  const type = normalizeString(req.body?.type);
+  const payload = req.body?.payload ?? {};
+  const requestedPriority = Number(req.body?.priority ?? 0);
+  const priority = Number.isInteger(requestedPriority) ? requestedPriority : 0;
+
+  if (!JOB_TYPES.has(type)) {
+    return res.status(400).json({ ok: false, message: "Job type must be generation or training." });
+  }
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return res.status(400).json({ ok: false, message: "Job payload must be an object." });
+  }
+
+  try {
+    const { rows } = await query(
+      `INSERT INTO jobs (type, status, priority, payload, created_by)
+       VALUES ($1, 'queued', $2, $3::jsonb, $4)
+       RETURNING *`,
+      [type, priority, JSON.stringify(payload), req.session.userId],
+    );
+
+    res.status(201).json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    console.error("Create job failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+app.get("/api/jobs/:id", requireAuth, async (req, res) => {
+  const jobId = Number(req.params.id);
+  if (!Number.isInteger(jobId) || jobId <= 0) {
+    return res.status(400).json({ ok: false, message: "Invalid job id." });
+  }
+
+  try {
+    const { rows } = await query(
+      `SELECT * FROM jobs WHERE id = $1 AND created_by = $2 LIMIT 1`,
+      [jobId, req.session.userId],
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({ ok: false, message: "Job not found." });
+    }
+
+    res.json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    console.error("Get job failed:", err);
     res.status(500).json({ ok: false, message: String(err.message || err) });
   }
 });
