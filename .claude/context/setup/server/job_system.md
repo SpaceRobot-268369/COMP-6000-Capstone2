@@ -412,6 +412,33 @@ claimed_by = manual-cancel-worker
 finished_at = set
 ```
 
+- Stale recovery API was later deployed and smoke-tested on Server A at:
+
+```text
+10a1152 feat: add stale job recovery API
+```
+
+- Stale job with attempts remaining was requeued:
+
+```text
+job 4: claimed -> queued
+attempt_count = 1
+max_attempts = 3
+claimed_by = null
+heartbeat_at = null
+error_message = worker heartbeat expired; requeued
+```
+
+- Stale job with attempts exhausted was failed:
+
+```text
+job 5: running -> failed
+attempt_count = 3
+max_attempts = 3
+finished_at = set
+error_message = worker heartbeat expired; max attempts reached
+```
+
 This confirms the Milestone 2 MVP API flow works on Server A through nginx and
 PostgreSQL. The test used placeholder artifact URIs and a temporary worker
 token; production deployment must replace the token and switch
