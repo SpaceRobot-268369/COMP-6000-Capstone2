@@ -365,6 +365,27 @@ result = {"duration_s":10,"sample_rate":16000}
 finished_at = set
 ```
 
+- Cancel API was later deployed and smoke-tested on Server A at:
+
+```text
+1ff3daf feat: add job cancel API
+```
+
+- Queued cancel path succeeded:
+
+```text
+job 2: queued -> cancelled
+finished_at = set
+```
+
+- Active cancel path succeeded:
+
+```text
+job 3: queued -> claimed -> cancel_requested -> cancelled
+claimed_by = manual-cancel-worker
+finished_at = set
+```
+
 This confirms the Milestone 2 MVP API flow works on Server A through nginx and
 PostgreSQL. The test used placeholder artifact URIs and a temporary worker
 token; production deployment must replace the token and switch
