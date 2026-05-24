@@ -1,0 +1,18 @@
+{
+  "pretrained_model_name": "facebook/audiogen-medium",
+  "manifest_path": "resources/site_257_bowra-dry-a/layer_c_smoke_2_3_species/train_manifest_splendid_fairywren_pass.csv",
+  "num_examples": 24,
+  "num_epochs": 5,
+  "batch_size": 1,
+  "learning_rate": 1e-05,
+  "sample_rate": 16000,
+  "frame_rate": 50,
+  "target_modules": [
+    "out_proj",
+    "linear1",
+    "linear2"
+  ],
+  "lora_rank": 8,
+  "lora_alpha": 32,
+  "lora_dropout": 0.1
+}

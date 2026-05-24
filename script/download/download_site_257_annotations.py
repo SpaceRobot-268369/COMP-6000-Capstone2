@@ -41,7 +41,7 @@ DEFAULT_WORKERS = 10
 
 def parse_args() -> argparse.Namespace:
     script_dir = Path(__file__).resolve().parent
-    project_root = script_dir.parent
+    project_root = script_dir.parent.parent
     default_csv = (
         project_root
         / "resources"

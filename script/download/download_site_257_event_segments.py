@@ -364,6 +364,10 @@ def main() -> None:
 
         anno_subdir = args.annotations_dir / f"site_257_item_{item_id}"
         anno_csv = anno_subdir / f"site_257_item_{item_id}.csv"
+        if not anno_csv.exists():
+            flat_anno_csv = args.annotations_dir / f"annotations_{item_id}.csv"
+            if flat_anno_csv.exists():
+                anno_csv = flat_anno_csv
         events = read_annotation_events(anno_csv)
 
         if not events:

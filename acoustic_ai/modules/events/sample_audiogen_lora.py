@@ -20,9 +20,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "acoustic_ai"))
 
 from debug_paths import DEBUG_ROOT  # noqa: E402
 from modules.ambient.diffusion.layer_a_visualization import (  # noqa: E402
-    render_layer_a_mel_png_bytes,
+    LAYER_A_SPEC_CMAP,
+    LAYER_A_SPEC_DPI,
+    LAYER_A_SPEC_FIGSIZE,
     waveform_to_layer_a_mel_db,
 )
+from modules.ambient.preprocess import SPEC_CFG  # noqa: E402
 
 
 DEFAULT_OUTPUT_DIR = DEBUG_ROOT / "layer_c" / "audiogen" / "samples"
@@ -40,6 +43,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output_dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--run_name", default=None)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--seeds",
+        default=None,
+        help="Optional comma-separated seeds. Keeps the model loaded and writes one bundle per seed.",
+    )
     parser.add_argument("--duration", type=float, default=5.0)
     parser.add_argument("--guidance_scale", type=float, default=3.0)
     parser.add_argument("--temperature", type=float, default=1.0)
@@ -132,10 +140,27 @@ def slugify(value: str, max_len: int = 64) -> str:
     return value[:max_len] or "sample"
 
 
-def resolve_output_path(args: argparse.Namespace) -> Path:
+def parse_seed_values(args: argparse.Namespace) -> list[int]:
+    if not args.seeds:
+        return [args.seed]
+    values: list[int] = []
+    for value in args.seeds.split(","):
+        value = value.strip()
+        if value:
+            values.append(int(value))
+    if not values:
+        raise ValueError("--seeds was provided but no integer seeds were parsed")
+    return values
+
+
+def resolve_output_path(args: argparse.Namespace, seed: int) -> Path:
     if args.output_path:
+        if args.seeds:
+            raise ValueError("--output_path cannot be used with --seeds; use --output_dir instead")
         return args.output_path
-    run_name = args.run_name or f"{slugify(args.prompt)}__seed_{args.seed:04d}"
+    run_name = args.run_name or f"{slugify(args.prompt)}__seed_{seed:04d}"
+    if args.run_name and args.seeds:
+        run_name = f"{args.run_name}__seed_{seed:04d}"
     lora_name = slugify(args.lora_dir.name, max_len=80)
     return args.output_dir / lora_name / run_name / "generated_event.wav"
 
@@ -169,13 +194,34 @@ def match_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
 
 
 def render_spectrogram(audio: np.ndarray, sample_rate: int, path: Path) -> None:
+    import io
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     mel_db = waveform_to_layer_a_mel_db(audio, sample_rate)
-    path.write_bytes(
-        render_layer_a_mel_png_bytes(
-            mel_db,
-            duration_s=float(audio.shape[-1] / sample_rate),
-        )
+    duration_s = float(audio.shape[-1] / sample_rate)
+    fig, ax = plt.subplots(figsize=LAYER_A_SPEC_FIGSIZE)
+    img = ax.imshow(
+        mel_db,
+        aspect="auto",
+        origin="lower",
+        extent=[0, duration_s, 0, SPEC_CFG["n_mels"]],
+        cmap=LAYER_A_SPEC_CMAP,
     )
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("mel bin")
+    ax.set_title("Layer C - Generated Event Spectrogram")
+    fig.colorbar(img, ax=ax, label="dB")
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=LAYER_A_SPEC_DPI)
+    plt.close(fig)
+    buf.seek(0)
+    path.write_bytes(buf.read())
 
 
 def load_lora_into_lm(lm: torch.nn.Module, lora_dir: Path) -> torch.nn.Module:
@@ -204,9 +250,7 @@ def main() -> int:
     patch_audiocraft_mps_autocast()
 
     device = choose_device(args.device)
-    torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
+    seeds = parse_seed_values(args)
 
     print(f"Loading AudioCraft AudioGen from {args.pretrained_model_name}...")
     audiogen = AudioGen.get_pretrained(args.pretrained_model_name, device=device)
@@ -224,54 +268,59 @@ def main() -> int:
         cfg_coef=args.guidance_scale,
     )
 
-    print(f"Generating event audio for prompt: {args.prompt!r}")
-    with torch.no_grad():
-        generated = audiogen.generate([args.prompt], progress=True)
-
     sample_rate = int(audiogen.sample_rate)
-    audio = generated[0].detach().float().cpu().numpy()
-    if audio.ndim > 1:
-        audio = audio.mean(axis=0)
-    before = audio_stats(audio, sample_rate)
-    audio = match_rms(audio, args.output_target_rms)
-    after = audio_stats(audio, sample_rate)
+    for seed in seeds:
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
 
-    output_path = resolve_output_path(args)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    wavfile.write(output_path, sample_rate, audio.astype(np.float32))
+        print(f"Generating event audio for prompt: {args.prompt!r} seed={seed}")
+        with torch.no_grad():
+            generated = audiogen.generate([args.prompt], progress=True)
 
-    spec_path = output_path.with_name(f"{output_path.stem}_spectrogram.png")
-    meta_path = output_path.with_name(f"{output_path.stem}_metadata.json")
-    render_spectrogram(audio, sample_rate, spec_path)
-    meta_path.write_text(
-        json.dumps(
-            {
-                "prompt": args.prompt,
-                "pretrained_model_name": args.pretrained_model_name,
-                "lora_dir": str(args.lora_dir),
-                "seed": args.seed,
-                "duration": args.duration,
-                "guidance_scale": args.guidance_scale,
-                "temperature": args.temperature,
-                "top_k": args.top_k,
-                "top_p": args.top_p,
-                "output_target_rms": args.output_target_rms,
-                "audio_before_postprocess": before,
-                "audio": after,
-                "artifacts": {
-                    "wav": str(output_path),
-                    "spectrogram": str(spec_path),
+        audio = generated[0].detach().float().cpu().numpy()
+        if audio.ndim > 1:
+            audio = audio.mean(axis=0)
+        before = audio_stats(audio, sample_rate)
+        audio = match_rms(audio, args.output_target_rms)
+        after = audio_stats(audio, sample_rate)
+
+        output_path = resolve_output_path(args, seed)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        wavfile.write(output_path, sample_rate, audio.astype(np.float32))
+
+        spec_path = output_path.with_name(f"{output_path.stem}_spectrogram.png")
+        meta_path = output_path.with_name(f"{output_path.stem}_metadata.json")
+        render_spectrogram(audio, sample_rate, spec_path)
+        meta_path.write_text(
+            json.dumps(
+                {
+                    "prompt": args.prompt,
+                    "pretrained_model_name": args.pretrained_model_name,
+                    "lora_dir": str(args.lora_dir),
+                    "seed": seed,
+                    "duration": args.duration,
+                    "guidance_scale": args.guidance_scale,
+                    "temperature": args.temperature,
+                    "top_k": args.top_k,
+                    "top_p": args.top_p,
+                    "output_target_rms": args.output_target_rms,
+                    "audio_before_postprocess": before,
+                    "audio": after,
+                    "artifacts": {
+                        "wav": str(output_path),
+                        "spectrogram": str(spec_path),
+                    },
                 },
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
-    print(f"Saved generated event bundle to {output_path.parent}")
-    print(f"  WAV:  {output_path.name}")
-    print(f"  PNG:  {spec_path.name}")
-    print(f"  JSON: {meta_path.name}")
+        print(f"Saved generated event bundle to {output_path.parent}")
+        print(f"  WAV:  {output_path.name}")
+        print(f"  PNG:  {spec_path.name}")
+        print(f"  JSON: {meta_path.name}")
     return 0
 
 

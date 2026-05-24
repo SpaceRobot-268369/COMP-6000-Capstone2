@@ -1,0 +1,28 @@
+training:
+  base_model: facebook/audiogen-medium
+  species_common_name: Crested Bellbird
+  species_scientific_name: Oreoica gutturalis
+  manifest_path: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/train_manifest_crested_bellbird_pass_relaxed_top50.csv
+  source_audit_manifest: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/quality_v2_relaxed/manual_audit_crested_bellbird_top50.csv
+  num_examples: 38
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 0.00001
+  max_duration_s: 10.0
+  device: cpu
+  lora_rank: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  target_modules:
+    - out_proj
+    - linear1
+    - linear2
+
+inference:
+  prompt: Crested Bellbird ringing bird call, isolated foreground call, Bowra dry woodland
+  duration_s: 3.0
+  guidance_scale: 3.0
+  temperature: 1.0
+  top_k: 250
+  top_p: 0.0
+  output_target_rms: 0.02

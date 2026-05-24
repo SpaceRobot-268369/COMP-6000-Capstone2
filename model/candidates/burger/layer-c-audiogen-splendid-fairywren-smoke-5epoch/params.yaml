@@ -1,0 +1,27 @@
+training:
+  base_model: facebook/audiogen-medium
+  species_common_name: Splendid Fairywren
+  species_scientific_name: Malurus splendens
+  manifest_path: resources/site_257_bowra-dry-a/layer_c_smoke_2_3_species/train_manifest_splendid_fairywren_pass.csv
+  num_examples: 24
+  num_epochs: 5
+  batch_size: 1
+  learning_rate: 0.00001
+  max_duration_s: 10.0
+  device: cpu
+  lora_rank: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  target_modules:
+    - out_proj
+    - linear1
+    - linear2
+
+inference:
+  prompt: Splendid Fairywren bird call, Bowra dry woodland, dawn
+  duration_s: 3.0
+  guidance_scale: 3.0
+  temperature: 1.0
+  top_k: 250
+  top_p: 0.0
+  output_target_rms: 0.02

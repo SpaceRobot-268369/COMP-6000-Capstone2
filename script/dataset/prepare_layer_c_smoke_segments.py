@@ -205,6 +205,10 @@ def main() -> int:
     manifest_by_event = load_manifest(manifest_path)
     webm_paths = sorted(dataset_dir.glob("site_257_item_*/site_257_item_*_audioevent_*/*.webm"))
     if not webm_paths:
+        webm_paths = sorted(
+            (dataset_dir / "segments").glob("site_257_item_*/site_257_item_*_audioevent_*/*.webm")
+        )
+    if not webm_paths:
         print(f"[error] no downloaded webm segments found under {dataset_dir}", file=sys.stderr)
         return 1
 
