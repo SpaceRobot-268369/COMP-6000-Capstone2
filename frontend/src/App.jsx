@@ -8,6 +8,7 @@ import LayerATestPage from "./pages/LayerATestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
+import ServerStatus from "./components/ServerStatus.jsx";
 
 const accountStorageKey = "sonic-lab-account-name";
 
@@ -84,6 +85,8 @@ export default function App() {
         </div>
 
         <ThemeToggle />
+
+        <ServerStatus />
 
         <section className="sidebar-user panel" aria-label="Account status">
           <div className="sidebar-user-head">
