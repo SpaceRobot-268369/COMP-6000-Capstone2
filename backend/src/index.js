@@ -68,6 +68,13 @@ async function verifyPassword(password, storedHash) {
   return crypto.timingSafeEqual(expectedBuf, key);
 }
 
+function safeTokenEqual(actual, expected) {
+  const actualBuf = Buffer.from(actual);
+  const expectedBuf = Buffer.from(expected);
+  if (actualBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(actualBuf, expectedBuf);
+}
+
 function requireAuth(req, res, next) {
   if (!req.session?.userId) {
     return res.status(401).json({ ok: false, message: "Not authenticated." });
@@ -75,7 +82,33 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireWorkerAuth(req, res, next) {
+  const expectedToken = process.env.WORKER_API_TOKEN;
+  if (!expectedToken) {
+    return res.status(500).json({ ok: false, message: "Worker API token is not configured." });
+  }
+
+  const authHeader = req.get("authorization") || "";
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({ ok: false, message: "Worker authorization token is required." });
+  }
+
+  if (!safeTokenEqual(token, expectedToken)) {
+    return res.status(403).json({ ok: false, message: "Invalid worker authorization token." });
+  }
+
+  next();
+}
+
 const JOB_TYPES = new Set(["generation", "training"]);
+const WORKER_SETTABLE_JOB_STATUSES = new Set(["running", "uploading", "completed", "failed", "cancelled"]);
+const WORKER_STATUS_TRANSITIONS = {
+  claimed: new Set(["running", "failed"]),
+  running: new Set(["uploading", "failed"]),
+  uploading: new Set(["completed", "failed"]),
+  cancel_requested: new Set(["cancelled", "failed"]),
+};
 
 function serializeJob(row) {
   return {
@@ -256,6 +289,194 @@ app.get("/api/jobs/:id", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Get job failed:", err);
     res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Worker job routes
+// ---------------------------------------------------------------------------
+app.post("/api/worker/jobs/claim", requireWorkerAuth, async (req, res) => {
+  const workerId = normalizeString(req.body?.worker_id);
+  const requestedTypes = Array.isArray(req.body?.types) && req.body.types.length > 0
+    ? req.body.types.map(normalizeString)
+    : ["generation", "training"];
+  const types = requestedTypes.filter((type) => JOB_TYPES.has(type));
+
+  if (!workerId) {
+    return res.status(400).json({ ok: false, message: "worker_id is required." });
+  }
+
+  if (types.length !== requestedTypes.length) {
+    return res.status(400).json({ ok: false, message: "Worker types must be generation or training." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: candidates } = await client.query(
+      `SELECT id
+       FROM jobs
+       WHERE status = 'queued'
+         AND type = ANY($1::text[])
+         AND attempt_count < max_attempts
+       ORDER BY priority DESC, created_at ASC
+       FOR UPDATE SKIP LOCKED
+       LIMIT 1`,
+      [types],
+    );
+
+    if (!candidates[0]) {
+      await client.query("COMMIT");
+      return res.json({ ok: true, job: null });
+    }
+
+    const { rows } = await client.query(
+      `UPDATE jobs
+       SET status = 'claimed',
+           claimed_by = $2,
+           claimed_at = NOW(),
+           heartbeat_at = NOW(),
+           attempt_count = attempt_count + 1
+       WHERE id = $1
+       RETURNING *`,
+      [candidates[0].id, workerId],
+    );
+
+    await client.query("COMMIT");
+    res.json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Claim job failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/worker/jobs/:id/heartbeat", requireWorkerAuth, async (req, res) => {
+  const jobId = Number(req.params.id);
+  const workerId = normalizeString(req.body?.worker_id);
+
+  if (!Number.isInteger(jobId) || jobId <= 0) {
+    return res.status(400).json({ ok: false, message: "Invalid job id." });
+  }
+
+  if (!workerId) {
+    return res.status(400).json({ ok: false, message: "worker_id is required." });
+  }
+
+  try {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET heartbeat_at = NOW()
+       WHERE id = $1
+         AND claimed_by = $2
+         AND status IN ('claimed', 'running', 'uploading', 'cancel_requested')
+       RETURNING *`,
+      [jobId, workerId],
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({ ok: false, message: "Active job not found for worker." });
+    }
+
+    res.json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    console.error("Heartbeat failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+app.post("/api/worker/jobs/:id/status", requireWorkerAuth, async (req, res) => {
+  const jobId = Number(req.params.id);
+  const workerId = normalizeString(req.body?.worker_id);
+  const nextStatus = normalizeString(req.body?.status);
+  const result = req.body?.result;
+  const artifactUri = req.body?.artifact_uri ?? null;
+  const logUri = req.body?.log_uri ?? null;
+  const errorMessage = req.body?.error_message ?? null;
+
+  if (!Number.isInteger(jobId) || jobId <= 0) {
+    return res.status(400).json({ ok: false, message: "Invalid job id." });
+  }
+
+  if (!workerId) {
+    return res.status(400).json({ ok: false, message: "worker_id is required." });
+  }
+
+  if (!WORKER_SETTABLE_JOB_STATUSES.has(nextStatus)) {
+    return res.status(400).json({ ok: false, message: "Invalid worker job status." });
+  }
+
+  if (result !== undefined && (!result || typeof result !== "object" || Array.isArray(result))) {
+    return res.status(400).json({ ok: false, message: "Job result must be an object when provided." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: currentRows } = await client.query(
+      `SELECT *
+       FROM jobs
+       WHERE id = $1 AND claimed_by = $2
+       FOR UPDATE`,
+      [jobId, workerId],
+    );
+
+    const current = currentRows[0];
+    if (!current) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ ok: false, message: "Job not found for worker." });
+    }
+
+    const allowedNext = WORKER_STATUS_TRANSITIONS[current.status];
+    if (!allowedNext?.has(nextStatus)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        ok: false,
+        message: `Invalid job status transition from ${current.status} to ${nextStatus}.`,
+      });
+    }
+
+    const { rows } = await client.query(
+      `UPDATE jobs
+       SET status = $1,
+           heartbeat_at = NOW(),
+           started_at = CASE
+               WHEN $1 = 'running' AND started_at IS NULL THEN NOW()
+               ELSE started_at
+           END,
+           finished_at = CASE
+               WHEN $1 IN ('completed', 'failed', 'cancelled') THEN NOW()
+               ELSE finished_at
+           END,
+           result = COALESCE($4::jsonb, result),
+           artifact_uri = COALESCE($5, artifact_uri),
+           log_uri = COALESCE($6, log_uri),
+           error_message = COALESCE($7, error_message)
+       WHERE id = $2 AND claimed_by = $3
+       RETURNING *`,
+      [
+        nextStatus,
+        jobId,
+        workerId,
+        result === undefined ? null : JSON.stringify(result),
+        artifactUri,
+        logUri,
+        errorMessage,
+      ],
+    );
+
+    await client.query("COMMIT");
+    res.json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Update job status failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  } finally {
+    client.release();
   }
 });
 
