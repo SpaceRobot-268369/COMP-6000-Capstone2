@@ -38,19 +38,27 @@ model/candidates/murphy/layer-b-segment-selection-smoke/outputs/
 
 ## Manual Audit
 
-Initial dev-container smoke test passed with `--segments-per-type 1` on
-2026-05-24 for the previous wind/rain/thunder cases. The comparable
-breeze/storm/light-raining/heavy-raining cases exposed that CLAP-only ranking
-does not reliably separate weather intensity.
+Final dev-container smoke test passed with `--segments-per-type 1` on
+2026-05-24 for the comparable breeze, storm, light-raining, and heavy-raining
+cases.
+
+Manual listening passed for all exported top-1 clips:
+
+| Case | Manual result |
+|---|---|
+| breeze | Pass - light wind texture |
+| storm wind | Pass - strong wind texture |
+| storm thunder | Pass - exported thunder clip matches storm thunder |
+| light_raining | Pass - light rain texture |
+| heavy_raining | Pass - heavy rain texture |
 
 Current selector behavior combines:
 
 - CLAP semantic file retrieval
 - `asset_index.csv` intensity labels for light/medium/strong filtering
 - segment-level audio validation for silence, clipping, and texture stability
-
-Re-run manual listening after each selector change and record pass/fail notes in
-the local `outputs/manual_audit.md`.
+- light-wind segment ranking that prefers lower-energy breeze clips
+- multi-type smoke export so storm writes both wind and thunder clips
 
 ## Artifact Policy
 
