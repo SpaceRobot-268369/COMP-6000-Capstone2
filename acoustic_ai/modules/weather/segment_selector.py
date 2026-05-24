@@ -197,7 +197,13 @@ def _rank_asset_segments(
                 sample_rate=info.samplerate,
                 weather_type=weather_type,
             )
-            score = float(asset["score"]) + quality["quality_score"]
+            target_intensity = asset.get("target_intensity", "unknown")
+            score = _segment_rank_score(
+                retrieval_score=float(asset["score"]),
+                quality=quality,
+                weather_type=weather_type,
+                target_intensity=target_intensity,
+            )
             ranked.append({
                 "weather_type": weather_type,
                 "file": asset["file"],
@@ -222,6 +228,24 @@ def _rank_asset_segments(
         if _segment_is_usable(item["weather_type"], item.get("validation", {}))
     ]
     return sorted(usable or ranked, key=lambda item: item["score"], reverse=True)
+
+
+def _segment_rank_score(
+    *,
+    retrieval_score: float,
+    quality: dict,
+    weather_type: WeatherType,
+    target_intensity: str,
+) -> float:
+    score = retrieval_score + quality["quality_score"]
+    if weather_type == "wind" and target_intensity == "light":
+        rms = float(quality.get("rms", 0.0))
+        peak = float(quality.get("peak", 0.0))
+        lightness_bonus = max(0.0, 0.04 - rms) * 4.0
+        gust_penalty = max(0.0, peak - 0.25) * 0.35
+        energy_penalty = max(0.0, rms - 0.04) * 3.0
+        score += lightness_bonus - gust_penalty - energy_penalty
+    return round(float(score), 4)
 
 
 def _segment_is_usable(weather_type: WeatherType, validation: dict) -> bool:

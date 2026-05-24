@@ -127,23 +127,26 @@ def main() -> int:
 
 
 def validate_case(case: dict, result: dict, out_dir: Path) -> list[str]:
-    expected_type = case["weather_types"][0]
     failures = []
 
     if result.get("warnings"):
         failures.append(f"{case['name']} returned warnings: {result['warnings']}")
 
-    segments = [
-        item for item in result.get("results", [])
-        if item.get("weather_type") == expected_type
-    ]
-    if not segments:
-        return failures + [f"{case['name']} returned no {expected_type} segments."]
+    export_index = 0
+    for expected_type in case["weather_types"]:
+        segments = [
+            item for item in result.get("results", [])
+            if item.get("weather_type") == expected_type
+        ]
+        if not segments:
+            failures.append(f"{case['name']} returned no {expected_type} segments.")
+            continue
 
-    for index, item in enumerate(segments):
-        failures.extend(validate_segment(case["name"], expected_type, index, item))
-        if item.get("validation", {}).get("asset_available") is not False:
-            export_segment_clip(case["name"], index, item, out_dir)
+        for item in segments:
+            failures.extend(validate_segment(case["name"], expected_type, export_index, item))
+            if item.get("validation", {}).get("asset_available") is not False:
+                export_segment_clip(case["name"], export_index, item, out_dir)
+            export_index += 1
 
     return failures
 
