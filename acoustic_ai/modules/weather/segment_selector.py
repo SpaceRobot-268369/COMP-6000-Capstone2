@@ -216,7 +216,29 @@ def _rank_asset_segments(
                 "reason": _segment_reason(weather_type, quality),
             })
 
-    return sorted(ranked, key=lambda item: item["score"], reverse=True)
+    usable = [
+        item
+        for item in ranked
+        if _segment_is_usable(item["weather_type"], item.get("validation", {}))
+    ]
+    return sorted(usable or ranked, key=lambda item: item["score"], reverse=True)
+
+
+def _segment_is_usable(weather_type: WeatherType, validation: dict) -> bool:
+    if validation.get("asset_available") is False:
+        return False
+
+    silence_ratio = float(validation.get("silence_ratio", 1.0))
+    clipping_ratio = float(validation.get("clipping_ratio", 1.0))
+    stability = float(validation.get("stability", 0.0))
+
+    if clipping_ratio > 0.02:
+        return False
+    if weather_type in {"wind", "rain"}:
+        return silence_ratio <= 0.40 and stability >= 0.20
+    if weather_type == "thunder":
+        return silence_ratio <= 0.80
+    return True
 
 
 def _segment_windows(
