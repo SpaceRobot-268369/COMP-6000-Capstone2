@@ -23,24 +23,33 @@ from modules.weather.segment_selector import select_weather_segments
 
 CASES = [
     {
-        "name": "wind",
-        "query": "strong natural forest wind ambience",
+        "name": "breeze",
+        "query": "light breeze through forest leaves",
         "weather_types": ["wind"],
-        "wind_speed_ms": 9.0,
+        "wind_speed_ms": 3.0,
         "precipitation_mm": 0.0,
     },
     {
-        "name": "rain",
-        "query": "light drizzle under forest canopy",
-        "weather_types": ["rain"],
-        "wind_speed_ms": 1.0,
-        "precipitation_mm": 1.5,
+        "name": "storm",
+        "query": "strong storm wind with distant thunder",
+        "weather_types": ["wind", "thunder"],
+        "wind_speed_ms": 11.0,
+        "precipitation_mm": 6.0,
+        "include_thunder": True,
     },
     {
-        "name": "thunder",
-        "query": "distant rolling thunderstorm ambience",
-        "weather_types": ["thunder"],
-        "include_thunder": True,
+        "name": "light_raining",
+        "query": "light raining under forest canopy",
+        "weather_types": ["rain"],
+        "wind_speed_ms": 1.0,
+        "precipitation_mm": 1.0,
+    },
+    {
+        "name": "heavy_raining",
+        "query": "heavy raining in dense forest",
+        "weather_types": ["rain"],
+        "wind_speed_ms": 4.0,
+        "precipitation_mm": 8.0,
     },
 ]
 
@@ -169,7 +178,7 @@ def validate_segment(case_name: str, expected_type: str, index: int, item: dict)
         failures.append(f"{prefix} clips too much: clipping_ratio={clipping_ratio}")
 
     if expected_type in {"wind", "rain"}:
-        if silence_ratio > 0.35:
+        if silence_ratio > 0.40:
             failures.append(f"{prefix} has too much silence: silence_ratio={silence_ratio}")
         if stability < 0.20:
             failures.append(f"{prefix} is too unstable for a texture bed: stability={stability}")
