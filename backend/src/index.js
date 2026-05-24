@@ -105,6 +105,7 @@ function requireWorkerAuth(req, res, next) {
 }
 
 const JOB_TYPES = new Set(["generation", "training"]);
+const USER_CANCELLABLE_JOB_STATUSES = new Set(["queued", "claimed", "running", "uploading"]);
 const WORKER_SETTABLE_JOB_STATUSES = new Set(["running", "uploading", "completed", "failed", "cancelled"]);
 const WORKER_STATUS_TRANSITIONS = {
   claimed: new Set(["running", "failed"]),
@@ -292,6 +293,59 @@ app.get("/api/jobs/:id", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Get job failed:", err);
     res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
+app.post("/api/jobs/:id/cancel", requireAuth, async (req, res) => {
+  const jobId = Number(req.params.id);
+  if (!Number.isInteger(jobId) || jobId <= 0) {
+    return res.status(400).json({ ok: false, message: "Invalid job id." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: currentRows } = await client.query(
+      `SELECT *
+       FROM jobs
+       WHERE id = $1 AND created_by = $2
+       FOR UPDATE`,
+      [jobId, req.session.userId],
+    );
+
+    const current = currentRows[0];
+    if (!current) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ ok: false, message: "Job not found." });
+    }
+
+    if (!USER_CANCELLABLE_JOB_STATUSES.has(current.status)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        ok: false,
+        message: `Job cannot be cancelled from status ${current.status}.`,
+      });
+    }
+
+    const nextStatus = current.status === "queued" ? "cancelled" : "cancel_requested";
+    const { rows } = await client.query(
+      `UPDATE jobs
+       SET status = $1,
+           finished_at = CASE WHEN $1 = 'cancelled' THEN NOW() ELSE finished_at END
+       WHERE id = $2 AND created_by = $3
+       RETURNING *`,
+      [nextStatus, jobId, req.session.userId],
+    );
+
+    await client.query("COMMIT");
+    res.json({ ok: true, job: serializeJob(rows[0]) });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Cancel job failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  } finally {
+    client.release();
   }
 });
 

@@ -65,7 +65,7 @@ claimed -> failed
 running -> failed
 uploading -> failed
 
-queued -> cancel_requested
+queued -> cancelled
 claimed -> cancel_requested
 running -> cancel_requested
 uploading -> cancel_requested
@@ -169,8 +169,16 @@ Returns job state and visible result metadata for the owner.
 
 ### `POST /api/jobs/:id/cancel`
 
-Moves an active job to `cancel_requested`. Workers should check for cancellation
-between long-running steps.
+Cancels a job owned by the current user.
+
+MVP behavior:
+
+- `queued` jobs move directly to `cancelled` because no worker owns them.
+- `claimed`, `running`, and `uploading` jobs move to `cancel_requested`.
+- `completed`, `failed`, and `cancelled` jobs cannot be cancelled.
+
+Workers should check for `cancel_requested` between long-running steps and then
+report `cancelled` or `failed`.
 
 ## Worker API
 
