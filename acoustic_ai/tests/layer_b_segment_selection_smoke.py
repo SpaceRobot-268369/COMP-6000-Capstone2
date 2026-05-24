@@ -50,7 +50,12 @@ def main() -> int:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=PROJECT_ROOT / "debug" / "layer_b_segment_smoke",
+        default=PROJECT_ROOT
+        / "model"
+        / "candidates"
+        / "murphy"
+        / "layer-b-segment-selection-smoke"
+        / "outputs",
         help="Directory for JSON report and exported candidate clips.",
     )
     parser.add_argument("--top-assets", type=int, default=3)

@@ -206,7 +206,7 @@ Pass criteria:
 - segment start/duration metadata is valid
 - wind/rain segments are not mostly silent and are stable enough for texture use
 - thunder segments are not mostly silent
-- selected clips are exported to `debug/layer_b_segment_smoke/` for manual listening
+- selected clips are exported to `model/candidates/murphy/layer-b-segment-selection-smoke/outputs/` for manual listening
 
 The smoke test is not a substitute for listening. It catches broken retrieval,
 missing assets, bad segment metadata, silence, and clipping; the developer still

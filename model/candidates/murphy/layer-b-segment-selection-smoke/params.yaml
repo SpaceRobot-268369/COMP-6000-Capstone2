@@ -1,0 +1,25 @@
+smoke_test:
+  script: acoustic_ai/tests/layer_b_segment_selection_smoke.py
+  target_duration: 30.0
+  top_assets: 3
+  segments_per_type: 1
+  window_seconds: 10.0
+  overlap_seconds: 2.0
+  cases:
+    - name: wind
+      query: strong natural forest wind ambience
+      weather_types:
+        - wind
+      wind_speed_ms: 9.0
+      precipitation_mm: 0.0
+    - name: rain
+      query: light drizzle under forest canopy
+      weather_types:
+        - rain
+      wind_speed_ms: 1.0
+      precipitation_mm: 1.5
+    - name: thunder
+      query: distant rolling thunderstorm ambience
+      weather_types:
+        - thunder
+      include_thunder: true
