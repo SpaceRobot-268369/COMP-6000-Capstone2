@@ -179,6 +179,39 @@ file-level retrieval
 → return segment sequence metadata to Layer D
 ```
 
+## Smoke Test
+
+Run the Layer B segment-selection smoke test from the repository root:
+
+```bash
+./acoustic_ai/.venv/bin/python acoustic_ai/tests/layer_b_segment_selection_smoke.py
+```
+
+The smoke test checks three cases:
+
+- wind: strong natural forest wind ambience
+- rain: light drizzle under forest canopy
+- thunder: distant rolling thunderstorm ambience
+
+Expected prerequisites:
+
+- `laion_clap` is available in `acoustic_ai/.venv`
+- weather embedding indexes exist under `acoustic_ai/data/weather/metadata/`
+- selected weather WAV files exist at the indexed paths
+
+Pass criteria:
+
+- each case returns at least one segment for the requested weather type
+- selected files exist locally
+- segment start/duration metadata is valid
+- wind/rain segments are not mostly silent and are stable enough for texture use
+- thunder segments are not mostly silent
+- selected clips are exported to `debug/layer_b_segment_smoke/` for manual listening
+
+The smoke test is not a substitute for listening. It catches broken retrieval,
+missing assets, bad segment metadata, silence, and clipping; the developer still
+needs to listen to the exported clips to confirm semantic quality.
+
 ## Output Format
 
 Layer B should eventually return:

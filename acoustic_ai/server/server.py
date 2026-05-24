@@ -36,6 +36,7 @@ from server.inference import (
 )
 
 from modules.ambient.diffusion.layer_a_visualization import render_layer_a_mel_png_bytes
+from modules.weather.segment_selector import select_weather_segments
 
 app = FastAPI(title="Soundscape Inference API", version="0.1.0")
 
@@ -200,6 +201,19 @@ class LayerARequest(BaseModel):
     seed: Optional[int] = 42
 
 
+class LayerBSegmentRequest(BaseModel):
+    query: Optional[str] = None
+    weather_types: Optional[list[str]] = None
+    wind_speed_ms: Optional[float] = None
+    precipitation_mm: Optional[float] = None
+    include_thunder: bool = False
+    target_duration: float = 30.0
+    top_assets: int = 3
+    segments_per_type: int = 2
+    window_seconds: float = 10.0
+    overlap_seconds: float = 2.0
+
+
 @app.post("/layer_a/generate")
 def layer_a_generate(body: LayerARequest):
     """Generate Layer A with the trained AudioLDM2 LoRA smoke-test model.
@@ -236,6 +250,46 @@ def layer_a_smoke_test_1_generate(body: LayerARequest):
 def layer_a_smoke_test_2_generate(body: LayerARequest):
     """Generate Layer A smoke test 2 with the insect/cicada LoRA."""
     return _layer_a_smoke_test_response("smoke_test_2", body.seed)
+
+
+@app.post("/layer_b/select_segments")
+def layer_b_select_segments(body: LayerBSegmentRequest):
+    """Select Layer B weather segments for Layer D.
+
+    This endpoint returns metadata only. It does not render the final weather
+    layer and does not decide timeline placement; Layer D owns those steps.
+    """
+    allowed_types = {"wind", "rain", "thunder"}
+    weather_types = body.weather_types
+    if weather_types:
+        invalid = sorted(set(weather_types).difference(allowed_types))
+        if invalid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid weather_types: {invalid}. Allowed: wind, rain, thunder.",
+            )
+
+    try:
+        return select_weather_segments(
+            query=body.query,
+            weather_types=weather_types,  # type: ignore[arg-type]
+            wind_speed_ms=body.wind_speed_ms,
+            precipitation_mm=body.precipitation_mm,
+            include_thunder=body.include_thunder,
+            target_duration=body.target_duration,
+            top_assets=body.top_assets,
+            segments_per_type=body.segments_per_type,
+            window_seconds=body.window_seconds,
+            overlap_seconds=body.overlap_seconds,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Layer B segment selection failed: {exc}")
 
 
 def _layer_a_smoke_test_response(smoke_test_id: str, seed: Optional[int]):
