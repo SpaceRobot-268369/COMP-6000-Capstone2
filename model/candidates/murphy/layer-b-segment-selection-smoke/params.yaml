@@ -6,20 +6,29 @@ smoke_test:
   window_seconds: 10.0
   overlap_seconds: 2.0
   cases:
-    - name: wind
-      query: strong natural forest wind ambience
+    - name: breeze
+      query: light breeze through forest leaves
       weather_types:
         - wind
-      wind_speed_ms: 9.0
+      wind_speed_ms: 3.0
       precipitation_mm: 0.0
-    - name: rain
-      query: light drizzle under forest canopy
+    - name: storm
+      query: strong storm wind with distant thunder
+      weather_types:
+        - wind
+        - thunder
+      wind_speed_ms: 11.0
+      precipitation_mm: 6.0
+      include_thunder: true
+    - name: light_raining
+      query: light raining under forest canopy
       weather_types:
         - rain
       wind_speed_ms: 1.0
-      precipitation_mm: 1.5
-    - name: thunder
-      query: distant rolling thunderstorm ambience
+      precipitation_mm: 1.0
+    - name: heavy_raining
+      query: heavy raining in dense forest
       weather_types:
-        - thunder
-      include_thunder: true
+        - rain
+      wind_speed_ms: 4.0
+      precipitation_mm: 8.0

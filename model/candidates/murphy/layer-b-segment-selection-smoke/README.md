@@ -31,19 +31,26 @@ model/candidates/murphy/layer-b-segment-selection-smoke/outputs/
 
 | Case | Query |
 |---|---|
-| wind | strong natural forest wind ambience |
-| rain | light drizzle under forest canopy |
-| thunder | distant rolling thunderstorm ambience |
+| breeze | light breeze through forest leaves |
+| storm | strong storm wind with distant thunder |
+| light_raining | light raining under forest canopy |
+| heavy_raining | heavy raining in dense forest |
 
 ## Manual Audit
 
-Dev-container smoke test passed with `--segments-per-type 1` on 2026-05-24.
+Initial dev-container smoke test passed with `--segments-per-type 1` on
+2026-05-24 for the previous wind/rain/thunder cases. The comparable
+breeze/storm/light-raining/heavy-raining cases exposed that CLAP-only ranking
+does not reliably separate weather intensity.
 
-Manual listening notes:
+Current selector behavior combines:
 
-- `wind_0_windy_forest_176.0s.wav`: pass; matches wind description, no severe clipping.
-- `rain_0_rainforest_rain_32.0s.wav`: pass; matches rain description, no severe clipping.
-- `thunder_0_rain_thunder_40.0s.wav`: pass; matches thunder/rain-thunder description, no severe clipping.
+- CLAP semantic file retrieval
+- `asset_index.csv` intensity labels for light/medium/strong filtering
+- segment-level audio validation for silence, clipping, and texture stability
+
+Re-run manual listening after each selector change and record pass/fail notes in
+the local `outputs/manual_audit.md`.
 
 ## Artifact Policy
 

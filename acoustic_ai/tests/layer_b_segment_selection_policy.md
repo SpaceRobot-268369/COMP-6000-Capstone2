@@ -187,11 +187,12 @@ Run the Layer B segment-selection smoke test from the repository root:
 ./acoustic_ai/.venv/bin/python acoustic_ai/tests/layer_b_segment_selection_smoke.py
 ```
 
-The smoke test checks three cases:
+The smoke test checks four comparable weather-intensity cases:
 
-- wind: strong natural forest wind ambience
-- rain: light drizzle under forest canopy
-- thunder: distant rolling thunderstorm ambience
+- breeze: light breeze through forest leaves
+- storm: strong storm wind with distant thunder
+- light_raining: light raining under forest canopy
+- heavy_raining: heavy raining in dense forest
 
 Expected prerequisites:
 
