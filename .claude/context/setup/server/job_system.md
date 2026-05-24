@@ -307,6 +307,61 @@ MVP stale handling:
 Do not reclaim jobs in `uploading` too aggressively; a later version may use a
 longer upload timeout.
 
+## Server A Smoke Test
+
+Verified on Server A (`spacerobot-268369`) on 2026-05-24:
+
+- Deployment branch was updated to:
+
+```text
+656e96d fix: allow http session smoke tests
+```
+
+- Existing production PostgreSQL volume was manually patched with the `jobs`
+  schema from `services/prod/db_init.sql`.
+- `WORKER_API_TOKEN=server-a-worker-test-token` was added to
+  `services/prod/.env` for smoke testing.
+- `SESSION_COOKIE_SECURE=false` was added temporarily so HTTP-only localhost
+  tests can preserve session cookies before HTTPS is configured.
+- Backend was rebuilt and restarted with:
+
+```bash
+docker compose up -d --build backend
+```
+
+- `/api/health` returned `ok: true` and `db: connected`.
+- A smoke-test user was registered through `POST /api/register`.
+- `POST /api/jobs` created job `1` with status `queued`.
+- `GET /api/jobs/1` returned the created job for the owning session.
+- Worker claim succeeded:
+
+```text
+queued -> claimed
+claimed_by = manual-test-worker
+attempt_count = 1
+```
+
+- Worker heartbeat updated `heartbeat_at`.
+- Worker status updates succeeded:
+
+```text
+claimed -> running -> uploading -> completed
+```
+
+- Final completed metadata:
+
+```text
+artifact_uri = s3://test/generated/job-1.wav
+log_uri = s3://test/logs/job-1.log
+result = {"duration_s":10,"sample_rate":16000}
+finished_at = set
+```
+
+This confirms the Milestone 2 MVP API flow works on Server A through nginx and
+PostgreSQL. The test used placeholder artifact URIs and a temporary worker
+token; production deployment must replace the token and switch
+`SESSION_COOKIE_SECURE=true` after HTTPS is configured.
+
 ## Artifact Contract
 
 Workers must upload artifacts before marking a job `completed`.
