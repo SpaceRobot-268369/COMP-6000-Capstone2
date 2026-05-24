@@ -2,8 +2,16 @@ clip_path,layer,intensity,recording_id,season,sample_bin,notes
 acoustic_ai/data/weather/wind/wind_forest_trees.wav,wind,medium,freesound,unknown,unknown,curated_mvp
 acoustic_ai/data/weather/wind/wind_trees_rustling.wav,wind,light,freesound,unknown,unknown,curated_mvp
 acoustic_ai/data/weather/wind/windy_forest.wav,wind,strong,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/wind/wind_trees_rustling_2.wav,wind,light,freesound_523389,unknown,unknown,expanded_dataset
+acoustic_ai/data/weather/wind/ambient_soft_wind.wav,wind,light,freesound_161812,unknown,unknown,expanded_dataset
 acoustic_ai/data/weather/rain/light_forest_rain.wav,rain,light,freesound,unknown,unknown,curated_mvp
 acoustic_ai/data/weather/rain/rainforest_rain.wav,rain,medium,freesound,unknown,unknown,curated_mvp
 acoustic_ai/data/weather/rain/rain_on_leaf.wav,rain,light,freesound,unknown,unknown,curated_mvp
-acoustic_ai/data/weather/thunder/rain_thunder.wav,thunder,medium,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/rain/forest_drizzle_light.wav,rain,light,freesound_262029,unknown,unknown,expanded_dataset
+acoustic_ai/data/weather/rain/forest_rain_canopy.wav,rain,medium,freesound_719062,unknown,unknown,expanded_dataset
+acoustic_ai/data/weather/rain/heavy_rain_dense.wav,rain,strong,freesound_200272,unknown,unknown,expanded_dataset
 acoustic_ai/data/weather/thunder/thunderstorm_ambience.wav,thunder,strong,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/thunder/rain_thunder.wav,thunder,medium,freesound,unknown,unknown,curated_mvp
+acoustic_ai/data/weather/thunder/distant_thunder_rolling.wav,thunder,medium,freesound_151201,unknown,unknown,expanded_dataset
+acoustic_ai/data/weather/thunder/storm_thunder_buildup.wav,thunder,strong,freesound_511348,unknown,unknown,expanded_dataset
+acoustic_ai/data/weather/thunder/rain_thunderstorm_blend.wav,thunder,strong,freesound_732992,unknown,unknown,expanded_dataset
