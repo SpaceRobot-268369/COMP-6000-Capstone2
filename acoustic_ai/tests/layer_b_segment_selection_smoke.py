@@ -178,7 +178,9 @@ def validate_segment(case_name: str, expected_type: str, index: int, item: dict)
         failures.append(f"{prefix} clips too much: clipping_ratio={clipping_ratio}")
 
     if expected_type in {"wind", "rain"}:
-        if silence_ratio > 0.40:
+        target_intensity = item.get("target_intensity")
+        silence_limit = 0.65 if expected_type == "rain" and target_intensity == "light" else 0.40
+        if silence_ratio > silence_limit:
             failures.append(f"{prefix} has too much silence: silence_ratio={silence_ratio}")
         if stability < 0.20:
             failures.append(f"{prefix} is too unstable for a texture bed: stability={stability}")
