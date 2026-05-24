@@ -120,6 +120,17 @@ MVP can use SQL init files because the project does not yet have a migration
 system. A later milestone should introduce migrations before schema changes
 become frequent.
 
+Current schema locations:
+
+```text
+services/dev/db_init.sql
+services/prod/db_init.sql
+```
+
+These SQL init files run only when a PostgreSQL data volume is created for the
+first time. Existing dev or production databases need a manual migration,
+temporary schema patch, or volume rebuild to receive later schema changes.
+
 ## User API
 
 User-facing APIs require normal session auth.

@@ -44,6 +44,56 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions (expire);
 
 -- ============================================================
+-- Jobs
+-- Server A owns job state for on-demand Server B workers.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS jobs (
+    id             BIGSERIAL PRIMARY KEY,
+    type           TEXT        NOT NULL CHECK (type IN ('generation', 'training')),
+    status         TEXT        NOT NULL DEFAULT 'queued' CHECK (
+        status IN (
+            'queued',
+            'claimed',
+            'running',
+            'uploading',
+            'completed',
+            'failed',
+            'cancel_requested',
+            'cancelled'
+        )
+    ),
+    priority       INTEGER     NOT NULL DEFAULT 0,
+    payload        JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    result         JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    artifact_uri   TEXT,
+    log_uri        TEXT,
+    error_message  TEXT,
+    claimed_by     TEXT,
+    claimed_at     TIMESTAMPTZ,
+    heartbeat_at   TIMESTAMPTZ,
+    started_at     TIMESTAMPTZ,
+    finished_at    TIMESTAMPTZ,
+    attempt_count  INTEGER     NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    max_attempts   INTEGER     NOT NULL DEFAULT 3 CHECK (max_attempts > 0),
+    created_by     INTEGER     REFERENCES users(id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_status_priority_created
+    ON jobs (status, priority DESC, created_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_claimed_by
+    ON jobs (claimed_by);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_heartbeat
+    ON jobs (heartbeat_at);
+
+CREATE OR REPLACE TRIGGER trg_jobs_updated_at
+    BEFORE UPDATE ON jobs
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+-- ============================================================
 -- Seed — test account (password: test1234)
 -- ============================================================
 INSERT INTO users (username, email, password_hash)
