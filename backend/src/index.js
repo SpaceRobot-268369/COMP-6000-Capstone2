@@ -537,6 +537,75 @@ app.post("/api/worker/jobs/:id/status", requireWorkerAuth, async (req, res) => {
   }
 });
 
+app.post("/api/worker/jobs/recover-stale", requireWorkerAuth, async (req, res) => {
+  const requestedTimeoutSeconds = Number(req.body?.timeout_seconds ?? 300);
+  const timeoutSeconds = Number.isInteger(requestedTimeoutSeconds) && requestedTimeoutSeconds > 0
+    ? requestedTimeoutSeconds
+    : 300;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: staleJobs } = await client.query(
+      `SELECT *
+       FROM jobs
+       WHERE status IN ('claimed', 'running', 'uploading')
+         AND heartbeat_at IS NOT NULL
+         AND heartbeat_at < NOW() - ($1::int * INTERVAL '1 second')
+       FOR UPDATE SKIP LOCKED`,
+      [timeoutSeconds],
+    );
+
+    const requeued = [];
+    const failed = [];
+
+    for (const job of staleJobs) {
+      if (job.attempt_count < job.max_attempts) {
+        const { rows } = await client.query(
+          `UPDATE jobs
+           SET status = 'queued',
+               claimed_by = NULL,
+               claimed_at = NULL,
+               heartbeat_at = NULL,
+               started_at = NULL,
+               error_message = 'worker heartbeat expired; requeued'
+           WHERE id = $1
+           RETURNING *`,
+          [job.id],
+        );
+        requeued.push(serializeJob(rows[0]));
+      } else {
+        const { rows } = await client.query(
+          `UPDATE jobs
+           SET status = 'failed',
+               finished_at = NOW(),
+               error_message = 'worker heartbeat expired; max attempts reached'
+           WHERE id = $1
+           RETURNING *`,
+          [job.id],
+        );
+        failed.push(serializeJob(rows[0]));
+      }
+    }
+
+    await client.query("COMMIT");
+    res.json({
+      ok: true,
+      timeout_seconds: timeoutSeconds,
+      recovered_count: requeued.length + failed.length,
+      requeued,
+      failed,
+    });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Recover stale jobs failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  } finally {
+    client.release();
+  }
+});
+
 // ---------------------------------------------------------------------------
 // AI routes — proxy to FastAPI inference server (port 8000)
 // ---------------------------------------------------------------------------

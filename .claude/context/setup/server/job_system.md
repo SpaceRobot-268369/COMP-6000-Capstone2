@@ -294,6 +294,32 @@ MVP retry policy:
 Automatic retry can be implemented as an explicit backend helper first. A
 scheduled retry sweeper can be added later.
 
+MVP stale recovery endpoint:
+
+```text
+POST /api/worker/jobs/recover-stale
+```
+
+This endpoint is protected by `WORKER_API_TOKEN` and manually recovers jobs with
+expired heartbeats. It is intentionally not a scheduler yet.
+
+Request:
+
+```json
+{
+  "timeout_seconds": 300
+}
+```
+
+Behavior:
+
+- considers `claimed`, `running`, and `uploading` jobs stale when
+  `heartbeat_at` is older than `timeout_seconds`;
+- if `attempt_count < max_attempts`, moves the job back to `queued` and clears
+  worker claim fields;
+- if attempts are exhausted, moves the job to `failed` and sets `finished_at`;
+- returns `requeued` and `failed` job lists for audit/debugging.
+
 ## Heartbeat and Lease Policy
 
 Workers should send heartbeat every 30 seconds while in `claimed`, `running`, or
