@@ -1,0 +1,6 @@
+outs:
+- md5: 7104aee0a1972f61dff7e3f99f662ba8.dir
+  size: 140003650
+  nfiles: 5
+  hash: md5
+  path: thunder

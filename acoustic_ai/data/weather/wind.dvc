@@ -1,0 +1,6 @@
+outs:
+- md5: 159b83d8180facf5980f21ac18da1d01.dir
+  size: 158249222
+  nfiles: 5
+  hash: md5
+  path: wind
