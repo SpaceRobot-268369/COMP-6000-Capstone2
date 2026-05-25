@@ -90,6 +90,47 @@ log_uri = <LOG_BASE_URI>/job-<id>.log
 result = {"mock": true, ...}
 ```
 
+## Smoke Test
+
+Verified on 2026-05-25 through SSH port forwarding from local Windows to Server
+A:
+
+```powershell
+ssh -L 8080:localhost:80 spacerobot-268369
+```
+
+Worker environment:
+
+```powershell
+$env:SERVER_A_URL="http://localhost:8080"
+$env:WORKER_API_TOKEN="server-a-worker-test-token"
+$env:WORKER_ID="local-fake-worker"
+$env:WORKER_JOB_TYPES="generation"
+$env:POLL_INTERVAL_SECONDS="3"
+$env:HEARTBEAT_INTERVAL_SECONDS="2"
+$env:FAKE_RUN_SECONDS="5"
+$env:FAKE_UPLOAD_SECONDS="2"
+python worker\worker.py
+```
+
+Observed worker output:
+
+```text
+worker starting id=local-fake-worker server=http://localhost:8080 types=generation
+job 7: claimed type=generation
+job 7: completed artifact_uri=s3://placeholder/generated/job-7.wav
+```
+
+Server A API verification:
+
+```text
+GET /api/jobs/7 -> 200 OK
+status = completed
+result.mock = true
+result.worker_id = local-fake-worker
+artifact_uri = s3://placeholder/generated/job-7.wav
+```
+
 ## Not Implemented Yet
 
 - real Python GPU environment setup;
