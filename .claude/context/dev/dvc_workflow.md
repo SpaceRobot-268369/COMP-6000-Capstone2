@@ -32,9 +32,9 @@ git checkout <branch>  →  post-checkout hook fires
 | Downloaded annotations | `resources/site_257_bowra-dry-a/downloaded_annotations/` | sparse CSVs |
 | VAE checkpoint | `model/candidates/lucas/vae-site257-30epoch/best.pt` | 213 MB |
 | Vocoder checkpoint | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` | 11 MB |
-| Per-clip latent database | `acoustic_ai/data/ambient/latents/latent_clips.npy` | tens of MB |
-| Weather assets | `acoustic_ai/data/weather/weather_assets/` | curated wind/rain clips |
-| Event snippets | `acoustic_ai/data/events/event_snippets/` | extracted annotation clips |
+| Per-clip latent database | `acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/ambient/latents/latent_clips.npy` | tens of MB |
+| Weather assets | `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/weather_assets/` | curated wind/rain clips |
+| Event snippets | `acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/data/events/event_snippets/` | extracted annotation clips |
 | Per-candidate LoRA / checkpoint binaries | `model/candidates/<member>/<run-id>/*.{pt,safetensors}` | 11 MB – 280 MB each |
 
 ### Git (not DVC)
@@ -42,7 +42,7 @@ git checkout <branch>  →  post-checkout hook fires
 | File | Why |
 |---|---|
 | `resources/site_257_bowra-dry-a/site_257_*.csv` | Small metadata |
-| `acoustic_ai/data/weather/asset_index.csv` | Asset index headers |
+| `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv` | Asset index headers |
 | All `.dvc` pointer files | Pointers to DVC artifacts |
 | `dvc.yaml`, `dvc.lock` | Pipeline stage definitions + lockfile |
 | `params.yaml` (root) | Pipeline-stage hyperparameters |
@@ -193,9 +193,9 @@ params changed.
 | Stage | Command | Key outputs |
 |---|---|---|
 | `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
-| `train_vae` | `modules/ambient/train.py` | `model/candidates/lucas/vae-site257-30epoch/best.pt` |
+| `train_vae` | `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train.py` | `model/candidates/lucas/vae-site257-30epoch/best.pt` |
 | `precompute_latents` | `precompute/precompute_latents.py` | `data/ambient/latents/latent_clips.npy`, `latent_templates.npy` |
-| `train_vocoder` | `modules/ambient/train_vocoder.py` | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` |
+| `train_vocoder` | `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train_vocoder.py` | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` |
 
 Hyperparameters that affect stage reruns are tracked in root `params.yaml`.
 Compare params between branches: `dvc params diff main`.

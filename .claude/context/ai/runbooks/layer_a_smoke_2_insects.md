@@ -25,7 +25,7 @@ events, no music, no machinery, no strong wind.
 From `acoustic_ai/`:
 
 ```bash
-./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
+./.venv/bin/accelerate launch layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/train_audioldm2.py \
   --manifest_path ../resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/manifest.csv \
   --output_dir ../model/candidates/lucas/layer-a-audioldm2-insects-smoke \
   --batch_size 1 \
@@ -37,7 +37,7 @@ From `acoustic_ai/`:
 
 ```bash
 for seed in 42 43 44; do
-  ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
+  ./.venv/bin/python layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/sample_audioldm2.py \
     --prompt "summer afternoon insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, dry hot air, distant environmental bed, no birds, no foreground events, no music, no machinery, no strong wind" \
     --lora_dir ../model/candidates/lucas/layer-a-audioldm2-insects-smoke \
     --run_name insects_smoke_seed${seed} \

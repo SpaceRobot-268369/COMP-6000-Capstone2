@@ -54,7 +54,7 @@ python3 script/download/download_site_257_event_segments.py \
 Train one LoRA per species. Boobook example:
 
 ```bash
-./acoustic_ai/.venv/bin/python acoustic_ai/modules/events/train_audiogen_lora.py \
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/train_audiogen_lora.py \
   --manifest resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/prepared_manifest_boobook.csv \
   --output_dir model/candidates/lucas/layer-c-audiogen-boobook-smoke \
   --num_epochs 5 \
@@ -68,7 +68,7 @@ Output: 32 MB LoRA adapter (`adapter_model.safetensors` + `adapter_config.json`
 ## Sample
 
 ```bash
-./acoustic_ai/.venv/bin/python acoustic_ai/modules/events/sample_audiogen_lora.py \
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/sample_audiogen_lora.py \
   --lora_dir model/candidates/lucas/layer-c-audiogen-boobook-smoke \
   --output_dir debug/layer_c/audiogen/samples/audiogen-lora-boobook-smoke/
 ```

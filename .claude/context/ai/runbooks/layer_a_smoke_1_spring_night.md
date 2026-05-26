@@ -22,7 +22,7 @@ spring-night smoke prompt that excludes foreground events, music, and machinery.
 From `acoustic_ai/`:
 
 ```bash
-./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
+./.venv/bin/accelerate launch layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/train_audioldm2.py \
   --manifest_path ../resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv \
   --output_dir ../model/candidates/lucas/layer-a-audioldm2-raw-smoke \
   --batch_size 1 \
@@ -39,7 +39,7 @@ candidate as the documented negative result.
 
 ```bash
 for seed in 42 43 44; do
-  ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
+  ./.venv/bin/python layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/sample_audioldm2.py \
     --prompt "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery" \
     --lora_dir ../model/candidates/lucas/layer-a-audioldm2-raw-smoke \
     --run_name spring_night_raw_smoke_seed${seed} \

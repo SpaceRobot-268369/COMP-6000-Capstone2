@@ -122,9 +122,12 @@ export default function App() {
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
-          <Route path="/dev/layer-a" element={<Navigate to="/dev/layer-a/smoking-test-1" replace />} />
-          <Route path="/dev/layer-a/smoking-test-1" element={<LayerATestPage variant="springNight" />} />
-          <Route path="/dev/layer-a/smoking-test-2" element={<LayerATestPage variant="insects" />} />
+          <Route path="/dev/layers" element={<LayerATestPage />} />
+          {/* Legacy redirects — the old per-smoke-test routes are gone; everything */}
+          {/* runs through the registry-driven /dev/layers page. */}
+          <Route path="/dev/layer-a" element={<Navigate to="/dev/layers" replace />} />
+          <Route path="/dev/layer-a/smoking-test-1" element={<Navigate to="/dev/layers" replace />} />
+          <Route path="/dev/layer-a/smoking-test-2" element={<Navigate to="/dev/layers" replace />} />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}

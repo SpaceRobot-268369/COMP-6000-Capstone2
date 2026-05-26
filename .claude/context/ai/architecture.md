@@ -1,5 +1,15 @@
 # AI Module Architecture — Layered Soundscape System
 
+> **Layout note (post-restructure):** code lives under
+> `acoustic_ai/layers/layer_<X>/attempts/<member>__<stage>__<slug>/`.
+> Available attempts are declared in `acoustic_ai/registry.yaml` and
+> served via `GET /layers` for the frontend dropdown. Naming rules:
+> [../dev/attempt_naming.md](../dev/attempt_naming.md). Per-layer
+> "Module" sections describe the *role*; concrete implementations live
+> across one or more attempts per layer.
+
+
+
 ## Overview
 
 The AI pipeline is organised as five modules (A–E) arranged into two modes:
@@ -47,7 +57,7 @@ Uploaded audio clip
 
 ## Module Details
 
-### Module A — Ambient Representation (`modules/ambient/`)
+### Layer A — Ambient Representation (layers/layer_a/)
 
 | File | Role |
 |---|---|
@@ -66,7 +76,7 @@ Uploaded audio clip
 
 **Layer A data dependency:** the cleaned segment pool (`data/ambient/ambient_segments/` + `ambient_index.csv`) must be built by `precompute/build_ambient_index.py` before retrieval can run. Cleaning is **audio-only and content-agnostic** — events are an open class (birds, vehicles, frogs, helicopters, voices, unknown), but ambient is locally stationary, so the gate flags frames that deviate > 3·MAD from a per-clip rolling-median baseline of mel/RMS/centroid/flatness/flux/ZCR features. After ±0.5 s dilation, contiguous unmasked spans ≥ 20 s are kept and sliced into 20–60 s segments (target 30 s) so runtime crossfades are minimal. BirdNET and A2O annotations are run as **post-hoc audits** over retained segments, not as gates. Retrieval matches on `diel_bin` + `season` + (`hour`, `month`) cyclic encoding only — temp/humidity/wind/rain are excluded because they belong to Layers B and C.
 
-### Module B — Weather Sound Engine (`modules/weather/`)
+### Layer B — Weather Sound Engine (layers/layer_b/)
 
 | File | Role |
 |---|---|
@@ -80,7 +90,7 @@ Intensity mapping:
 - wind: none <2 m/s, light 2–6, moderate 6–10, strong >10
 - rain: none 0 mm, light 0–2, moderate 2–5, heavy >5
 
-### Module C — Species/Event Layer (`modules/events/`)
+### Layer C — Species/Event Layer (layers/layer_c/)
 
 **Approach:** **Generative**, using **AudioGen LoRA** fine-tuned per species (and optionally per diel/seasonal context) on top of the `facebook/audiogen-medium` base model. AudioGen is chosen over AudioLDM2 for this layer because:
 - Token-based (EnCodec) representation preserves transients better than mel→HiFi-GAN
@@ -108,7 +118,7 @@ Intensity mapping:
 
 **Tooling note:** AudioGen lives in Meta's `audiocraft` repo (not HuggingFace `diffusers`). Use a separate Python environment (`acoustic_ai/.venv-audiogen`) to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
 
-### Module D — Mixer (`modules/mixer/`)
+### Layer D — Mixer (layers/layer_d/)
 
 | File | Role |
 |---|---|
@@ -116,7 +126,7 @@ Intensity mapping:
 
 No training data. Pure algorithmic combiner.
 
-### Module E — Analysis Explainer (`modules/analysis/`)
+### Layer E — Analysis Explainer (layers/layer_e/)
 
 | File | Role |
 |---|---|

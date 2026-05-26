@@ -44,7 +44,7 @@ Seed behavior:
 
 ## Integration Details
 - Dependencies added: `diffusers`, `accelerate`, `peft`
-- Code Location: `acoustic_ai/modules/ambient/diffusion/`
+- Code Location: `acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/`
   - `audioldm2_dataset.py`: PyTorch `Dataset` that reads the manifest, loads audio waveforms, preserves quiet field-recording levels by default, and returns raw caption strings for `AudioLDM2Pipeline.encode_prompt`.
   - `train_audioldm2.py`: The `accelerate`-based LoRA fine-tuning script.
   - `sample_audioldm2.py`: The inference script that merges the base model with the LoRA adapter for generating soundscapes.
@@ -56,7 +56,7 @@ Use this workflow to reproduce the successful Layer A smoke-test model from
 1. Train the smoke LoRA:
    ```bash
    cd acoustic_ai
-   ./.venv/bin/accelerate launch modules/ambient/diffusion/train_audioldm2.py \
+   ./.venv/bin/accelerate launch layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/train_audioldm2.py \
      --manifest_path ../resources/site_257_bowra-dry-a/smoking_test_dataset/manifest.csv \
      --output_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
      --batch_size 1 \
@@ -72,7 +72,7 @@ Use this workflow to reproduce the successful Layer A smoke-test model from
 2. Generate three validation audios and mel-spectrograms:
    ```bash
    for seed in 42 43 44; do
-     ./.venv/bin/python modules/ambient/diffusion/sample_audioldm2.py \
+     ./.venv/bin/python layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/sample_audioldm2.py \
        --prompt "quiet spring night ambient soundscape, Bowra dry woodland, Australia, distant environmental bed, no foreground events, no music, no machinery" \
        --lora_dir model/candidates/lucas/layer-a-audioldm2-raw-smoke \
        --run_name spring_night_raw_smoke_seed${seed} \

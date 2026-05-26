@@ -1,0 +1,131 @@
+# Layer / attempt registry.
+#
+# Declarative source of truth for which models exist per layer. The FastAPI
+# server reads this on startup to:
+#   - serve GET /layers (for the frontend dropdown)
+#   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
+#
+# Naming rules: .claude/context/dev/attempt_naming.md
+# Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# IDs use snake_case on disk; dropdown labels use human-readable strings.
+
+layers:
+
+  layer_a:
+    label: "Layer A — Ambient bed"
+    default: lucas__smoke_1__audioldm2_spring_night
+    attempts:
+
+      lucas__smoke_1__audioldm2_spring_night:
+        label: "Spring night (AudioLDM2 LoRA)"
+        author: lucas
+        stage: smoke_1
+        status: smoke_test_1_success
+        checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            quiet spring night ambient soundscape, Bowra dry woodland, Australia,
+            distant environmental bed, no foreground events, no music, no machinery
+          guidance_scale: 2.0
+          num_inference_steps: 100
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+        notes:
+          - Layer A dev endpoint is locked to the spring-night smoke prompt.
+          - No user-specified prompts while the model is trained on the small smoke dataset.
+
+      lucas__smoke_2__audioldm2_insects:
+        label: "Insects/cicadas (AudioLDM2 LoRA)"
+        author: lucas
+        stage: smoke_2
+        status: smoke_test_2_insects_success
+        checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            summer afternoon insect-rich ambient soundscape, cicada and insect texture,
+            Bowra dry woodland, Australia, dry hot air, distant environmental bed,
+            no birds, no foreground events, no music, no machinery, no strong wind
+          guidance_scale: 2.0
+          num_inference_steps: 100
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+        notes:
+          - Training data excludes annotated event overlaps and strong-wind rows.
+
+      lucas__smoke_4__vae_baseline:
+        label: "VAE + HiFi-GAN baseline (legacy /analysis backing)"
+        author: lucas
+        stage: smoke_4
+        status: superseded
+        checkpoint: model/candidates/lucas/vae-site257-30epoch
+        extra_checkpoints:
+          vocoder: model/candidates/lucas/vocoder-hifigan-site257
+        params:
+          sample_rate: 22050
+          n_mels: 128
+          latent_dim: 256
+        notes:
+          - Pre-AudioLDM2 retrieval+VAE+vocoder pipeline. Still backs /analysis.
+
+  layer_b:
+    label: "Layer B — Weather"
+    default: lucas__smoke_1__curated_assets
+    attempts:
+      lucas__smoke_1__curated_assets:
+        label: "Curated wind/rain assets"
+        author: lucas
+        stage: smoke_1
+        status: placeholder
+        checkpoint: null
+        params: {}
+        notes:
+          - Asset library + parameter mixing, no trained model.
+
+  layer_c:
+    label: "Layer C — Events"
+    default: lucas__smoke_1__audiogen_boobook
+    attempts:
+      lucas__smoke_1__audiogen_boobook:
+        label: "Boobook owl (AudioGen LoRA)"
+        author: lucas
+        stage: smoke_1
+        status: smoke_test_1_success
+        checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
+        params:
+          base_model: facebook/audiogen-medium
+          sample_rate: 16000
+        notes:
+          - Per-species LoRA; 16 kHz native.
+
+  layer_d:
+    label: "Layer D — Mixer"
+    default: lucas__smoke_1__layered_mix
+    attempts:
+      lucas__smoke_1__layered_mix:
+        label: "Layered mix (placeholder)"
+        author: lucas
+        stage: smoke_1
+        status: placeholder
+        checkpoint: null
+        params: {}
+        notes:
+          - Combines A+B+C outputs into final WAV + explanation JSON.
+
+  layer_e:
+    label: "Layer E — Analysis"
+    default: lucas__smoke_1__detectors
+    attempts:
+      lucas__smoke_1__detectors:
+        label: "Weather + event detectors"
+        author: lucas
+        stage: smoke_1
+        status: partial
+        checkpoint: null
+        params: {}
+        notes:
+          - Weather + event detectors. Ambient similarity uses the layer_a smoke_4 VAE encoder.

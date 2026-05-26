@@ -28,15 +28,23 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 | 3 | AI module | Python / PyTorch (`acoustic_ai/`) | Layer A smoke ✓, Layer C smoke ✓ |
 | 4 | Metadata DB (optional) | PostgreSQL | Not started |
 
-### AI modules
+### AI modules (per-layer codes)
 
-| Module | Role | Status |
+| Layer | Role | Status |
 |---|---|---|
-| A — Ambient | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | Smoke 1 (spring night) ✓, Smoke 2 (insects) ✓ |
-| B — Weather | Curated wind/rain assets + parameter mixing | Placeholder |
-| C — Events | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | Smoke 1 (boobook) ✓ |
-| D — Mixer | Combine A+B+C → WAV + explanation JSON | Placeholder |
-| E — Analysis | Ambient similarity + weather + event detectors | Partial (A working) |
+| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1 (spring night) ✓, smoke-2 (insects) ✓ |
+| layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
+| layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
+| layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
+| layer-e (Analysis) | Ambient similarity + weather + event detectors | Partial (layer-a working) |
+
+Each layer hosts independent attempts under
+`acoustic_ai/layers/<layer-code>/attempts/<member>__<stage>__<slug>/`.
+Stage tokens (`smoke-N` / `mvp-N` / `prod-N`) and the full naming rules
+live in [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md).
+The set of available attempts is declared in `acoustic_ai/registry.yaml`
+— the FastAPI server reads it to serve `GET /layers` for the frontend
+dropdown.
 
 **Generative model strategy:** Layers A and C use frozen large base models + LoRA adapters for the MVP. Migration to in-house distilled models is a future option, gated on (1) LoRA path proven across species/contexts, (2) demonstrated latency/VRAM bottleneck, (3) team capacity. See [distillation strategy](.claude/context/ai/distillation_strategy.md).
 
@@ -74,6 +82,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── dvc_workflow.md
     │   ├── s3_bucket_layout.md
     │   ├── model_readme_standard.md
+    │   ├── attempt_naming.md              # Naming rules for layer attempts + checkpoints
     │   ├── stages/                        # Per-stage goals + exit criteria (stage_1.md, …)
     │   ├── testing/
     │   │   ├── analysis_test_cases.md
@@ -106,6 +115,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
 | Model README standard | [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md) |
+| Attempt naming rules (layer-X attempts + checkpoints) | [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md) |
 | Project stage goals | [.claude/context/dev/stages/](.claude/context/dev/stages/) |
 | Analysis test cases | [.claude/context/dev/testing/analysis_test_cases.md](.claude/context/dev/testing/analysis_test_cases.md) |
 | Layer verification & handoff formats | [.claude/context/dev/testing/layer_verification_formats.md](.claude/context/dev/testing/layer_verification_formats.md) |
@@ -145,31 +155,40 @@ Always use `acoustic_ai/.venv` for AI training and inference (`./acoustic_ai/.ve
 
 DVC and its S3 deps are the exception: they live at user-site (`pip3 install --user ...`), **not** in the venv. Git hooks call `dvc` and must work without venv activation. See [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md).
 
-### Model checkpoint layout
+### Attempts and checkpoints
+
+Layer code lives under `acoustic_ai/layers/<layer-code>/attempts/`, and the
+matching checkpoints live under `model/candidates/<member>/`. Both sides share
+the same naming convention:
 
 ```
-model/
-├── candidates/<member>/<run-id>/    # per-experiment checkpoints (DVC-tracked)
-└── production/<role>/               # promoted checkpoint slots, created only after sign-off
+acoustic_ai/layers/layer-<X>/attempts/<member>__<stage>__<slug>/   # code
+model/candidates/<member>/<stage>__<slug>/                         # checkpoint
+model/production/<role>/                                           # promoted slot
 ```
+
+`<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
+in [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md).
 
 At this stage of the project, **nothing is in production**. Every trained
-checkpoint — including the VAE and vocoder used by the current inference path
-— is a candidate. A `model/production/<role>/` slot will be created only after
-an explicit promotion decision (validation, sign-off, release tagging).
+checkpoint — including the VAE and vocoder used by the smoke-4 inference
+path — is a candidate. A `model/production/<role>/` slot will be created
+only after an explicit promotion decision (validation, sign-off, release
+tagging).
 
 Rules (team workflow):
-- One folder per member, one folder per run — never overwrite another member's candidates.
-- Train into `candidates/<member>/...`.
+- One folder per member, one folder per attempt — never overwrite another member's work.
+- Attempts are **self-contained**: each `acoustic_ai/layers/.../attempts/<id>/` folder owns its `data/`, `precompute/`, `debug/`, `train.py`, `sample.py`, `handler.py`, `README.md`. No shared `common/` folder; duplication between attempts is intentional.
 - Each model folder under `model/candidates/...` or `model/production/...` ships with `README.md` + DVC pointer(s); candidate folders also ship with `params.yaml`, and add `metrics.json` once evals exist.
 - Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md); keep the audit section empty until developers provide evaluation notes or review findings.
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
-### Pipeline vs. candidate hyperparameters
+### Pipeline vs. attempt hyperparameters
 
-- Root `params.yaml` → only contains hyperparameters for stages declared in `dvc.yaml` (currently `ambient` and `vocoder`). Changes here trigger `dvc repro` re-runs.
-- `model/candidates/<member>/<run-id>/params.yaml` → all per-candidate experiment hyperparameters, sectioned `training:` and `inference:`.
+- Root `params.yaml` → only contains hyperparameters for stages declared in `dvc.yaml`. Changes here trigger `dvc repro` re-runs.
+- `acoustic_ai/layers/<layer>/attempts/<id>/params.yaml` → per-attempt experiment hyperparameters, sectioned `training:` and `inference:`.
+- `model/candidates/<member>/<stage>__<slug>/params.yaml` → frozen snapshot of the params used to train the checkpoint (matches the attempt's `params.yaml` at training time).
 
 ### Layer A dev-generation contract
 

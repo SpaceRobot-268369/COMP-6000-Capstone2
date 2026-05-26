@@ -1,5 +1,15 @@
 # Pipeline Design — Generation & Analysis Modes
 
+> **Layout note (post-restructure):** code lives under
+> `acoustic_ai/layers/layer_<X>/attempts/<member>__<stage>__<slug>/`.
+> Available attempts are declared in `acoustic_ai/registry.yaml` and
+> served via `GET /layers` for the frontend dropdown. Naming rules:
+> [../dev/attempt_naming.md](../dev/attempt_naming.md). Per-layer
+> "Module" sections describe the *role*; concrete implementations live
+> across one or more attempts per layer.
+
+
+
 ---
 
 ## Generation Mode — Layer Design
@@ -58,7 +68,7 @@ Stage 2 — runtime retrieval:
 
 VAE reconstruction is **not** part of the MVP path for Layer A — the existing VAE was trained on event-contaminated full clips, so its latent space mixes ambient with events and is the wrong tool for this layer. Keep VAE for transformation mode and Module E analysis.
 
-**Code:** `modules/ambient/retrieval.py` [PLACEHOLDER]
+**Code:** `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/retrieval.py` [PLACEHOLDER]
 **Data:** `data/ambient/ambient_segments/`, `data/ambient/ambient_index.csv` (cleaned ambient-only pool — to be built)
 **Legacy data:** `data/ambient/latents/latent_clips.npy` (5,318 per-clip latents over uncleaned clips — retained for transformation/analysis, not used for Layer A retrieval)
 
@@ -81,7 +91,7 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 | `2 ≤ precipitation_mm < 5` | Moderate rain |
 | `precipitation_mm ≥ 5` | Dense heavy rain |
 
-**Code:** `modules/weather/asset_index.py`, `modules/weather/mixer.py` [PLACEHOLDERS]
+**Code:** `layers/layer_b/attempts/lucas__smoke_1__curated_assets/asset_index.py`, `layers/layer_b/attempts/lucas__smoke_1__curated_assets/mixer.py` [PLACEHOLDERS]
 **Data:** `data/weather/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/`
 
 ---
@@ -95,7 +105,7 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 We fine-tune `facebook/audiogen-medium` with LoRA adapters on per-species snippet manifests built from A2O / BirdNET annotations. AudioGen is chosen over AudioLDM2 for events specifically because its token-based EnCodec representation preserves transients (the leading edge of a call), its training corpus already contains AudioSet animal/environmental labels, and its native operating range matches event clip durations. Retrieval and DSP variation are kept as fallbacks if a given species LoRA fails the smoke-test bar.
 
 **Pre-condition:** annotation audit must complete before training any LoRA.
-Run `modules/events/annotation_audit.py` and review `data/events/annotation_label_report.md` to produce per-species manifests filtered by score, duration, and diel context.
+Run `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.py` and review `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/data/events/annotation_label_report.md` to produce per-species manifests filtered by score, duration, and diel context.
 
 **Per-species selection policy (apply in order):**
 
@@ -138,7 +148,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 
 **Tooling:** Meta's `audiocraft` + PEFT. Use a separate environment at `acoustic_ai/.venv-audiogen` to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
 
-**Code:** `modules/events/annotation_audit.py`, `modules/events/dataset.py`, `modules/events/train_audiogen.py`, `modules/events/sample_audiogen.py`, `modules/events/scheduler.py` [PLACEHOLDERS]
+**Code:** `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/dataset.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/train_audiogen_lora.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/sample_audiogen_lora.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/scheduler.py` [PLACEHOLDERS]
 **Data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
 **Checkpoints:** `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` per LoRA (DVC-tracked)
 
@@ -168,7 +178,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 | `env_match_score` | Similarity between request and retrieved clips |
 | `limitations` | Notes about speculative nature and dataset gaps |
 
-**Code:** `modules/mixer/audio_mixer.py` [PLACEHOLDER]
+**Code:** `layers/layer_d/attempts/lucas__smoke_1__layered_mix/audio_mixer.py` [PLACEHOLDER]
 
 ---
 
@@ -232,7 +242,7 @@ Optional enhancement: add acoustic indices (ACI, entropy, spectral centroid) as 
 - Use spectral heuristics first (broadband energy, low-freq modulation, high-freq texture).
 - Upgrade to a small classifier after labels accumulate.
 
-**Code:** `modules/analysis/weather_detector.py` [PLACEHOLDER]
+**Code:** `layers/layer_e/attempts/lucas__smoke_1__detectors/weather_detector.py` [PLACEHOLDER]
 **Shared data:** `data/weather/asset_index.csv` (weather intensity labels)
 
 ---
@@ -253,7 +263,7 @@ Optional enhancement: add acoustic indices (ACI, entropy, spectral centroid) as 
 - Cross-reference with `data/events/annotation_event_index.csv` where available.
 - Use existing A2O annotations as validation or overrides.
 
-**Code:** `modules/analysis/event_detector.py` [PLACEHOLDER]
+**Code:** `layers/layer_e/attempts/lucas__smoke_1__detectors/event_detector.py` [PLACEHOLDER]
 **Shared data:** `data/events/annotation_event_index.csv`
 
 ---
