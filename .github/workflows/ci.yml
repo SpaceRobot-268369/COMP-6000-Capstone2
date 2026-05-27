@@ -1,0 +1,95 @@
+name: CI smoke checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend:
+    name: Backend syntax
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Check backend entrypoint syntax
+        run: node --check src/index.js
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build Vite frontend
+        run: npm exec -- vite build
+
+  python-worker:
+    name: Python worker compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile worker scripts when present
+        run: |
+          if [ -d worker ]; then
+            python -m compileall -q worker
+          else
+            echo "No worker directory present on this branch; skipping."
+          fi
+
+  production-compose:
+    name: Production compose config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production Docker Compose config when present
+        run: |
+          if [ -f services/prod/docker-compose.yml ]; then
+            docker compose -f services/prod/docker-compose.yml config
+          else
+            echo "No services/prod/docker-compose.yml present on this branch; skipping."
+          fi
