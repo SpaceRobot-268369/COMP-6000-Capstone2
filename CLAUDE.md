@@ -88,6 +88,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │       ├── job_system.md              # Server A job state + worker API contract
     │       ├── milestone_1_2_status.md    # Current Server A + Job System status
     │       ├── on_demand_ai_worker.md     # Server A/B job orchestration topology
+    │       ├── server_b_setup_checklist.md # Server B first setup + validation checklist
     │       └── server_a_deployment.md      # Server A production deployment runbook
     └── branches/                          # Ephemeral per-branch scratch (<branch-slug>/)
                                            # Deleted in the merge PR, or content promoted first.
@@ -119,6 +120,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Server job system contract | [.claude/context/setup/server/job_system.md](.claude/context/setup/server/job_system.md) |
 | Milestone 1/2 server status | [.claude/context/setup/server/milestone_1_2_status.md](.claude/context/setup/server/milestone_1_2_status.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
+| Server B setup checklist | [.claude/context/setup/server/server_b_setup_checklist.md](.claude/context/setup/server/server_b_setup_checklist.md) |
 | Server A deployment runbook | [.claude/context/setup/server/server_a_deployment.md](.claude/context/setup/server/server_a_deployment.md) |
 | Training data filtering policy (site 257 MVP sample) | [.claude/skills/training_data_filtering_policy.md](.claude/skills/training_data_filtering_policy.md) |
 
