@@ -1,0 +1,10 @@
+# Artifact policy: .claude/context/dev/artifact_policy.md
+# Never commit ad-hoc dev runs.
+/dev/
+
+# WAVs must be DVC-tracked; only `.wav.dvc` pointers belong in git.
+*.wav
+
+# Showcase PNG/JSON are also DVC-tracked (only reference/ PNG+JSON go to git).
+/showcase/*.png
+/showcase/*.metadata.json

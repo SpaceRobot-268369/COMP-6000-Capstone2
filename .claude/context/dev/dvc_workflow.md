@@ -128,6 +128,55 @@ git commit -m "Add <stage-name> pipeline stage"
 dvc push
 ```
 
+## Sample artifacts
+
+Each attempt has a `samples/` subtree. See
+[artifact_policy.md](artifact_policy.md) for the full rules; the DVC-relevant
+bits:
+
+```
+acoustic_ai/layers/<layer>/attempts/<id>/samples/
+├── reference/seed_42.png            # git
+├── reference/seed_42.metadata.json  # git
+├── reference/seed_42.wav.dvc        # git pointer → S3
+├── showcase/seed_<N>_<label>.*.dvc  # all DVC (PNG + JSON + WAV)
+└── dev/                             # gitignored
+```
+
+**Regenerate + commit a reference sample** (canonical seed `42`):
+
+```bash
+acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
+    layer_a lucas__smoke_1__audioldm2_spring_night
+
+dvc add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/samples/reference/seed_42.wav
+git add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/samples/reference/   # picks up .png, .json, .wav.dvc
+git commit -m "model: refresh smoke_1 reference sample"
+git push && dvc push
+```
+
+**Add a showcase sample** (everything DVC):
+
+```bash
+dvc add <attempt>/samples/showcase/seed_7_quiet.wav \
+        <attempt>/samples/showcase/seed_7_quiet.png \
+        <attempt>/samples/showcase/seed_7_quiet.metadata.json
+git add <attempt>/samples/showcase/*.dvc
+git commit && git push && dvc push
+```
+
+**Branch-switching UX:** the `dvc install` hook (next section) auto-runs
+`dvc checkout` after every `git checkout`, so cached samples on a teammate's
+branch materialise locally without extra commands.
+
+**Garbage collection** (monthly, or before a release):
+
+```bash
+dvc gc --cloud --all-branches --all-tags   # prunes S3 blobs unreferenced anywhere
+```
+
+Don't run on a shallow clone — it will over-prune.
+
 ## Automatic git hooks
 
 Installed once by `dvc install`. Fire without manual intervention:

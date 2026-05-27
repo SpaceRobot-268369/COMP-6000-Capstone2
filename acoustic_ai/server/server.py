@@ -23,6 +23,7 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # Make `layers.*` importable.
@@ -112,6 +113,32 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         "sample_rate": sample_rate,
         "duration_s":  duration_s,
     }
+
+
+@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")
+def list_samples(layer_id: str, attempt_id: str) -> dict:
+    """Cached reference + showcase samples for an attempt (see
+    .claude/context/dev/artifact_policy.md). The frontend uses this to show
+    a preview without running generation."""
+    try:
+        return registry.list_samples(layer_id, attempt_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav")
+def get_sample_wav(layer_id: str, attempt_id: str, tier: str, stem: str):
+    """Serve a sample WAV inline (so the browser <audio> tag can play it)."""
+    try:
+        path = registry.sample_wav_path(layer_id, attempt_id, tier, stem)
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"WAV not materialised locally ({path.name}). Run `dvc pull` then retry.",
+        )
+    return FileResponse(path, media_type="audio/wav", filename=path.name)
 
 
 # ---------------------------------------------------------------------------

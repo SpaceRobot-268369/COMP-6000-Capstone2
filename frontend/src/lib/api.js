@@ -46,6 +46,40 @@ export async function fetchLayerRegistry() {
  * @param {{seed?: number}} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, sample_rate:number, duration_s:number}>}
  */
+// ─── Cached samples (no model load required) ──────────────────────────────────
+
+/**
+ * Fetch the cached reference + showcase samples for an attempt.
+ * See .claude/context/dev/artifact_policy.md.
+ * @returns {Promise<{
+ *   attempt:string, layer:string, canonical_seed:number,
+ *   reference: Array<{stem:string, has_png:boolean, has_wav:boolean, has_json:boolean,
+ *                     png_b64:?string, metadata:?object, wav_url:?string}>,
+ *   showcase:  Array<{stem:string, has_png:boolean, has_wav:boolean, has_json:boolean,
+ *                     png_b64:?string, metadata:?object, wav_url:?string}>
+ * }>}
+ */
+export async function fetchAttemptSamples(layerId, attemptId) {
+  const res = await fetch(
+    `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/samples`,
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || `Failed to list samples (${res.status})`);
+  }
+  return res.json();
+}
+
+/**
+ * Build a playable URL for a cached sample WAV. The Express backend proxies
+ * the request through to FastAPI; the browser <audio> tag points at this URL.
+ */
+export function sampleWavUrl(layerId, attemptId, tier, stem) {
+  const base = API_BASE || "";
+  return `${base}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`;
+}
+
 // ─── Stage-3 product endpoints (placeholders) ─────────────────────────────────
 // Analysis / Generation / Transformation routes will be reimplemented on top of
 // the new layer/attempt registry in a follow-up. The current stubs keep the

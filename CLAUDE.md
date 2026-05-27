@@ -83,6 +83,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── s3_bucket_layout.md
     │   ├── model_readme_standard.md
     │   ├── attempt_naming.md              # Naming rules for layer attempts + checkpoints
+    │   ├── artifact_policy.md             # Sample artifacts (reference/showcase/dev tiers, git vs DVC)
     │   ├── stages/                        # Per-stage goals + exit criteria (stage_1.md, …)
     │   ├── testing/
     │   │   ├── analysis_test_cases.md
@@ -116,6 +117,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
 | Model README standard | [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md) |
 | Attempt naming rules (layer-X attempts + checkpoints) | [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md) |
+| Artifact policy (sample audio/spectrograms in repo) | [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md) |
 | Project stage goals | [.claude/context/dev/stages/](.claude/context/dev/stages/) |
 | Analysis test cases | [.claude/context/dev/testing/analysis_test_cases.md](.claude/context/dev/testing/analysis_test_cases.md) |
 | Layer verification & handoff formats | [.claude/context/dev/testing/layer_verification_formats.md](.claude/context/dev/testing/layer_verification_formats.md) |
@@ -138,6 +140,7 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
 | Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev/` |
 | Stage goals | `.claude/context/dev/stages/` |
+| Sample artifacts (reference/showcase/dev) | `acoustic_ai/layers/<layer>/attempts/<id>/samples/` (rules: `.claude/context/dev/artifact_policy.md`) |
 | Testing specs & diagrams | `.claude/context/dev/testing/`, `.claude/context/dev/diagrams/` |
 | Setup (local services; server reserved) | `.claude/context/setup/local/`, `.claude/context/setup/server/` |
 | Branch-scoped dev logs (ephemeral) | `.claude/context/branches/<branch-slug>/` |
@@ -183,6 +186,11 @@ Rules (team workflow):
 - Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md); keep the audit section empty until developers provide evaluation notes or review findings.
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
+
+Generated **sample artifacts** (audio + spectrograms) per attempt go under
+`acoustic_ai/layers/<layer>/attempts/<id>/samples/`, split into three tiers
+(`reference/` — git PNG+JSON, DVC WAV; `showcase/` — all DVC; `dev/` —
+gitignored). Canonical seed is `42`. Full rules: [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
 
 ### Pipeline vs. attempt hyperparameters
 

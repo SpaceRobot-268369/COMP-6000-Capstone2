@@ -115,8 +115,8 @@ independently, and an attempt's reproducibility shouldn't depend on
 files outside its own folder.
 
 ```
-layers/layer-<X>/attempts/<member>__<stage>__<slug>/
-├── README.md           # required: model card + run log
+layers/layer_<X>/attempts/<member>__<stage>__<slug>/
+├── README.md           # required: model card + run log + link to samples/reference/seed_42.png
 ├── handler.py          # required: implements load() + generate(seed, **kw)
 ├── train.py            # optional: training entrypoint
 ├── sample.py           # optional: standalone sampling/debug entrypoint
@@ -125,8 +125,17 @@ layers/layer-<X>/attempts/<member>__<stage>__<slug>/
 ├── params.yaml         # optional: per-attempt hyperparameters
 ├── data/               # attempt-local derived data (DVC-tracked)
 ├── precompute/         # attempt-local precompute scripts
-└── debug/              # attempt-local diagnostics
+├── debug/              # attempt-local diagnostics
+└── samples/            # cached sample outputs (artifact_policy.md)
+    ├── reference/      #   canonical seed; PNG+JSON in git, WAV via .wav.dvc
+    ├── showcase/       #   author-curated extra seeds; everything DVC
+    ├── dev/            #   ad-hoc runs; fully gitignored
+    └── .gitignore      #   excludes dev/, *.wav, showcase PNG/JSON
 ```
+
+The `samples/` subtree is governed by
+[artifact_policy.md](artifact_policy.md). Canonical seed across the project
+is `42`; regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
 
 Two attempts that share a method (e.g. AudioLDM2 spring-night vs.
 AudioLDM2 insects) **duplicate** the training/sampling code rather than

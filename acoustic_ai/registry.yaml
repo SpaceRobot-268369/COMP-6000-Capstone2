@@ -5,10 +5,13 @@
 #   - serve GET /layers (for the frontend dropdown)
 #   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
 #
-# Naming rules: .claude/context/dev/attempt_naming.md
+# Naming rules:    .claude/context/dev/attempt_naming.md
+# Artifact policy: .claude/context/dev/artifact_policy.md
 # Handler interface: each attempt provides handler.py exporting load() + generate().
 #
 # IDs use snake_case on disk; dropdown labels use human-readable strings.
+# Canonical seed for samples/reference/ is 42 unless an attempt overrides it
+# under `samples: { canonical_seed: <N> }`.
 
 layers:
 

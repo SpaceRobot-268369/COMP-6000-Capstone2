@@ -84,6 +84,9 @@ promotion.
 - Params:
 - Metrics:
 - Sample outputs:
+  - Reference (canonical seed): `<attempt>/samples/reference/seed_42.png` · `seed_42.metadata.json` · `seed_42.wav.dvc`
+  - Showcase (optional extras): `<attempt>/samples/showcase/seed_<N>_<label>.{png,metadata.json,wav}.dvc`
+  - Policy: [artifact_policy.md](artifact_policy.md)
 - Related runbook or log:
 
 ## Results / metrics

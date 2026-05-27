@@ -206,6 +206,42 @@ app.get("/api/layers", requireAuth, async (_req, res) => {
   }
 });
 
+// Cached samples for an attempt — drives the "view reference / showcase"
+// preview in the frontend. See .claude/context/dev/artifact_policy.md.
+app.get("/api/layers/:layer/attempts/:attempt/samples", requireAuth, async (req, res) => {
+  const { layer, attempt } = req.params;
+  try {
+    const r = await fetch(
+      `${AI_SERVER}/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples`,
+    );
+    const body = await r.json();
+    res.status(r.status).json(body);
+  } catch (err) {
+    console.error(`Samples proxy failed (${layer}/${attempt}):`, err);
+    res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
+  }
+});
+
+// Stream a cached sample WAV through the proxy (browser plays it via <audio>).
+app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/:stem.wav", requireAuth, async (req, res) => {
+  const { layer, attempt, tier, stem } = req.params;
+  try {
+    const r = await fetch(
+      `${AI_SERVER}/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`,
+    );
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      return res.status(r.status).json(body);
+    }
+    res.setHeader("content-type", r.headers.get("content-type") || "audio/wav");
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.send(buf);
+  } catch (err) {
+    console.error(`Sample WAV proxy failed (${layer}/${attempt}/${tier}/${stem}):`, err);
+    res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
+  }
+});
+
 // Per-attempt generation — only `seed` is forwarded (Layer A dev-generation
 // contract, see CLAUDE.md). The handler picks up every other parameter from
 // the attempt's registry.yaml entry.

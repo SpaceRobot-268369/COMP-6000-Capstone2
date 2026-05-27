@@ -125,6 +125,104 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
 
 # --- handler dispatch ------------------------------------------------------
 
+# --- samples ---------------------------------------------------------------
+
+_CANONICAL_SEED_DEFAULT = 42
+
+
+def canonical_seed(spec: AttemptSpec) -> int:
+    """Per-attempt canonical seed (registry override, else project default)."""
+    samples_cfg = spec.params.get("samples") if isinstance(spec.params, dict) else None
+    if isinstance(samples_cfg, dict) and "canonical_seed" in samples_cfg:
+        return int(samples_cfg["canonical_seed"])
+    return _CANONICAL_SEED_DEFAULT
+
+
+def _samples_root(spec: AttemptSpec) -> Path:
+    return (
+        _AI_ROOT / "layers" / spec.layer / "attempts" / spec.id / "samples"
+    )
+
+
+def list_samples(layer_id: str, attempt_id: str) -> dict:
+    """Enumerate what's actually present on disk under samples/reference and
+    samples/showcase. Returns artefact descriptors the server can hand to the
+    frontend; PNG/JSON contents are inlined (small) and WAV presence is a
+    flag (caller fetches separately if wanted).
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    root = _samples_root(spec)
+    seed = canonical_seed(spec)
+
+    def _scan(tier: str) -> list[dict]:
+        d = root / tier
+        if not d.is_dir():
+            return []
+        entries: dict[str, dict] = {}
+        for f in sorted(d.iterdir()):
+            if f.name in {".gitkeep", ".gitignore"}:
+                continue
+            # Strip suffixes to a triplet stem.
+            stem = f.name
+            for suffix in (".wav.dvc", ".png.dvc", ".metadata.json.dvc",
+                           ".wav", ".png", ".metadata.json"):
+                if stem.endswith(suffix):
+                    stem = stem[: -len(suffix)]
+                    break
+            triplet = entries.setdefault(stem, {
+                "stem": stem,
+                "has_png": False, "has_wav": False, "has_json": False,
+                "png_b64": None, "metadata": None, "wav_url": None,
+            })
+            name = f.name
+            if name.endswith(".png"):
+                triplet["has_png"] = True
+                try:
+                    import base64 as _b64
+                    triplet["png_b64"] = _b64.b64encode(f.read_bytes()).decode("ascii")
+                except OSError:
+                    pass
+            elif name.endswith(".metadata.json"):
+                triplet["has_json"] = True
+                try:
+                    import json as _json
+                    triplet["metadata"] = _json.loads(f.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    pass
+            elif name.endswith(".wav"):
+                triplet["has_wav"] = True
+                triplet["wav_url"] = (
+                    f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+                )
+            # .dvc pointers count as "exists" but we can't inline contents.
+            elif name.endswith(".png.dvc"):
+                triplet["has_png"] = True
+            elif name.endswith(".wav.dvc"):
+                triplet["has_wav"] = True
+            elif name.endswith(".metadata.json.dvc"):
+                triplet["has_json"] = True
+        return list(entries.values())
+
+    return {
+        "attempt":        attempt_id,
+        "layer":          layer_id,
+        "canonical_seed": seed,
+        "reference":      _scan("reference"),
+        "showcase":       _scan("showcase"),
+    }
+
+
+def sample_wav_path(layer_id: str, attempt_id: str, tier: str, stem: str) -> Path:
+    """Resolve a samples/<tier>/<stem>.wav path, restricted to legal tiers."""
+    if tier not in {"reference", "showcase"}:
+        raise ValueError(f"illegal tier: {tier}")
+    spec = get_attempt(layer_id, attempt_id)
+    safe_stem = stem.replace("/", "_").replace("..", "_")
+    return _samples_root(spec) / tier / f"{safe_stem}.wav"
+
+
+# --- handler dispatch ------------------------------------------------------
+
 _state_cache: dict[str, object] = {}
 _state_lock = threading.Lock()
 
