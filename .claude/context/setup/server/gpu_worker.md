@@ -19,12 +19,19 @@ queued -> claimed -> running -> uploading -> completed
 Files:
 
 ```text
+worker/api_client.py
+worker/config.py
+worker/generation_adapter.py
 worker/worker.py
 worker/.env.example
 worker/requirements.txt
 ```
 
-The worker uses only Python standard library modules for the MVP.
+The worker uses only Python standard library modules for the MVP. The main loop
+and Server A API contract live in `worker/worker.py` and `worker/api_client.py`.
+The current fake generation implementation lives in
+`worker/generation_adapter.py`; real `acoustic_ai` generation and artifact
+upload should be added there first.
 
 ## Environment
 
