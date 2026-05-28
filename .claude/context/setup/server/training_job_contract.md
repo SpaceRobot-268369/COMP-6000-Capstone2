@@ -33,7 +33,6 @@ All real training jobs should include:
   "run_id": "layer-c-boobook-v1",
   "owner": "team-member-name",
   "dataset_uri": "s3://bucket/path/or/dvc/path",
-  "output_prefix": "s3://bucket/model/candidates/team-member-name/layer-c-boobook-v1",
   "base_model": "facebook/audiogen-medium",
   "seed": 42
 }
@@ -47,9 +46,24 @@ Field meanings:
 | `run_id` | Stable training run id; used in output paths and logs |
 | `owner` | Team member responsible for the run |
 | `dataset_uri` | Input dataset location; S3/DVC/local path agreed by the layer owner |
-| `output_prefix` | Durable output prefix for checkpoints, logs, configs, and metrics |
 | `base_model` | Base model/checkpoint identifier or URI |
 | `seed` | Reproducibility seed |
+
+The worker derives output locations from the existing DVC/S3 conventions:
+
+```text
+local_output_dir = model/candidates/<owner>/<run_id>/
+log_s3_prefix = s3://eco-acoustic-data.store.adelaideuni.cloud/logs/<layer>/<run_id>/<YYYY-MM-DD>/
+```
+
+Do not put model candidates directly under a human-readable S3
+`model/candidates/` prefix. Candidate checkpoint binaries live in the repo
+working tree under `model/candidates/...`, are tracked with DVC, and are pushed
+to the DVC remote:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache/
+```
 
 ## Common Optional Payload Fields
 
@@ -83,7 +97,6 @@ Expected MVP fields:
     "run_id": "layer-a-site257-v1",
     "owner": "team-member-name",
     "dataset_uri": "s3://.../layer-a-dataset",
-    "output_prefix": "s3://.../model/candidates/team-member-name/layer-a-site257-v1",
     "base_model": "cvssp/audioldm2",
     "site_id": "257",
     "prompt_set": "ambient_site257_mvp",
@@ -116,7 +129,6 @@ Expected MVP fields if executed through the worker:
     "run_id": "layer-b-weather-assets-v1",
     "owner": "team-member-name",
     "dataset_uri": "s3://.../weather-assets",
-    "output_prefix": "s3://.../model/candidates/team-member-name/layer-b-weather-assets-v1",
     "task": "prepare_assets",
     "weather_types": ["rain", "wind"],
     "seed": 42
@@ -141,7 +153,6 @@ Expected MVP fields:
     "run_id": "layer-c-boobook-v1",
     "owner": "team-member-name",
     "dataset_uri": "s3://.../layer-c-boobook-dataset",
-    "output_prefix": "s3://.../model/candidates/team-member-name/layer-c-boobook-v1",
     "base_model": "facebook/audiogen-medium",
     "species": "southern_boobook",
     "epochs": 5,
@@ -174,10 +185,13 @@ On success, Server B should update the job to `completed` with:
   "duration_s": 3600,
   "gpu": "Tesla T4",
   "peak_vram_mb": 14000,
-  "checkpoint_uri": "s3://.../checkpoint.safetensors",
-  "config_uri": "s3://.../train_config.json",
-  "metrics_uri": "s3://.../metrics.json",
-  "sample_uri": "s3://.../samples/sample.wav",
+  "local_output_dir": "model/candidates/team-member-name/layer-c-boobook-v1",
+  "checkpoint_path": "model/candidates/team-member-name/layer-c-boobook-v1/adapter_model.safetensors",
+  "checkpoint_dvc_path": "model/candidates/team-member-name/layer-c-boobook-v1/adapter_model.safetensors.dvc",
+  "log_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/logs/layer-c/layer-c-boobook-v1/2026-05-28/train.log",
+  "config_path": "model/candidates/team-member-name/layer-c-boobook-v1/params.yaml",
+  "metrics_path": "model/candidates/team-member-name/layer-c-boobook-v1/metrics.json",
+  "sample_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/logs/layer-c/layer-c-boobook-v1/2026-05-28/samples/sample.wav",
   "artifact_uploaded": true
 }
 ```
@@ -185,8 +199,8 @@ On success, Server B should update the job to `completed` with:
 The job row should also set:
 
 ```text
-artifact_uri = checkpoint_uri
-log_uri = durable training log URI
+artifact_uri = checkpoint_path or checkpoint_dvc_path
+log_uri = durable training log URI under s3://eco-acoustic-data.store.adelaideuni.cloud/logs/...
 ```
 
 For fake training jobs, `mock` remains `true` and placeholder URIs are allowed.
@@ -206,6 +220,21 @@ durable:
 Do not leave the only copy of outputs on Server B local disk. Server B is
 disposable and may shut down after idle.
 
+Follow the existing project rules:
+
+- local candidate output folder:
+  `model/candidates/<owner>/<run_id>/`;
+- checkpoint binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked;
+- metadata (`README.md`, `params.yaml`, `metrics.json`,
+  `training_metadata.json`, `.dvc` pointers) is git-tracked;
+- DVC pushes binary bytes to
+  `s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache/`;
+- human-readable logs and audit samples can be mirrored to
+  `s3://eco-acoustic-data.store.adelaideuni.cloud/logs/<layer>/<run_id>/<date>/`;
+- do not write directly to `dvc-cache/` with `aws s3 cp`;
+- do not write into `model/production/<role>/` until explicit validation and
+  promotion sign-off.
+
 ## Failure Result
 
 On failure, Server B should update the job to `failed` with:
@@ -218,7 +247,7 @@ On failure, Server B should update the job to `failed` with:
   "run_id": "layer-c-boobook-v1",
   "error_type": "oom",
   "error_message": "CUDA out of memory",
-  "log_uri": "s3://.../train.log",
+  "log_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/logs/layer-c/layer-c-boobook-v1/2026-05-28/train.log",
   "partial_artifact_uri": null
 }
 ```
@@ -265,8 +294,10 @@ terminate the subprocess safely.
 4. Send heartbeats while training runs.
 5. Detect cancellation requests.
 6. Verify expected output files exist.
-7. Upload checkpoint/log/config/metrics/sample outputs.
-8. Return result metadata to `worker/worker.py`.
+7. DVC-track checkpoint binaries and push them to the configured DVC remote.
+8. Mirror logs and audit samples to the human-readable S3 `logs/` prefix when
+   required.
+9. Return result metadata to `worker/worker.py`.
 
 The worker should not connect directly to PostgreSQL. All job state updates go
 through Server A APIs.
@@ -287,4 +318,3 @@ queued -> claimed -> running -> uploading -> completed
 
 and returns placeholder checkpoint/log/metrics URIs. Real Layer A/C commands are
 not connected yet.
-
