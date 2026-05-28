@@ -30,6 +30,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_PROJECT_ROOT / "acoustic_ai"))
 
 from layers.layer_a.attempts.lucas__smoke_1__audioldm2_spring_night.code.layer_a_visualization import (  # noqa: E402
+    build_expected_overlay,
+    build_expected_png_text,
     render_layer_a_mel_png_bytes,
     waveform_to_layer_a_mel_db,
 )
@@ -156,13 +158,21 @@ def _ffmpeg_webm_to_wav(webm: Path, dst: Path, t_start: float | None = None, t_e
     subprocess.run(cmd, check=True)
 
 
+def _case_dir(attempt_root: Path, spec: dict) -> Path:
+    """Per-case subdir under expected/ — one folder per source clip."""
+    d = attempt_root / "expected" / spec["stem"]
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def _process_clip_dir(spec: dict, attempt_root: Path) -> dict:
     """Source has audio.wav + meta.json already extracted."""
     src_dir = _PROJECT_ROOT / spec["clip_dir"]
     src_wav = src_dir / "audio.wav"
     src_meta = src_dir / "meta.json"
 
-    dst_wav = attempt_root / "expected" / f"{spec['stem']}.wav"
+    case = _case_dir(attempt_root, spec)
+    dst_wav = case / "audio.wav"
     shutil.copy2(src_wav, dst_wav)
 
     audio, sr = _load_wav_mono(dst_wav)
@@ -174,7 +184,8 @@ def _process_clip_dir(spec: dict, attempt_root: Path) -> dict:
 def _process_webm_slice(spec: dict, attempt_root: Path) -> dict:
     """Slice a window from a raw .webm recording."""
     src_webm = _PROJECT_ROOT / spec["webm"]
-    dst_wav = attempt_root / "expected" / f"{spec['stem']}.wav"
+    case = _case_dir(attempt_root, spec)
+    dst_wav = case / "audio.wav"
 
     _ffmpeg_webm_to_wav(src_webm, dst_wav, t_start=spec["t_start"], t_end=spec["t_end"])
 
@@ -192,15 +203,10 @@ def _process_webm_slice(spec: dict, attempt_root: Path) -> dict:
 def _finalize(spec: dict, attempt_root: Path,
               audio: np.ndarray, sr: int, src_metadata: dict,
               *, source_kind: str) -> dict:
-    """Render mel PNG + write metadata.json. Returns artefact paths."""
+    """Render mel PNG + write metadata.json into the per-case subdir."""
 
     duration_s = float(audio.shape[0] / sr)
     mel_db = waveform_to_layer_a_mel_db(audio, sr)
-    png_bytes = render_layer_a_mel_png_bytes(mel_db, duration_s)
-
-    png_path = attempt_root / "expected" / f"{spec['stem']}.png"
-    json_path = attempt_root / "expected" / f"{spec['stem']}.metadata.json"
-    png_path.write_bytes(png_bytes)
 
     metadata = {
         "tier": "expected",
@@ -212,11 +218,23 @@ def _finalize(spec: dict, attempt_root: Path,
         "audio": _audio_stats(audio, sr),
         "source_metadata": src_metadata,
     }
+
+    png_bytes = render_layer_a_mel_png_bytes(
+        mel_db,
+        duration_s,
+        overlay=build_expected_overlay(metadata),
+        png_text=build_expected_png_text(metadata),
+    )
+
+    case = _case_dir(attempt_root, spec)
+    png_path  = case / "spectrogram.png"
+    json_path = case / "metadata.json"
+    png_path.write_bytes(png_bytes)
     json_path.write_text(json.dumps(metadata, indent=2, sort_keys=True))
 
     return {
-        "wav": str(attempt_root / "expected" / f"{spec['stem']}.wav"),
-        "png": str(png_path),
+        "wav":  str(case / "audio.wav"),
+        "png":  str(png_path),
         "json": str(json_path),
     }
 

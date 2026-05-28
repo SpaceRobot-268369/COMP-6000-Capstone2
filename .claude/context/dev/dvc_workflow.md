@@ -135,38 +135,53 @@ tiers directly at attempt root. See
 [artifact_policy.md](artifact_policy.md) for the full rules; the DVC-relevant
 bits:
 
+Each case (source clip or generated seed) is its own subdir with fixed
+filenames `{audio.wav, spectrogram.png, metadata.json}`. `expected/` is real
+audio (PNG + JSON in git, WAV via DVC); `showcase/` is generated samples
+(all three DVC-tracked).
+
 ```
 acoustic_ai/layers/<layer>/attempts/<id>/
-├── expected/seed_42.png            # git
-├── expected/seed_42.metadata.json  # git
-├── expected/seed_42.wav.dvc        # git pointer → S3
-├── showcase/seed_<N>_<label>.*.dvc # all DVC (PNG + JSON + WAV)
-└── dev-artifacts-self-testing/     # gitignored — ad-hoc developer self-test runs
+├── expected/                                      # real-audio ground truth
+│   └── real_<clip_id>/
+│       ├── audio.wav.dvc            # git pointer → S3
+│       ├── spectrogram.png          # git (renders inline on GitHub)
+│       └── metadata.json            # git
+├── showcase/                                      # author-curated generated samples
+│   └── seed_<N>_<label>/
+│       ├── audio.wav.dvc            # git pointer → S3
+│       ├── spectrogram.png.dvc      # git pointer → S3
+│       └── metadata.json.dvc        # git pointer → S3
+└── dev-artifacts-self-testing/      # folder tracked via .gitkeep, contents gitignored
+    └── .gitkeep
 ```
 
-**Regenerate + commit an expected sample** (canonical seed `42`):
+**Re-extract + commit expected samples** (real audio, not generated — there
+is no seed; runs `extract_expected_samples.py`):
 
 ```bash
-acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
-    layer_a lucas__smoke_1__audioldm2_spring_night
+acoustic_ai/.venv/bin/python acoustic_ai/scripts/extract_expected_samples.py
 
-dvc add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/expected/seed_42.wav
-git add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/expected/   # picks up .png, .json, .wav.dvc
-git commit -m "model: refresh smoke_1 expected sample"
+ATT=acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night
+dvc add  $ATT/expected/*/audio.wav
+git add  $ATT/expected/                                # picks up spectrogram.png, metadata.json, audio.wav.dvc
+git commit -m "data: refresh smoke_1 expected samples"
 git push && dvc push
 ```
 
-**Add a showcase sample** (everything DVC):
+**Add a showcase sample** (generated; everything DVC-tracked):
 
 ```bash
 acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
-    layer_a lucas__smoke_1__audioldm2_spring_night --showcase --seed 7 --label quiet
+    layer_a lucas__smoke_1__audioldm2_spring_night --seed 7 --label quiet
 
-dvc add <attempt>/showcase/seed_7_quiet.wav \
-        <attempt>/showcase/seed_7_quiet.png \
-        <attempt>/showcase/seed_7_quiet.metadata.json
-git add <attempt>/showcase/*.dvc
-git commit && git push && dvc push
+ATT=acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night
+dvc add  $ATT/showcase/seed_7_quiet/audio.wav \
+         $ATT/showcase/seed_7_quiet/spectrogram.png \
+         $ATT/showcase/seed_7_quiet/metadata.json
+git add  $ATT/showcase/seed_7_quiet/*.dvc
+git commit -m "model: add smoke_1 showcase seed=7 (quiet)"
+git push && dvc push
 ```
 
 **Branch-switching UX:** the `dvc install` hook (next section) auto-runs

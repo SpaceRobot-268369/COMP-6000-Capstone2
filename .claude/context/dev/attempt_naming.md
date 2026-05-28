@@ -116,7 +116,7 @@ files outside its own folder.
 
 ```
 layers/layer_<X>/attempts/<member>__<stage>__<slug>/
-├── README.md           # required: model card + run log + link to expected/seed_42.png
+├── README.md           # required: model card + run log + link to a showcase spectrogram
 ├── params.yaml         # optional: per-attempt hyperparameters
 ├── __init__.py         # makes the attempt an importable package
 ├── code/               # required: all Python source for this attempt
@@ -129,15 +129,21 @@ layers/layer_<X>/attempts/<member>__<stage>__<slug>/
 ├── data/               # attempt-local derived data (DVC-tracked)
 ├── precompute/         # attempt-local precompute scripts (optional)
 ├── debug/              # attempt-local diagnostics (optional, often gitignored)
-├── expected/           # canonical seed_42 triplet; PNG+JSON in git, WAV via .wav.dvc
-├── showcase/           # author-curated extra seeds; everything DVC
-├── dev-artifacts-self-testing/   # ad-hoc developer self-test runs; fully gitignored
-└── .gitignore          # excludes dev-artifacts-self-testing/, *.wav, showcase PNG/JSON
+├── expected/           # real-audio ground truth; one subdir per case (real_<clip_id>/)
+│   └── real_<clip_id>/{audio.wav.dvc, spectrogram.png, metadata.json}
+├── showcase/           # author-curated generated samples; one subdir per seed
+│   └── seed_<N>_<label>/{audio.wav, spectrogram.png, metadata.json} (all DVC-tracked)
+├── dev-artifacts-self-testing/   # ad-hoc dev scratch; folder tracked via .gitkeep, contents gitignored
+│   └── .gitkeep
+└── .gitignore          # ignores dev-artifacts-self-testing/* (except .gitkeep), *.wav, showcase PNG/JSON
 ```
 
-The `expected/` / `showcase/` / `dev-artifacts-self-testing/` tiers are governed by
-[artifact_policy.md](artifact_policy.md). Canonical seed across the project
-is `42`; regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
+The `expected/` / `showcase/` / `dev-artifacts-self-testing/` tiers, the
+per-case subdir convention, and the PNG metadata baking (overlay + tEXt
+chunks) are all governed by [artifact_policy.md](artifact_policy.md).
+Canonical seed across the project is `42` (applies to showcase + the
+live Dev UI, **not** to expected — that's real audio). Regenerate via
+`acoustic_ai/scripts/regenerate_samples.py`.
 
 The handler is loaded by the server as
 `layers.<layer>.attempts.<id>.code.handler` — keep `code/` as the import root

@@ -23,7 +23,7 @@ repo bloats or reviewers can't see the result.
 |---|---|---|---|
 | **expected** | 2–3 **real-audio** ground-truth segments per attempt, extracted from the source recordings the attempt was trained on. Used as the comparison baseline in the Dev UI. NOT model outputs. | `<attempt>/expected/` | PNG + JSON in **git**, WAV in **DVC** |
 | **showcase** | Author-curated **generated** samples (model outputs at specific seeds) that the developer wants other teammates to review. | `<attempt>/showcase/` | all in **DVC** (PNG + JSON + WAV) |
-| **dev-artifacts-self-testing** | Ad-hoc developer runs for self-testing, training-time debug spectrograms, anything experimental. | `<attempt>/dev-artifacts-self-testing/` | **gitignored entirely** — never committed |
+| **dev-artifacts-self-testing** | Ad-hoc developer runs for self-testing, training-time debug spectrograms, anything experimental. | `<attempt>/dev-artifacts-self-testing/` | folder tracked via `.gitkeep`; **all other contents gitignored** — never committed |
 
 The asymmetry "PNG in git, WAV in DVC" is deliberate:
 - PNGs render inline on GitHub diffs / PR review.
@@ -45,28 +45,42 @@ format is `seed_<N>_<short_label>` (lowercase, snake_case label).
 
 ## File naming inside the attempt tiers
 
+Each case (one real source clip or one generated seed) lives in its **own
+subdirectory** named for the stem. Inside the subdir, filenames are fixed:
+`audio.wav`, `spectrogram.png`, `metadata.json`. The subdir name is the only
+thing that varies between cases. This mirrors the source `clip_dir/` layout
+(`audio.wav` + `meta.json`) and keeps every case self-contained.
+
 ```
 <attempt>/
 ├── expected/                        # real-audio ground truth (2–3 per attempt)
-│   ├── real_<source_clip_id>.png            # mel spectrogram (rendered via the layer's own viz)
-│   ├── real_<source_clip_id>.metadata.json  # source manifest ref, selection reason, audio stats
-│   └── real_<source_clip_id>.wav.dvc        # → DVC blob of the WAV
+│   └── real_<source_clip_id>/
+│       ├── audio.wav.dvc            # → DVC blob of the WAV
+│       ├── spectrogram.png          # mel spectrogram (rendered via the layer's own viz)
+│       └── metadata.json            # source manifest ref, selection reason, audio stats
 ├── showcase/                        # dev-curated generated samples for teammate review
-│   ├── seed_<N>_<short_label>.png.dvc
-│   ├── seed_<N>_<short_label>.metadata.json.dvc
-│   └── seed_<N>_<short_label>.wav.dvc
-├── dev-artifacts-self-testing/      # gitignored — ad-hoc developer self-test runs
-└── .gitignore                       # excludes dev-artifacts-self-testing/  + *.wav  + *.png/.json in showcase/
+│   └── seed_<N>_<short_label>/
+│       ├── audio.wav.dvc
+│       ├── spectrogram.png.dvc
+│       └── metadata.json.dvc
+├── dev-artifacts-self-testing/      # folder tracked via .gitkeep, contents gitignored
+│   └── .gitkeep
+└── .gitignore                       # ignores dev-artifacts-self-testing/* (except .gitkeep), *.wav, showcase PNG/JSON
 ```
 
 Conventions:
-- **Expected stem:** `real_<source_clip_id>` — traceable back to a row in the
-  attempt's training manifest. No "seed" because the audio is not generated.
-- **Showcase stem:** `seed_<N>_<short_label>` (lowercase, snake_case).
-- Triplet `.wav` + `.png` + `.metadata.json` must always share the same stem.
+- **Expected case dir:** `real_<source_clip_id>/` — name traceable back to a row
+  in the attempt's training manifest. No "seed" because the audio is not generated.
+- **Showcase case dir:** `seed_<N>_<short_label>/` (lowercase, snake_case label).
+- Inside a case dir, file names are always `audio.wav`, `spectrogram.png`,
+  `metadata.json` (with matching `.dvc` pointers where applicable).
 - Expected WAV uses a `.wav.dvc` pointer so the blob is fetched on demand;
   PNG + JSON next to it are plain git so reviewers see them inline on GitHub.
 - Showcase triplet is fully DVC-tracked (PNG + JSON + WAV).
+- **Metadata is also baked into the PNG itself**: each spectrogram carries a
+  small visible overlay (header/subline/footer) and lossless PNG `tEXt`
+  chunks readable via `exiftool` or `PIL.Image.open(p).text` — same fields
+  as the JSON sidecar, redundant for convenience.
 
 ### Placeholder layers
 
@@ -138,7 +152,7 @@ selection changes):
 ```bash
 # Edit PICKS in extract_expected_samples.py, then:
 ./acoustic_ai/.venv/bin/python acoustic_ai/scripts/extract_expected_samples.py
-dvc add acoustic_ai/layers/<layer>/attempts/<id>/expected/*.wav
+dvc add acoustic_ai/layers/<layer>/attempts/<id>/expected/*/audio.wav
 git add acoustic_ai/layers/<layer>/attempts/<id>/expected/   # PNG + JSON + .wav.dvc
 git commit -m "data: refresh <attempt> expected samples"
 git push && dvc push

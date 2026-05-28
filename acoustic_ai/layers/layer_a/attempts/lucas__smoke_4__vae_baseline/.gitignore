@@ -1,10 +1,13 @@
 # Artifact policy: .claude/context/dev/artifact_policy.md
-# Never commit ad-hoc dev / self-testing runs.
-/dev-artifacts-self-testing/
+# Track the dev-artifacts-self-testing/ folder (via .gitkeep) but never
+# commit its contents — it's pure local scratch.
+/dev-artifacts-self-testing/*
+!/dev-artifacts-self-testing/.gitkeep
 
 # WAVs must be DVC-tracked; only `.wav.dvc` pointers belong in git.
 *.wav
 
 # Showcase PNG/JSON are also DVC-tracked (only expected/ PNG+JSON go to git).
-/showcase/*.png
-/showcase/*.metadata.json
+# Cases are grouped: showcase/<stem>/{audio.wav, spectrogram.png, metadata.json}.
+/showcase/**/*.png
+/showcase/**/metadata.json

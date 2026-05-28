@@ -187,13 +187,25 @@ Rules (team workflow):
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
-Generated **sample artifacts** (audio + spectrograms) per attempt live in three
-tiers directly under the attempt root:
-`acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/`
-(`expected/` — canonical seed_42, git PNG+JSON, DVC WAV; `showcase/` — author-
-curated extra seeds, all DVC; `dev-artifacts-self-testing/` — ad-hoc developer
-runs, gitignored). Python source for the attempt lives under `code/`. Canonical
-seed is `42`. Full rules: [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
+**Sample artifacts** (audio + spectrograms) per attempt live in three tiers
+directly under the attempt root:
+`acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/`.
+Each case (one source clip or one generated seed) is its own subdirectory
+with fixed filenames `{audio.wav, spectrogram.png, metadata.json}`:
+
+- `expected/real_<clip_id>/` — **real-audio** ground truth; PNG + JSON in
+  git, WAV via `.wav.dvc`.
+- `showcase/seed_<N>_<label>/` — author-curated **generated** samples; all
+  three files DVC-tracked.
+- `dev-artifacts-self-testing/` — ad-hoc dev scratch; folder tracked via
+  `.gitkeep`, all other contents gitignored.
+
+Spectrogram PNGs also carry baked-in metadata: a visible overlay
+(header/subline/footer) and lossless PNG `tEXt` chunks mirroring the JSON
+sidecar. Python source for the attempt lives under `code/`. Canonical seed
+is `42` (showcase + Dev UI only — `expected/` is real audio). Full rules:
+[.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via
+`acoustic_ai/scripts/regenerate_samples.py`.
 
 ### Pipeline vs. attempt hyperparameters
 

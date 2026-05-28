@@ -10,10 +10,10 @@ by this script.
 
 For the selected attempt this script:
   1. Calls handler.load() + handler.generate(seed=<your --seed>).
-  2. Writes the triplet:
-        <attempt>/showcase/seed_<N>_<label>.png
-        <attempt>/showcase/seed_<N>_<label>.metadata.json
-        <attempt>/showcase/seed_<N>_<label>.wav
+  2. Writes the triplet into a per-case subdir:
+        <attempt>/showcase/seed_<N>_<label>/audio.wav
+        <attempt>/showcase/seed_<N>_<label>/spectrogram.png
+        <attempt>/showcase/seed_<N>_<label>/metadata.json
 
   All three are then `dvc add`'d (showcase is fully DVC-tracked).
 
@@ -77,19 +77,48 @@ def _checkpoint_dvc_hash(checkpoint_path: Path | None) -> str | None:
     return None
 
 
-def _render_png_bytes(layer_id: str, attempt_id: str, mel_db, duration_s: float) -> bytes | None:
+def _render_png_bytes(
+    layer_id: str,
+    attempt_id: str,
+    mel_db,
+    duration_s: float,
+    metadata: dict | None = None,
+) -> bytes | None:
     """Use the attempt-local layer_a_visualization helper if present;
-    otherwise fall back to a generic matplotlib render."""
+    otherwise fall back to a generic matplotlib render.
+
+    When the attempt-local viz exposes build_showcase_overlay /
+    build_showcase_png_text, those are used to bake metadata into the PNG.
+    """
     if mel_db is None:
         return None
     import importlib
-    try:
-        viz = importlib.import_module(
-            f"layers.{layer_id}.attempts.{attempt_id}.layer_a_visualization"
-        )
-        return viz.render_layer_a_mel_png_bytes(mel_db, duration_s)
-    except ModuleNotFoundError:
-        pass
+    viz = None
+    for modpath in (
+        f"layers.{layer_id}.attempts.{attempt_id}.code.layer_a_visualization",
+        f"layers.{layer_id}.attempts.{attempt_id}.layer_a_visualization",
+    ):
+        try:
+            viz = importlib.import_module(modpath)
+            break
+        except ModuleNotFoundError:
+            continue
+
+    if viz is not None:
+        overlay  = None
+        png_text = None
+        if metadata is not None:
+            if hasattr(viz, "build_showcase_overlay"):
+                overlay = viz.build_showcase_overlay(metadata)
+            if hasattr(viz, "build_showcase_png_text"):
+                png_text = viz.build_showcase_png_text(metadata)
+        try:
+            return viz.render_layer_a_mel_png_bytes(
+                mel_db, duration_s, overlay=overlay, png_text=png_text,
+            )
+        except TypeError:
+            # Older viz signature without overlay/png_text kwargs.
+            return viz.render_layer_a_mel_png_bytes(mel_db, duration_s)
 
     try:
         import io
@@ -157,7 +186,7 @@ def regenerate(
     stem = f"seed_{run_seed}_{label}"
 
     attempt_root = _AI_ROOT / "layers" / layer_id / "attempts" / attempt_id
-    out_dir = attempt_root / tier
+    out_dir = attempt_root / tier / stem
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[INFO] {layer_id}/{attempt_id} [{tier}] — seed {run_seed}")
@@ -179,14 +208,14 @@ def regenerate(
     metadata["handler_git_sha"] = _git_short_sha(handler_path)
     metadata["generated_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
 
-    # Write triplet.
-    wav_path = out_dir / f"{stem}.wav"
-    png_path = out_dir / f"{stem}.png"
-    json_path = out_dir / f"{stem}.metadata.json"
+    # Write triplet (fixed filenames inside the per-case subdir).
+    wav_path  = out_dir / "audio.wav"
+    png_path  = out_dir / "spectrogram.png"
+    json_path = out_dir / "metadata.json"
 
     if wav_bytes:
         wav_path.write_bytes(wav_bytes)
-    png_bytes = _render_png_bytes(layer_id, attempt_id, mel_db, duration_s)
+    png_bytes = _render_png_bytes(layer_id, attempt_id, mel_db, duration_s, metadata)
     if png_bytes:
         png_path.write_bytes(png_bytes)
     json_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")

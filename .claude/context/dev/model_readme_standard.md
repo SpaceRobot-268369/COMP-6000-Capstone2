@@ -84,8 +84,8 @@ promotion.
 - Params:
 - Metrics:
 - Sample outputs:
-  - Reference (canonical seed): `<attempt>/samples/reference/seed_42.png` · `seed_42.metadata.json` · `seed_42.wav.dvc`
-  - Showcase (optional extras): `<attempt>/samples/showcase/seed_<N>_<label>.{png,metadata.json,wav}.dvc`
+  - Expected (real-audio ground truth): `<attempt>/expected/real_<clip_id>/{spectrogram.png, metadata.json, audio.wav.dvc}` — one subdir per source clip.
+  - Showcase (generated samples, canonical seed `42` baseline): `<attempt>/showcase/seed_<N>_<label>/{audio.wav.dvc, spectrogram.png.dvc, metadata.json.dvc}` — one subdir per seed; all three DVC-tracked.
   - Policy: [artifact_policy.md](artifact_policy.md)
 - Related runbook or log:
 
