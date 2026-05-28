@@ -235,6 +235,72 @@ result.worker_id = shinypokemon-fake-worker
 After the smoke test, the worker was stopped and Server B was stopped in RONIN
 to avoid GPU budget usage.
 
+## Server B Training Smoke Test
+
+Verified on 2026-05-28 using the real Server B machine `shinypokemon`, after
+adding the fake training adapter.
+
+Verified commit on Server B:
+
+```text
+19ae0fe feat: add fake training worker adapter
+```
+
+Worker environment:
+
+```bash
+export SERVER_A_URL="http://10.0.9.8"
+export WORKER_API_TOKEN="server-a-worker-test-token"
+export WORKER_ID="shinypokemon-fake-worker"
+export WORKER_JOB_TYPES="generation,training"
+export POLL_INTERVAL_SECONDS="3"
+export HEARTBEAT_INTERVAL_SECONDS="2"
+export FAKE_RUN_SECONDS="5"
+export FAKE_TRAINING_SECONDS="10"
+export FAKE_UPLOAD_SECONDS="2"
+python worker/worker.py
+```
+
+Server A test job:
+
+```text
+POST /api/jobs
+type = training
+payload = {
+  "layer": "C",
+  "run_id": "layer-c-fake-smoke-1",
+  "species": "southern_boobook",
+  "source": "server-b-training-smoke"
+}
+job id = 9
+```
+
+Server A API verification:
+
+```text
+GET /api/jobs/9 -> 200 OK
+type = training
+status = completed
+payload.layer = C
+payload.run_id = layer-c-fake-smoke-1
+result.mock = true
+result.worker_id = shinypokemon-fake-worker
+```
+
+This verifies the automatic fake training flow:
+
+```text
+Server A creates training job
+-> Server B claims it
+-> Server B marks running
+-> Server B marks uploading
+-> Server B records placeholder checkpoint/log/metrics metadata
+-> Server A stores completed result
+```
+
+After the smoke test, the worker was stopped and Server B was stopped in RONIN
+to avoid GPU budget usage.
+
 ## Not Implemented Yet
 
 - real Python GPU environment setup;
