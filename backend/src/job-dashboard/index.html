@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server A/B Job Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Server A/B</p>
+          <h1>Training Job Dashboard</h1>
+          <p class="lead">Submit training jobs, track worker state, cancel active jobs, and inspect checkpoint metadata.</p>
+        </div>
+        <div class="server-note">
+          <span>Server B</span>
+          <strong>Manual start, 10 min idle shutdown</strong>
+        </div>
+      </header>
+
+      <section class="panel auth-panel" id="auth-panel">
+        <div>
+          <h2>Account</h2>
+          <p id="auth-status">Checking session...</p>
+        </div>
+        <form id="login-form" class="auth-form">
+          <input id="account" name="account" type="text" placeholder="Username or email" autocomplete="username" />
+          <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" />
+          <button type="submit">Login</button>
+        </form>
+      </section>
+
+      <section class="grid">
+        <form class="panel job-form" id="job-form">
+          <div class="panel-head">
+            <div>
+              <h2>Create Training Job</h2>
+              <p>Layer C SA3 LoRA is the current real GPU path.</p>
+            </div>
+          </div>
+
+          <label>
+            <span>Layer</span>
+            <select id="layer" name="layer">
+              <option value="C">Layer C - SA3 LoRA</option>
+              <option value="A">Layer A - adapter pending</option>
+              <option value="B">Layer B - adapter pending</option>
+            </select>
+          </label>
+
+          <div class="pair">
+            <label>
+              <span>Run ID</span>
+              <input id="run_id" name="run_id" type="text" />
+            </label>
+            <label>
+              <span>Owner</span>
+              <input id="owner" name="owner" type="text" />
+            </label>
+          </div>
+
+          <label>
+            <span>Training Backend</span>
+            <input id="training_backend" name="training_backend" type="text" />
+          </label>
+
+          <label>
+            <span>Species / Task</span>
+            <input id="species" name="species" type="text" />
+          </label>
+
+          <label>
+            <span>Base Model</span>
+            <input id="base_model" name="base_model" type="text" />
+          </label>
+
+          <div class="pair">
+            <label>
+              <span>Steps</span>
+              <input id="steps" name="steps" type="number" min="1" />
+            </label>
+            <label>
+              <span>Checkpoint Every</span>
+              <input id="checkpoint_every" name="checkpoint_every" type="number" min="1" />
+            </label>
+          </div>
+
+          <div class="pair">
+            <label>
+              <span>Demo Every</span>
+              <input id="demo_every" name="demo_every" type="number" min="1" />
+            </label>
+            <label>
+              <span>Seed</span>
+              <input id="seed" name="seed" type="number" />
+            </label>
+          </div>
+
+          <label>
+            <span>Notes</span>
+            <textarea id="notes" name="notes" rows="3" placeholder="Optional run notes"></textarea>
+          </label>
+
+          <div class="preview">
+            <span>Payload Preview</span>
+            <pre id="payload-preview"></pre>
+          </div>
+
+          <button type="submit" class="primary">Queue Training Job</button>
+        </form>
+
+        <section class="panel list-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Recent Jobs</h2>
+              <p id="jobs-count">No jobs loaded</p>
+            </div>
+            <button type="button" id="refresh-btn">Refresh</button>
+          </div>
+          <div class="jobs-list" id="jobs-list"></div>
+        </section>
+
+        <section class="panel detail-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Job Detail</h2>
+              <p id="detail-title">Select a job</p>
+            </div>
+            <button type="button" id="cancel-btn" class="danger" hidden>Cancel</button>
+          </div>
+          <div id="job-detail" class="empty">Select a job to inspect payload, result, artifact paths, and errors.</div>
+        </section>
+      </section>
+
+      <p id="toast" class="toast" hidden></p>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
