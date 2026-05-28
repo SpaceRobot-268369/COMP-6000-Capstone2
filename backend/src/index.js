@@ -1,6 +1,4 @@
 import crypto from "node:crypto";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import session from "express-session";
@@ -10,7 +8,6 @@ import pg from "pg";
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE
   ? process.env.SESSION_COOKIE_SECURE === "true"
   : process.env.NODE_ENV === "production";
@@ -22,7 +19,6 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use("/job-dashboard", express.static(join(__dirname, "job-dashboard")));
 app.use(session({
   store: new PgSession({
     pool,
@@ -273,29 +269,6 @@ app.post("/api/jobs", requireAuth, async (req, res) => {
     res.status(201).json({ ok: true, job: serializeJob(rows[0]) });
   } catch (err) {
     console.error("Create job failed:", err);
-    res.status(500).json({ ok: false, message: String(err.message || err) });
-  }
-});
-
-app.get("/api/jobs", requireAuth, async (req, res) => {
-  const requestedLimit = Number(req.query?.limit ?? 50);
-  const limit = Number.isInteger(requestedLimit)
-    ? Math.min(Math.max(requestedLimit, 1), 100)
-    : 50;
-
-  try {
-    const { rows } = await query(
-      `SELECT *
-       FROM jobs
-       WHERE created_by = $1
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [req.session.userId, limit],
-    );
-
-    res.json({ ok: true, jobs: rows.map(serializeJob) });
-  } catch (err) {
-    console.error("List jobs failed:", err);
     res.status(500).json({ ok: false, message: String(err.message || err) });
   }
 });
