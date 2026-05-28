@@ -60,7 +60,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── runbooks/
     │   │   ├── layer_a_smoke_1_spring_night.md
     │   │   ├── layer_a_smoke_2_insects.md
-    │   │   └── layer_c_smoke_1_birds.md
+    │   │   ├── layer_c_smoke_1_birds.md
+    │   │   └── layer_c_sa3_lora_cloud_handoff.md
     │   └── logs/
     │       ├── mvp_decision_log.md
     │       └── audioldm2_transition_log.md
@@ -103,6 +104,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
+| Layer C SA3 LoRA cloud handoff | [.claude/context/ai/runbooks/layer_c_sa3_lora_cloud_handoff.md](.claude/context/ai/runbooks/layer_c_sa3_lora_cloud_handoff.md) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |

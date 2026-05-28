@@ -1,0 +1,43 @@
+# Layer C Stable Audio 3 LoRA smoke candidate - Horsfield's Bronze-cuckoo
+training:
+  status: prepared_entrypoint_verified_no_checkpoint
+  base_model: small-sfx-base
+  model_family: stable_audio_3
+  training_manifest: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_smoke_core6_train_manifest.csv
+  metadata_jsonl: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_smoke_core6_metadata.jsonl
+  official_data_dir: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_core6_data
+  training_audio_count: 6
+  target_duration_seconds: 8.0
+  caption: "clean Horsfield's bronze cuckoo bird call, repeated descending whistled notes, clear foreground call, sparse natural woodland background, short isolated bird vocalisation"
+  proposed_lora:
+    rank: 8
+    alpha: 8
+    dropout: 0.05
+    adapter_type: dora-rows
+    exclude:
+      - seconds_total
+  proposed_smoke_schedule:
+    steps: 300
+    batch_size: 1
+    learning_rate: 0.0001
+    checkpoint_every: 100
+    demo_every: 999999
+    precision: bf16_mixed
+  notes:
+    - Official Stable Audio 3 train_lora.py is required; the installed CLI only exposes generation and LoRA loading.
+    - Local CPU dry-run loaded the six clips and created LoRA layers, but was stopped during demo generation before checkpoint save.
+    - Full training should run on a CUDA GPU; this machine currently reports cuda=false and mps=false.
+validation:
+  reference_conditioned_probe:
+    model: small-sfx-base
+    init_noise_level: 0.40
+    steps: 8
+    cfg_scale: 1.0
+    stable_core_reference_bank: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/stable_audio_core_reference_bank_pass6.csv
+    sample_audit_csv: debug/layer_c/stable_audio/samples/horsfields_bronze_cuckoo_stable_audio_core6_noise040_5seed/horsfields_bronze_cuckoo_stable_audio_core6_noise040_5seed_sample_audit.csv
+    manual_result: 30/30 Pass
+inference:
+  recommended_reference_bank: resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/stable_audio_core_reference_bank_pass6.csv
+  recommended_init_noise_level: 0.40
+  recommended_steps: 8
+  recommended_cfg_scale: 1.0
