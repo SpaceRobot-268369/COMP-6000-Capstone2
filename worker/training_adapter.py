@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import os
 import subprocess
@@ -139,7 +139,7 @@ def _run_layer_c_sa3_training(
     if not (Path(config.sa3_repo) / "scripts" / "train_lora.py").is_file():
         raise RuntimeError(f"Stable Audio 3 train_lora.py not found under {config.sa3_repo}")
 
-    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     log_path = REPO_ROOT / LAYER_C_SA3_LOG_DIR / f"sa3_lora_{run_id}_{timestamp}.log"
     env = os.environ.copy()
     env.update(

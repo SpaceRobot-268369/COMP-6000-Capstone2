@@ -30,4 +30,4 @@ for name in "${required_vars[@]}"; do
 done
 
 cd "$ROOT_DIR"
-exec python worker/worker.py
+exec "${WORKER_PYTHON:-python3}" worker/worker.py
