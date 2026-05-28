@@ -41,7 +41,7 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 Each layer hosts independent attempts under
 `acoustic_ai/layers/<layer-code>/attempts/<member>__<stage>__<slug>/`.
 Stage tokens (`smoke-N` / `mvp-N` / `prod-N`) and the full naming rules
-live in [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md).
+live in [.claude/context/conventions.md](.claude/context/conventions.md).
 The set of available attempts is declared in `acoustic_ai/registry.yaml`
 — the FastAPI server reads it to serve `GET /layers` for the frontend
 dropdown.
@@ -69,7 +69,7 @@ COMP-6000-Capstone2/
 ├── acoustic_ai/             # Python AI module (FastAPI server runs natively for MPS)
 │   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
 │   ├── layers/              # per-layer attempts (layer_a, layer_b, layer_c, …)
-│   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see attempt_naming.md
+│   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see conventions.md
 │   ├── scripts/             # extract_expected_samples.py, regenerate_samples.py
 │   ├── registry.yaml        # declares which attempts the server exposes via GET /layers
 │   ├── requirements.txt
@@ -112,6 +112,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ├── skills/                                # Reusable agent skills
 │   └── training_data_filtering_policy.md
 └── context/                               # Project context the agent loads on demand
+    ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
     │   ├── architecture.md
     │   ├── pipeline_design.md
@@ -128,34 +129,25 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── known_issues.md
     │   └── logs/
     │       └── generation_quality_analysis.md
-    ├── dev/                               # Developer workflows, specs, stage goals, testing, diagrams
-    │   ├── conventions.md                 # Index of all naming/layout/policy rules (links to the deep-dives below)
+    ├── dev/                               # Developer workflows: git, DVC, S3, testing
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
     │   ├── s3_bucket_layout.md
-    │   ├── model_readme_standard.md
-    │   ├── attempt_naming.md              # Naming rules for layer attempts + checkpoints
-    │   ├── artifact_policy.md             # Sample artifacts (expected/showcase/dev-artifacts-self-testing tiers, git vs DVC)
-    │   ├── stages/                        # Per-stage goals + exit criteria (stage_1.md, …)
-    │   ├── testing/
-    │   │   ├── analysis_test_cases.md
-    │   │   └── layer_verification_formats.md
-    │   └── diagrams/
-    │       └── workflow_diagrams.md
-    ├── setup/                             # How to run the system
-    │   ├── local/
-    │   │   └── services.md                # Local-mac service topology, ports, env vars
-    │   └── server/
-    │       └── on_demand_ai_worker.md     # Server A/B job orchestration topology
-    └── branches/                          # Ephemeral per-branch scratch (<branch-slug>/)
-                                           # Deleted in the merge PR, or content promoted first.
+    │   └── testing/
+    │       ├── analysis_test_cases.md
+    │       └── layer_verification_formats.md
+    └── setup/                             # How to run the system
+        ├── local/
+        │   └── services.md                # Local-mac service topology, ports, env vars
+        └── server/
+            └── on_demand_ai_worker.md     # Server A/B job orchestration topology
 ```
 
 ### Quick-link table
 
 | Need | Doc |
 |---|---|
-| **Conventions hub** (naming, layout, policy index) | [.claude/context/dev/conventions.md](.claude/context/dev/conventions.md) |
+| **Conventions** (repo structure, naming, tracking, artifact tiers, attempt internals, model README) | [.claude/context/conventions.md](.claude/context/conventions.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
@@ -168,13 +160,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
-| Model README standard | [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md) |
-| Attempt naming rules (layer-X attempts + checkpoints) | [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md) |
-| Artifact policy (sample audio/spectrograms in repo) | [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md) |
-| Project stage goals | [.claude/context/dev/stages/](.claude/context/dev/stages/) |
 | Analysis test cases | [.claude/context/dev/testing/analysis_test_cases.md](.claude/context/dev/testing/analysis_test_cases.md) |
 | Layer verification & handoff formats | [.claude/context/dev/testing/layer_verification_formats.md](.claude/context/dev/testing/layer_verification_formats.md) |
-| Workflow diagrams | [.claude/context/dev/diagrams/workflow_diagrams.md](.claude/context/dev/diagrams/workflow_diagrams.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Training data filtering policy (site 257 MVP sample) | [.claude/skills/training_data_filtering_policy.md](.claude/skills/training_data_filtering_policy.md) |
@@ -183,13 +170,12 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 
 ## Critical conventions
 
-> Project-wide index of naming, layout, and policy rules:
-> [.claude/context/dev/conventions.md](.claude/context/dev/conventions.md). The
-> subsections below are the **canonical home** for CLAUDE.md-only rules (Storage
-> rule, Python environment, Pipeline-vs-attempt params, Layer A dev-generation
-> contract). Other rules — branch naming, attempt naming, artifact policy,
-> etc. — live in their own docs under `.claude/context/dev/`; the hub links to
-> all of them.
+> Canonical doc for project-wide naming, layout, and policy rules:
+> [.claude/context/conventions.md](.claude/context/conventions.md). The
+> subsections below are the **canonical home** for CLAUDE.md-only rules
+> (Storage rule, Python environment, Pipeline-vs-attempt params, Layer A
+> dev-generation contract). Everything else — repo structure, attempt
+> naming, artifact tiers, model README — lives in `conventions.md`.
 
 ### Storage rule
 
@@ -200,18 +186,14 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 | Architecture / design docs | `.claude/context/ai/`, `.claude/context/data/` |
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
 | Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev/` |
-| Stage goals | `.claude/context/dev/stages/` |
-| Sample artifacts (expected/showcase/dev-artifacts-self-testing) | `acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/` (rules: `.claude/context/dev/artifact_policy.md`) |
-| Testing specs & diagrams | `.claude/context/dev/testing/`, `.claude/context/dev/diagrams/` |
+| Sample artifacts (expected/showcase/dev-artifacts-self-testing) | `acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/` (rules: `.claude/context/conventions.md`) |
+| Testing specs | `.claude/context/dev/testing/` |
 | Setup (local services; server reserved) | `.claude/context/setup/local/`, `.claude/context/setup/server/` |
-| Branch-scoped dev logs (ephemeral) | `.claude/context/branches/<branch-slug>/` |
 | Custom slash commands | `.claude/commands/` |
 | Reusable skills | `.claude/skills/` |
 | Settings | `.claude/settings.local.json` |
 
 CLAUDE.md is a **hub**, not a manual. If a section grows past ~5 lines or is referenced from elsewhere, it moves into `.claude/context/` and CLAUDE.md links to it.
-
-Branch-scoped scratch in `.claude/context/branches/<branch-slug>/` must be deleted in the merge PR, **or** their durable content promoted to a permanent doc first.
 
 ### Python environment
 
@@ -232,7 +214,7 @@ model/production/<role>/                                           # promoted sl
 ```
 
 `<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
-in [.claude/context/dev/attempt_naming.md](.claude/context/dev/attempt_naming.md).
+in [.claude/context/conventions.md](.claude/context/conventions.md).
 
 At this stage of the project, **nothing is in production**. Every trained
 checkpoint — including the VAE and vocoder used by the smoke-4 inference
@@ -244,7 +226,7 @@ Rules (team workflow):
 - One folder per member, one folder per attempt — never overwrite another member's work.
 - Attempts are **self-contained**: each `acoustic_ai/layers/.../attempts/<id>/` folder owns its `data/`, `precompute/`, `debug/`, `train.py`, `sample.py`, `handler.py`, `README.md`. No shared `common/` folder; duplication between attempts is intentional.
 - Each model folder under `model/candidates/...` or `model/production/...` ships with `README.md` + DVC pointer(s); candidate folders also ship with `params.yaml`, and add `metrics.json` once evals exist.
-- Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md); keep the audit section empty until developers provide evaluation notes or review findings.
+- Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/conventions.md § Model checkpoint README](.claude/context/conventions.md#6-model-checkpoint-readme); keep the audit section empty until developers provide evaluation notes or review findings.
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
@@ -265,7 +247,7 @@ Spectrogram PNGs also carry baked-in metadata: a visible overlay
 (header/subline/footer) and lossless PNG `tEXt` chunks mirroring the JSON
 sidecar. Python source for the attempt lives under `code/`. Canonical seed
 is `42` (showcase + Dev UI only — `expected/` is real audio). Full rules:
-[.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via
+[.claude/context/conventions.md](.claude/context/conventions.md). Regenerate via
 `acoustic_ai/scripts/regenerate_samples.py`.
 
 ### Pipeline vs. attempt hyperparameters

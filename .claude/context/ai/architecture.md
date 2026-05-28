@@ -4,7 +4,7 @@
 > `acoustic_ai/layers/layer_<X>/attempts/<member>__<stage>__<slug>/`.
 > Available attempts are declared in `acoustic_ai/registry.yaml` and
 > served via `GET /layers` for the frontend dropdown. Naming rules:
-> [../dev/attempt_naming.md](../dev/attempt_naming.md). Per-layer
+> [../conventions.md](../conventions.md). Per-layer
 > "Module" sections describe the *role*; concrete implementations live
 > across one or more attempts per layer.
 
@@ -37,9 +37,8 @@ acoustic_ai/
 
 Each attempt is **self-contained** with `code/` (handler + train + sample),
 `data/` (DVC), and the artifact tiers `expected/` / `showcase/` /
-`dev-artifacts-self-testing/`. See [attempt_naming.md](../dev/attempt_naming.md)
-and [artifact_policy.md](../dev/artifact_policy.md) for the full per-attempt
-layout. Checkpoints live in `model/candidates/<member>/<stage>__<slug>/` and
+`dev-artifacts-self-testing/`. See [conventions.md](../conventions.md) for
+the full per-attempt layout and artifact tier rules. Checkpoints live in `model/candidates/<member>/<stage>__<slug>/` and
 are paired with attempts by name; promotion to `model/production/<role>/`
 happens only after explicit sign-off.
 

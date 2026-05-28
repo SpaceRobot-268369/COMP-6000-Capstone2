@@ -17,7 +17,7 @@ layers/
             └── debug/          # attempt-local diagnostics
 ```
 
-Authoritative rules: **[../../.claude/context/dev/attempt_naming.md](../../.claude/context/dev/attempt_naming.md)**.
+Authoritative rules: **[../../.claude/context/conventions.md](../../.claude/context/conventions.md)**.
 
 Currently-registered attempts live in **[../registry.yaml](../registry.yaml)**.
 The FastAPI server reads it to drive `GET /layers` (frontend dropdown) and

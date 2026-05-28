@@ -1,9 +1,9 @@
 # DVC + S3 Workflow
 
-> Part of the project [conventions index](conventions.md). This is the
-> canonical doc for DVC commands, the git vs. DVC tracking split, and the
-> daily/fresh-clone discipline. Bucket paths live in [s3_bucket_layout.md](s3_bucket_layout.md);
-> per-attempt artifact rules live in [artifact_policy.md](artifact_policy.md).
+> Part of the project [conventions](../conventions.md). This is the canonical
+> doc for DVC commands, the git vs. DVC tracking split, and the daily /
+> fresh-clone discipline. Bucket paths live in [s3_bucket_layout.md](s3_bucket_layout.md);
+> per-attempt artifact rules live in [conventions.md § Artifact tiers](../conventions.md#4-artifact-tiers).
 
 DVC tracks large binary artifacts (audio clips, model checkpoints, latent
 databases) so they stay out of git history. Git stores only the `.dvc` pointer
@@ -105,7 +105,7 @@ tagging.
 Every model checkpoint folder ships with:
 
 - `.dvc` pointer for the binary checkpoint(s)
-- `README.md` — model log / model card following [model_readme_standard.md](model_readme_standard.md)
+- `README.md` — model log / model card following [conventions.md § Model checkpoint README](../conventions.md#6-model-checkpoint-readme)
 
 Candidate folders also ship with:
 
@@ -137,8 +137,8 @@ dvc push
 
 Each attempt has `expected/`, `showcase/`, and `dev-artifacts-self-testing/`
 tiers directly at attempt root. See
-[artifact_policy.md](artifact_policy.md) for the full rules; the DVC-relevant
-bits:
+[conventions.md § Artifact tiers](../conventions.md#4-artifact-tiers) for the
+full rules; the DVC-relevant bits:
 
 Each case (source clip or generated seed) is its own subdir with fixed
 filenames `{audio.wav, spectrogram.png, metadata.json}`. `expected/` is real

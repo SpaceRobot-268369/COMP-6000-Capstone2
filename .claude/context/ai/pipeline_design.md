@@ -4,7 +4,7 @@
 > `acoustic_ai/layers/layer_<X>/attempts/<member>__<stage>__<slug>/`.
 > Available attempts are declared in `acoustic_ai/registry.yaml` and
 > served via `GET /layers` for the frontend dropdown. Naming rules:
-> [../dev/attempt_naming.md](../dev/attempt_naming.md). Per-layer
+> [../conventions.md](../conventions.md). Per-layer
 > "Module" sections describe the *role*; concrete implementations live
 > across one or more attempts per layer.
 

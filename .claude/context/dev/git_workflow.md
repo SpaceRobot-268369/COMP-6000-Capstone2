@@ -1,8 +1,8 @@
 # Git Workflow & Standards
 
-> Part of the project [conventions index](conventions.md). This is the
-> canonical doc for branch naming, commit subject style, the pre-commit
-> file audit, and the "do not track in git" categories.
+> Part of the project [conventions](../conventions.md). This is the canonical
+> doc for branch naming, commit subject style, the pre-commit file audit,
+> and the "do not track in git" categories.
 
 ## Branch Naming
 
@@ -88,7 +88,6 @@ Source of truth is `.gitignore` at the repo root. The table below summarises wha
 
 - Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`, `.wav`) → **DVC, never git**. Metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) → git.
 - Anything under `resources/` is ignored **by default** — add an explicit `!` allow-list entry in `.gitignore` if a small metadata file must be tracked.
-- Branch-scoped scratch in `.claude/context/branches/<branch-slug>/` is committed but ephemeral — delete or promote before the merge PR.
 
 ### Pre-commit file audit
 
