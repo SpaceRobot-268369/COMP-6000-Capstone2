@@ -175,30 +175,37 @@ http://localhost:8080
 
 ## Fake Worker Environment
 
-Set environment variables on Server B:
+Create a local env file on Server B:
 
 ```bash
-export SERVER_A_URL="http://10.0.9.8"
-export WORKER_API_TOKEN="server-a-worker-test-token"
-export WORKER_ID="shinypokemon-fake-worker"
-export WORKER_JOB_TYPES="generation"
-export POLL_INTERVAL_SECONDS="3"
-export HEARTBEAT_INTERVAL_SECONDS="2"
-export FAKE_RUN_SECONDS="5"
-export FAKE_UPLOAD_SECONDS="2"
+cd ~/COMP-6000-Capstone2-worker
+cp worker/.env.example worker/.env
+nano worker/.env
 ```
 
 Replace `SERVER_A_URL` with whichever connectivity test passed.
 
-The test token is temporary. Replace it with a strong production token before
-real Server B use.
+For normal Server B use, enable the 10-minute idle shutdown in `worker/.env`:
+
+```env
+SERVER_A_URL=http://10.0.9.8
+WORKER_ID=shinypokemon-worker
+WORKER_JOB_TYPES=generation,training
+IDLE_SHUTDOWN_ENABLED=true
+IDLE_SHUTDOWN_DRY_RUN=false
+IDLE_SHUTDOWN_SECONDS=600
+SHUTDOWN_COMMAND=sudo shutdown -h now
+```
+
+The test token is temporary. Set the real `WORKER_API_TOKEN` before real Server
+B use. `worker/.env` is ignored by git.
 
 ## Run Fake Worker
 
 From the repository root on Server B:
 
 ```bash
-python worker/worker.py
+bash worker/run_worker.sh
 ```
 
 Expected startup:
@@ -253,4 +260,3 @@ Only after the fake Server B test passes:
 - replace fake sleep with real generation;
 - upload real artifacts and logs;
 - keep GPU concurrency at `1` for MVP unless proven safe.
-

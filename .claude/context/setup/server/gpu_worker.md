@@ -23,6 +23,7 @@ worker/api_client.py
 worker/config.py
 worker/generation_adapter.py
 worker/training_adapter.py
+worker/run_worker.sh
 worker/worker.py
 worker/.env.example
 worker/requirements.txt
@@ -38,12 +39,12 @@ checkpoint upload should be added there first.
 
 ## Environment
 
-Required:
+Required in `worker/.env` on Server B:
 
 ```env
-SERVER_A_URL=http://localhost
+SERVER_A_URL=http://10.0.9.8
 WORKER_API_TOKEN=change-me
-WORKER_ID=shinypokemon-manual-worker
+WORKER_ID=shinypokemon-worker
 WORKER_JOB_TYPES=generation,training
 ```
 
@@ -59,8 +60,8 @@ ARTIFACT_BASE_URI=s3://placeholder/generated
 LOG_BASE_URI=s3://placeholder/logs
 CHECKPOINT_BASE_URI=s3://placeholder/checkpoints
 METRICS_BASE_URI=s3://placeholder/metrics
-IDLE_SHUTDOWN_ENABLED=false
-IDLE_SHUTDOWN_DRY_RUN=true
+IDLE_SHUTDOWN_ENABLED=true
+IDLE_SHUTDOWN_DRY_RUN=false
 IDLE_SHUTDOWN_SECONDS=600
 SHUTDOWN_COMMAND=sudo shutdown -h now
 ```
@@ -70,20 +71,24 @@ the forwarded localhost URL.
 
 ## Run
 
-From the repository root:
+On Server B, create the local env file once:
 
 ```bash
-python worker/worker.py
+cd ~/COMP-6000-Capstone2-worker
+cp worker/.env.example worker/.env
+nano worker/.env
 ```
 
-Or with an env file loaded by the shell:
+Set the real `WORKER_API_TOKEN` in `worker/.env`. The file is ignored by git.
+
+Then start the worker from the repository root:
 
 ```bash
-set -a
-. worker/.env
-set +a
-python worker/worker.py
+bash worker/run_worker.sh
 ```
+
+The script loads `worker/.env`, validates required variables, and runs
+`python worker/worker.py`.
 
 ## MVP Behavior
 
