@@ -24,6 +24,10 @@ class TrainingResult:
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LAYER_C_SA3_SCRIPT = Path("script/events/train_sa3_lora_core6_smoke.sh")
+LAYER_C_SA3_DATA_DIR = Path(
+    "resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/"
+    "bronze_cuckoo_natural_core_v1/sa3_lora_core6_data"
+)
 LAYER_C_SA3_OUTPUT_DIR = Path(
     "model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints"
 )
@@ -133,10 +137,20 @@ def _run_layer_c_sa3_training(
     num_workers = _payload_int(payload, "num_workers", 0)
 
     script_path = REPO_ROOT / LAYER_C_SA3_SCRIPT
+    data_dir = REPO_ROOT / LAYER_C_SA3_DATA_DIR
     output_dir = REPO_ROOT / LAYER_C_SA3_OUTPUT_DIR
+    sa3_python = Path(config.sa3_python)
+    if not sa3_python.is_absolute():
+        sa3_python = REPO_ROOT / sa3_python
+    train_lora = Path(config.sa3_repo) / "scripts" / "train_lora.py"
+
     if not script_path.is_file():
         raise RuntimeError(f"Layer C SA3 script not found: {script_path}")
-    if not (Path(config.sa3_repo) / "scripts" / "train_lora.py").is_file():
+    if not data_dir.is_dir():
+        raise RuntimeError(f"Layer C SA3 data dir not found: {data_dir}")
+    if not sa3_python.is_file():
+        raise RuntimeError(f"Layer C SA3 Python not found: {sa3_python}")
+    if not train_lora.is_file():
         raise RuntimeError(f"Stable Audio 3 train_lora.py not found under {config.sa3_repo}")
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -145,9 +159,7 @@ def _run_layer_c_sa3_training(
     env.update(
         {
             "SA3_REPO": config.sa3_repo,
-            "PYTHON": str((REPO_ROOT / config.sa3_python).resolve())
-            if not Path(config.sa3_python).is_absolute()
-            else config.sa3_python,
+            "PYTHON": str(sa3_python),
             "MPLCONFIGDIR": config.sa3_mplconfigdir,
             "SA3_STEPS": str(steps),
             "SA3_CHECKPOINT_EVERY": str(checkpoint_every),
@@ -157,8 +169,48 @@ def _run_layer_c_sa3_training(
     )
 
     started_at = time.monotonic()
+    command = [
+        str(sa3_python),
+        str(train_lora),
+        "--model",
+        "small-sfx-base",
+        "--data_dir",
+        str(data_dir),
+        "--save_dir",
+        str(output_dir),
+        "--name",
+        "layer-c-sa3-bronze-cuckoo-core6-smoke",
+        "--adapter_type",
+        "dora-rows",
+        "--rank",
+        "8",
+        "--lora_alpha",
+        "8",
+        "--dropout",
+        "0.05",
+        "--lr",
+        "0.0001",
+        "--steps",
+        str(steps),
+        "--batch_size",
+        "1",
+        "--duration",
+        "8",
+        "--checkpoint_every",
+        str(checkpoint_every),
+        "--demo_every",
+        str(demo_every),
+        "--log_every",
+        "10",
+        "--num_workers",
+        str(num_workers),
+        "--logger",
+        "none",
+        "--exclude",
+        "seconds_total",
+    ]
     return_code = _run_with_heartbeats(
-        ["bash", str(LAYER_C_SA3_SCRIPT)],
+        command,
         config=config,
         heartbeat=heartbeat,
         log_path=log_path,
