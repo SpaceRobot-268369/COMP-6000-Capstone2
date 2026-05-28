@@ -50,6 +50,57 @@ dropdown.
 
 ---
 
+## Repo layout
+
+Top-level map. Each entry links to its canonical deep-dive doc where one exists.
+
+```
+COMP-6000-Capstone2/
+├── CLAUDE.md                # this file — agent guidance + structural index
+├── AGENTS.md                # points agents at CLAUDE.md
+├── Makefile                 # convenience targets
+├── dvc.yaml / dvc.lock      # DVC pipeline definition + lock
+├── params.yaml              # hyperparameters for stages declared in dvc.yaml
+│
+├── frontend/                # React + Vite UI scaffold (Docker, port 5173)
+├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
+├── services/dev/            # docker-compose.yml + db_init.sql for local frontend+backend+postgres
+│
+├── acoustic_ai/             # Python AI module (FastAPI server runs natively for MPS)
+│   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
+│   ├── layers/              # per-layer attempts (layer_a, layer_b, layer_c, …)
+│   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see attempt_naming.md
+│   ├── scripts/             # extract_expected_samples.py, regenerate_samples.py
+│   ├── registry.yaml        # declares which attempts the server exposes via GET /layers
+│   ├── requirements.txt
+│   └── .venv/               # gitignored — the ONLY Python interpreter for AI work (see "Python environment")
+│
+├── model/                   # trained checkpoints
+│   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
+│   └── production/<role>/                     # promoted slots — empty until explicit promotion
+│
+├── resources/               # source recordings + manifests (DVC-tracked)
+│   └── site_257_bowra-dry-a/                  # only site live right now
+│
+├── script/                  # data prep & download utilities (one-shot scripts, not pipeline stages)
+│   ├── dataset/             # manifest builders, segment prep, spectrogram rendering for datasets
+│   ├── download/            # site_257 clip/annotation/event downloaders, recording fetcher
+│   └── env/                 # NASA env-feature fetcher
+│
+├── debug/                   # local-only diagnostics workspace (per-layer subfolders; see debug/README.md)
+└── .claude/                 # agent context loaded on demand — full tree in next section
+```
+
+Conventions for top-level entries:
+- **frontend/**, **backend/**, **services/dev/** → containerised; run via Docker Compose in `services/dev/`.
+- **acoustic_ai/** → native only (Apple Silicon MPS); never `pip install` outside `acoustic_ai/.venv` (DVC is the documented exception — see "Python environment").
+- **model/**, **resources/** → binaries are DVC, metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git.
+- **script/** vs **acoustic_ai/scripts/** → top-level `script/` is for data preparation (one-shot, ad-hoc); `acoustic_ai/scripts/` is for AI-module utilities that read/write artefacts under `acoustic_ai/`.
+
+When a top-level dir is added/removed/renamed, this section must be updated in the same commit (same discipline as the `.claude/` map below).
+
+---
+
 ## .claude/ directory map
 
 CLAUDE.md is the **structural index** for `.claude/`. The tree below is the single source of truth — when files are added, moved, renamed, or removed under `.claude/`, this section must be updated in the same commit. Agents should refuse to land structural changes that leave this section stale.

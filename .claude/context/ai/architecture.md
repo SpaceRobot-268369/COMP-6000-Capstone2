@@ -18,18 +18,30 @@ Each module owns its code, its derived data, and its checkpoints.
 
 ```
 acoustic_ai/
-├── modules/
-│   ├── ambient/     — Module A: ambient bed (VAE encoder + retrieval)
-│   ├── weather/     — Module B: weather sound engine (asset mixing)
-│   ├── events/      — Module C: species/event layer (AudioGen LoRA generative)
-│   ├── mixer/       — Module D: layer combiner + explanation output
-│   └── analysis/    — Module E: analysis explainer (detectors)
-├── precompute/      — One-off preprocessing scripts
-├── data/            — DVC-tracked pipeline artifacts (per-module)
-├── checkpoints/     — DVC-tracked model weights
-├── server.py        — FastAPI entry point (runs locally, port 8000)
-└── inference.py     — Inference helpers (used by server.py)
+├── server/                                # registry-driven FastAPI app on :8000
+│   ├── server.py                          #   GET /layers, POST /layers/<l>/attempts/<id>/generate
+│   └── registry.py                        #   reads acoustic_ai/registry.yaml
+├── registry.yaml                          # declares which attempts the server exposes
+├── layers/                                # per-layer attempts (role per layer below)
+│   ├── layer_a/attempts/<member>__<stage>__<slug>/   # Layer A — Ambient bed
+│   ├── layer_b/attempts/…                            # Layer B — Weather (placeholder)
+│   ├── layer_c/attempts/…                            # Layer C — Events
+│   ├── layer_d/attempts/…                            # Layer D — Mixer (placeholder)
+│   └── layer_e/attempts/…                            # Layer E — Analysis (partial)
+├── scripts/                               # AI-module utilities
+│   ├── extract_expected_samples.py        #   populate <attempt>/expected/ from source recordings
+│   └── regenerate_samples.py              #   populate <attempt>/showcase/ from the handler
+├── requirements.txt
+└── .venv/                                 # gitignored — the ONLY interpreter for AI work
 ```
+
+Each attempt is **self-contained** with `code/` (handler + train + sample),
+`data/` (DVC), and the artifact tiers `expected/` / `showcase/` /
+`dev-artifacts-self-testing/`. See [attempt_naming.md](../dev/attempt_naming.md)
+and [artifact_policy.md](../dev/artifact_policy.md) for the full per-attempt
+layout. Checkpoints live in `model/candidates/<member>/<stage>__<slug>/` and
+are paired with attempts by name; promotion to `model/production/<role>/`
+happens only after explicit sign-off.
 
 ---
 
