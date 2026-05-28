@@ -184,6 +184,10 @@ have to be chronological — pick the next available number that isn't
 already in use. Once assigned, a number never changes (renaming breaks
 the registry, frontend dropdown state, and checkpoint paths).
 
+> The **process** inside each stage (goal → filter → audit → polish →
+> train → artifacts → compare → wire-up) lives in
+> [dev/dev_workflow.md](dev/dev_workflow.md).
+
 **Examples:**
 
 | ✅ Good | ❌ Bad | Reason |

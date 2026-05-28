@@ -110,7 +110,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ├── settings.local.json
 ├── commands/                              # Custom slash-command definitions
 ├── skills/                                # Reusable agent skills
-│   └── training_data_filtering_policy.md
+│   ├── commit_changes.md
+│   └── dvc_push.md
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
@@ -129,13 +130,11 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── known_issues.md
     │   └── logs/
     │       └── generation_quality_analysis.md
-    ├── dev/                               # Developer workflows: git, DVC, S3, testing
+    ├── dev/                               # Developer workflows: git, DVC, S3
+    │   ├── dev_workflow.md                # Stage workflow: smoke → mvp/prod loop
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
-    │   ├── s3_bucket_layout.md
-    │   └── testing/
-    │       ├── analysis_test_cases.md
-    │       └── layer_verification_formats.md
+    │   └── s3_bucket_layout.md
     └── setup/                             # How to run the system
         ├── local/
         │   └── services.md                # Local-mac service topology, ports, env vars
@@ -157,14 +156,14 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
 | Generation quality analysis | [.claude/context/data/logs/generation_quality_analysis.md](.claude/context/data/logs/generation_quality_analysis.md) |
+| **Stage workflow** (smoke → mvp/prod loop, generation mode) | [.claude/context/dev/dev_workflow.md](.claude/context/dev/dev_workflow.md) |
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
-| Analysis test cases | [.claude/context/dev/testing/analysis_test_cases.md](.claude/context/dev/testing/analysis_test_cases.md) |
-| Layer verification & handoff formats | [.claude/context/dev/testing/layer_verification_formats.md](.claude/context/dev/testing/layer_verification_formats.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
-| Training data filtering policy (site 257 MVP sample) | [.claude/skills/training_data_filtering_policy.md](.claude/skills/training_data_filtering_policy.md) |
+| Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
+| DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
 
 ---
 
@@ -187,7 +186,6 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
 | Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev/` |
 | Sample artifacts (expected/showcase/dev-artifacts-self-testing) | `acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/` (rules: `.claude/context/conventions.md`) |
-| Testing specs | `.claude/context/dev/testing/` |
 | Setup (local services; server reserved) | `.claude/context/setup/local/`, `.claude/context/setup/server/` |
 | Custom slash commands | `.claude/commands/` |
 | Reusable skills | `.claude/skills/` |
