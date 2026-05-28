@@ -99,3 +99,4 @@ acoustic_ai/=*
 
 # Claude
 /.claude/worktrees
+.antigravitycli/

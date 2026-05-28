@@ -21,6 +21,29 @@ Server A is the source of truth. Server B must be disposable: if it stops or
 crashes, Server A's PostgreSQL job records still describe what happened and
 what needs retry, cancellation, or human review.
 
+## Network Topology
+
+Server A (`spacerobot-268369`) is the only publicly reachable host. It exposes
+exactly three inbound ports:
+
+| Port | Purpose |
+|---|---|
+| 22 | SSH (admin + outbound tunnel origin to Server B) |
+| 80 | HTTP (redirect to 443) |
+| 443 | HTTPS (frontend + backend API) |
+
+Server B (`shinypokemon`) has **no public ingress**. It is not exposed to the
+internet — no open HTTP/HTTPS/API ports, no public DNS record needed for the
+worker API. All communication from Server A to Server B (health checks, job
+dispatch, status polling, log retrieval) goes through an **SSH tunnel**
+initiated from Server A to Server B. Server A health-checks the worker by
+hitting the tunnelled local port; Server B's worker API binds to localhost
+only.
+
+This keeps the attack surface on Server B minimal: the only way in is SSH from
+Server A's key, and the worker HTTP endpoint is never directly reachable from
+the public internet.
+
 ## Hosting and Control Plane (RONIN / AWS)
 
 Both servers are RONIN-managed instances on AWS. RONIN owns authentication and
