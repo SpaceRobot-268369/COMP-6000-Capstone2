@@ -56,6 +56,12 @@ HEARTBEAT_INTERVAL_SECONDS=30
 FAKE_RUN_SECONDS=5
 FAKE_TRAINING_SECONDS=10
 FAKE_UPLOAD_SECONDS=2
+REAL_TRAINING_ENABLED=false
+SA3_REPO=/home/ubuntu/stable-audio-3
+SA3_PYTHON=acoustic_ai/.venv-audiogen/bin/python
+SA3_MPLCONFIGDIR=/tmp/mpl
+DVC_PYTHON=python3
+DVC_PUSH_ENABLED=true
 ARTIFACT_BASE_URI=s3://placeholder/generated
 LOG_BASE_URI=s3://placeholder/logs
 CHECKPOINT_BASE_URI=s3://placeholder/checkpoints
@@ -120,6 +126,39 @@ artifact_uri = <CHECKPOINT_BASE_URI>/<run-id>/checkpoint.safetensors
 log_uri = <LOG_BASE_URI>/<run-id>/train.log
 result = {"mock": true, "checkpoint_uri": ..., "metrics_uri": ...}
 ```
+
+When `REAL_TRAINING_ENABLED=true`, Layer C jobs with
+`payload.training_backend = "sa3_lora"` run the real Stable Audio 3 LoRA script
+instead of the fake training adapter. Other training jobs remain fake until
+their layer-specific adapters are implemented.
+
+Minimal real Layer C payload:
+
+```json
+{
+  "type": "training",
+  "payload": {
+    "layer": "C",
+    "training_backend": "sa3_lora",
+    "run_id": "layer-c-sa3-smoke-10",
+    "owner": "burger",
+    "steps": 10,
+    "checkpoint_every": 10,
+    "demo_every": 999999,
+    "num_workers": 0
+  }
+}
+```
+
+The real adapter:
+
+1. runs `script/events/train_sa3_lora_core6_smoke.sh`;
+2. keeps Server A heartbeats alive while the subprocess runs;
+3. writes a local log under `logs/`;
+4. finds the newest `.ckpt` in the Layer C SA3 checkpoint directory;
+5. runs `python3 -m dvc add <checkpoint>`;
+6. runs `python3 -m dvc push <checkpoint>.dvc`;
+7. marks the job completed with `artifact_uri = <checkpoint>.dvc`.
 
 Idle shutdown is disabled by default. When enabled, the worker asks Server A for
 queue state after failed claims. If the queue is idle for
@@ -488,9 +527,9 @@ for the Server A/B infrastructure MVP.
 
 ## Not Implemented Yet
 
-- automatic worker execution of the real Layer C SA3 training command;
-- automatic DVC add/push and artifact URI update from the worker;
-- automatic upload or retention policy for training logs;
+- Server A -> Server B end-to-end verification of the real Layer C SA3 training
+  adapter;
+- durable S3 upload or retention policy for training logs;
 - 300-step Layer C model-quality smoke run;
 - real generation inference path;
 - worker registry;

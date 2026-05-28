@@ -171,6 +171,45 @@ Layer C owner must confirm:
 - expected checkpoint filename;
 - expected metrics filename.
 
+### Layer C SA3 LoRA Worker Payload
+
+The first real training adapter supports the existing Layer C Stable Audio 3
+LoRA smoke script. It is opt-in: Server B must set
+`REAL_TRAINING_ENABLED=true`, and the job payload must include
+`training_backend: "sa3_lora"`.
+
+Example:
+
+```json
+{
+  "type": "training",
+  "payload": {
+    "layer": "C",
+    "training_backend": "sa3_lora",
+    "run_id": "layer-c-sa3-smoke-10",
+    "owner": "burger",
+    "base_model": "stable-audio-3 small-sfx-base",
+    "species": "horsfields_bronze_cuckoo",
+    "steps": 10,
+    "checkpoint_every": 10,
+    "demo_every": 999999,
+    "num_workers": 0,
+    "seed": 42
+  }
+}
+```
+
+For the current MVP, the script path and output directory are fixed:
+
+```text
+script/events/train_sa3_lora_core6_smoke.sh
+model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/
+```
+
+The worker keeps heartbeats alive while the subprocess runs, DVC-tracks the
+newest generated `.ckpt`, pushes it to the DVC remote, and returns the `.dvc`
+pointer path as `artifact_uri`.
+
 ## Worker Result
 
 On success, Server B should update the job to `completed` with:

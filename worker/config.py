@@ -37,6 +37,12 @@ class WorkerConfig:
     fake_run_seconds: int
     fake_upload_seconds: int
     fake_training_seconds: int
+    real_training_enabled: bool
+    sa3_repo: str
+    sa3_python: str
+    sa3_mplconfigdir: str
+    dvc_python: str
+    dvc_push_enabled: bool
     artifact_base_uri: str
     log_base_uri: str
     checkpoint_base_uri: str
@@ -64,6 +70,15 @@ def load_config() -> WorkerConfig:
         fake_run_seconds=env_int("FAKE_RUN_SECONDS", 5),
         fake_upload_seconds=env_int("FAKE_UPLOAD_SECONDS", 2),
         fake_training_seconds=env_int("FAKE_TRAINING_SECONDS", 10),
+        real_training_enabled=env_bool("REAL_TRAINING_ENABLED", False),
+        sa3_repo=os.getenv("SA3_REPO", "/home/ubuntu/stable-audio-3"),
+        sa3_python=os.getenv(
+            "SA3_PYTHON",
+            "acoustic_ai/.venv-audiogen/bin/python",
+        ),
+        sa3_mplconfigdir=os.getenv("SA3_MPLCONFIGDIR", "/tmp/mpl"),
+        dvc_python=os.getenv("DVC_PYTHON", "python3"),
+        dvc_push_enabled=env_bool("DVC_PUSH_ENABLED", True),
         artifact_base_uri=os.getenv("ARTIFACT_BASE_URI", "s3://placeholder/generated").rstrip("/"),
         log_base_uri=os.getenv("LOG_BASE_URI", "s3://placeholder/logs").rstrip("/"),
         checkpoint_base_uri=os.getenv("CHECKPOINT_BASE_URI", "s3://placeholder/checkpoints").rstrip("/"),

@@ -58,7 +58,8 @@ class ServerAClient:
                 "worker_id": self.config.worker_id,
                 "types": self.config.worker_job_types,
                 "capabilities": {
-                    "mode": "fake",
+                    "mode": "real-training" if self.config.real_training_enabled else "fake",
+                    "real_training_enabled": self.config.real_training_enabled,
                 },
             },
         )
