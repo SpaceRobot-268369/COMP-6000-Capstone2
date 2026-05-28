@@ -138,6 +138,88 @@ result.worker_id = local-fake-worker
 artifact_uri = s3://placeholder/generated/job-7.wav
 ```
 
+## Server B Smoke Test
+
+Verified on 2026-05-28 using the real Server B machine `shinypokemon`.
+
+Machine details observed during setup:
+
+```text
+Hostname: shinypokemon.adelaideuni.cloud
+Internal IP: 10.0.9.27
+Instance type: g4dn.2xlarge
+GPU: Tesla T4
+VRAM: 15360 MiB
+RAM: 32 GiB
+vCPU: 8
+OS: Ubuntu 22.04.5 LTS
+Python: 3.12.10
+Git: 2.34.1
+NVIDIA driver: 580.126.09
+```
+
+Server B can reach Server A through the private network:
+
+```bash
+curl -i http://10.0.9.8/api/health
+```
+
+Response:
+
+```text
+HTTP/1.1 200 OK
+{"ok":true,"db":"connected",...}
+```
+
+Code deployed on Server B:
+
+```bash
+git clone https://github.com/SpaceRobot-268369/COMP-6000-Capstone2.git COMP-6000-Capstone2-worker
+cd ~/COMP-6000-Capstone2-worker
+git checkout infra/songke/server-a-deployment
+git log -1 --oneline
+```
+
+Verified commit:
+
+```text
+7699345 refactor: split worker generation adapter
+```
+
+Worker environment:
+
+```bash
+export SERVER_A_URL="http://10.0.9.8"
+export WORKER_API_TOKEN="server-a-worker-test-token"
+export WORKER_ID="shinypokemon-fake-worker"
+export WORKER_JOB_TYPES="generation"
+export POLL_INTERVAL_SECONDS="3"
+export HEARTBEAT_INTERVAL_SECONDS="2"
+export FAKE_RUN_SECONDS="5"
+export FAKE_UPLOAD_SECONDS="2"
+python worker/worker.py
+```
+
+Server A test job:
+
+```text
+POST /api/jobs
+payload = {"seed":404,"source":"server-b-smoke"}
+job id = 8
+```
+
+Server A API verification:
+
+```text
+GET /api/jobs/8 -> 200 OK
+status = completed
+result.mock = true
+result.worker_id = shinypokemon-fake-worker
+```
+
+After the smoke test, the worker was stopped and Server B was stopped in RONIN
+to avoid GPU budget usage.
+
 ## Not Implemented Yet
 
 - real Python GPU environment setup;
