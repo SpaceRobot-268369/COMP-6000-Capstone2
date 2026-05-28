@@ -125,10 +125,10 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   └── logs/
     │       ├── mvp_decision_log.md
     │       └── audioldm2_transition_log.md
-    ├── layer-b/                           # Layer B weather asset policy
-    │   └── weather_asset_policy.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
+    │   ├── site_clip_filtering_policy.md
+    │   ├── site_weather_audit_v0.md
     │   ├── known_issues.md
     │   └── logs/
     │       └── generation_quality_analysis.md
@@ -151,12 +151,13 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | **Conventions** (repo structure, naming, tracking, artifact tiers, attempt internals, model README) | [.claude/context/conventions.md](.claude/context/conventions.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
-| Layer B weather asset policy | [.claude/context/layer-b/weather_asset_policy.md](.claude/context/layer-b/weather_asset_policy.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
+| Site clip filtering policy | [.claude/context/data/site_clip_filtering_policy.md](.claude/context/data/site_clip_filtering_policy.md) |
+| Site weather audit v0 | [.claude/context/data/site_weather_audit_v0.md](.claude/context/data/site_weather_audit_v0.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
 | Generation quality analysis | [.claude/context/data/logs/generation_quality_analysis.md](.claude/context/data/logs/generation_quality_analysis.md) |
 | **Stage workflow** (smoke → mvp/prod loop, generation mode) | [.claude/context/dev/dev_workflow.md](.claude/context/dev/dev_workflow.md) |
