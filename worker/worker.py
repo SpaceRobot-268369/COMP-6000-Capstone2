@@ -11,6 +11,7 @@ flow.
 from __future__ import annotations
 
 import sys
+import subprocess
 import time
 from typing import Any
 
@@ -25,6 +26,8 @@ class Worker:
         self.config = config
         self.client = client
         self._next_heartbeat_by_job: dict[str, float] = {}
+        self._idle_since: float | None = None
+        self._shutdown_triggered = False
 
     def heartbeat_or_cancel(self, job_id: str) -> bool:
         now = time.monotonic()
@@ -105,6 +108,7 @@ class Worker:
         self._next_heartbeat_by_job[job_id] = 0
 
         try:
+            self._idle_since = None
             if job["type"] == "generation":
                 self.process_generation_job(job)
             elif job["type"] == "training":
@@ -124,6 +128,47 @@ class Worker:
         finally:
             self._next_heartbeat_by_job.pop(job_id, None)
 
+    def handle_idle(self) -> bool:
+        """Return True when the worker should exit after triggering shutdown."""
+
+        if not self.config.idle_shutdown_enabled:
+            return False
+
+        idle_status = self.client.idle_check()
+        if not idle_status["idle"]:
+            self._idle_since = None
+            print(
+                "idle-check: not idle "
+                f"queued={idle_status['queued_count']} "
+                f"active={idle_status['active_count']} "
+                f"uploading={idle_status['uploading_count']}",
+                flush=True,
+            )
+            return False
+
+        now = time.monotonic()
+        if self._idle_since is None:
+            self._idle_since = now
+            print("idle-check: queue idle; starting shutdown timer", flush=True)
+            return False
+
+        idle_seconds = int(now - self._idle_since)
+        if idle_seconds < self.config.idle_shutdown_seconds:
+            return False
+
+        if self._shutdown_triggered:
+            return True
+
+        self._shutdown_triggered = True
+        command = " ".join(self.config.shutdown_command)
+        if self.config.idle_shutdown_dry_run:
+            print(f"idle shutdown dry-run: would run `{command}`", flush=True)
+            return True
+
+        print(f"idle shutdown: running `{command}`", flush=True)
+        subprocess.run(self.config.shutdown_command, check=False)
+        return True
+
     def run_forever(self) -> int:
         print(
             "worker starting "
@@ -137,6 +182,8 @@ class Worker:
             try:
                 job = self.client.claim_job()
                 if not job:
+                    if self.handle_idle():
+                        return 0
                     time.sleep(self.config.poll_interval_seconds)
                     continue
                 self.process_job(job)

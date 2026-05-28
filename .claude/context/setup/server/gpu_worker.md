@@ -59,6 +59,10 @@ ARTIFACT_BASE_URI=s3://placeholder/generated
 LOG_BASE_URI=s3://placeholder/logs
 CHECKPOINT_BASE_URI=s3://placeholder/checkpoints
 METRICS_BASE_URI=s3://placeholder/metrics
+IDLE_SHUTDOWN_ENABLED=false
+IDLE_SHUTDOWN_DRY_RUN=true
+IDLE_SHUTDOWN_SECONDS=600
+SHUTDOWN_COMMAND=sudo shutdown -h now
 ```
 
 For Server A testing through SSH port forwarding, `SERVER_A_URL` can point at
@@ -111,6 +115,12 @@ artifact_uri = <CHECKPOINT_BASE_URI>/<run-id>/checkpoint.safetensors
 log_uri = <LOG_BASE_URI>/<run-id>/train.log
 result = {"mock": true, "checkpoint_uri": ..., "metrics_uri": ...}
 ```
+
+Idle shutdown is disabled by default. When enabled, the worker asks Server A for
+queue state after failed claims. If the queue is idle for
+`IDLE_SHUTDOWN_SECONDS`, the worker runs `SHUTDOWN_COMMAND`. Keep
+`IDLE_SHUTDOWN_DRY_RUN=true` while testing so the worker exits after printing
+the command instead of powering off Server B.
 
 ## Smoke Test
 

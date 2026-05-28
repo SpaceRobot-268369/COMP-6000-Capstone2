@@ -537,6 +537,53 @@ app.post("/api/worker/jobs/:id/status", requireWorkerAuth, async (req, res) => {
   }
 });
 
+app.post("/api/worker/jobs/idle-check", requireWorkerAuth, async (req, res) => {
+  const workerId = normalizeString(req.body?.worker_id);
+  const requestedTypes = Array.isArray(req.body?.types) && req.body.types.length > 0
+    ? req.body.types.map(normalizeString)
+    : ["generation", "training"];
+  const types = requestedTypes.filter((type) => JOB_TYPES.has(type));
+
+  if (!workerId) {
+    return res.status(400).json({ ok: false, message: "worker_id is required." });
+  }
+
+  if (types.length !== requestedTypes.length) {
+    return res.status(400).json({ ok: false, message: "Worker types must be generation or training." });
+  }
+
+  try {
+    const { rows } = await query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'queued' AND type = ANY($1::text[]))::int AS queued_count,
+         COUNT(*) FILTER (
+           WHERE status IN ('claimed', 'running', 'uploading', 'cancel_requested')
+             AND type = ANY($1::text[])
+         )::int AS active_count,
+         COUNT(*) FILTER (WHERE status = 'uploading' AND type = ANY($1::text[]))::int AS uploading_count
+       FROM jobs`,
+      [types],
+    );
+
+    const counts = rows[0];
+    const queuedCount = counts.queued_count;
+    const activeCount = counts.active_count;
+    const uploadingCount = counts.uploading_count;
+
+    res.json({
+      ok: true,
+      idle: queuedCount === 0 && activeCount === 0 && uploadingCount === 0,
+      queued_count: queuedCount,
+      active_count: activeCount,
+      uploading_count: uploadingCount,
+      checked_types: types,
+    });
+  } catch (err) {
+    console.error("Idle check failed:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
 app.post("/api/worker/jobs/recover-stale", requireWorkerAuth, async (req, res) => {
   const requestedTimeoutSeconds = Number(req.body?.timeout_seconds ?? 300);
   const timeoutSeconds = Number.isInteger(requestedTimeoutSeconds) && requestedTimeoutSeconds > 0

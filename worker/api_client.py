@@ -99,3 +99,11 @@ class ServerAClient:
         response = self.post(f"/api/worker/jobs/{job_id}/status", body)
         return response["job"]
 
+    def idle_check(self) -> dict[str, Any]:
+        return self.post(
+            "/api/worker/jobs/idle-check",
+            {
+                "worker_id": self.config.worker_id,
+                "types": self.config.worker_job_types,
+            },
+        )

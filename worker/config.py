@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import shlex
 import socket
 
 
@@ -16,6 +17,13 @@ def env_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)
@@ -33,6 +41,10 @@ class WorkerConfig:
     log_base_uri: str
     checkpoint_base_uri: str
     metrics_base_uri: str
+    idle_shutdown_enabled: bool
+    idle_shutdown_dry_run: bool
+    idle_shutdown_seconds: int
+    shutdown_command: list[str]
 
 
 def load_config() -> WorkerConfig:
@@ -56,4 +68,8 @@ def load_config() -> WorkerConfig:
         log_base_uri=os.getenv("LOG_BASE_URI", "s3://placeholder/logs").rstrip("/"),
         checkpoint_base_uri=os.getenv("CHECKPOINT_BASE_URI", "s3://placeholder/checkpoints").rstrip("/"),
         metrics_base_uri=os.getenv("METRICS_BASE_URI", "s3://placeholder/metrics").rstrip("/"),
+        idle_shutdown_enabled=env_bool("IDLE_SHUTDOWN_ENABLED", False),
+        idle_shutdown_dry_run=env_bool("IDLE_SHUTDOWN_DRY_RUN", True),
+        idle_shutdown_seconds=env_int("IDLE_SHUTDOWN_SECONDS", 600),
+        shutdown_command=shlex.split(os.getenv("SHUTDOWN_COMMAND", "sudo shutdown -h now")),
     )

@@ -38,6 +38,42 @@ MVP job types:
 Generation jobs should have priority over training jobs because users wait on
 them interactively.
 
+## Worker Idle Check
+
+Server B uses the worker idle-check endpoint before automatic shutdown:
+
+```text
+POST /api/worker/jobs/idle-check
+Authorization: Bearer <WORKER_API_TOKEN>
+```
+
+Request:
+
+```json
+{
+  "worker_id": "shinypokemon-fake-worker",
+  "types": ["generation", "training"]
+}
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "idle": true,
+  "queued_count": 0,
+  "active_count": 0,
+  "uploading_count": 0,
+  "checked_types": ["generation", "training"]
+}
+```
+
+`idle` is true only when there are no queued or active jobs for the requested
+types. Active means `claimed`, `running`, `uploading`, or `cancel_requested`.
+The Server B worker must still wait for its configured idle timeout before
+running a shutdown command.
+
 ## Job Statuses
 
 | Status | Meaning |
