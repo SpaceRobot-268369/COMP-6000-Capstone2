@@ -59,6 +59,14 @@ resources/**
 !resources/site_257_bowra-dry-a/site_257_all_items.csv
 !resources/site_257_bowra-dry-a/all_items_annotation/
 !resources/site_257_bowra-dry-a/all_items_annotation/README.md
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/*.csv
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/*.jsonl
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_core6_data/
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_core6_data/README.md
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_core6_data/*.txt
+!resources/site_257_bowra-dry-a/layer_c_smoke_fairywren_robin_bellbird/bronze_cuckoo_natural_core_v1/sa3_lora_core6_data/*.wav.dvc
 
 # IDE and editors
 .idea/
