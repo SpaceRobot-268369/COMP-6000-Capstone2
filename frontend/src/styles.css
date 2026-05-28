@@ -205,6 +205,56 @@ textarea {
   background: rgba(177, 242, 255, 0.08);
 }
 
+.sidebar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(177, 242, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d6f8ff;
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 180ms ease;
+}
+
+.sidebar-status:hover {
+  border-color: rgba(177, 242, 255, 0.38);
+  background: rgba(177, 242, 255, 0.08);
+}
+
+.sidebar-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  flex-shrink: 0;
+}
+
+.sidebar-status-label {
+  color: rgba(238, 249, 252, 0.85);
+}
+
+.sidebar-status--online   { color: #4ade80; }
+.sidebar-status--degraded { color: #facc15; }
+.sidebar-status--offline  { color: #f87171; }
+.sidebar-status--checking { color: rgba(210, 244, 255, 0.55); }
+.sidebar-status--checking .sidebar-status-dot {
+  animation: sidebar-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sidebar-status-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
 .main-panel {
   min-width: 0;
   height: 100vh;
@@ -3344,6 +3394,19 @@ textarea {
 [data-theme="light"] .sidebar-action:hover,
 [data-theme="light"] .sidebar-action.active { border-color: rgba(0,110,155,0.42); background: rgba(0,100,140,0.1); color: #003a55; }
 [data-theme="light"] .sidebar-logout-button { border-color: rgba(0,110,155,0.2); color: #005070; }
+[data-theme="light"] .sidebar-status {
+  border-color: rgba(0,110,155,0.2);
+  background: rgba(0,0,0,0.03);
+}
+[data-theme="light"] .sidebar-status:hover {
+  border-color: rgba(0,110,155,0.42);
+  background: rgba(0,100,140,0.1);
+}
+[data-theme="light"] .sidebar-status-label  { color: rgba(0, 30, 50, 0.78); }
+[data-theme="light"] .sidebar-status--online   { color: #15803d; }
+[data-theme="light"] .sidebar-status--degraded { color: #a16207; }
+[data-theme="light"] .sidebar-status--offline  { color: #b91c1c; }
+[data-theme="light"] .sidebar-status--checking { color: rgba(0, 30, 50, 0.45); }
 
 /* ── Theme toggle itself ─────────────────────────────────────────────────── */
 [data-theme="light"] .theme-toggle { border-color: rgba(0,100,140,0.16); background: rgba(0,0,0,0.04); }

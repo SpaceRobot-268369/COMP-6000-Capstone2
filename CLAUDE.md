@@ -311,6 +311,17 @@ Commands, env vars, ports: [.claude/context/setup/local/services.md](.claude/con
 - Remote is already declared in `.dvc/config`; new machines just need the install + AWS profile.
 - Full workflow (fresh-clone, daily commands, candidate discipline, troubleshooting): [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md).
 
+### Pre-Commit File Audit
+
+Before every commit, check whether any unintended files are being tracked by git.
+
+1. Run `git status` and inspect the staged and untracked file lists.
+2. If any file appears that should not be committed (large binaries, generated outputs, credentials, editor artefacts, OS files, etc.), **do not commit yet**.
+3. Add the offending path(s) to `.gitignore` (and run `git rm --cached <path>` if the file is already tracked).
+4. Verify `git status` is clean of unintended files before proceeding with the commit.
+
+This check is mandatory — never skip it, even for "quick" commits.
+
 ---
 
 ## Backend API
