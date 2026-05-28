@@ -1,5 +1,8 @@
 # Model README Standard
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for the required sections of a model checkpoint's `README.md`.
+
 Every trained model checkpoint folder must include a `README.md` that acts as
 the durable model log and lightweight model card.
 

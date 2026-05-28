@@ -1,5 +1,8 @@
 # Attempt Naming Rules
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for attempt + checkpoint folder naming.
+
 Single source of truth for how AI-module attempts are named on disk, in the
 model registry, and on checkpoint folders under `model/candidates/`. This
 applies to every layer (A–E) under `acoustic_ai/layers/`.

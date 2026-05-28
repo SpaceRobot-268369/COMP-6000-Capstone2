@@ -1,5 +1,10 @@
 # DVC + S3 Workflow
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for DVC commands, the git vs. DVC tracking split, and the
+> daily/fresh-clone discipline. Bucket paths live in [s3_bucket_layout.md](s3_bucket_layout.md);
+> per-attempt artifact rules live in [artifact_policy.md](artifact_policy.md).
+
 DVC tracks large binary artifacts (audio clips, model checkpoints, latent
 databases) so they stay out of git history. Git stores only the `.dvc` pointer
 files (~100 bytes each); the actual bytes live in S3.

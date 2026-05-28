@@ -129,6 +129,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   └── logs/
     │       └── generation_quality_analysis.md
     ├── dev/                               # Developer workflows, specs, stage goals, testing, diagrams
+    │   ├── conventions.md                 # Index of all naming/layout/policy rules (links to the deep-dives below)
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
     │   ├── s3_bucket_layout.md
@@ -154,6 +155,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 
 | Need | Doc |
 |---|---|
+| **Conventions hub** (naming, layout, policy index) | [.claude/context/dev/conventions.md](.claude/context/dev/conventions.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
@@ -180,6 +182,14 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ---
 
 ## Critical conventions
+
+> Project-wide index of naming, layout, and policy rules:
+> [.claude/context/dev/conventions.md](.claude/context/dev/conventions.md). The
+> subsections below are the **canonical home** for CLAUDE.md-only rules (Storage
+> rule, Python environment, Pipeline-vs-attempt params, Layer A dev-generation
+> contract). Other rules — branch naming, attempt naming, artifact policy,
+> etc. — live in their own docs under `.claude/context/dev/`; the hub links to
+> all of them.
 
 ### Storage rule
 

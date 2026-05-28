@@ -1,5 +1,9 @@
 # S3 Bucket Layout — `eco-acoustic-data.store.adelaideuni.cloud`
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for the S3 bucket structure and prefixes. DVC commands +
+> workflow live in [dvc_workflow.md](dvc_workflow.md).
+
 This bucket is the shared DVC remote and human-browsable artifact store for the
 Capstone 2 project. Region: `ap-southeast-2`.
 

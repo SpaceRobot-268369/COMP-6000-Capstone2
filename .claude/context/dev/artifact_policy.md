@@ -1,5 +1,9 @@
 # Artifact Policy
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for sample artifact tiers, per-case subdir naming, the git/DVC
+> split, the canonical seed `42`, and PNG metadata baking.
+
 What sample outputs (audio, spectrograms, metadata) live in the repo, where,
 and how they're stored. Goal: switching to any teammate's branch shows their
 results without re-running training/inference.

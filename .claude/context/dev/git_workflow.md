@@ -1,5 +1,9 @@
 # Git Workflow & Standards
 
+> Part of the project [conventions index](conventions.md). This is the
+> canonical doc for branch naming, commit subject style, the pre-commit
+> file audit, and the "do not track in git" categories.
+
 ## Branch Naming
 
 All branches must follow this pattern:
