@@ -28,14 +28,17 @@ class WorkerConfig:
     heartbeat_interval_seconds: int
     fake_run_seconds: int
     fake_upload_seconds: int
+    fake_training_seconds: int
     artifact_base_uri: str
     log_base_uri: str
+    checkpoint_base_uri: str
+    metrics_base_uri: str
 
 
 def load_config() -> WorkerConfig:
     worker_job_types = [
         item.strip()
-        for item in os.getenv("WORKER_JOB_TYPES", "generation").split(",")
+        for item in os.getenv("WORKER_JOB_TYPES", "generation,training").split(",")
         if item.strip()
     ]
 
@@ -48,7 +51,9 @@ def load_config() -> WorkerConfig:
         heartbeat_interval_seconds=env_int("HEARTBEAT_INTERVAL_SECONDS", 30),
         fake_run_seconds=env_int("FAKE_RUN_SECONDS", 5),
         fake_upload_seconds=env_int("FAKE_UPLOAD_SECONDS", 2),
+        fake_training_seconds=env_int("FAKE_TRAINING_SECONDS", 10),
         artifact_base_uri=os.getenv("ARTIFACT_BASE_URI", "s3://placeholder/generated").rstrip("/"),
         log_base_uri=os.getenv("LOG_BASE_URI", "s3://placeholder/logs").rstrip("/"),
+        checkpoint_base_uri=os.getenv("CHECKPOINT_BASE_URI", "s3://placeholder/checkpoints").rstrip("/"),
+        metrics_base_uri=os.getenv("METRICS_BASE_URI", "s3://placeholder/metrics").rstrip("/"),
     )
-

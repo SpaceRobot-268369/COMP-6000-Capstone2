@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Server B worker loop for the Milestone 3 API contract.
 
-The worker currently uses a fake generation adapter. It verifies that a Python
-daemon can claim jobs from Server A, send heartbeats, and drive the job state
-machine through running, uploading, and completed. Real generation should be
-plugged into generation_adapter.py without changing the Server A API flow.
+The worker currently uses fake generation and training adapters. It verifies
+that a Python daemon can claim jobs from Server A, send heartbeats, and drive
+the job state machine through running, uploading, and completed. Real layer
+logic should be plugged into the adapters without changing the Server A API
+flow.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from typing import Any
 from api_client import ServerAClient
 from config import WorkerConfig, load_config
 from generation_adapter import run_generation_job, upload_generation_outputs
+from training_adapter import run_training_job, upload_training_outputs
 
 
 class Worker:
@@ -68,6 +70,35 @@ class Worker:
         )
         print(f"job {job_id}: completed artifact_uri={generation_result.artifact_uri}", flush=True)
 
+    def process_training_job(self, job: dict[str, Any]) -> None:
+        job_id = str(job["id"])
+        self.client.update_status(job_id, "running")
+
+        training_result = run_training_job(
+            job,
+            self.config,
+            lambda: self.heartbeat_or_cancel(job_id),
+        )
+        if training_result is None:
+            return
+
+        self.client.update_status(job_id, "uploading")
+        if not upload_training_outputs(
+            job,
+            self.config,
+            lambda: self.heartbeat_or_cancel(job_id),
+        ):
+            return
+
+        self.client.update_status(
+            job_id,
+            "completed",
+            result=training_result.result,
+            artifact_uri=training_result.checkpoint_uri,
+            log_uri=training_result.log_uri,
+        )
+        print(f"job {job_id}: completed checkpoint_uri={training_result.checkpoint_uri}", flush=True)
+
     def process_job(self, job: dict[str, Any]) -> None:
         job_id = str(job["id"])
         print(f"job {job_id}: claimed type={job['type']}", flush=True)
@@ -76,6 +107,8 @@ class Worker:
         try:
             if job["type"] == "generation":
                 self.process_generation_job(job)
+            elif job["type"] == "training":
+                self.process_training_job(job)
             else:
                 raise RuntimeError(f"unsupported job type: {job['type']}")
         except Exception as exc:

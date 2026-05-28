@@ -22,6 +22,7 @@ Files:
 worker/api_client.py
 worker/config.py
 worker/generation_adapter.py
+worker/training_adapter.py
 worker/worker.py
 worker/.env.example
 worker/requirements.txt
@@ -31,7 +32,9 @@ The worker uses only Python standard library modules for the MVP. The main loop
 and Server A API contract live in `worker/worker.py` and `worker/api_client.py`.
 The current fake generation implementation lives in
 `worker/generation_adapter.py`; real `acoustic_ai` generation and artifact
-upload should be added there first.
+upload should be added there first. The current fake training implementation
+lives in `worker/training_adapter.py`; real Layer A/C training commands and
+checkpoint upload should be added there first.
 
 ## Environment
 
@@ -41,18 +44,21 @@ Required:
 SERVER_A_URL=http://localhost
 WORKER_API_TOKEN=change-me
 WORKER_ID=shinypokemon-manual-worker
+WORKER_JOB_TYPES=generation,training
 ```
 
 Optional:
 
 ```env
-WORKER_JOB_TYPES=generation
 POLL_INTERVAL_SECONDS=10
 HEARTBEAT_INTERVAL_SECONDS=30
 FAKE_RUN_SECONDS=5
+FAKE_TRAINING_SECONDS=10
 FAKE_UPLOAD_SECONDS=2
 ARTIFACT_BASE_URI=s3://placeholder/generated
 LOG_BASE_URI=s3://placeholder/logs
+CHECKPOINT_BASE_URI=s3://placeholder/checkpoints
+METRICS_BASE_URI=s3://placeholder/metrics
 ```
 
 For Server A testing through SSH port forwarding, `SERVER_A_URL` can point at
@@ -95,6 +101,15 @@ Placeholder completion metadata:
 artifact_uri = <ARTIFACT_BASE_URI>/job-<id>.wav
 log_uri = <LOG_BASE_URI>/job-<id>.log
 result = {"mock": true, ...}
+```
+
+Training jobs use the same state flow and currently return placeholder training
+metadata:
+
+```text
+artifact_uri = <CHECKPOINT_BASE_URI>/<run-id>/checkpoint.safetensors
+log_uri = <LOG_BASE_URI>/<run-id>/train.log
+result = {"mock": true, "checkpoint_uri": ..., "metrics_uri": ...}
 ```
 
 ## Smoke Test
