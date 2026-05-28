@@ -1,0 +1,24 @@
+# Stable Audio 3 LoRA training environment
+#
+# Recommended base:
+#   Python 3.10 or 3.11
+#   NVIDIA CUDA GPU
+#
+# Install PyTorch first if the image does not already provide it. The
+# stable-audio-3 package currently pins torch==2.7.1 and torchaudio==2.7.1.
+#
+# Example:
+#   python -m pip install --upgrade pip setuptools wheel
+#   python -m pip install git+https://github.com/Stability-AI/stable-audio-3.git
+#   python -m pip install dill pytorch-lightning safetensors wandb matplotlib pandas soundfile librosa torchvision==0.22.1
+
+git+https://github.com/Stability-AI/stable-audio-3.git@fa5ee841dd49bae0fa361fac26904adc27fd400e
+dill
+pytorch-lightning
+safetensors
+wandb
+matplotlib
+pandas
+soundfile
+librosa
+torchvision==0.22.1

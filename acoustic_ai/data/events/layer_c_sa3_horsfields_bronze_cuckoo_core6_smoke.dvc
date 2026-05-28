@@ -1,0 +1,6 @@
+outs:
+- md5: 1ae34bf1eb698f97a7ed61411825b4c3.dir
+  size: 970218
+  nfiles: 16
+  hash: md5
+  path: layer_c_sa3_horsfields_bronze_cuckoo_core6_smoke
