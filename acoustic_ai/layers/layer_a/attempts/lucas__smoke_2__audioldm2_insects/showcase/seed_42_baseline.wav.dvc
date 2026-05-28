@@ -1,0 +1,5 @@
+outs:
+- md5: 1129006d9c62d1b924e106c7ae180b53
+  size: 320044
+  hash: md5
+  path: seed_42_baseline.wav

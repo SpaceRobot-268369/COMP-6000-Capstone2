@@ -1,0 +1,15 @@
+{
+  "audio": {
+    "duration_s": 9.0151875,
+    "peak": 0.007659912109375,
+    "rms": 0.00228346255607903,
+    "sample_rate": 16000
+  },
+  "selection_reason": "highest BirdNET confidence (0.9999) \u2014 clean canonical boobook call (2019-08-14 23:07)",
+  "source": "real_audio",
+  "source_clip_id": "5296_audioevent_6180314",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/manifest.csv",
+  "source_metadata": {},
+  "tier": "expected"
+}

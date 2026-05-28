@@ -130,38 +130,42 @@ dvc push
 
 ## Sample artifacts
 
-Each attempt has a `samples/` subtree. See
+Each attempt has `expected/`, `showcase/`, and `dev-artifacts-self-testing/`
+tiers directly at attempt root. See
 [artifact_policy.md](artifact_policy.md) for the full rules; the DVC-relevant
 bits:
 
 ```
-acoustic_ai/layers/<layer>/attempts/<id>/samples/
-├── reference/seed_42.png            # git
-├── reference/seed_42.metadata.json  # git
-├── reference/seed_42.wav.dvc        # git pointer → S3
-├── showcase/seed_<N>_<label>.*.dvc  # all DVC (PNG + JSON + WAV)
-└── dev/                             # gitignored
+acoustic_ai/layers/<layer>/attempts/<id>/
+├── expected/seed_42.png            # git
+├── expected/seed_42.metadata.json  # git
+├── expected/seed_42.wav.dvc        # git pointer → S3
+├── showcase/seed_<N>_<label>.*.dvc # all DVC (PNG + JSON + WAV)
+└── dev-artifacts-self-testing/     # gitignored — ad-hoc developer self-test runs
 ```
 
-**Regenerate + commit a reference sample** (canonical seed `42`):
+**Regenerate + commit an expected sample** (canonical seed `42`):
 
 ```bash
 acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
     layer_a lucas__smoke_1__audioldm2_spring_night
 
-dvc add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/samples/reference/seed_42.wav
-git add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/samples/reference/   # picks up .png, .json, .wav.dvc
-git commit -m "model: refresh smoke_1 reference sample"
+dvc add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/expected/seed_42.wav
+git add  acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night/expected/   # picks up .png, .json, .wav.dvc
+git commit -m "model: refresh smoke_1 expected sample"
 git push && dvc push
 ```
 
 **Add a showcase sample** (everything DVC):
 
 ```bash
-dvc add <attempt>/samples/showcase/seed_7_quiet.wav \
-        <attempt>/samples/showcase/seed_7_quiet.png \
-        <attempt>/samples/showcase/seed_7_quiet.metadata.json
-git add <attempt>/samples/showcase/*.dvc
+acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
+    layer_a lucas__smoke_1__audioldm2_spring_night --showcase --seed 7 --label quiet
+
+dvc add <attempt>/showcase/seed_7_quiet.wav \
+        <attempt>/showcase/seed_7_quiet.png \
+        <attempt>/showcase/seed_7_quiet.metadata.json
+git add <attempt>/showcase/*.dvc
 git commit && git push && dvc push
 ```
 

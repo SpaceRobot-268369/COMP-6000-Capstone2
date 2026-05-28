@@ -23,8 +23,9 @@ export default function LayerATestPage() {
   const [progress, setProgress] = useState(0);
 
   // Cached samples (loaded whenever the attempt changes)
-  const [samples,    setSamples]    = useState(null);  // {reference:[…], showcase:[…], canonical_seed}
+  const [samples,    setSamples]    = useState(null);  // {expected:[…], showcase:[…], canonical_seed}
   const [samplesErr, setSamplesErr] = useState("");
+  const [expectedKey, setExpectedKey] = useState(""); // "<tier>/<stem>"
 
   // Load the layer registry once on mount.
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function LayerATestPage() {
     if (!layerId || !attemptId) return;
     setSamples(null);
     setSamplesErr("");
+    setExpectedKey("");
     fetchAttemptSamples(layerId, attemptId)
       .then((doc) => {
         setSamples(doc);
@@ -72,6 +74,34 @@ export default function LayerATestPage() {
   const currentAttempt = useMemo(
     () => currentLayer?.attempts.find((a) => a.id === attemptId),
     [currentLayer, attemptId],
+  );
+
+  // Flatten cached samples in display order (expected first, then showcase).
+  const expectedEntries = useMemo(() => {
+    if (!samples) return [];
+    const tiers = [
+      { tier: "expected", entries: samples.expected || [] },
+      { tier: "showcase", entries: samples.showcase || [] },
+    ];
+    return tiers.flatMap((t) =>
+      t.entries.map((s) => ({ tier: t.tier, sample: s, key: `${t.tier}/${s.stem}` })),
+    );
+  }, [samples]);
+
+  // Auto-select the first expected sample when entries change.
+  useEffect(() => {
+    if (!expectedEntries.length) {
+      setExpectedKey("");
+      return;
+    }
+    if (!expectedEntries.some((e) => e.key === expectedKey)) {
+      setExpectedKey(expectedEntries[0].key);
+    }
+  }, [expectedEntries, expectedKey]);
+
+  const expectedSelected = useMemo(
+    () => expectedEntries.find((e) => e.key === expectedKey) || null,
+    [expectedEntries, expectedKey],
   );
 
   // Fake progress ticker.
@@ -170,191 +200,346 @@ export default function LayerATestPage() {
         </div>
       </header>
 
-      <div className="generation-grid layer-a-grid">
-        {/* ── Left: input parameters ── */}
+      <div className="dev-controls-row">
+        {/* ── Top: controls (own row) ── */}
         <aside className="panel generation-sidebar-card">
           <div className="generation-card-head">
-            <h2>{currentLayer?.label || layerId}</h2>
+            <h2>
+              {currentLayer?.label || layerId}
+              {currentAttempt && currentAttempt.available === false && (
+                <span className="dev-unavailable-pill" title={currentAttempt.unavailable_reason || ""}>
+                  Unavailable
+                </span>
+              )}
+            </h2>
             <p>{currentAttempt?.label || attemptId}</p>
           </div>
 
-          <div className="generation-sidebar-body" style={{ display: "grid", gap: 14 }}>
-            <LabeledSelect
-              label="Layer"
-              value={layerId}
-              onChange={setLayerId}
-              options={registry.layers.map((l) => ({ value: l.id, label: l.label }))}
-            />
+          <div className="dev-controls-body">
+            <div className="dev-controls-form">
+              <LabeledSelect
+                label="Layer"
+                value={layerId}
+                onChange={setLayerId}
+                options={registry.layers.map((l) => ({ value: l.id, label: l.label }))}
+              />
 
-            <LabeledSelect
-              label="Attempt"
-              value={attemptId}
-              onChange={setAttemptId}
-              options={(currentLayer?.attempts || []).map((a) => ({
-                value: a.id,
-                label: `${a.label}  (${a.stage}, ${a.status})`,
-              }))}
-            />
+              <LabeledSelect
+                label="Model / Attempt"
+                value={attemptId}
+                onChange={setAttemptId}
+                options={(currentLayer?.attempts || []).map((a) => ({
+                  value: a.id,
+                  label: `${a.label}  (${a.stage}, ${a.status})${a.available === false ? " — unavailable" : ""}`,
+                }))}
+              />
 
-            <div className="gen-info-block">
-              <p>Attempt ID</p>
-              <code>{attemptId}</code>
+              <LabeledNumber
+                label="Seed"
+                value={seed}
+                min={0}
+                max={2147483647}
+                hint="Same seed + same attempt = same audio."
+                onChange={setSeed}
+              />
+
+              <div className="dev-controls-action">
+                <button
+                  type="button"
+                  className="gen-primary-btn"
+                  onClick={handleRun}
+                  disabled={isLoading || !attemptId || currentAttempt?.available === false}
+                  title={
+                    currentAttempt?.available === false
+                      ? currentAttempt?.unavailable_reason || "Model weights unavailable"
+                      : undefined
+                  }
+                >
+                  {isLoading ? "Generating..." : "Generate"}
+                </button>
+              </div>
             </div>
 
-            <LabeledNumber
-              label="Seed"
-              value={seed}
-              min={0}
-              max={2147483647}
-              hint="Seed controls the random starting noise. Same seed + same attempt = same audio."
-              onChange={setSeed}
-            />
-
-            <button
-              type="button"
-              className="gen-primary-btn"
-              onClick={handleRun}
-              disabled={isLoading || !attemptId}
-              style={{ marginTop: 4 }}
-            >
-              {isLoading ? "Generating..." : "Generate"}
-            </button>
+            {currentAttempt && currentAttempt.available === false && (
+              <div className="dev-availability-warn" role="alert">
+                <p className="dev-availability-title">⚠ Model weights unavailable</p>
+                <p className="dev-availability-reason">
+                  {currentAttempt.unavailable_reason ||
+                    "Required weight files are not on disk."}
+                </p>
+                {currentAttempt.missing_files?.length > 0 && currentAttempt.checkpoint && (
+                  <pre className="dev-availability-cmd">
+{`dvc pull \\\n  ${currentAttempt.missing_files
+  .map((f) => `${currentAttempt.checkpoint}/${f}`)
+  .join(" \\\n  ")}`}
+                  </pre>
+                )}
+              </div>
+            )}
 
             {(isLoading || isDone) && (
               <ProgressBlock progress={progress} label={progressText} />
             )}
 
-            {errorMsg && (
-              <p className="analysis-error" style={{ marginTop: 8 }}>{errorMsg}</p>
-            )}
-          </div>
-        </aside>
+            {errorMsg && <p className="analysis-error">{errorMsg}</p>}
 
-        {/* ── Centre: viewer ── */}
-        <main className="panel generation-canvas-card">
-          <div className="generation-canvas"
-               style={{ display: "block", padding: 20, overflow: "auto" }}>
-
-            {/* Cached samples (no model load) */}
-            <CachedSamples
-              layerId={layerId}
-              attemptId={attemptId}
-              samples={samples}
-              error={samplesErr}
-            />
-
-            {!isDone && !isLoading && !samples?.reference?.length && !samples?.showcase?.length && (
-              <div style={{ padding: "24px 0", opacity: 0.6 }}>
-                <p style={{ fontSize: 13 }}>
-                  No cached samples on disk yet. Click Generate to run the handler.
-                </p>
+            <div className="dev-controls-meta">
+              <div className="gen-info-block">
+                <p>Attempt ID</p>
+                <code>{attemptId || "—"}</code>
               </div>
-            )}
 
-            {isLoading && (
-              <div className="gen-computing-overlay">
-                <div className="layer-a-processing">
-                  <div className="gen-computing-ring" />
-                  <ProgressBlock progress={progress} label={progressText} />
-                </div>
+              <div className="gen-info-block">
+                <p>Run tag</p>
+                <code>{isDone ? tag : "—"}</code>
               </div>
-            )}
 
-            {isDone && (
-              <div className="layer-a-result-stack">
-                {result?.audio_b64 && (
-                  <ReviewSection title="♪ Audio">
-                    <audio controls
-                           src={`data:audio/wav;base64,${result.audio_b64}`}
-                           style={{ width: "100%" }} />
-                    <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                      {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s · seed{" "}
-                      {result.metadata?.seed ?? seed}
-                    </p>
-                  </ReviewSection>
-                )}
-
-                {result?.image_b64 && (
-                  <ReviewSection title="▤ Mel-Spectrogram">
-                    <img src={`data:image/png;base64,${result.image_b64}`}
-                         alt="Mel-spectrogram"
-                         className="gen-spectrogram-img layer-a-spectrogram-img" />
-                  </ReviewSection>
-                )}
-
-                {result?.metadata && (
-                  <ReviewSection title="{ } Metadata">
-                    <pre className="layer-a-json">
-                      {JSON.stringify(result.metadata, null, 2)}
-                    </pre>
-                  </ReviewSection>
-                )}
+              <div className="gen-info-block">
+                <p>Audio stats</p>
+                <code>
+                  {isDone && result?.metadata?.audio
+                    ? `RMS ${result.metadata.audio.rms?.toFixed?.(4)} · peak ${result.metadata.audio.peak?.toFixed?.(4)}`
+                    : "—"}
+                </code>
               </div>
-            )}
-          </div>
-        </main>
-
-        {/* ── Right: outputs ── */}
-        <aside className="panel generation-output-card">
-          <div className="generation-card-head">
-            <h2>Outputs</h2>
-            <p>WAV, mel-spectrogram, metadata</p>
-          </div>
-
-          <div className="generation-output-body">
-            <article className="gen-file-card">
-              <div className="gen-file-head">
-                <div className="gen-file-icon">▤</div>
-                <div>
-                  <span>Run tag</span>
-                  <strong>{isDone ? tag : "-"}</strong>
-                </div>
-              </div>
-            </article>
+            </div>
 
             {isDone && result?.metadata?.prompt_locked && (
               <p className="mock-badge">
                 Fixed prompt active — user prompts disabled
               </p>
             )}
+          </div>
+        </aside>
 
-            {isDone && result?.metadata?.audio && (
-              <div className="gen-info-block">
-                <p>Audio stats</p>
-                <code>
-                  RMS {result.metadata.audio.rms?.toFixed?.(4)} · peak{" "}
-                  {result.metadata.audio.peak?.toFixed?.(4)}
-                </code>
+      </div>
+
+      <div className="dev-results-row">
+        {/* ── Left: expected results (cached) ── */}
+        <main className="panel dev-result-card">
+          <div className="generation-card-head">
+            <h2>Expected Results</h2>
+            <p>
+              {samples?.canonical_seed != null
+                ? `Cached samples · canonical seed ${samples.canonical_seed}`
+                : "Cached expected / showcase samples"}
+            </p>
+          </div>
+
+          <div className="dev-result-body">
+            {samplesErr && <p className="analysis-error">{samplesErr}</p>}
+
+            {expectedEntries.length > 1 && (
+              <div className="dev-sample-tabs" role="tablist" aria-label="Cached samples">
+                {expectedEntries.map((e) => (
+                  <button
+                    key={e.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={e.key === expectedKey}
+                    className={`dev-sample-tab${e.key === expectedKey ? " active" : ""}`}
+                    onClick={() => setExpectedKey(e.key)}
+                  >
+                    <span className="dev-sample-tab-tier">{e.tier}</span>
+                    <span className="dev-sample-tab-stem">{e.sample.stem}</span>
+                  </button>
+                ))}
               </div>
             )}
 
-            <button type="button" className="gen-secondary-btn"
-                    disabled={!isDone || !result?.audio_b64}
-                    onClick={() => downloadDataUrl(
-                      `data:audio/wav;base64,${result.audio_b64}`,
-                      `${tag}.wav`,
-                    )}>
-              ↓ Download WAV
-            </button>
+            <ExpectedSample
+              layerId={layerId}
+              attemptId={attemptId}
+              tier={expectedSelected?.tier}
+              sample={expectedSelected?.sample}
+              loading={!samplesErr && !samples}
+              empty={!samplesErr && samples && expectedEntries.length === 0}
+            />
+          </div>
+        </main>
 
-            <button type="button" className="gen-secondary-btn"
-                    disabled={!isDone || !result?.image_b64}
-                    onClick={() => downloadDataUrl(
-                      `data:image/png;base64,${result.image_b64}`,
-                      `${tag}_spectrogram.png`,
-                    )}>
-              ↓ Download Spectrogram (PNG)
-            </button>
+        {/* ── Right: generated results (live run) ── */}
+        <aside className="panel dev-result-card">
+          <div className="generation-card-head">
+            <h2>Generated Results</h2>
+            <p>Live output from the latest run</p>
+          </div>
 
-            <button type="button" className="gen-secondary-btn"
-                    disabled={!isDone}
-                    onClick={downloadJson}>
-              ↓ Download Metadata (JSON)
-            </button>
+          <div className="dev-result-body">
+            <ReviewSection title="♪ Audio">
+              {isDone && result?.audio_b64 ? (
+                <>
+                  <audio controls
+                         src={`data:audio/wav;base64,${result.audio_b64}`}
+                         style={{ width: "100%" }} />
+                  <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+                    {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s · seed{" "}
+                    {result.metadata?.seed ?? seed}
+                  </p>
+                </>
+              ) : (
+                <Placeholder kind="audio" loading={isLoading}>
+                  {isLoading ? "Generating audio…" : "Click Generate to run the handler."}
+                </Placeholder>
+              )}
+            </ReviewSection>
+
+            <ReviewSection title="▤ Mel-Spectrogram">
+              {isDone && result?.image_b64 ? (
+                <img src={`data:image/png;base64,${result.image_b64}`}
+                     alt="Mel-spectrogram"
+                     className="gen-spectrogram-img layer-a-spectrogram-img" />
+              ) : (
+                <Placeholder kind="image" loading={isLoading}>
+                  {isLoading ? "Rendering spectrogram…" : "Spectrogram appears after generation."}
+                </Placeholder>
+              )}
+            </ReviewSection>
+
+            <ReviewSection title="{ } Metadata">
+              {isDone && result?.metadata ? (
+                <pre className="layer-a-json">
+                  {JSON.stringify(result.metadata, null, 2)}
+                </pre>
+              ) : (
+                <Placeholder kind="json" loading={isLoading}>
+                  {isLoading ? "Collecting metadata…" : "Metadata appears after generation."}
+                </Placeholder>
+              )}
+            </ReviewSection>
+
+            {isLoading && (
+              <ProgressBlock progress={progress} label={progressText} />
+            )}
+
+            <div className="dev-download-row">
+              <button type="button" className="gen-secondary-btn"
+                      disabled={!isDone || !result?.audio_b64}
+                      onClick={() => downloadDataUrl(
+                        `data:audio/wav;base64,${result.audio_b64}`,
+                        `${tag}.wav`,
+                      )}>
+                ↓ WAV
+              </button>
+              <button type="button" className="gen-secondary-btn"
+                      disabled={!isDone || !result?.image_b64}
+                      onClick={() => downloadDataUrl(
+                        `data:image/png;base64,${result.image_b64}`,
+                        `${tag}_spectrogram.png`,
+                      )}>
+                ↓ Spectrogram
+              </button>
+              <button type="button" className="gen-secondary-btn"
+                      disabled={!isDone || !result?.metadata}
+                      onClick={downloadJson}>
+                ↓ Metadata
+              </button>
+            </div>
           </div>
         </aside>
       </div>
     </section>
+  );
+}
+
+function ExpectedSample({ layerId, attemptId, tier, sample, loading, empty }) {
+  const hasSample = Boolean(sample);
+  const wavSrc = hasSample && sample.has_wav
+    ? sampleWavUrl(layerId, attemptId, tier, sample.stem)
+    : null;
+
+  const audioCaption = loading
+    ? "Loading cached samples…"
+    : empty
+      ? "No cached samples on disk for this attempt yet."
+      : !hasSample
+        ? "Select a cached sample to preview."
+        : "WAV not present locally — generate or run dvc pull.";
+
+  const spectrogramCaption = loading
+    ? "Loading…"
+    : empty
+      ? "No cached spectrogram available."
+      : !hasSample
+        ? "Spectrogram appears once a sample is selected."
+        : sample.has_png
+          ? "PNG is DVC-tracked — run dvc pull to render."
+          : "No spectrogram on disk.";
+
+  const metadataCaption = loading
+    ? "Loading…"
+    : empty
+      ? "No metadata cached for this attempt yet."
+      : !hasSample
+        ? "Metadata appears once a sample is selected."
+        : "No metadata on disk for this sample.";
+
+  return (
+    <>
+      <ReviewSection title="♪ Audio">
+        {wavSrc ? (
+          <>
+            <audio controls src={wavSrc} style={{ width: "100%" }}>
+              Your browser doesn't support audio playback.
+            </audio>
+            <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+              <code>{sample.stem}</code> · {tier}
+            </p>
+          </>
+        ) : (
+          <Placeholder kind="audio" loading={loading}>{audioCaption}</Placeholder>
+        )}
+      </ReviewSection>
+
+      <ReviewSection title="▤ Mel-Spectrogram">
+        {hasSample && sample.png_b64 ? (
+          <img
+            src={`data:image/png;base64,${sample.png_b64}`}
+            alt={`${tier} sample ${sample.stem}`}
+            className="gen-spectrogram-img layer-a-spectrogram-img"
+          />
+        ) : (
+          <Placeholder kind="image" loading={loading}>{spectrogramCaption}</Placeholder>
+        )}
+      </ReviewSection>
+
+      <ReviewSection title="{ } Metadata">
+        {hasSample && sample.metadata ? (
+          <pre className="layer-a-json">
+            {JSON.stringify(sample.metadata, null, 2)}
+          </pre>
+        ) : (
+          <Placeholder kind="json" loading={loading}>{metadataCaption}</Placeholder>
+        )}
+      </ReviewSection>
+    </>
+  );
+}
+
+function Placeholder({ kind, loading, children }) {
+  return (
+    <div className={`dev-placeholder dev-placeholder-${kind}${loading ? " is-loading" : ""}`}>
+      <div className="dev-placeholder-art" aria-hidden="true">
+        {kind === "audio" && (
+          <div className="dev-placeholder-waveform">
+            {Array.from({ length: 28 }).map((_, i) => (
+              <span key={i} style={{ ["--i"]: i }} />
+            ))}
+          </div>
+        )}
+        {kind === "image" && <div className="dev-placeholder-image" />}
+        {kind === "json" && (
+          <div className="dev-placeholder-json">
+            <span style={{ width: "30%" }} />
+            <span style={{ width: "65%" }} />
+            <span style={{ width: "50%" }} />
+            <span style={{ width: "72%" }} />
+            <span style={{ width: "40%" }} />
+          </div>
+        )}
+      </div>
+      <p className="dev-placeholder-caption">{children}</p>
+    </div>
   );
 }
 
@@ -412,117 +597,10 @@ function ProgressBlock({ progress, label }) {
   );
 }
 
-function CachedSamples({ layerId, attemptId, samples, error }) {
-  if (error) {
-    return (
-      <section style={{ marginBottom: 16 }}>
-        <h3 style={cachedHeaderStyle}>⚡ Cached samples</h3>
-        <p className="analysis-error">{error}</p>
-      </section>
-    );
-  }
-  if (!samples) return null;
-
-  const groups = [
-    { tier: "reference", entries: samples.reference || [] },
-    { tier: "showcase",  entries: samples.showcase  || [] },
-  ].filter((g) => g.entries.length > 0);
-
-  if (!groups.length) return null;
-
-  return (
-    <section style={{ marginBottom: 24 }}>
-      <h3 style={cachedHeaderStyle}>
-        ⚡ Cached samples
-        <small style={{ marginLeft: 8, opacity: 0.6, fontSize: 11 }}>
-          canonical seed {samples.canonical_seed} · no model load
-        </small>
-      </h3>
-
-      {groups.map((g) => (
-        <div key={g.tier} style={{ marginTop: 12 }}>
-          <p style={{ margin: "0 0 6px", fontSize: 11, opacity: 0.7,
-                      textTransform: "uppercase", letterSpacing: 0.4 }}>
-            {g.tier}
-          </p>
-          <div style={{ display: "grid", gap: 12 }}>
-            {g.entries.map((s) => (
-              <SampleCard
-                key={`${g.tier}/${s.stem}`}
-                tier={g.tier}
-                sample={s}
-                wavSrc={s.has_wav ? sampleWavUrl(layerId, attemptId, g.tier, s.stem) : null}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-const cachedHeaderStyle = {
-  margin: "0 0 8px",
-  fontSize: 12,
-  letterSpacing: 0,
-  textTransform: "uppercase",
-  opacity: 0.85,
-};
-
-function SampleCard({ tier, sample, wavSrc }) {
-  return (
-    <article style={{
-      border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: 8, padding: 12, display: "grid", gap: 8,
-    }}>
-      <p style={{ margin: 0, fontSize: 12, opacity: 0.85 }}>
-        <code>{sample.stem}</code>
-        {!sample.png_b64 && sample.has_png && (
-          <small style={{ marginLeft: 8, opacity: 0.6 }}>
-            (PNG is DVC-tracked, run <code>dvc pull</code> to render)
-          </small>
-        )}
-      </p>
-
-      {sample.png_b64 && (
-        <img
-          src={`data:image/png;base64,${sample.png_b64}`}
-          alt={`${tier} sample ${sample.stem}`}
-          style={{ width: "100%", maxHeight: 220, objectFit: "contain",
-                   background: "#000", borderRadius: 4 }}
-        />
-      )}
-
-      {wavSrc && (
-        <audio controls src={wavSrc} style={{ width: "100%" }}>
-          Your browser doesn't support audio playback.
-        </audio>
-      )}
-      {!sample.has_wav && (
-        <small style={{ opacity: 0.6 }}>WAV not present locally — generate or `dvc pull`.</small>
-      )}
-
-      {sample.metadata && (
-        <details>
-          <summary style={{ fontSize: 11, opacity: 0.7, cursor: "pointer" }}>
-            metadata ({sample.metadata.handler_git_sha ?? "no git sha"})
-          </summary>
-          <pre style={{ fontSize: 10, marginTop: 6, maxHeight: 200, overflow: "auto" }}>
-            {JSON.stringify(sample.metadata, null, 2)}
-          </pre>
-        </details>
-      )}
-    </article>
-  );
-}
-
 function ReviewSection({ title, children }) {
   return (
-    <section>
-      <h3 style={{ margin: "0 0 8px", fontSize: 12, letterSpacing: 0,
-                   textTransform: "uppercase", opacity: 0.75 }}>
-        {title}
-      </h3>
+    <section className="dev-review-section">
+      <h3>{title}</h3>
       {children}
     </section>
   );

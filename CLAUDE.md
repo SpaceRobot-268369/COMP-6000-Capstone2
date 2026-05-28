@@ -83,7 +83,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── s3_bucket_layout.md
     │   ├── model_readme_standard.md
     │   ├── attempt_naming.md              # Naming rules for layer attempts + checkpoints
-    │   ├── artifact_policy.md             # Sample artifacts (reference/showcase/dev tiers, git vs DVC)
+    │   ├── artifact_policy.md             # Sample artifacts (expected/showcase/dev-artifacts-self-testing tiers, git vs DVC)
     │   ├── stages/                        # Per-stage goals + exit criteria (stage_1.md, …)
     │   ├── testing/
     │   │   ├── analysis_test_cases.md
@@ -140,7 +140,7 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
 | Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev/` |
 | Stage goals | `.claude/context/dev/stages/` |
-| Sample artifacts (reference/showcase/dev) | `acoustic_ai/layers/<layer>/attempts/<id>/samples/` (rules: `.claude/context/dev/artifact_policy.md`) |
+| Sample artifacts (expected/showcase/dev-artifacts-self-testing) | `acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/` (rules: `.claude/context/dev/artifact_policy.md`) |
 | Testing specs & diagrams | `.claude/context/dev/testing/`, `.claude/context/dev/diagrams/` |
 | Setup (local services; server reserved) | `.claude/context/setup/local/`, `.claude/context/setup/server/` |
 | Branch-scoped dev logs (ephemeral) | `.claude/context/branches/<branch-slug>/` |
@@ -187,10 +187,13 @@ Rules (team workflow):
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
-Generated **sample artifacts** (audio + spectrograms) per attempt go under
-`acoustic_ai/layers/<layer>/attempts/<id>/samples/`, split into three tiers
-(`reference/` — git PNG+JSON, DVC WAV; `showcase/` — all DVC; `dev/` —
-gitignored). Canonical seed is `42`. Full rules: [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
+Generated **sample artifacts** (audio + spectrograms) per attempt live in three
+tiers directly under the attempt root:
+`acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/`
+(`expected/` — canonical seed_42, git PNG+JSON, DVC WAV; `showcase/` — author-
+curated extra seeds, all DVC; `dev-artifacts-self-testing/` — ad-hoc developer
+runs, gitignored). Python source for the attempt lives under `code/`. Canonical
+seed is `42`. Full rules: [.claude/context/dev/artifact_policy.md](.claude/context/dev/artifact_policy.md). Regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
 
 ### Pipeline vs. attempt hyperparameters
 

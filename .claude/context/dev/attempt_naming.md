@@ -116,26 +116,32 @@ files outside its own folder.
 
 ```
 layers/layer_<X>/attempts/<member>__<stage>__<slug>/
-├── README.md           # required: model card + run log + link to samples/reference/seed_42.png
-├── handler.py          # required: implements load() + generate(seed, **kw)
-├── train.py            # optional: training entrypoint
-├── sample.py           # optional: standalone sampling/debug entrypoint
-├── preprocess.py       # optional
-├── dataset.py          # optional
+├── README.md           # required: model card + run log + link to expected/seed_42.png
 ├── params.yaml         # optional: per-attempt hyperparameters
+├── __init__.py         # makes the attempt an importable package
+├── code/               # required: all Python source for this attempt
+│   ├── __init__.py
+│   ├── handler.py      # required: implements load() + generate(seed, **kw)
+│   ├── train.py        # optional: training entrypoint
+│   ├── sample.py       # optional: standalone sampling/debug entrypoint
+│   ├── preprocess.py   # optional
+│   └── dataset.py      # optional
 ├── data/               # attempt-local derived data (DVC-tracked)
-├── precompute/         # attempt-local precompute scripts
-├── debug/              # attempt-local diagnostics
-└── samples/            # cached sample outputs (artifact_policy.md)
-    ├── reference/      #   canonical seed; PNG+JSON in git, WAV via .wav.dvc
-    ├── showcase/       #   author-curated extra seeds; everything DVC
-    ├── dev/            #   ad-hoc runs; fully gitignored
-    └── .gitignore      #   excludes dev/, *.wav, showcase PNG/JSON
+├── precompute/         # attempt-local precompute scripts (optional)
+├── debug/              # attempt-local diagnostics (optional, often gitignored)
+├── expected/           # canonical seed_42 triplet; PNG+JSON in git, WAV via .wav.dvc
+├── showcase/           # author-curated extra seeds; everything DVC
+├── dev-artifacts-self-testing/   # ad-hoc developer self-test runs; fully gitignored
+└── .gitignore          # excludes dev-artifacts-self-testing/, *.wav, showcase PNG/JSON
 ```
 
-The `samples/` subtree is governed by
+The `expected/` / `showcase/` / `dev-artifacts-self-testing/` tiers are governed by
 [artifact_policy.md](artifact_policy.md). Canonical seed across the project
 is `42`; regenerate via `acoustic_ai/scripts/regenerate_samples.py`.
+
+The handler is loaded by the server as
+`layers.<layer>.attempts.<id>.code.handler` — keep `code/` as the import root
+for the attempt's Python sources.
 
 Two attempts that share a method (e.g. AudioLDM2 spring-night vs.
 AudioLDM2 insects) **duplicate** the training/sampling code rather than

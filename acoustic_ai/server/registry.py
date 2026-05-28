@@ -55,7 +55,7 @@ class AttemptSpec:
 
     @property
     def handler_module(self) -> str:
-        return f"layers.{self.layer}.attempts.{self.id}.handler"
+        return f"layers.{self.layer}.attempts.{self.id}.code.handler"
 
 
 # --- loading ---------------------------------------------------------------
@@ -73,18 +73,82 @@ def _resolve_checkpoint(value: Any) -> Path | None:
     return (_PROJECT_ROOT / str(value)).resolve()
 
 
+# Weight-file extensions we treat as "real" model binaries (i.e. not pointers).
+_WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pt")
+
+
+def _ckpt_availability(ckpt_dir: Path | None) -> dict:
+    """Inspect a checkpoint directory and report whether the actual weight
+    blobs are materialised on disk (as opposed to only DVC pointer files).
+
+    Returns:
+        {
+            "available": bool,
+            "reason":    str | None,    # human-readable when not available
+            "missing":   list[str],     # base filenames that need `dvc pull`
+        }
+    """
+    if ckpt_dir is None:
+        # Attempts without a checkpoint (placeholders) are considered
+        # available — the handler doesn't need any weights.
+        return {"available": True, "reason": None, "missing": []}
+
+    if not ckpt_dir.exists():
+        return {
+            "available": False,
+            "reason": f"checkpoint directory missing: {ckpt_dir}",
+            "missing": [],
+        }
+
+    has_weight = any(
+        p.is_file() and p.suffix in _WEIGHT_SUFFIXES
+        for p in ckpt_dir.iterdir()
+    )
+    if has_weight:
+        return {"available": True, "reason": None, "missing": []}
+
+    # No real weights — list any `.dvc` pointer files so the UI can tell the
+    # user exactly which paths to `dvc pull`.
+    pointers = sorted(
+        p.name[:-4]  # strip ".dvc"
+        for p in ckpt_dir.iterdir()
+        if p.is_file() and p.name.endswith(".dvc")
+        and any(p.name.endswith(s + ".dvc") for s in _WEIGHT_SUFFIXES)
+    )
+    if pointers:
+        return {
+            "available": False,
+            "reason": (
+                "Weights are DVC-tracked but not on disk locally. "
+                f"Run `dvc pull` for: {', '.join(pointers)}"
+            ),
+            "missing": pointers,
+        }
+    return {
+        "available": False,
+        "reason": f"no weight files found in {ckpt_dir}",
+        "missing": [],
+    }
+
+
 def list_layers() -> list[dict]:
     """Return the dropdown payload — one entry per layer, with attempt list."""
     out: list[dict] = []
     for layer_id, layer_block in _registry_doc()["layers"].items():
         attempts = []
         for att_id, att in layer_block["attempts"].items():
+            ckpt = _resolve_checkpoint(att.get("checkpoint"))
+            avail = _ckpt_availability(ckpt)
             attempts.append({
                 "id":      att_id,
                 "label":   att.get("label", att_id),
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
                 "status":  att.get("status", ""),
+                "checkpoint":       str(ckpt) if ckpt else None,
+                "available":        avail["available"],
+                "unavailable_reason": avail["reason"],
+                "missing_files":    avail["missing"],
             })
         out.append({
             "id":      layer_id,
@@ -139,14 +203,13 @@ def canonical_seed(spec: AttemptSpec) -> int:
 
 
 def _samples_root(spec: AttemptSpec) -> Path:
-    return (
-        _AI_ROOT / "layers" / spec.layer / "attempts" / spec.id / "samples"
-    )
+    """Attempt root — the `expected/` and `showcase/` tiers live directly here."""
+    return _AI_ROOT / "layers" / spec.layer / "attempts" / spec.id
 
 
 def list_samples(layer_id: str, attempt_id: str) -> dict:
-    """Enumerate what's actually present on disk under samples/reference and
-    samples/showcase. Returns artefact descriptors the server can hand to the
+    """Enumerate what's actually present on disk under <attempt>/expected and
+    <attempt>/showcase. Returns artefact descriptors the server can hand to the
     frontend; PNG/JSON contents are inlined (small) and WAV presence is a
     flag (caller fetches separately if wanted).
     """
@@ -207,14 +270,14 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
         "attempt":        attempt_id,
         "layer":          layer_id,
         "canonical_seed": seed,
-        "reference":      _scan("reference"),
+        "expected":       _scan("expected"),
         "showcase":       _scan("showcase"),
     }
 
 
 def sample_wav_path(layer_id: str, attempt_id: str, tier: str, stem: str) -> Path:
-    """Resolve a samples/<tier>/<stem>.wav path, restricted to legal tiers."""
-    if tier not in {"reference", "showcase"}:
+    """Resolve an <attempt>/<tier>/<stem>.wav path, restricted to legal tiers."""
+    if tier not in {"expected", "showcase"}:
         raise ValueError(f"illegal tier: {tier}")
     spec = get_attempt(layer_id, attempt_id)
     safe_stem = stem.replace("/", "_").replace("..", "_")

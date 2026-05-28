@@ -72,13 +72,9 @@ export default function App() {
               <span className="nav-icon">≋</span>
               <span>Transformation</span>
             </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-1" className={sidebarLinkClass}>
+            <NavLink to="/dev/layers" className={sidebarLinkClass}>
               <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 1 (spring night)</span>
-            </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-2" className={sidebarLinkClass}>
-              <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 2</span>
+              <span>Dev — Layers</span>
             </NavLink>
           </nav>
         </div>
@@ -123,11 +119,6 @@ export default function App() {
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
           <Route path="/dev/layers" element={<LayerATestPage />} />
-          {/* Legacy redirects — the old per-smoke-test routes are gone; everything */}
-          {/* runs through the registry-driven /dev/layers page. */}
-          <Route path="/dev/layer-a" element={<Navigate to="/dev/layers" replace />} />
-          <Route path="/dev/layer-a/smoking-test-1" element={<Navigate to="/dev/layers" replace />} />
-          <Route path="/dev/layer-a/smoking-test-2" element={<Navigate to="/dev/layers" replace />} />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}

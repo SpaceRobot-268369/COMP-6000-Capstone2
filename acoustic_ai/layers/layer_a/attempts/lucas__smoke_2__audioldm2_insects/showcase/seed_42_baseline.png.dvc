@@ -1,0 +1,5 @@
+outs:
+- md5: 94d6b80cda1b17fdd279309d2c283cdc
+  size: 389716
+  hash: md5
+  path: seed_42_baseline.png

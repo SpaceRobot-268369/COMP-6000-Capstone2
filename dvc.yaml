@@ -15,7 +15,7 @@ stages:
     cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/precompute/precompute_spectrograms.py
     deps:
       - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/precompute/precompute_spectrograms.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/preprocess.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/preprocess.py
       - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
     outs:
       - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/shared/wavs:
@@ -24,12 +24,12 @@ stages:
           cache: true
 
   train_vae:
-    cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train.py
+    cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/train.py
     deps:
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/model.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/dataset.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/preprocess.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/train.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/model.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/dataset.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/preprocess.py
       - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
     params:
       - params.yaml:
@@ -49,9 +49,9 @@ stages:
     cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/precompute/precompute_latents.py
     deps:
       - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/precompute/precompute_latents.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/model.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/dataset.py
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/preprocess.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/model.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/dataset.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/preprocess.py
       - model/candidates/lucas/vae-site257-30epoch/best.pt
       - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
     params:
@@ -64,9 +64,9 @@ stages:
           cache: true
 
   train_vocoder:
-    cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train_vocoder.py
+    cmd: python3 acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/train_vocoder.py
     deps:
-      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train_vocoder.py
+      - acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/code/train_vocoder.py
       - resources/site_257_bowra-dry-a/site_257_training_manifest.csv
     params:
       - params.yaml:

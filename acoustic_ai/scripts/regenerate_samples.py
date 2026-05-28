@@ -1,31 +1,25 @@
 #!/usr/bin/env python3
-"""Regenerate canonical reference samples for one or more attempts.
+"""Regenerate a `showcase/` sample (model output) for one attempt.
 
 Policy: .claude/context/dev/artifact_policy.md
 Naming: .claude/context/dev/attempt_naming.md
 
-For each selected attempt this script:
-  1. Reads canonical_seed from registry.yaml (defaults to 42).
-  2. Calls the attempt's handler.load() + handler.generate(seed=...).
-  3. Writes the triplet:
-        <attempt>/samples/reference/seed_<N>.png            (git-tracked)
-        <attempt>/samples/reference/seed_<N>.metadata.json  (git-tracked)
-        <attempt>/samples/reference/seed_<N>.wav            (then `dvc add`)
+This script writes ONLY to `<attempt>/showcase/`. The `expected/` tier is
+real-audio ground truth — populated by extract_expected_samples.py, never
+by this script.
 
-The user (not this script) runs `dvc add` + `git add` afterwards — the script
-deliberately stays out of git/DVC plumbing so a failed regeneration doesn't
-leave the tree in a weird half-staged state.
+For the selected attempt this script:
+  1. Calls handler.load() + handler.generate(seed=<your --seed>).
+  2. Writes the triplet:
+        <attempt>/showcase/seed_<N>_<label>.png
+        <attempt>/showcase/seed_<N>_<label>.metadata.json
+        <attempt>/showcase/seed_<N>_<label>.wav
+
+  All three are then `dvc add`'d (showcase is fully DVC-tracked).
 
 Usage:
-    # one attempt:
     acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \\
-        layer_a lucas__smoke_1__audioldm2_spring_night
-
-    # every active attempt (skips placeholders/superseded):
-    acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py --all-active
-
-    # everything in the registry, including placeholders (will error out):
-    acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py --all
+        layer_a lucas__smoke_1__audioldm2_spring_night --seed 7 --label low_noise
 """
 
 from __future__ import annotations
@@ -121,39 +115,65 @@ def _render_png_bytes(layer_id: str, attempt_id: str, mel_db, duration_s: float)
 # ---------------------------------------------------------------------------
 
 
-def regenerate(layer_id: str, attempt_id: str) -> dict:
+def regenerate(
+    layer_id: str,
+    attempt_id: str,
+    *,
+    tier: str = "showcase",
+    seed: int | None = None,
+    label: str | None = None,
+) -> dict:
+    """Regenerate a generated sample triplet into `<attempt>/showcase/`.
+
+    Only the `showcase` tier is writable here. `expected/` is reserved for
+    real-audio ground truth (see acoustic_ai/scripts/extract_expected_samples.py
+    and the artifact policy doc).
+
+    Required args:
+      seed  — explicit non-canonical seed for the variation.
+      label — short snake_case label (e.g. 'low_noise', 'variation_a').
+    Filename stem becomes `seed_<seed>_<label>`. All three artifacts go to DVC.
+    """
+    if tier != "showcase":
+        raise ValueError(
+            f"regenerate() only writes to the `showcase` tier; got tier={tier!r}. "
+            "`expected/` is real-audio ground truth — see "
+            "acoustic_ai/scripts/extract_expected_samples.py."
+        )
+
     spec = registry.get_attempt(layer_id, attempt_id)
 
     if spec.status in SKIP_STATUSES:
         return {"layer": layer_id, "attempt": attempt_id, "skipped": spec.status}
 
-    # Canonical seed: registry override, else 42.
-    canonical_seed = int(
-        spec.params.get("canonical_seed")
-        or spec.params.get("samples", {}).get("canonical_seed", 42)
-    )
+    # Pick the seed:
+    #   expected → canonical (registry override > project default 42)
+    #   showcase → explicit --seed required
+    if seed is None:
+        raise ValueError("regenerate() requires --seed (showcase always uses an explicit seed)")
+    if not label:
+        raise ValueError("regenerate() requires --label (short snake_case)")
+    run_seed = int(seed)
+    stem = f"seed_{run_seed}_{label}"
 
-    out_dir = (
-        _AI_ROOT / "layers" / layer_id / "attempts" / attempt_id / "samples" / "reference"
-    )
+    attempt_root = _AI_ROOT / "layers" / layer_id / "attempts" / attempt_id
+    out_dir = attempt_root / tier
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = f"seed_{canonical_seed}"
 
-    print(f"[INFO] {layer_id}/{attempt_id} — seed {canonical_seed}")
-    result = registry.generate(layer_id, attempt_id, seed=canonical_seed)
+    print(f"[INFO] {layer_id}/{attempt_id} [{tier}] — seed {run_seed}")
+    result = registry.generate(layer_id, attempt_id, seed=run_seed)
 
     wav_bytes = result.get("wav_bytes", b"")
     mel_db    = result.get("mel_db")
     metadata  = dict(result.get("metadata", {}))
 
-    sr = int(metadata.get("audio", {}).get("sample_rate", 0))
     duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
 
     # Enrich metadata with traceability info.
-    handler_path = (
-        _AI_ROOT / "layers" / layer_id / "attempts" / attempt_id / "handler.py"
-    )
-    metadata["seed"] = canonical_seed
+    handler_path = attempt_root / "code" / "handler.py"
+    metadata["seed"] = run_seed
+    metadata["tier"] = "showcase"
+    metadata["showcase_label"] = label
     metadata["checkpoint"] = str(spec.checkpoint) if spec.checkpoint else None
     metadata["checkpoint_dvc_hash"] = _checkpoint_dvc_hash(spec.checkpoint)
     metadata["handler_git_sha"] = _git_short_sha(handler_path)
@@ -172,45 +192,31 @@ def regenerate(layer_id: str, attempt_id: str) -> dict:
     json_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
 
     print(f"[OK]   wrote {wav_path.name}, {png_path.name}, {json_path.name}")
-    print(f"       NEXT: dvc add {wav_path}  &&  git add {png_path} {json_path} {wav_path}.dvc")
+    print(f"       NEXT: dvc add {wav_path} {png_path} {json_path}  &&  git add {wav_path}.dvc {png_path}.dvc {json_path}.dvc")
     return {
-        "layer": layer_id, "attempt": attempt_id, "seed": canonical_seed,
+        "layer": layer_id, "attempt": attempt_id, "tier": "showcase", "seed": run_seed,
         "wav": str(wav_path), "png": str(png_path), "json": str(json_path),
     }
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("layer", nargs="?", help="Layer id (e.g. layer_a)")
-    ap.add_argument("attempt", nargs="?", help="Attempt id (e.g. lucas__smoke_1__...)")
-    ap.add_argument("--all", action="store_true", help="Regenerate every registered attempt.")
-    ap.add_argument("--all-active", action="store_true",
-                    help="Regenerate every attempt except placeholder/partial/superseded.")
+    ap.add_argument("layer", help="Layer id (e.g. layer_a)")
+    ap.add_argument("attempt", help="Attempt id (e.g. lucas__smoke_1__...)")
+    ap.add_argument("--seed", type=int, required=True,
+                    help="Seed for this showcase variation.")
+    ap.add_argument("--label", required=True,
+                    help="Short snake_case label for showcase stem (e.g. 'low_noise').")
     args = ap.parse_args()
 
-    targets: list[tuple[str, str]] = []
-    if args.all or args.all_active:
-        for layer in registry.list_layers():
-            for att in layer["attempts"]:
-                if args.all_active and att["status"] in SKIP_STATUSES:
-                    print(f"[SKIP] {layer['id']}/{att['id']}  (status={att['status']})")
-                    continue
-                targets.append((layer["id"], att["id"]))
-    elif args.layer and args.attempt:
-        targets.append((args.layer, args.attempt))
-    else:
-        ap.print_help()
-        return 2
-
     failures: list[tuple[str, str, str]] = []
-    for layer_id, attempt_id in targets:
-        try:
-            regenerate(layer_id, attempt_id)
-        except NotImplementedError as e:
-            print(f"[SKIP] {layer_id}/{attempt_id}  (handler not implemented: {e})")
-        except Exception as e:  # noqa: BLE001
-            print(f"[FAIL] {layer_id}/{attempt_id}  ({type(e).__name__}: {e})")
-            failures.append((layer_id, attempt_id, str(e)))
+    try:
+        regenerate(args.layer, args.attempt, tier="showcase", seed=args.seed, label=args.label)
+    except NotImplementedError as e:
+        print(f"[SKIP] {args.layer}/{args.attempt}  (handler not implemented: {e})")
+    except Exception as e:  # noqa: BLE001
+        print(f"[FAIL] {args.layer}/{args.attempt}  ({type(e).__name__}: {e})")
+        failures.append((args.layer, args.attempt, str(e)))
 
     if failures:
         print(f"\n{len(failures)} failure(s):")

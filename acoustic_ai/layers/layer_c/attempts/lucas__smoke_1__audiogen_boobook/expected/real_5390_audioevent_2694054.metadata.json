@@ -1,0 +1,15 @@
+{
+  "audio": {
+    "duration_s": 9.0035625,
+    "peak": 0.010833740234375,
+    "rms": 0.0023435931652784348,
+    "sample_rate": 16000
+  },
+  "selection_reason": "high confidence but dawn (04:57) rather than evening \u2014 shows diel variation",
+  "source": "real_audio",
+  "source_clip_id": "5390_audioevent_2694054",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/manifest.csv",
+  "source_metadata": {},
+  "tier": "expected"
+}
