@@ -152,7 +152,8 @@ Minimal real Layer C payload:
 
 The real adapter:
 
-1. runs `script/events/train_sa3_lora_core6_smoke.sh`;
+1. directly invokes `${SA3_PYTHON} ${SA3_REPO}/scripts/train_lora.py` with the
+   Layer C SA3 LoRA arguments;
 2. keeps Server A heartbeats alive while the subprocess runs;
 3. writes a local log under `logs/`;
 4. finds the newest `.ckpt` in the Layer C SA3 checkpoint directory;
@@ -525,10 +526,73 @@ The 300-step Layer C run was intentionally not started during this handoff.
 Treat 300-step training as Layer C model-quality work, not as required evidence
 for the Server A/B infrastructure MVP.
 
+## Server A/B Automatic Real Layer C SA3 Training Smoke Test
+
+Verified on 2026-05-28 using Server A plus the real Server B machine
+`shinypokemon`.
+
+This test proves the automatic job flow for real Layer C training, not only a
+manual SSH command.
+
+Verified Git commit on Server B:
+
+```text
+49aed64 fix: run sa3 training with configured python
+```
+
+Worker environment highlights:
+
+```text
+SERVER_A_URL=http://10.0.9.8
+WORKER_ID=shinypokemon-real-training-worker
+WORKER_JOB_TYPES=training
+REAL_TRAINING_ENABLED=true
+SA3_REPO=/home/ubuntu/stable-audio-3
+SA3_PYTHON=acoustic_ai/.venv-audiogen/bin/python
+DVC_PUSH_ENABLED=true
+IDLE_SHUTDOWN_ENABLED=false
+```
+
+Server A test job:
+
+```text
+POST /api/jobs
+job id = 12
+type = training
+payload.layer = C
+payload.training_backend = sa3_lora
+payload.run_id = layer-c-sa3-worker-smoke-12
+payload.steps = 10
+payload.checkpoint_every = 10
+payload.demo_every = 999999
+payload.num_workers = 0
+```
+
+Observed worker output:
+
+```text
+job 12: claimed type=training
+GPU available: True (cuda), used: True
+5.6 M trainable params
+Trainer.fit stopped: max_steps=10 reached
+job 12: completed checkpoint_uri=model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10-v1.ckpt.dvc
+```
+
+Server A API verification:
+
+```text
+GET /api/jobs/12 -> 200 OK
+status = completed
+result.mock = false
+result.training_backend = sa3_lora
+artifact_uri = model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10-v1.ckpt.dvc
+```
+
+After the smoke test, Server B was manually shut down to avoid GPU budget
+usage.
+
 ## Not Implemented Yet
 
-- Server A -> Server B end-to-end verification of the real Layer C SA3 training
-  adapter;
 - durable S3 upload or retention policy for training logs;
 - 300-step Layer C model-quality smoke run;
 - real generation inference path;

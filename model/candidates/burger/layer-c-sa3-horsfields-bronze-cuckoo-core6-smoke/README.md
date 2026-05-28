@@ -6,8 +6,9 @@ Prepared for LoRA training. This folder records the first Stable Audio 3 LoRA
 smoke candidate dataset after the AudioGen LoRA route failed to produce stable
 species-specific calls.
 
-Server B real 10-step smoke training passed on 2026-05-28. The 300-step model
-quality run has not been started yet.
+Server B real 10-step smoke training passed on 2026-05-28. The automatic Server
+A/B worker path also completed a real 10-step Layer C SA3 LoRA job on
+2026-05-28. The 300-step model quality run has not been started yet.
 
 ## Goal
 
@@ -117,6 +118,17 @@ Server B 10-step CUDA smoke status:
   `model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt`
 - Checkpoint pointer:
   `model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt.dvc`
+
+Automatic Server A/B worker smoke status:
+
+- Server A job id: `12`
+- Worker: `shinypokemon-real-training-worker`
+- Commit: `49aed64 fix: run sa3 training with configured python`
+- Job payload: `layer=C`, `training_backend=sa3_lora`, `steps=10`
+- Job reached `status=completed`
+- Result was real training, not fake worker output: `mock=false`
+- Worker reported checkpoint pointer:
+  `model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10-v1.ckpt.dvc`
 
 ## Evaluation Plan
 

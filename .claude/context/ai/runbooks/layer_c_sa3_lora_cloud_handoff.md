@@ -280,6 +280,43 @@ The 300-step run was intentionally not started in this handoff. Treat 300-step
 training as Layer C model-quality validation, not as required infrastructure
 evidence for Server A/B.
 
+## Verified Automatic Server A/B 10-Step Smoke
+
+Verified on 2026-05-28 through the Server A job queue and Server B worker.
+
+This was a real Stable Audio 3 LoRA training job started from Server A and
+executed by Server B, not a manual SSH foreground command.
+
+Server B commit:
+
+```text
+49aed64 fix: run sa3 training with configured python
+```
+
+Server A job:
+
+```text
+job id: 12
+type: training
+status: completed
+payload.layer: C
+payload.training_backend: sa3_lora
+payload.run_id: layer-c-sa3-worker-smoke-12
+payload.steps: 10
+```
+
+Observed worker result:
+
+```text
+GPU available: True (cuda), used: True
+Trainer.fit stopped: max_steps=10 reached
+job 12: completed checkpoint_uri=model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10-v1.ckpt.dvc
+```
+
+Server A API check returned `status = completed` for job 12.
+
+Server B was shut down after verification to avoid GPU budget usage.
+
 ## Success Criteria
 
 Training success:
