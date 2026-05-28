@@ -311,6 +311,91 @@ Server A creates training job
 After the smoke test, the worker was stopped and Server B was stopped in RONIN
 to avoid GPU budget usage.
 
+## Server B Idle Shutdown Smoke Test
+
+Verified on 2026-05-28 using the real Server B machine `shinypokemon`.
+
+Server A idle-check API verification:
+
+```bash
+printf '%s' '{"worker_id":"manual-idle-check","types":["generation","training"]}' > /tmp/idle-check.json
+curl -i -H "Authorization: Bearer server-a-worker-test-token" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/idle-check.json \
+  http://localhost/api/worker/jobs/idle-check
+```
+
+Response:
+
+```text
+HTTP/1.1 200 OK
+{"ok":true,"idle":true,"queued_count":0,"active_count":0,"uploading_count":0,"checked_types":["generation","training"]}
+```
+
+Dry-run shutdown test on Server B:
+
+```bash
+export SERVER_A_URL="http://10.0.9.8"
+export WORKER_API_TOKEN="server-a-worker-test-token"
+export WORKER_ID="shinypokemon-idle-dry-run"
+export WORKER_JOB_TYPES="generation,training"
+export POLL_INTERVAL_SECONDS="3"
+export HEARTBEAT_INTERVAL_SECONDS="2"
+export FAKE_RUN_SECONDS="5"
+export FAKE_TRAINING_SECONDS="10"
+export FAKE_UPLOAD_SECONDS="2"
+export IDLE_SHUTDOWN_ENABLED="true"
+export IDLE_SHUTDOWN_DRY_RUN="true"
+export IDLE_SHUTDOWN_SECONDS="30"
+python worker/worker.py
+```
+
+Observed output:
+
+```text
+worker starting id=shinypokemon-idle-dry-run server=http://10.0.9.8 types=generation,training
+idle-check: queue idle; starting shutdown timer
+idle shutdown dry-run: would run `sudo shutdown -h now`
+```
+
+Real shutdown pre-check:
+
+```bash
+sudo -n true
+echo $?
+```
+
+Observed output:
+
+```text
+0
+```
+
+Real shutdown test:
+
+```bash
+export SERVER_A_URL="http://10.0.9.8"
+export WORKER_API_TOKEN="server-a-worker-test-token"
+export WORKER_ID="shinypokemon-idle-real-shutdown"
+export WORKER_JOB_TYPES="generation,training"
+export POLL_INTERVAL_SECONDS="3"
+export HEARTBEAT_INTERVAL_SECONDS="2"
+export IDLE_SHUTDOWN_ENABLED="true"
+export IDLE_SHUTDOWN_DRY_RUN="false"
+export IDLE_SHUTDOWN_SECONDS="30"
+python worker/worker.py
+```
+
+Observed behavior:
+
+```text
+idle-check: queue idle; starting shutdown timer
+idle shutdown: running `sudo shutdown -h now`
+```
+
+Server B then shut down successfully and RONIN reported that it could stop.
+For normal use, set `IDLE_SHUTDOWN_SECONDS=600` for a 10-minute idle timeout.
+
 ## Not Implemented Yet
 
 - real Python GPU environment setup;
@@ -318,7 +403,6 @@ to avoid GPU budget usage.
 - model checkpoint validation;
 - real generation;
 - artifact upload;
-- idle shutdown;
 - worker registry;
 - local disk cleanup;
 - OOM detection.

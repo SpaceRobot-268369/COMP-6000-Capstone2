@@ -82,11 +82,13 @@ Use an idle timeout such as 5-15 minutes to avoid stopping and restarting B for
 back-to-back requests.
 
 The worker checks Server A before shutdown using the worker idle-check API.
-Shutdown should remain disabled or dry-run until it has been tested on Server B:
+Dry-run and real shutdown were verified on Server B on 2026-05-28. Use a short
+timeout such as 30 seconds only for tests; normal usage should use 600 seconds
+for the requested 10-minute idle shutdown.
 
 ```env
 IDLE_SHUTDOWN_ENABLED=true
-IDLE_SHUTDOWN_DRY_RUN=true
+IDLE_SHUTDOWN_DRY_RUN=false
 IDLE_SHUTDOWN_SECONDS=600
 SHUTDOWN_COMMAND=sudo shutdown -h now
 ```
