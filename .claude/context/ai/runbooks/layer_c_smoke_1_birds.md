@@ -3,6 +3,25 @@
 Per-species event-generation LoRA. Trial stage — not yet wired into the dev
 endpoint or the mixer.
 
+## macOS install (one-time, into `acoustic_ai/.venv`)
+
+AudioCraft pins `torch==2.1.0`, `torchaudio<2.1.2`, `torchvision==0.16.0`,
+`torchtext==0.16.0`, and `xformers<0.0.23`. None of those are usable on this
+project's venv (torch 2.11, Apple Silicon — no xformers wheels). Install
+audiocraft and its non-torch deps without letting pip touch torch:
+
+```bash
+./acoustic_ai/.venv/bin/pip install --no-deps audiocraft
+./acoustic_ai/.venv/bin/pip install --no-deps av einops num2words julius encodec sentencepiece flashy
+./acoustic_ai/.venv/bin/pip install spacy dora-search hydra-colorlog torchmetrics demucs
+```
+
+`xformers` is replaced by an in-process stub in
+`code/handler.py:_install_xformers_stub()` — the only `ops.*` calls audiocraft
+makes at runtime are `unbind` (aliased to `torch.unbind`) and
+`memory_efficient_attention` (raises if the MPS path ever tries to use it,
+which it should not). Skip xformers; don't try to build it.
+
 ## Scope
 
 Train or validate **bird vocal events only**. The current annotation dataset
@@ -54,7 +73,7 @@ python3 script/download/download_site_257_event_segments.py \
 Train one LoRA per species. Boobook example:
 
 ```bash
-./acoustic_ai/.venv/bin/python acoustic_ai/modules/events/train_audiogen_lora.py \
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/train_audiogen_lora.py \
   --manifest resources/site_257_bowra-dry-a/smoking_test_1_layer_C_dataset_1/prepared_manifest_boobook.csv \
   --output_dir model/candidates/lucas/layer-c-audiogen-boobook-smoke \
   --num_epochs 5 \
@@ -68,7 +87,7 @@ Output: 32 MB LoRA adapter (`adapter_model.safetensors` + `adapter_config.json`
 ## Sample
 
 ```bash
-./acoustic_ai/.venv/bin/python acoustic_ai/modules/events/sample_audiogen_lora.py \
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/sample_audiogen_lora.py \
   --lora_dir model/candidates/lucas/layer-c-audiogen-boobook-smoke \
   --output_dir debug/layer_c/audiogen/samples/audiogen-lora-boobook-smoke/
 ```

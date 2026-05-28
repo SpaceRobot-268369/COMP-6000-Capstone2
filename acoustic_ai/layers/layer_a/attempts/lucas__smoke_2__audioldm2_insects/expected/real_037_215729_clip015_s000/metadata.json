@@ -1,0 +1,70 @@
+{
+  "audio": {
+    "duration_s": 10.7044375,
+    "peak": 0.052642822265625,
+    "rms": 0.008265934884548187,
+    "sample_rate": 16000
+  },
+  "selection_reason": "hottest day in set (44C) \u2014 upper end of insect density",
+  "source": "real_audio",
+  "source_clip_id": "037_215729_clip015_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/smoking_test2_insects_dataset/manifest.csv",
+  "source_metadata": {
+    "caption": "summer afternoon, insect-rich ambient soundscape, cicada and insect texture, Bowra dry woodland, Australia, hot (44C), dry air, moderate wind, recorded 2020-02-01, no music, no machinery",
+    "clip_id": "037_215729_clip015_s000",
+    "diel_bin": "afternoon",
+    "duration_s": 10.704,
+    "env": {
+      "cloud_clearness_index": "0.58",
+      "count": "51",
+      "day_of_year": "32",
+      "daylight_hours": "13.51",
+      "days_since_rain": "3",
+      "hour_local": "14",
+      "hour_utc": "4",
+      "humidity_pct": "18.33",
+      "month": "2",
+      "precipitation_daily_mm": "0.0",
+      "precipitation_mm": "0.0",
+      "recorded_date_utc": "2020-02-01T04:00:00.000Z",
+      "recording_id": "215729",
+      "sample_bin": "afternoon",
+      "sample_local_date": "2020-02-01",
+      "season": "summer",
+      "solar_radiation_wm2": "708.05",
+      "sunrise_local": "05:44",
+      "sunset_local": "19:15",
+      "surface_pressure_kpa": "99.44",
+      "temp_max_c": "44.34",
+      "temp_min_c": "31.28",
+      "temperature_c": "44.34",
+      "wind_direction_deg": "358.5",
+      "wind_max_ms": "5.44",
+      "wind_speed_ms": "2.96"
+    },
+    "filter_rules": {
+      "excluded_annotated_event_overlap": true,
+      "max_wind_max_ms": "strictly below 8.0 by default",
+      "max_wind_speed_ms": "strictly below 4.5 by default"
+    },
+    "insect_filter_metrics": {
+      "high_cv": 0.120278,
+      "high_ratio": 0.023899,
+      "low_ratio": 0.88466,
+      "mid_ratio": 0.017312,
+      "rms": 0.00827494,
+      "score": 0.014268
+    },
+    "recording_date": "2020-02-01",
+    "season": "summer",
+    "segment_abs_end_s": 4224.683,
+    "segment_abs_start_s": 4213.978,
+    "segment_id": "215729_clip015_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_215729/site_257_item_215729_clip_015.webm",
+    "source_segment_wav": "acoustic_ai/data/ambient/ambient_segments/215729_clip015_s000.wav",
+    "t_end": 24.683,
+    "t_start": 13.978
+  },
+  "tier": "expected"
+}

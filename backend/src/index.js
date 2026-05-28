@@ -194,73 +194,77 @@ app.get("/api/ai/health", async (_req, res) => {
   }
 });
 
-app.post("/api/analysis", requireAuth, async (req, res) => {
+// Layer registry — dropdown population
+app.get("/api/layers", requireAuth, async (_req, res) => {
   try {
-    // Forward the multipart file + query params to FastAPI
-    const url = new URL(`${AI_SERVER}/analysis`);
-    Object.entries(req.body).forEach(([k, v]) => url.searchParams.set(k, v));
-
-    const r = await fetch(url.toString(), {
-      method: "POST",
-      headers: req.headers["content-type"]
-        ? { "content-type": req.headers["content-type"] }
-        : {},
-      body: req,  // stream the raw request body through
-      duplex: "half",
-    });
-
+    const r = await fetch(`${AI_SERVER}/layers`);
     const body = await r.json();
     res.status(r.status).json(body);
   } catch (err) {
-    console.error("Analysis proxy failed:", err);
+    console.error("Layers list proxy failed:", err);
     res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
   }
 });
 
-app.post("/api/generation", requireAuth, async (req, res) => {
+// Cached samples for an attempt — drives the "view reference / showcase"
+// preview in the frontend. See .claude/context/dev/artifact_policy.md.
+app.get("/api/layers/:layer/attempts/:attempt/samples", requireAuth, async (req, res) => {
+  const { layer, attempt } = req.params;
   try {
-    const r = await fetch(`${AI_SERVER}/generation`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-
+    const r = await fetch(
+      `${AI_SERVER}/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples`,
+    );
     const body = await r.json();
     res.status(r.status).json(body);
   } catch (err) {
-    console.error("Generation proxy failed:", err);
+    console.error(`Samples proxy failed (${layer}/${attempt}):`, err);
     res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
   }
 });
 
-app.post("/api/layer_a/generate", requireAuth, async (req, res) => {
-  await proxyLayerAGeneration(req, res, "/layer_a/generate", "Layer A proxy failed:");
+// Stream a cached sample WAV through the proxy (browser plays it via <audio>).
+app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/:stem.wav", requireAuth, async (req, res) => {
+  const { layer, attempt, tier, stem } = req.params;
+  try {
+    const r = await fetch(
+      `${AI_SERVER}/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`,
+    );
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      return res.status(r.status).json(body);
+    }
+    res.setHeader("content-type", r.headers.get("content-type") || "audio/wav");
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.send(buf);
+  } catch (err) {
+    console.error(`Sample WAV proxy failed (${layer}/${attempt}/${tier}/${stem}):`, err);
+    res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
+  }
 });
 
-app.post("/api/layer_a/smoke_test_1/generate", requireAuth, async (req, res) => {
-  await proxyLayerAGeneration(req, res, "/layer_a/smoke_test_1/generate", "Layer A smoke test 1 proxy failed:");
-});
-
-app.post("/api/layer_a/smoke_test_2/generate", requireAuth, async (req, res) => {
-  await proxyLayerAGeneration(req, res, "/layer_a/smoke_test_2/generate", "Layer A smoke test 2 proxy failed:");
-});
-
-async function proxyLayerAGeneration(req, res, aiPath, logLabel) {
+// Per-attempt generation — only `seed` is forwarded (Layer A dev-generation
+// contract, see CLAUDE.md). The handler picks up every other parameter from
+// the attempt's registry.yaml entry.
+app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
+  const { layer, attempt } = req.params;
   try {
     const requestedSeed = Number(req.body?.seed);
-    const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : 42;
-    const r = await fetch(`${AI_SERVER}${aiPath}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seed }),
-    });
+    const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null;
+    const r = await fetch(
+      `${AI_SERVER}/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/generate`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed }),
+      },
+    );
     const body = await r.json();
     res.status(r.status).json(body);
   } catch (err) {
-    console.error(logLabel, err);
+    console.error(`Layer generation proxy failed (${layer}/${attempt}):`, err);
     res.status(502).json({ ok: false, message: "AI server error.", detail: String(err.message) });
   }
-}
+});
 
 app.get("/", (_req, res) => {
   res.json({ service: "backend", status: "running" });

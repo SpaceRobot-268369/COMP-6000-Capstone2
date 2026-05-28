@@ -8,6 +8,7 @@ import LayerATestPage from "./pages/LayerATestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
+import ServerStatus from "./components/ServerStatus.jsx";
 
 const accountStorageKey = "sonic-lab-account-name";
 
@@ -72,18 +73,16 @@ export default function App() {
               <span className="nav-icon">≋</span>
               <span>Transformation</span>
             </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-1" className={sidebarLinkClass}>
+            <NavLink to="/dev/layers" className={sidebarLinkClass}>
               <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 1 (spring night)</span>
-            </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-2" className={sidebarLinkClass}>
-              <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 2</span>
+              <span>Dev — Layers</span>
             </NavLink>
           </nav>
         </div>
 
         <ThemeToggle />
+
+        <ServerStatus />
 
         <section className="sidebar-user panel" aria-label="Account status">
           <div className="sidebar-user-head">
@@ -122,9 +121,7 @@ export default function App() {
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
-          <Route path="/dev/layer-a" element={<Navigate to="/dev/layer-a/smoking-test-1" replace />} />
-          <Route path="/dev/layer-a/smoking-test-1" element={<LayerATestPage variant="springNight" />} />
-          <Route path="/dev/layer-a/smoking-test-2" element={<LayerATestPage variant="insects" />} />
+          <Route path="/dev/layers" element={<LayerATestPage />} />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}
