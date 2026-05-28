@@ -6,6 +6,9 @@ Prepared for LoRA training. This folder records the first Stable Audio 3 LoRA
 smoke candidate dataset after the AudioGen LoRA route failed to produce stable
 species-specific calls.
 
+Server B real 10-step smoke training passed on 2026-05-28. The 300-step model
+quality run has not been started yet.
+
 ## Goal
 
 Train a small Stable Audio 3 LoRA for Layer C event generation using verified
@@ -44,8 +47,8 @@ Official SA3 LoRA data directory:
 
 The full handoff package contains six `.wav` files, each with a matching
 same-name `.txt` caption required by `train_lora.py`. In git, keep only the
-small metadata and captions; add the `.wav` files through DVC when this dataset
-is finalized for shared training.
+small metadata, captions, and `.dvc` pointers. The six `.wav` files are stored
+in the shared DVC/S3 cache.
 
 The six clips were selected from real audited source crops, not generated
 audio. They first passed a reference-conditioned SA3 probe:
@@ -101,6 +104,19 @@ Local CPU dry-run status: the script successfully loaded six clips, created
 192 LoRA layers, and reported 5.6M trainable parameters. It was stopped during
 CPU demo generation before a checkpoint was saved, because this machine has no
 CUDA or MPS accelerator.
+
+Server B 10-step CUDA smoke status:
+
+- Machine: `shinypokemon`
+- GPU: Tesla T4, 15 GB VRAM
+- torch: 2.7.1+cu126
+- Stable Audio 3 repo: `/home/ubuntu/stable-audio-3`
+- Hugging Face auth: verified with `hf auth whoami`
+- Command reached `max_steps=10`
+- Generated checkpoint:
+  `model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt`
+- Checkpoint pointer:
+  `model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt.dvc`
 
 ## Evaluation Plan
 

@@ -401,15 +401,100 @@ idle shutdown: running `sudo shutdown -h now`
 Server B then shut down successfully and RONIN reported that it could stop.
 For normal use, set `IDLE_SHUTDOWN_SECONDS=600` for a 10-minute idle timeout.
 
+## Server B Real Layer C SA3 Smoke Test
+
+Verified on 2026-05-28 using the real Server B machine `shinypokemon`.
+
+This test was run manually on Server B to prove the real GPU training stack,
+DVC/S3 data flow, Hugging Face model access, and checkpoint artifact storage.
+It was not run through the automatic worker training adapter yet.
+
+Verified Git commit on Server B:
+
+```text
+8d81066 data: track layer c sa3 10-step smoke checkpoint
+```
+
+Runtime environment:
+
+```text
+GPU: Tesla T4, 15360 MiB VRAM
+CUDA available through torch: true
+torch: 2.7.1+cu126
+Stable Audio 3 upstream repo: /home/ubuntu/stable-audio-3
+Stable Audio 3 commit: fa5ee841dd49bae0fa361fac26904adc27fd400e
+Layer C training env: acoustic_ai/.venv-audiogen
+Hugging Face auth: verified with hf auth whoami
+```
+
+DVC/S3 verification:
+
+```text
+Layer C smoke wavs were pushed from local Windows with DVC.
+Server B ran dvc pull and materialized all six Layer C wav files.
+The 10-step checkpoint was pushed from Server B with DVC.
+```
+
+Training command:
+
+```bash
+cd ~/COMP-6000-Capstone2-worker
+mkdir -p logs
+
+SA3_REPO=/home/ubuntu/stable-audio-3 \
+PYTHON=/home/ubuntu/COMP-6000-Capstone2-worker/acoustic_ai/.venv-audiogen/bin/python \
+MPLCONFIGDIR=/tmp/mpl \
+SA3_STEPS=10 \
+SA3_CHECKPOINT_EVERY=10 \
+SA3_DEMO_EVERY=999999 \
+SA3_NUM_WORKERS=0 \
+bash script/events/train_sa3_lora_core6_smoke.sh \
+  2>&1 | tee logs/sa3_lora_core6_train_10.log
+```
+
+Observed result:
+
+```text
+GPU available: True (cuda), used: True
+Found 6 files
+LoRA config: rank=8, alpha=8.0, adapter_type=dora-rows
+lora layers: 192
+5.6 M trainable params
+Trainer.fit stopped: max_steps=10 reached
+```
+
+Generated checkpoint:
+
+```text
+model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt
+size: 22 MB
+```
+
+Git/DVC artifact pointer:
+
+```text
+model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-core6-smoke/lora_checkpoints/epoch=1-step=10.ckpt.dvc
+```
+
+This proves a minimal real training path:
+
+```text
+DVC/S3 data -> Server B CUDA -> Stable Audio 3 base model -> Layer C LoRA training -> checkpoint -> DVC/S3 artifact
+```
+
+The 300-step Layer C run was intentionally not started during this handoff.
+Treat 300-step training as Layer C model-quality work, not as required evidence
+for the Server A/B infrastructure MVP.
+
 ## Not Implemented Yet
 
-- real Python GPU environment setup;
-- DVC/S3 pull/push;
-- model checkpoint validation;
-- real generation;
-- artifact upload;
+- automatic worker execution of the real Layer C SA3 training command;
+- automatic DVC add/push and artifact URI update from the worker;
+- automatic upload or retention policy for training logs;
+- 300-step Layer C model-quality smoke run;
+- real generation inference path;
 - worker registry;
 - local disk cleanup;
-- OOM detection.
+- OOM detection and retry classification.
 
 These are later Milestone 3/4/P1 tasks.
