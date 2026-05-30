@@ -56,13 +56,12 @@ User env request
 
 ## Analysis Mode
 
-```
-Uploaded audio clip
-    └── Module A (via E): encode → latent NN → ambient context + env estimate
-    └── Module B (via E): spectral heuristics → wind/rain intensity
-    └── Module C (via E): BirdNET / annotation lookup → detected events
-    └── Module E: assemble analysis report
-```
+Three detector heads (E-A ambient, E-B weather, E-C events) run in parallel
+on the raw mixture — no decomposer, no shared stem. Layer E aggregates.
+
+Full design rationale (why no decomposer, per-head model options, report
+schema, MVP build order) lives in
+[pipeline_design.md § Analysis Mode](pipeline_design.md#analysis-mode--component-design).
 
 ---
 
@@ -83,9 +82,10 @@ Uploaded audio clip
 **Vocoder:** `model/candidates/lucas/vocoder-hifigan-site257/best.pt` (11 MB, DVC-tracked)
 **Latents:** `data/ambient/latents/latent_clips.npy` — 5,318 per-clip latents + env vectors (DVC-tracked)
 
-**Current status:** Layer A generation is being validated with AudioLDM2 LoRA on this branch. This is one attempted Layer A implementation and has succeeded for the smoke test. The current user-validated smoke checkpoint is `model/candidates/lucas/layer-a-audioldm2-raw-smoke`, based on `cvssp/audioldm2`; it works well for quiet, environmental-like ambient beds with only minor issues. Keep output low-volume and mostly stationary. The dev path is fixed-prompt because the smoke dataset is tiny: the frontend should expose only a non-negative integer seed, the backend should forward only `{ seed }`, and FastAPI owns the prompt/checkpoint/settings. Different seeds produce different variations from the same model/prompt/settings; the same seed should reproduce effectively the same audio on the same code path. Seed is not temperature, and temperature is not exposed here. The failed high-RMS checkpoint `model/candidates/lucas/layer-a-audioldm2-rms005-smoke` is deprecated because it produced pulsing/machine-like artifacts after over-amplifying quiet field recordings. If this branch is merged into `main`, update the broader docs so AudioLDM2 LoRA is described consistently as the main Layer A path. The trained VAE is retained for transformation mode and Module E analysis only; it is not on the Layer A generation path. CLI and frontend Layer A spectrograms should use the shared log-mel renderer in `modules.ambient.diffusion.layer_a_visualization`.
+**Current status:** Layer A generation is validated with AudioLDM2 LoRA on this branch — smoke checkpoint `model/candidates/lucas/layer-a-audioldm2-raw-smoke` (base `cvssp/audioldm2`) passes for quiet, stationary ambient beds. The trained VAE is retained for transformation mode and Module E analysis only — not on the Layer A generation path.
 
-**Layer A data dependency:** the cleaned segment pool (`data/ambient/ambient_segments/` + `ambient_index.csv`) must be built by `precompute/build_ambient_index.py` before retrieval can run. Cleaning is **audio-only and content-agnostic** — events are an open class (birds, vehicles, frogs, helicopters, voices, unknown), but ambient is locally stationary, so the gate flags frames that deviate > 3·MAD from a per-clip rolling-median baseline of mel/RMS/centroid/flatness/flux/ZCR features. After ±0.5 s dilation, contiguous unmasked spans ≥ 20 s are kept and sliced into 20–60 s segments (target 30 s) so runtime crossfades are minimal. BirdNET and A2O annotations are run as **post-hoc audits** over retained segments, not as gates. Retrieval matches on `diel_bin` + `season` + (`hour`, `month`) cyclic encoding only — temp/humidity/wind/rain are excluded because they belong to Layers B and C.
+Generation algorithm, dev-path seed contract, the cleaned-segment-pool data dependency, and the legacy retrieval-first design all live in
+[pipeline_design.md § Layer A](pipeline_design.md#layer-a--ambient-site-bed).
 
 ### Layer B — Weather Sound Engine (layers/layer_b/)
 
@@ -103,11 +103,7 @@ Intensity mapping:
 
 ### Layer C — Species/Event Layer (layers/layer_c/)
 
-**Approach:** **Generative**, using **AudioGen LoRA** fine-tuned per species (and optionally per diel/seasonal context) on top of the `facebook/audiogen-medium` base model. AudioGen is chosen over AudioLDM2 for this layer because:
-- Token-based (EnCodec) representation preserves transients better than mel→HiFi-GAN
-- Trained on AudioSet's environmental/animal labels — the base model already has owl, songbird, insect priors
-- Native short-clip operating range (1–10 s) matches Layer C event durations
-- LoRA fine-tuning is supported via PEFT on the transformer attention layers
+**Approach:** generative AudioGen LoRA per species (and optionally per diel/seasonal context) on top of `facebook/audiogen-medium` (1.5B params, 16 kHz mono).
 
 | File | Role |
 |---|---|
@@ -117,17 +113,11 @@ Intensity mapping:
 | `sample_audiogen.py` | Generate event clips from a LoRA + prompt + duration + seed [PLACEHOLDER] |
 | `scheduler.py` | Timeline event placement (which LoRAs fire, when, at what density) [PLACEHOLDER] |
 
-**Base model:** `facebook/audiogen-medium` (1.5B params, 16 kHz mono)
 **Checkpoints:** `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` per LoRA (DVC-tracked)
 **Training data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
 
-**Pre-condition:** annotation_audit.py must run before any Module C training, to produce per-species manifests filtered by score, duration, and diel context.
-
-**Smoke test:** Single LoRA on Southern Boobook nocturnal calls — see `pipeline_design.md` Layer C section for the smoke-test selection policy and hyperparameters.
-
-**Sample-rate boundary:** AudioGen output is 16 kHz mono. Module D mixer must resample 16 kHz → 22,050 Hz at the layer boundary before overlaying on the ambient bed.
-
-**Tooling note:** AudioGen lives in Meta's `audiocraft` repo (not HuggingFace `diffusers`). Use a separate Python environment (`acoustic_ai/.venv-audiogen`) to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
+Why AudioGen over AudioLDM2 here, per-species selection policy, smoke-test hyperparameters, sample-rate boundary, tooling environment, and prompt style:
+[pipeline_design.md § Layer C](pipeline_design.md#layer-c--species-and-annotated-event-layer).
 
 ### Layer D — Mixer (layers/layer_d/)
 
@@ -139,12 +129,23 @@ No training data. Pure algorithmic combiner.
 
 ### Layer E — Analysis Explainer (layers/layer_e/)
 
+Three detector heads run in parallel on the raw mixture (no decomposition
+step), plus an aggregator that assembles the report JSON. See
+[pipeline_design.md § Analysis Mode](pipeline_design.md#analysis-mode--component-design)
+for the full per-head design, pre-trained model options, and report schema.
+
 | File | Role |
 |---|---|
-| `weather_detector.py` | Detect wind/rain intensity from mel spectrogram [PLACEHOLDER] |
-| `event_detector.py` | Detect species/events from audio [PLACEHOLDER] |
+| `ambient_similarity.py` | E-A: embed clip → k-NN against `ambient_index.csv` → context estimate [PLACEHOLDER] |
+| `weather_detector.py` | E-B: wind/rain intensity from mel + tagger probs [PLACEHOLDER] |
+| `event_detector.py` | E-C: species/event detection + onsets on the raw mixture [PLACEHOLDER] |
+| `aggregator.py` | Assemble per-head outputs into the report JSON [PLACEHOLDER] |
 
-No dedicated training data. Uses Module A latents, Module B asset index, Module C event index.
+Reuse-from-generation table (CLAP, EnCodec, what does and doesn't transfer):
+[pipeline_design.md § Reuse from generation models](pipeline_design.md#reuse-from-generation-models).
+
+No dedicated training data of its own. Reads Module A latents/index, Module B
+asset index, Module C event index.
 
 ---
 

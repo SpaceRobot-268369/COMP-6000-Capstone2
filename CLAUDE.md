@@ -115,6 +115,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
+    │   ├── prerequisites.md               # Conceptual on-ramp: audio fundamentals, encoder/decoder, LoRA, ecosystem
     │   ├── architecture.md
     │   ├── pipeline_design.md
     │   ├── distillation_strategy.md
@@ -147,6 +148,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Need | Doc |
 |---|---|
 | **Conventions** (repo structure, naming, tracking, artifact tiers, attempt internals, model README) | [.claude/context/conventions.md](.claude/context/conventions.md) |
+| **AI prerequisites** (audio fundamentals, encoder/decoder, LoRA, pre-trained ecosystem) | [.claude/context/ai/prerequisites.md](.claude/context/ai/prerequisites.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
