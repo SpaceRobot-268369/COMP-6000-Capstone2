@@ -91,6 +91,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--audit-samples-per-cell", type=int, default=5,
                    help="Number of clips to copy into audit_samples/<season>_<diel>/. 0 disables.")
     p.add_argument("--audit-seed", type=int, default=42)
+    p.add_argument("--out-dir", type=str, default=None,
+                   help="Output dataset directory (relative to repo root or absolute). "
+                        "Defaults to the MVP-1 dataset dir. Use a separate dir to keep "
+                        "the MVP-1 dataset frozen for rollback.")
     return p.parse_args()
 
 
@@ -542,6 +546,15 @@ def write_manifest(rows: list[dict], path: Path) -> None:
 
 def main() -> int:
     args = parse_args()
+
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+        if not out_dir.is_absolute():
+            out_dir = REPO_ROOT / out_dir
+    else:
+        out_dir = OUT_DIR
+    manifest_path = out_dir / "manifest.csv"
+
     env_map = load_env_map(ENV_DATA)
     clip_time_map = load_clip_time_map(TRAINING_MANIFEST)
     ann_intervals = load_annotation_intervals(ANNOTATIONS_DIR)
@@ -581,21 +594,21 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    manifest_rows, errors = write_dataset(selected, OUT_DIR, args.overwrite, args.render_spectrograms)
-    write_manifest(manifest_rows, MANIFEST_PATH)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest_rows, errors = write_dataset(selected, out_dir, args.overwrite, args.render_spectrograms)
+    write_manifest(manifest_rows, manifest_path)
 
-    n_audit = write_audit_samples(selected, OUT_DIR, args.audit_samples_per_cell, args.audit_seed)
+    n_audit = write_audit_samples(selected, out_dir, args.audit_samples_per_cell, args.audit_seed)
     if n_audit:
-        print(f"\nAudit samples: {n_audit} clips copied into {OUT_DIR / 'audit_samples'}")
+        print(f"\nAudit samples: {n_audit} clips copied into {out_dir / 'audit_samples'}")
 
     # Gitignore the audit copies — they are derivative listening fodder.
-    gi = OUT_DIR / ".gitignore"
+    gi = out_dir / ".gitignore"
     if not gi.exists():
         gi.write_text("audit_samples/\n")
 
     print(f"\nDone. {len(manifest_rows) - len(errors)}/{len(manifest_rows)} clips exported.")
-    print(f"Manifest: {MANIFEST_PATH}")
+    print(f"Manifest: {manifest_path}")
     if errors:
         print(f"Errors ({len(errors)}): {errors[:20]}{'...' if len(errors) > 20 else ''}")
         return 1
