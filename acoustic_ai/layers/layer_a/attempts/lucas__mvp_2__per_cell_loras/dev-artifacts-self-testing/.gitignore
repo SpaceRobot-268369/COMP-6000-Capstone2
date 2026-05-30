@@ -1,0 +1,5 @@
+# Local-only scratch (audio, spectrograms, metadata downloaded from server).
+# Per conventions: folder tracked via .gitkeep, contents gitignored.
+*
+!.gitkeep
+!.gitignore
