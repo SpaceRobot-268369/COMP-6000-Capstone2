@@ -64,9 +64,9 @@ COMP-6000-Capstone2/
 │
 ├── frontend/                # React + Vite UI scaffold (Docker, port 5173)
 ├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
-├── services/dev/            # docker-compose.yml + db_init.sql for local frontend+backend+postgres
+├── services/dev/            # docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
 │
-├── acoustic_ai/             # Python AI module (FastAPI server runs natively for MPS)
+├── acoustic_ai/             # Python AI module (FastAPI app runs natively on serverB for inference)
 │   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
 │   ├── layers/              # per-layer attempts (layer_a, layer_b, layer_c, …)
 │   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see conventions.md
@@ -300,9 +300,12 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 | Frontend | Docker | `http://localhost:5173` |
 | Backend | Docker | `http://localhost:4000` |
 | PostgreSQL | Docker | `localhost:5432` |
-| AI server | **Native only** (GPU/MPS) | `http://localhost:8000` |
+| AI tunnel | Docker sidecar | `ai-tunnel:8000` inside Compose |
+| AI server | Native on serverB | `serverB:127.0.0.1:8000` via SSH tunnel |
 
-Docker cannot access macOS MPS — the AI server **must** run natively.
+The Docker backend reaches serverB through the Compose `ai-tunnel` sidecar.
+The FastAPI process itself runs natively on serverB; keep SSH keys outside the
+repository and use the key convention in `services/dev/README.md`.
 
 Commands, env vars, ports: [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md).
 

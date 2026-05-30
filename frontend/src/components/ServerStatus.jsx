@@ -1,30 +1,25 @@
-import { useState } from "react";
+import { NavLink } from "react-router-dom";
 
-const STATES = [
-  { key: "online",   label: "Server online",  detail: "All systems nominal" },
-  { key: "degraded", label: "Server degraded", detail: "Elevated latency" },
-  { key: "offline",  label: "Server offline", detail: "No response" },
-  { key: "checking", label: "Checking…",      detail: "Pinging backend" },
-];
+const FALLBACK_STATUS = {
+  key: "checking",
+  label: "Checking serverB",
+  detail: "Pinging AI tunnel",
+};
 
-export default function ServerStatus() {
-  const [index, setIndex] = useState(0);
-  const current = STATES[index];
-
-  function cycle() {
-    setIndex((i) => (i + 1) % STATES.length);
-  }
+export default function ServerStatus({ status = FALLBACK_STATUS }) {
+  const current = status || FALLBACK_STATUS;
 
   return (
-    <button
-      type="button"
-      className={`sidebar-status sidebar-status--${current.key}`}
-      onClick={cycle}
+    <NavLink
+      to="/server-b"
+      className={({ isActive }) =>
+        `sidebar-status sidebar-status--${current.key}${isActive ? " active" : ""}`
+      }
       title={current.detail}
-      aria-label={`Server status: ${current.label}. Click to preview next state.`}
+      aria-label={`ServerB status: ${current.label}. Open serverB status page.`}
     >
       <span className="sidebar-status-dot" aria-hidden="true" />
       <span className="sidebar-status-label">{current.label}</span>
-    </button>
+    </NavLink>
   );
 }
