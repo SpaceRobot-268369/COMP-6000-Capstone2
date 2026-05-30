@@ -149,6 +149,7 @@ def list_layers() -> list[dict]:
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
+                "uses_seed":        bool(att.get("uses_seed", False)),
             })
         out.append({
             "id":      layer_id,

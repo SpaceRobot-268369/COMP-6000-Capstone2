@@ -25,6 +25,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
         params:
           base_model: cvssp/audioldm2
@@ -45,6 +46,7 @@ layers:
         author: lucas
         stage: smoke_2
         status: smoke_test_2_insects_success
+        uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
         params:
           base_model: cvssp/audioldm2
@@ -98,6 +100,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        uses_seed: true
         checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
         params:
           base_model: facebook/audiogen-medium
