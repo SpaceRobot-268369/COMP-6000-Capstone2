@@ -80,6 +80,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--render-spectrograms", action="store_true",
                    help="Render mel spectrogram NPY+PNG per clip. Slow; off by default for MVP build.")
+    p.add_argument("--no-content-filters", action="store_true",
+                   help="Skip §6.1 per-clip audio-content filters (RMS / DC / crest / spectral flatness).")
+    p.add_argument("--min-rms", type=float, default=0.0005)
+    p.add_argument("--max-rms", type=float, default=0.3)
+    p.add_argument("--max-dc-offset", type=float, default=0.05)
+    p.add_argument("--max-crest-factor", type=float, default=30.0)
+    p.add_argument("--max-low-band-flat-frac", type=float, default=0.60,
+                   help="Drop if >FRAC of frames have flatness <0.05 in the 500-2000 Hz band (motor bleed).")
+    p.add_argument("--audit-samples-per-cell", type=int, default=5,
+                   help="Number of clips to copy into audit_samples/<season>_<diel>/. 0 disables.")
+    p.add_argument("--audit-seed", type=int, default=42)
     return p.parse_args()
 
 
@@ -155,6 +166,65 @@ def overlaps_annotation(rec_id: str, seg_start_s: float, seg_end_s: float,
     return False
 
 
+# ---------- §6.1 content stats ----------
+
+def compute_content_stats(wav_path: Path) -> dict | None:
+    """Cheap per-clip audio-content stats. None if read fails."""
+    import numpy as np
+    import soundfile as sf
+    try:
+        y, sr = sf.read(str(wav_path), dtype="float32", always_2d=False)
+    except Exception:
+        return None
+    if y.ndim > 1:
+        y = y.mean(axis=1)
+    if y.size == 0:
+        return None
+    rms = float(np.sqrt(np.mean(y * y) + 1e-12))
+    peak = float(np.max(np.abs(y)))
+    dc = float(np.mean(y))
+    crest = peak / (rms + 1e-12)
+
+    # Spectral flatness, 500-2000 Hz band, fraction of frames below 0.05.
+    n_fft, hop = 1024, 512
+    if y.shape[0] < n_fft + hop:
+        flat_low_frac = 0.0
+    else:
+        usable = y.shape[0] - n_fft
+        n_frames = 1 + usable // hop
+        win = np.hanning(n_fft).astype(np.float32)
+        idx = np.arange(n_fft)[None, :] + (np.arange(n_frames) * hop)[:, None]
+        frames = y[idx] * win
+        spec = np.abs(np.fft.rfft(frames, axis=1)) + 1e-12
+        freqs = np.fft.rfftfreq(n_fft, 1.0 / sr)
+        band = (freqs >= 500.0) & (freqs <= 2000.0)
+        if int(band.sum()) < 2:
+            flat_low_frac = 0.0
+        else:
+            band_spec = spec[:, band]
+            geo = np.exp(np.mean(np.log(band_spec), axis=1))
+            arith = np.mean(band_spec, axis=1)
+            flat = geo / (arith + 1e-12)
+            flat_low_frac = float(np.mean(flat < 0.05))
+
+    return {"rms": rms, "peak": peak, "dc_offset": abs(dc),
+            "crest_factor": crest, "flat_low_band_frac": flat_low_frac}
+
+
+def content_drop_reason(stats: dict, args) -> str | None:
+    if stats["rms"] < args.min_rms:
+        return "content_near_silent"
+    if stats["rms"] > args.max_rms:
+        return "content_clipping"
+    if stats["dc_offset"] > args.max_dc_offset:
+        return "content_dc_offset"
+    if stats["crest_factor"] > args.max_crest_factor:
+        return "content_high_crest"
+    if stats["flat_low_band_frac"] > args.max_low_band_flat_frac:
+        return "content_motor_tonal"
+    return None
+
+
 # ---------- candidate gather ----------
 
 def load_candidates(args, env_map, clip_time_map, ann_intervals):
@@ -195,6 +265,17 @@ def load_candidates(args, env_map, clip_time_map, ann_intervals):
             if not seg_wav.exists():
                 stats["missing_segment_wav"] += 1
                 continue
+
+            if not args.no_content_filters:
+                cs = compute_content_stats(seg_wav)
+                if cs is None:
+                    stats["content_read_error"] += 1
+                    continue
+                reason = content_drop_reason(cs, args)
+                if reason:
+                    stats[reason] += 1
+                    continue
+                row["_content_stats"] = cs
 
             row["_rec_id"] = rec_id
             row["_env"] = env
@@ -346,6 +427,7 @@ def write_dataset(selected: list[dict], out_dir: Path, overwrite: bool, render_s
     n = len(selected)
     for i, row in enumerate(selected, 1):
         clip_id = f"{i:04d}_{row['segment_id']}"
+        row["_clip_id"] = clip_id
         clip_dir = clips_dir / clip_id
         clip_dir.mkdir(exist_ok=True)
         caption = build_caption(row)
@@ -419,6 +501,36 @@ def write_dataset(selected: list[dict], out_dir: Path, overwrite: bool, render_s
     return manifest_rows, errors
 
 
+def write_audit_samples(selected: list[dict], out_dir: Path, n_per_cell: int, seed: int) -> int:
+    """Copy n_per_cell random audio.wav files per (season, diel) into audit_samples/."""
+    import random
+    if n_per_cell <= 0:
+        return 0
+    audit_dir = out_dir / "audit_samples"
+    if audit_dir.exists():
+        shutil.rmtree(audit_dir)
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    clips_dir = out_dir / "clips"
+
+    by_cell: dict[tuple, list[dict]] = defaultdict(list)
+    for r in selected:
+        if r.get("_clip_id"):
+            by_cell[(r["season"], r["diel_bin"])].append(r)
+
+    copied = 0
+    for (season, diel), rows in by_cell.items():
+        rng = random.Random(f"{seed}:audit:{season}:{diel}")
+        sample = rng.sample(rows, min(n_per_cell, len(rows)))
+        cell_dir = audit_dir / f"{season}_{diel}"
+        cell_dir.mkdir(parents=True, exist_ok=True)
+        for r in sample:
+            src = clips_dir / r["_clip_id"] / "audio.wav"
+            if src.exists():
+                shutil.copy2(src, cell_dir / f"{r['_clip_id']}.wav")
+                copied += 1
+    return copied
+
+
 def write_manifest(rows: list[dict], path: Path) -> None:
     with open(path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -472,6 +584,15 @@ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     manifest_rows, errors = write_dataset(selected, OUT_DIR, args.overwrite, args.render_spectrograms)
     write_manifest(manifest_rows, MANIFEST_PATH)
+
+    n_audit = write_audit_samples(selected, OUT_DIR, args.audit_samples_per_cell, args.audit_seed)
+    if n_audit:
+        print(f"\nAudit samples: {n_audit} clips copied into {OUT_DIR / 'audit_samples'}")
+
+    # Gitignore the audit copies — they are derivative listening fodder.
+    gi = OUT_DIR / ".gitignore"
+    if not gi.exists():
+        gi.write_text("audit_samples/\n")
 
     print(f"\nDone. {len(manifest_rows) - len(errors)}/{len(manifest_rows)} clips exported.")
     print(f"Manifest: {MANIFEST_PATH}")

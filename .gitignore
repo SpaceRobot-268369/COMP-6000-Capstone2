@@ -57,6 +57,8 @@ resources/**
 !resources/site_257_bowra-dry-a/site_257_all_items.csv
 !resources/site_257_bowra-dry-a/all_items_annotation/
 !resources/site_257_bowra-dry-a/all_items_annotation/README.md
+!resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/
+!resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/**
 
 # IDE and editors
 .idea/
