@@ -1,0 +1,6 @@
+outs:
+- md5: 6d033475c1e9d203454fb076a5142ba3.dir
+  size: 456231100
+  nfiles: 3234
+  hash: md5
+  path: clips

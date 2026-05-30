@@ -8,7 +8,20 @@ import {
 
 const DEFAULT_SEED = 42;
 
-export default function LayerATestPage() {
+const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
+const ANALYSIS_LAYER_IDS   = ["layer_e"];
+
+export default function LayerATestPage({
+  mode = "generation",
+  includeLayers,
+  eyebrow = "DEVELOPER TOOLS",
+  title = "Layer / Attempt Dev Test",
+} = {}) {
+  const allowedLayerIds = useMemo(() => {
+    if (includeLayers && includeLayers.length) return includeLayers;
+    return mode === "analysis" ? ANALYSIS_LAYER_IDS : GENERATION_LAYER_IDS;
+  }, [mode, includeLayers]);
+
   // Registry state
   const [registry, setRegistry] = useState(null);
   const [regError, setRegError] = useState("");
@@ -31,15 +44,19 @@ export default function LayerATestPage() {
   useEffect(() => {
     fetchLayerRegistry()
       .then((doc) => {
-        setRegistry(doc);
-        const firstLayer = doc.layers?.[0];
+        const filtered = {
+          ...doc,
+          layers: (doc.layers || []).filter((l) => allowedLayerIds.includes(l.id)),
+        };
+        setRegistry(filtered);
+        const firstLayer = filtered.layers?.[0];
         if (firstLayer) {
           setLayerId(firstLayer.id);
           setAttemptId(firstLayer.default || firstLayer.attempts?.[0]?.id || "");
         }
       })
       .catch((e) => setRegError(e.message));
-  }, []);
+  }, [allowedLayerIds]);
 
   // When the layer changes, snap the attempt to that layer's default.
   useEffect(() => {
@@ -168,8 +185,8 @@ export default function LayerATestPage() {
       <section className="generation-page">
         <header className="generation-topbar">
           <div className="generation-brandline">
-            <p className="eyebrow">DEVELOPER TOOLS</p>
-            <span>Layer / Attempt Dev Test</span>
+            <p className="eyebrow">{eyebrow}</p>
+            <span>{title}</span>
           </div>
         </header>
         <p className="analysis-error">Failed to load layer registry: {regError}</p>
@@ -182,8 +199,8 @@ export default function LayerATestPage() {
       <section className="generation-page">
         <header className="generation-topbar">
           <div className="generation-brandline">
-            <p className="eyebrow">DEVELOPER TOOLS</p>
-            <span>Layer / Attempt Dev Test</span>
+            <p className="eyebrow">{eyebrow}</p>
+            <span>{title}</span>
           </div>
         </header>
         <p>Loading registry…</p>
@@ -195,8 +212,8 @@ export default function LayerATestPage() {
     <section className="generation-page">
       <header className="generation-topbar">
         <div className="generation-brandline">
-          <p className="eyebrow">DEVELOPER TOOLS</p>
-          <span>Layer / Attempt Dev Test</span>
+          <p className="eyebrow">{eyebrow}</p>
+          <span>{title}</span>
         </div>
       </header>
 
