@@ -90,6 +90,37 @@ const _PLACEHOLDER_MSG =
   "Use /dev/layers in the meantime.";
 
 export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
+
+/**
+ * Run the Layer E analysis pipeline (E-A ambient, E-B weather, E-C events)
+ * on an uploaded audio file. The backend is still being wired up — when the
+ * endpoint isn't live yet the caller will get a clear error to surface in UI.
+ *
+ * Expected response shape (mirrors pipeline_design.md § Analysis Mode):
+ *   {
+ *     ambient: { estimated_conditions:{...}, similar_clips:[...], confidence:0..1 },
+ *     weather: { wind_intensity:"none|light|moderate|strong",
+ *                rain_intensity:"none|light|moderate|heavy", confidence:0..1 },
+ *     events:  { detections:[{label, confidence, onset_s, offset_s}], confidence:0..1 },
+ *     limitations?: string[],
+ *     metadata?: object
+ *   }
+ */
+export async function analyseUpload(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/api/analysis`, {
+    method:      "POST",
+    credentials: "include",
+    body:        form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || `Analysis failed (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function generateSoundscape()  { throw new Error(_PLACEHOLDER_MSG); }
 export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG); }
 

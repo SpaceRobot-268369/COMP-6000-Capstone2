@@ -5,6 +5,7 @@ import AboutPage from "./pages/AboutPage.jsx";
 import TransformationPage from "./pages/TransformationPage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
+import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
@@ -75,7 +76,11 @@ export default function App() {
             </NavLink>
             <NavLink to="/dev/layers" className={sidebarLinkClass}>
               <span className="nav-icon">⌬</span>
-              <span>Dev — Layers</span>
+              <span>Dev — Generation</span>
+            </NavLink>
+            <NavLink to="/dev/analysis" className={sidebarLinkClass}>
+              <span className="nav-icon">◉</span>
+              <span>Dev — Analysis</span>
             </NavLink>
           </nav>
         </div>
@@ -121,7 +126,17 @@ export default function App() {
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
-          <Route path="/dev/layers" element={<LayerATestPage />} />
+          <Route
+            path="/dev/layers"
+            element={
+              <LayerATestPage
+                mode="generation"
+                eyebrow="DEVELOPER TOOLS — GENERATION"
+                title="Generation Layers Dev Test"
+              />
+            }
+          />
+          <Route path="/dev/analysis" element={<DevAnalysisPage />} />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}
