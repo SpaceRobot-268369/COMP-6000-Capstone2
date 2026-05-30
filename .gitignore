@@ -26,6 +26,13 @@ acoustic_ai/venv/
 acoustic_ai/.venv/
 acoustic_ai/.venv-*/
 
+# Private keys and local SSH material
+*.pem
+*.key
+*.p8
+**/.ssh/
+services/dev/secrets/
+
 # Logs and caches
 *.log
 npm-debug.log*
