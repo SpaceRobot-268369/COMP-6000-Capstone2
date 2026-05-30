@@ -125,6 +125,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   │   └── layer_c_smoke_1_birds.md
     │   └── logs/
     │       ├── mvp_decision_log.md
+    │       ├── caption_schema_log.md
     │       └── audioldm2_transition_log.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
@@ -154,6 +155,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
+| Caption schema log (Layer A) | [.claude/context/ai/logs/caption_schema_log.md](.claude/context/ai/logs/caption_schema_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
