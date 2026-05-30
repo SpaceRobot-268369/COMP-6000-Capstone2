@@ -304,8 +304,14 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 | AI server | Native on serverB | `serverB:127.0.0.1:8000` via SSH tunnel |
 
 The Docker backend reaches serverB through the Compose `ai-tunnel` sidecar.
-The FastAPI process itself runs natively on serverB; keep SSH keys outside the
-repository and use the key convention in `services/dev/README.md`.
+The FastAPI process itself runs natively on serverB out of
+`~/shiny-pikachu/` — a dedicated clone pinned to `main`; never `git
+checkout` another branch in that tree. Per-member experiment clones live
+beside it (e.g. `~/lucano/COMP-6000-Capstone2/`) and are free to switch
+branches. Startup / health / stop commands and the working-tree
+convention: [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md).
+Keep SSH keys outside the repository and use the key convention in
+`services/dev/README.md`.
 
 Commands, env vars, ports: [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md).
 
