@@ -66,6 +66,14 @@ RMS/peak/clipping metrics are quality controls, not weather labels. RMS can be
 used later by the mixer for normalization; clipping or obvious overload should
 reject or quarantine a candidate even if the CLAP weather score is high.
 
+Use `script/dataset/promote_site_weather_candidates.py` to promote candidate
+rows into Layer D-ready assets. The default promotion mode is conservative:
+
+- export only `pool_decision=accept`;
+- do not export backup rows unless explicitly requested;
+- do not export site-derived thunder for the MVP;
+- write 22,050 Hz mono WAV files plus `layer_d_ready_manifest.csv`.
+
 ## CLAP-First Retrieval MVP
 
 Use `script/dataset/build_site_weather_clap_retrieval.py` for the first

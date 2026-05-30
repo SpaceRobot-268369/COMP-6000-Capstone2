@@ -194,6 +194,63 @@ creates the actual 22.05 kHz mono WAV asset and writes its durable storage URI
 back to the candidate pool index. Until that exists, the row is a retrieval
 candidate, not a mixer input.
 
+## Layer D Asset Promotion 001
+
+Run on Server A (`spacerobot-268369`) on 2026-05-31.
+
+Script:
+
+```text
+script/dataset/promote_site_weather_candidates.py
+```
+
+Input:
+
+```text
+runs/mvp_pool_20260530_001_candidate_pool/candidate_pool_manifest.csv
+```
+
+Output:
+
+```text
+runs/mvp_pool_20260530_001_layer_d_assets_accept_only/
+debug/site_weather_layer_d_assets_mvp_001/
+```
+
+Policy version:
+
+```text
+site_weather_candidate_promotion_v0.1
+```
+
+Promotion mode:
+
+```text
+accept-only, no backup, no thunder
+```
+
+Summary:
+
+| Pool category | Promoted WAV assets |
+|---|---:|
+| `rain_primary` | 4 |
+| `rain_wind_mixed` | 6 |
+| `wind_primary` | 53 |
+| **Total** | **63** |
+
+Verification:
+
+| Requirement | Result |
+|---|---|
+| Sample rate | 22,050 Hz |
+| Channels | mono |
+| Format | WAV |
+| Manifest rows | 63 |
+
+The generated `layer_d_ready_manifest.csv` is the first MVP manifest that points
+to mixer-ready site-weather assets. Backup rows remain candidates only and are
+not promoted by default.
+
 ## Thunder Validator 001
 
 Run on Server A (`spacerobot-268369`) on 2026-05-30.
