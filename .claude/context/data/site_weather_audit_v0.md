@@ -121,3 +121,13 @@ final_score =
 Env metadata can propose candidate time ranges, but audio embedding must confirm
 weather type and intensity before a clip enters the Layer D site-weather pool.
 
+Implementation entry point:
+
+```text
+script/dataset/build_site_weather_clap_retrieval.py
+```
+
+Run it on the server against the existing Site 257 item metadata, env metadata,
+and S3 listing. The next manual audit should inspect its
+`retrieval_manifest.csv` and MP3 previews, then tune CLAP margin thresholds and
+contamination prompts.

@@ -42,6 +42,140 @@ final_score =
 + 0.15 * env_prior_score
 ```
 
+## Project Audio Boundaries
+
+Layer B candidates are not considered Layer D-ready just because they have an
+MP3 preview or a CLAP analysis WAV.
+
+The CLAP retrieval script may export 48 kHz mono WAV windows for embedding, and
+MP3 files for human listening. Those are analysis/review artifacts. Before a
+clip can be used by the Layer D mixer, it must be promoted to a Layer D asset:
+
+| Requirement | Value |
+|---|---|
+| Sample rate | 22,050 Hz |
+| Channels | mono |
+| Recommended format | WAV for mixer input |
+| Required metadata | source S3 URI, offsets, duration, CLAP scores, env prior, pool category, RMS/peak/clipping fields |
+
+The candidate pool manifest must therefore record whether a row is only a
+preview/analysis window or whether it has been exported as a Layer D-ready
+asset. Do not treat `preview_path` as a runtime asset path.
+
+RMS/peak/clipping metrics are quality controls, not weather labels. RMS can be
+used later by the mixer for normalization; clipping or obvious overload should
+reject or quarantine a candidate even if the CLAP weather score is high.
+
+## CLAP-First Retrieval MVP
+
+Use `script/dataset/build_site_weather_clap_retrieval.py` for the first
+server-side CLAP retrieval batch.
+
+The script keeps env metadata in the pipeline, but only for narrowing the search
+space:
+
+```text
+site item metadata + S3 listing + env rows
+-> env prior buckets: rain_env_prior / wind_env_prior / storm_env_prior
+-> sampled 15s site windows
+-> CLAP weather prompts + contamination prompts
+-> retrieval_manifest.csv
+```
+
+`clap_weather_label` is the primary machine label. `env_prior_for_clap_label`
+is auxiliary evidence, not a label override.
+
+Weather-vs-contamination margins should be treated conservatively. If a
+candidate's strongest weather prompt is close to the strongest insect/bird,
+human, or machine prompt, route it to `maybe_contamination_close` for listening
+review instead of accepting it directly.
+
+Thunder is gated more strictly than rain and wind because the current env data
+does not contain direct thunder/lightning annotations. Storm-prior windows must
+still pass audio confirmation before they can be accepted. A thunder CLAP label
+without at least weak storm/rain env support should be rejected or routed out of
+the Layer D weather candidate pool.
+
+## Balanced Retrieval
+
+After the first CLAP audit, global ranking should not be used as the only
+manifest selection method because wind tends to dominate the top results.
+
+For manual review batches, prefer target-first balanced retrieval:
+
+```text
+rain candidates -> rain prompt score vs contamination/other weather
+wind candidates -> wind prompt score vs contamination/other weather
+thunder candidates -> thunder prompt score with strict storm-prior gate
+```
+
+Recommended MVP review quotas:
+
+```text
+rain=30,wind=25,thunder=10
+```
+
+Use `retrieval_target` as the audit grouping field. `clap_weather_label` should
+still be recorded, but it should not erase the requested target. For example, a
+target `rain` clip with top CLAP label `wind` may still be worth hearing if the
+rain target score is high and the target-vs-other margin is close.
+
+## Candidate Pool Policy
+
+After `audit_002`, do not continue full manual review loops. Use manual audit
+results to build an automatic candidate pool, then only spot-check stratified
+samples.
+
+Run:
+
+```text
+script/dataset/build_site_weather_candidate_pool.py
+```
+
+The candidate pool should separate default retrieval material from backup
+material:
+
+| Pool category | Default use |
+|---|---|
+| `rain_primary` | Use by default for Layer D rain retrieval |
+| `rain_wind_mixed` | Use when mixed rain/wind is acceptable |
+| `wind_primary` | Use by default for Layer D wind retrieval |
+| `rain_backup_maybe` | Backup only |
+| `wind_with_bio_backup` | Backup only; likely biological contamination |
+| `wind_backup_maybe` | Backup only |
+| `wind_weak_backup` | Backup only |
+| `storm_rain_wind_backup` | Backup only; not thunder |
+| `reject` | Do not use |
+
+Thunder is not accepted from site audio in the MVP candidate pool. Route Layer D
+thunder needs to the library fallback unless a future thunder detector provides
+strong event confirmation.
+
+For thunder-like clips, run
+`script/dataset/validate_site_weather_thunder.py` as a second-pass validator.
+This validator reads the analysis WAV and computes envelope/spectrogram
+features such as low-frequency energy ratio, transient peak-to-median level,
+active duration, decay shape, spectral flux, and clipping ratio.
+
+The validator is deliberately conservative:
+
+- it can mark `possible_thunder_burst` for tiny targeted review;
+- it should not auto-promote a clip into the default thunder pool;
+- it treats peak/clipping risk as `ambiguous_overload_or_thunder`, because wind
+  overload can sound like thunder;
+- it requires thunder/storm context from CLAP target/label, storm pool, or storm
+  env before calling a low-frequency transient a possible thunder burst.
+
+For the MVP, Layer D thunder retrieval should still prefer the sound library
+unless a very small reviewed site thunder subset is explicitly promoted later.
+
+Do not use source separation as a prerequisite for Layer B weather retrieval.
+Natural site soundscapes have diffuse overlapping sources, and the project
+architecture expects direct detection/scoring on the mixture.
+
+Manual review should now be limited to small samples, for example 10-20 clips
+per pool category, rather than reviewing every candidate window.
+
 ## Scope
 
 This policy is for initial data screening only.
