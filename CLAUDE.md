@@ -32,7 +32,7 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 
 | Layer | Role | Status |
 |---|---|---|
-| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1 (spring night) ✓, smoke-2 (insects) ✓ |
+| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1/2 ✓ · **prod-1 per-cell bank (16 season×diel) promoted** → `model/production/layer_a_ambient/` |
 | layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
 | layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
 | layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
@@ -77,7 +77,7 @@ COMP-6000-Capstone2/
 │
 ├── model/                   # trained checkpoints
 │   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
-│   └── production/<role>/                     # promoted slots — empty until explicit promotion
+│   └── production/<role>/                     # promoted slots (layer_a_ambient ✓)
 │
 ├── resources/               # source recordings + manifests (DVC-tracked)
 │   └── site_257_bowra-dry-a/                  # only site live right now
@@ -218,11 +218,15 @@ model/production/<role>/                                           # promoted sl
 `<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
 in [.claude/context/conventions.md](.claude/context/conventions.md).
 
-At this stage of the project, **nothing is in production**. Every trained
-checkpoint — including the VAE and vocoder used by the smoke-4 inference
-path — is a candidate. A `model/production/<role>/` slot will be created
+First production promotion: **`model/production/layer_a_ambient/`** — the
+Layer A per-cell ambient bank, promoted from
+`lucas__mvp_2__per_cell_loras` (served via attempt
+`lucas__prod_1__per_cell_loras`, the layer_a registry default). Promoted
+**with documented caveats** — see the production card's audit section.
+Everything else — including the VAE and vocoder used by the smoke-4 inference
+path — remains a candidate. A `model/production/<role>/` slot is created
 only after an explicit promotion decision (validation, sign-off, release
-tagging).
+tagging) per [conventions §5.4](.claude/context/conventions.md).
 
 Rules (team workflow):
 - One folder per member, one folder per attempt — never overwrite another member's work.
