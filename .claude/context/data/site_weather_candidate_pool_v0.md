@@ -175,6 +175,64 @@ Interpretation:
 - Continue with spot-check review instead of full manual review. The generated
   sample has 67 clips across pool categories.
 
+## Server Rain Scout 003
+
+Run on Server A (`spacerobot-268369`) on 2026-05-31.
+
+Purpose: test whether dense rain-only sampling improves clean rain yield before
+running another full expansion.
+
+Retrieval output:
+
+```text
+runs/rain_scout_20260531_003/
+debug/site_weather_rain_scout_20260531_003/
+```
+
+Candidate pool output:
+
+```text
+runs/rain_scout_20260531_003_candidate_pool/
+debug/site_weather_rain_scout_20260531_003_candidate_pool/
+```
+
+Scout settings:
+
+```text
+target-quotas rain=50,wind=0,thunder=0
+max-recordings-per-target=30
+windows-per-recording=8
+no MP3 preview export
+```
+
+Retrieval summary:
+
+| Metric | Count |
+|---|---:|
+| Total retrieval windows | 50 |
+| Target rain | 50 |
+| CLAP rain label | 26 |
+| CLAP wind label | 21 |
+| CLAP thunder label | 3 |
+
+Candidate pool summary:
+
+| Category | Count |
+|---|---:|
+| `rain_primary` | 10 |
+| `rain_wind_mixed` | 2 |
+| `rain_backup_maybe` | 6 |
+| `reject` | 32 |
+
+Interpretation:
+
+- Dense rain-only sampling is materially better than broad balanced expansion:
+  the broad expansion produced `rain_primary=6/192` (~3%), while this scout
+  produced `rain_primary=10/50` (20%).
+- Future rain expansion should use dense rain scout settings and only promote
+  retained top rows after candidate-pool classification.
+- Wind is already sufficient for MVP testing; spend expansion budget on rain.
+
 ## Retrieval Implication
 
 Layer D site-first retrieval should query only accepted pools by default:

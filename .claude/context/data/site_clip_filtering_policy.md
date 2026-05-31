@@ -128,6 +128,35 @@ still be recorded, but it should not erase the requested target. For example, a
 target `rain` clip with top CLAP label `wind` may still be worth hearing if the
 rain target score is high and the target-vs-other margin is close.
 
+## Rain Dense Scout Strategy
+
+Server runs on 2026-05-31 showed that broad balanced expansion still produces a
+wind-heavy pool. The useful rain yield improved when rain was sampled as a
+dense scout:
+
+```text
+target-quotas rain=50,wind=0,thunder=0
+max-recordings-per-target=30
+windows-per-recording=8
+no MP3 preview export during scout
+```
+
+Observed yield:
+
+| Run | Rain rows | `rain_primary` | Yield |
+|---|---:|---:|---:|
+| broad rain expansion | 192 | 6 | ~3% |
+| rain dense scout | 50 | 10 | 20% |
+
+Use this pattern for future rain expansion:
+
+- sample many windows per rain-prior recording;
+- score first, then keep only the best rain rows;
+- export listening previews only for the retained sample, not for every scout
+  window;
+- do not spend more expansion effort on wind until rain is closer to the MVP
+  target.
+
 ## Candidate Pool Policy
 
 After `audit_002`, do not continue full manual review loops. Use manual audit
