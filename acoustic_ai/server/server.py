@@ -48,8 +48,10 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     seed: Optional[int] = None
-    # Forward-compat: extra fields are ignored unless the handler accepts them.
-    # We keep this minimal because Layer A's dev contract is "seed only".
+    # Cell selector for bank attempts (e.g. Layer A mvp_2 per-cell LoRAs).
+    # Single-adapter attempts ignore these (their handler swallows extras).
+    season: Optional[str] = None
+    diel: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -89,9 +91,14 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     metadata block.
     """
     try:
-        result = registry.generate(layer_id, attempt_id, seed=body.seed)
+        result = registry.generate(
+            layer_id, attempt_id,
+            seed=body.seed, season=body.season, diel=body.diel,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except NotImplementedError as exc:
         raise HTTPException(status_code=501, detail=str(exc))
     except Exception as exc:
@@ -126,11 +133,20 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav")
-def get_sample_wav(layer_id: str, attempt_id: str, tier: str, stem: str):
-    """Serve a sample WAV inline (so the browser <audio> tag can play it)."""
+@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{rel_path:path}")
+def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
+    """Serve a sample WAV inline (so the browser <audio> tag can play it).
+
+    `rel_path` is whatever the sample's `wav_url` puts after the tier — see
+    registry.list_samples() for the three supported layouts. Examples:
+        expected/<stem>.wav                       (legacy flat)
+        expected/<case>/audio.wav                 (canonical case-dir)
+        expected/<cell>/<case>/audio.wav          (cell-grouped bank)
+    """
+    if not rel_path.endswith(".wav"):
+        raise HTTPException(status_code=404, detail="only .wav samples are served")
     try:
-        path = registry.sample_wav_path(layer_id, attempt_id, tier, stem)
+        path = registry.sample_wav_path(layer_id, attempt_id, tier, rel_path)
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     if not path.exists():

@@ -1,0 +1,53 @@
+{
+  "attempt_id": "lucas__mvp_2__per_cell_loras",
+  "trained_at": "2026-05-30T17:00:00+09:30",
+  "architecture": "per_cell_lora_bank",
+  "n_cells": 16,
+  "hardware": {
+    "gpu": "Tesla T4",
+    "vram_gb": 16,
+    "host": "shinypokemon"
+  },
+  "environment": {
+    "torch": "2.12.0+cu130",
+    "accelerate_mixed_precision": "fp16",
+    "python": "3.10.12"
+  },
+  "recipe_per_cell": {
+    "num_epochs": 5,
+    "batch_size": 4,
+    "learning_rate": 1.0e-5,
+    "audio_rms_normalization": false,
+    "lora": {"r": 8, "alpha": 32, "dropout": 0.1,
+             "target_modules": ["to_q", "to_k", "to_v", "to_out.0"]}
+  },
+  "dataset": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset",
+  "caption_schema": "v2",
+  "reference_val_loss": {"attempt": "lucas__mvp_1_1__spring_night_replica", "val_loss": 0.0565},
+  "cells": [
+    {"cell": "spring_night",     "train_clips": 180, "val_clips": 20, "train_loss": 0.1413, "val_loss": 0.1004, "tier": "strong"},
+    {"cell": "autumn_night",     "train_clips": 180, "val_clips": 20, "train_loss": 0.1412, "val_loss": 0.1003, "tier": "strong"},
+    {"cell": "autumn_afternoon", "train_clips": 163, "val_clips": 18, "train_loss": 0.1747, "val_loss": 0.1191, "tier": "strong"},
+    {"cell": "summer_night",     "train_clips": 148, "val_clips": 16, "train_loss": 0.1622, "val_loss": 0.0938, "tier": "strong"},
+    {"cell": "spring_dawn",      "train_clips": 93,  "val_clips": 10, "train_loss": 0.1261, "val_loss": 0.0577, "tier": "healthy"},
+    {"cell": "summer_dawn",      "train_clips": 87,  "val_clips": 10, "train_loss": 0.1345, "val_loss": 0.0589, "tier": "healthy"},
+    {"cell": "winter_night",     "train_clips": 87,  "val_clips": 10, "train_loss": 0.1330, "val_loss": 0.0589, "tier": "healthy"},
+    {"cell": "spring_afternoon", "train_clips": 86,  "val_clips": 10, "train_loss": 0.1688, "val_loss": 0.0580, "tier": "healthy"},
+    {"cell": "spring_morning",   "train_clips": 84,  "val_clips": 9,  "train_loss": 0.1634, "val_loss": 0.0576, "tier": "healthy"},
+    {"cell": "winter_dawn",      "train_clips": 67,  "val_clips": 8,  "train_loss": 0.1738, "val_loss": 0.0860, "tier": "healthy"},
+    {"cell": "winter_afternoon", "train_clips": 59,  "val_clips": 7,  "train_loss": 0.1854, "val_loss": 0.1032, "tier": "healthy"},
+    {"cell": "autumn_dawn",      "train_clips": 53,  "val_clips": 6,  "train_loss": 0.1062, "val_loss": 0.1443, "tier": "watch", "note": "low train / high val = mild overfit; 6-clip val noisy"},
+    {"cell": "summer_afternoon", "train_clips": 53,  "val_clips": 6,  "train_loss": 0.1090, "val_loss": 0.1473, "tier": "watch", "note": "low train / high val = mild overfit; Phase 2.5 candidate"},
+    {"cell": "autumn_morning",   "train_clips": 34,  "val_clips": 4,  "train_loss": 0.2061, "val_loss": 0.0604, "tier": "thin"},
+    {"cell": "summer_morning",   "train_clips": 30,  "val_clips": 3,  "train_loss": 0.2647, "val_loss": 0.0697, "tier": "thin"},
+    {"cell": "winter_morning",   "train_clips": 20,  "val_clips": 2,  "train_loss": 0.1705, "val_loss": 0.0993, "tier": "thin"}
+  ],
+  "qualitative_outcome": "passed_listening_audit",
+  "known_issues": [
+    "No long-form generation yet (10s tiles only) — tiled+crossfade generator planned.",
+    "Minor per-cell quality variance; summer_afternoon and autumn_dawn are Phase 2.5 augmentation candidates.",
+    "Not servable until the Phase 3 inference router routes (season,diel) -> cell adapter."
+  ],
+  "promoted": false,
+  "successor_work": ["phase_3_inference_router", "phase_2_5_thin_cell_augmentation", "long_form_bed_generator"]
+}

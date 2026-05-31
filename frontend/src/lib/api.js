@@ -72,12 +72,14 @@ export async function fetchAttemptSamples(layerId, attemptId) {
 }
 
 /**
- * Build a playable URL for a cached sample WAV. The Express backend proxies
- * the request through to FastAPI; the browser <audio> tag points at this URL.
+ * Build a playable URL for a cached sample WAV. The server returns a fully
+ * formed `wav_url` per sample (it knows the layout — flat / case-dir /
+ * cell-grouped); the frontend just prefixes the API base + `/api`.
  */
-export function sampleWavUrl(layerId, attemptId, tier, stem) {
+export function sampleWavUrl(sample) {
+  if (!sample?.wav_url) return null;
   const base = API_BASE || "";
-  return `${base}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`;
+  return `${base}/api${sample.wav_url}`;
 }
 
 // ─── Stage-3 product endpoints (placeholders) ─────────────────────────────────
@@ -90,17 +92,53 @@ const _PLACEHOLDER_MSG =
   "Use /dev/layers in the meantime.";
 
 export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
+
+/**
+ * Run the Layer E analysis pipeline (E-A ambient, E-B weather, E-C events)
+ * on an uploaded audio file. The backend is still being wired up — when the
+ * endpoint isn't live yet the caller will get a clear error to surface in UI.
+ *
+ * Expected response shape (mirrors pipeline_design.md § Analysis Mode):
+ *   {
+ *     ambient: { estimated_conditions:{...}, similar_clips:[...], confidence:0..1 },
+ *     weather: { wind_intensity:"none|light|moderate|strong",
+ *                rain_intensity:"none|light|moderate|heavy", confidence:0..1 },
+ *     events:  { detections:[{label, confidence, onset_s, offset_s}], confidence:0..1 },
+ *     limitations?: string[],
+ *     metadata?: object
+ *   }
+ */
+export async function analyseUpload(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/api/analysis`, {
+    method:      "POST",
+    credentials: "include",
+    body:        form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.detail || `Analysis failed (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function generateSoundscape()  { throw new Error(_PLACEHOLDER_MSG); }
 export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG); }
 
-export async function generateAttempt(layerId, attemptId, { seed } = {}) {
+export async function generateAttempt(layerId, attemptId, { seed, season, diel } = {}) {
+  const payload = { seed };
+  if (season && diel) {
+    payload.season = season;
+    payload.diel = diel;
+  }
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {
       method:      "POST",
       headers:     { "Content-Type": "application/json" },
       credentials: "include",
-      body:        JSON.stringify({ seed }),
+      body:        JSON.stringify(payload),
     },
   );
   if (!res.ok) {

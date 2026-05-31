@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 12.678125,
+    "peak": 0.005889892578125,
+    "rms": 0.001373137580230832,
+    "sample_rate": 16000
+  },
+  "cell": "winter_dawn",
+  "selection_reason": "top-recording_id pick for cell winter_dawn (recording_id=1536798)",
+  "source": "real_audio",
+  "source_clip_id": "1436_1536798_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_winter_dawn.csv",
+  "source_metadata": {
+    "caption": "dawn winter ambient soundscape, Bowra dry woodland, Australia, cold (8C), humid air, moderate wind, recorded 2024-06-12, no music, no machinery",
+    "clip_id": "1436_1536798_clip001_s000",
+    "diel_bin": "dawn",
+    "duration_s": 12.678,
+    "env": {
+      "humidity_pct": 72.39,
+      "temperature_c": 7.92,
+      "wind_speed_ms": 2.38
+    },
+    "recording_date": "2024-06-12",
+    "recording_id": "1536798",
+    "season": "winter",
+    "segment_id": "1536798_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/1436_1536798_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

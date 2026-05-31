@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 10.7044375,
+    "peak": 0.019500732421875,
+    "rms": 0.003680617781355977,
+    "sample_rate": 16000
+  },
+  "cell": "spring_afternoon",
+  "selection_reason": "top-recording_id pick for cell spring_afternoon (recording_id=1401567)",
+  "source": "real_audio",
+  "source_clip_id": "0500_1401567_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_spring_afternoon.csv",
+  "source_metadata": {
+    "caption": "afternoon spring ambient soundscape, Bowra dry woodland, Australia, warm (31C), dry air, light breeze, recorded 2023-10-23, no music, no machinery",
+    "clip_id": "0500_1401567_clip001_s000",
+    "diel_bin": "afternoon",
+    "duration_s": 10.704,
+    "env": {
+      "humidity_pct": 12.69,
+      "temperature_c": 30.57,
+      "wind_speed_ms": 1.95
+    },
+    "recording_date": "2023-10-23",
+    "recording_id": "1401567",
+    "season": "spring",
+    "segment_id": "1401567_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0500_1401567_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

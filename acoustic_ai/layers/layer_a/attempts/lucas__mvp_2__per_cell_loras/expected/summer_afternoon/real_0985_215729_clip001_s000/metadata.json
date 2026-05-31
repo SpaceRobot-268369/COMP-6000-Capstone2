@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 12.6316875,
+    "peak": 0.02490234375,
+    "rms": 0.004543025977909565,
+    "sample_rate": 16000
+  },
+  "cell": "summer_afternoon",
+  "selection_reason": "top-recording_id pick for cell summer_afternoon (recording_id=215729)",
+  "source": "real_audio",
+  "source_clip_id": "0985_215729_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_summer_afternoon.csv",
+  "source_metadata": {
+    "caption": "afternoon summer ambient soundscape, Bowra dry woodland, Australia, very hot (44C), dry air, moderate wind, recorded 2020-02-01, no music, no machinery",
+    "clip_id": "0985_215729_clip001_s000",
+    "diel_bin": "afternoon",
+    "duration_s": 12.632,
+    "env": {
+      "humidity_pct": 18.33,
+      "temperature_c": 44.34,
+      "wind_speed_ms": 2.96
+    },
+    "recording_date": "2020-02-01",
+    "recording_id": "215729",
+    "season": "summer",
+    "segment_id": "215729_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0985_215729_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

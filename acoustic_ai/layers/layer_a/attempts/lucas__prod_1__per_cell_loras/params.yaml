@@ -1,0 +1,76 @@
+# Layer A AudioLDM2 LoRA — MVP-2: per-cell LoRA bank (Phase 2).
+#
+# 16 independent LoRAs, one per (season, diel_bin) cell. Each LoRA reuses the
+# EXACT recipe that produced smoke-quality output in
+# lucas__mvp_1_1__spring_night_replica (r=8, alpha=32, 5 epochs). The only
+# change vs that attempt is that it is run 16 times against 16 single-cell
+# manifests instead of once.
+#
+# Rationale: mvp_1 (r=8) and mvp_1_2 (r=64) both blurred when ONE shared LoRA
+# had to cover all 16 cells — gradient interference between cells, not a
+# capacity or data problem (mvp_1_1 proved a single cell trains cleanly).
+# Per-cell LoRAs eliminate the shared-weight interference by construction.
+#
+# Inference (Phase 3) routes on (season, diel_bin) -> loads the matching cell
+# adapter -> merges onto the frozen base.
+
+training:
+  base_model: cvssp/audioldm2
+  dataset: resources/site_257_bowra-dry-a/mvp2_per_cell_dataset
+  # Per-cell manifests are derived from dataset/manifest.csv by
+  # code/split_cell_manifests.py -> dataset/cell_<season>_<diel>.csv
+  per_cell_manifest_glob: cell_*.csv
+  num_epochs: 5
+  batch_size: 4
+  learning_rate: 1.0e-5
+  normalize_audio: false
+  mixed_precision: fp16
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+  # Caption schema v2 (date INCLUDED) — baked into manifest.csv, matches the
+  # proven mvp_1_1 recipe. Each cell's clips share their (season, diel) prefix.
+
+# 16 cells. Clip counts (train+val) from the cap-200 / wind<=5.5 build.
+# Thin cells flagged for Phase 2.5 augmentation if they underperform.
+cells:
+  spring_night:      {clips: 200, tier: strong}
+  autumn_night:      {clips: 200, tier: strong}
+  autumn_afternoon:  {clips: 181, tier: strong}
+  summer_night:      {clips: 164, tier: strong}
+  spring_dawn:       {clips: 103, tier: healthy}
+  summer_dawn:       {clips:  97, tier: healthy}
+  winter_night:      {clips:  97, tier: healthy}
+  spring_afternoon:  {clips:  96, tier: healthy}
+  spring_morning:    {clips:  93, tier: healthy}
+  winter_dawn:       {clips:  75, tier: healthy}
+  winter_afternoon:  {clips:  66, tier: healthy}
+  autumn_dawn:       {clips:  59, tier: healthy}
+  summer_afternoon:  {clips:  59, tier: healthy}
+  autumn_morning:    {clips:  38, tier: thin}
+  summer_morning:    {clips:  33, tier: thin}
+  winter_morning:    {clips:  22, tier: thin}
+
+# Inference exemplars for the 3-cell showcase A/B (seed 42). Captions match
+# the v2 template with the cell's representative env values.
+inference:
+  showcase_prompts:
+    spring_night: >-
+      night spring ambient soundscape, Bowra dry woodland, Australia,
+      mild (18C), moderate humidity, still, recorded 2024-09-15,
+      no music, no machinery
+    summer_afternoon: >-
+      afternoon summer ambient soundscape, Bowra dry woodland, Australia,
+      hot (33C), dry air, moderate wind, recorded 2024-12-15,
+      no music, no machinery
+    autumn_night: >-
+      night autumn ambient soundscape, Bowra dry woodland, Australia,
+      cool (12C), moderate humidity, still, recorded 2024-04-15,
+      no music, no machinery
+  num_inference_steps: 200
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80

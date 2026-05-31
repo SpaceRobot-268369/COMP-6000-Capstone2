@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 10.26325,
+    "peak": 0.005157470703125,
+    "rms": 0.0011796638136729598,
+    "sample_rate": 16000
+  },
+  "cell": "autumn_night",
+  "selection_reason": "top-recording_id pick for cell autumn_night (recording_id=1313286)",
+  "source": "real_audio",
+  "source_clip_id": "0350_1313286_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_autumn_night.csv",
+  "source_metadata": {
+    "caption": "night autumn ambient soundscape, Bowra dry woodland, Australia, cold (11C), moderate humidity, light breeze, recorded 2023-05-10, no music, no machinery",
+    "clip_id": "0350_1313286_clip001_s000",
+    "diel_bin": "night",
+    "duration_s": 10.263,
+    "env": {
+      "humidity_pct": 53.11,
+      "temperature_c": 10.9,
+      "wind_speed_ms": 1.4
+    },
+    "recording_date": "2023-05-10",
+    "recording_id": "1313286",
+    "season": "autumn",
+    "segment_id": "1313286_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0350_1313286_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}
