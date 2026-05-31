@@ -11,6 +11,9 @@ The deployment checkout stores Compose files and environment configuration.
 Docker images are pulled from GHCR into Docker's own image store; they are not
 stored inside this repository directory.
 
+The production database init script creates schema only. It does not seed the
+development `test@test.com / test1234` account.
+
 Required host-side Server B key:
 
 ```text
