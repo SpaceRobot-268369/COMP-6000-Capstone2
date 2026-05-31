@@ -260,14 +260,16 @@ is `42` (showcase + Dev UI only — `expected/` is real audio). Full rules:
 
 ### Layer A dev-generation contract
 
-The Layer A smoke LoRAs are trained on tiny datasets, so the dev generation path is locked down server-side:
+The Layer A LoRAs are trained on narrow datasets, so the dev generation path is locked down server-side:
 
-- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`).
-- Express backend forwards **only** `{ seed }`.
-- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass.
-- Server returns all parameters in response metadata for debugging.
+- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`), plus — for **bank attempts** that declare `uses_cells: true` — a `(season, diel)` cell selector (two dropdowns populated from the attempt's `cells` list).
+- Express backend forwards **only** `{ seed }`, plus `{ season, diel }` when both are valid (`season ∈ {spring,summer,autumn,winter}`, `diel ∈ {dawn,morning,afternoon,night}`); invalid/absent selectors are dropped and the server falls back to `default_cell`.
+- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass. For bank attempts it routes `(season, diel)` → the matching per-cell LoRA adapter (PEFT `set_adapter`) and uses that cell's locked prompt.
+- Server returns all parameters (including the resolved `cell`) in response metadata for debugging.
 
-Seed is **not** temperature — it initializes the diffusion noise. Same seed + same params + same code path = effectively the same audio.
+Seed is **not** temperature — it initializes the diffusion noise. Same seed + same cell + same params + same code path = effectively the same audio.
+
+The first bank attempt is `lucas__mvp_2__per_cell_loras` (16 season×diel adapters). See [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) once a Phase-3 runbook is added.
 
 ### Git branch naming
 

@@ -4145,6 +4145,14 @@ textarea {
   font-size: 12px;
   letter-spacing: 0.4px;
 }
+.layer-a-cell-row {
+  display: flex;
+  gap: 10px;
+}
+.layer-a-cell-row > .layer-a-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .layer-a-field > span {
   opacity: 0.7;
   text-transform: uppercase;

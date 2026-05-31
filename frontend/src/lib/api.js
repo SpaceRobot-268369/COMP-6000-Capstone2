@@ -124,14 +124,19 @@ export async function analyseUpload(file) {
 export async function generateSoundscape()  { throw new Error(_PLACEHOLDER_MSG); }
 export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG); }
 
-export async function generateAttempt(layerId, attemptId, { seed } = {}) {
+export async function generateAttempt(layerId, attemptId, { seed, season, diel } = {}) {
+  const payload = { seed };
+  if (season && diel) {
+    payload.season = season;
+    payload.diel = diel;
+  }
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {
       method:      "POST",
       headers:     { "Content-Type": "application/json" },
       credentials: "include",
-      body:        JSON.stringify({ seed }),
+      body:        JSON.stringify(payload),
     },
   );
   if (!res.ok) {

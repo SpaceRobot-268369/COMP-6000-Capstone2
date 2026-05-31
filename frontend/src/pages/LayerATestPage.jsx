@@ -30,6 +30,8 @@ export default function LayerATestPage({
 
   // Generation state
   const [seed,     setSeed]     = useState(DEFAULT_SEED);
+  const [season,   setSeason]   = useState("");        // bank attempts only
+  const [diel,     setDiel]     = useState("");        // bank attempts only
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -93,6 +95,46 @@ export default function LayerATestPage({
     [currentLayer, attemptId],
   );
   const usesSeed = currentAttempt?.uses_seed === true;
+  const usesCells = currentAttempt?.uses_cells === true;
+  const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+
+  // Derive the season / diel axes from the cell list (handles partial banks).
+  const seasonOptions = useMemo(() => {
+    const seen = [...new Set(cells.map((c) => c.split("_")[0]))];
+    return seen.map((s) => ({ value: s, label: s }));
+  }, [cells]);
+  const dielOptions = useMemo(() => {
+    const seen = [...new Set(
+      cells.filter((c) => c.startsWith(`${season}_`)).map((c) => c.split("_")[1]),
+    )];
+    return seen.map((d) => ({ value: d, label: d }));
+  }, [cells, season]);
+
+  // When the attempt changes, seed the (season, diel) selectors from the
+  // attempt's default_cell (or the first available cell).
+  useEffect(() => {
+    if (!usesCells || !cells.length) {
+      setSeason("");
+      setDiel("");
+      return;
+    }
+    const base = currentAttempt?.default_cell && cells.includes(currentAttempt.default_cell)
+      ? currentAttempt.default_cell
+      : cells[0];
+    const [s, d] = base.split("_");
+    setSeason(s);
+    setDiel(d);
+  }, [usesCells, cells, currentAttempt]);
+
+  // Keep diel valid when season changes (pick the first diel for that season).
+  useEffect(() => {
+    if (!usesCells || !season) return;
+    if (!cells.includes(`${season}_${diel}`)) {
+      const firstDiel = dielOptions[0]?.value || "";
+      setDiel(firstDiel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [season, usesCells]);
 
   // Flatten cached samples in display order (expected first, then showcase).
   const expectedEntries = useMemo(() => {
@@ -148,11 +190,12 @@ export default function LayerATestPage({
     setErrorMsg("");
     setResult(null);
     try {
-      const data = await generateAttempt(
-        layerId,
-        attemptId,
-        usesSeed ? { seed: Number(seed) || DEFAULT_SEED } : {},
-      );
+      const runParams = usesSeed ? { seed: Number(seed) || DEFAULT_SEED } : {};
+      if (usesCells && season && diel) {
+        runParams.season = season;
+        runParams.diel = diel;
+      }
+      const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
       setStatus("done");
     } catch (err) {
@@ -180,7 +223,7 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}__seed${seed || DEFAULT_SEED}`;
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}__seed${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -240,6 +283,23 @@ export default function LayerATestPage({
                 onChange={setAttemptId}
                 options={attemptOptions}
               />
+
+              {usesCells && (
+                <div className="layer-a-cell-row">
+                  <LabeledSelect
+                    label="Season"
+                    value={season}
+                    onChange={setSeason}
+                    options={seasonOptions}
+                  />
+                  <LabeledSelect
+                    label="Time of day"
+                    value={diel}
+                    onChange={setDiel}
+                    options={dielOptions}
+                  />
+                </div>
+              )}
 
               <LabeledNumber
                 label="Seed"
