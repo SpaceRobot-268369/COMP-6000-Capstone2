@@ -48,3 +48,8 @@ SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.
+
+Before enabling automatic deployment, run the manual `Server A Preflight`
+GitHub Actions workflow. It verifies the five Server A repository secrets, SSH
+access to `spacerobot-268369`, Docker/Compose availability, and the host-side
+Server B pem path without deploying or restarting the app.

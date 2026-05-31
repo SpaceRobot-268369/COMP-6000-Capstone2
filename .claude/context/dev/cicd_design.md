@@ -332,6 +332,33 @@ operators start Server B manually in RONIN, then Server B reads Server A's job
 list, runs work, reports status, posts Discord notifications, and shuts itself
 down when idle.
 
+### Server A Preflight
+
+Suggested workflow file:
+
+```text
+.github/workflows/server-a-preflight.yml
+```
+
+Trigger:
+
+```text
+workflow_dispatch only
+```
+
+Purpose:
+
+- verify the five Server A GitHub secrets are present;
+- verify required keys exist inside `SERVER_A_PROD_ENV`;
+- verify GitHub Actions can SSH to Server A as `ubuntu`;
+- verify Server A has `git`, `curl`, Docker, and Docker Compose available;
+- verify the Server B pem exists at `SERVERB_PEM_PATH`, is readable, and can be
+  parsed by `ssh-keygen`.
+
+This workflow must not deploy, restart containers, create the deployment
+checkout, or modify the running Server A application. It is a safe pre-deploy
+connectivity and configuration test.
+
 Rollback strategy:
 
 - keep the previous image SHA in the deploy metadata;
@@ -414,19 +441,25 @@ Server B post-deploy checks:
 
 ## Secrets
 
-Required GitHub Actions secrets will depend on the final deploy host names and
-registry permissions. Expected set:
+Current MVP Server A GitHub Actions secrets:
 
 ```text
 SERVER_A_HOST=SPACEROBOT-268369.ADELAIDEUNI.CLOUD
 SERVER_A_USER=ubuntu
 SERVER_A_SSH_KEY
 SERVER_A_DEPLOY_DIR=/home/ubuntu/eco-acoustic/COMP-6000-Capstone2
+SERVER_A_PROD_ENV
+```
+
+`GITHUB_TOKEN` is provided automatically by GitHub Actions and is used for GHCR
+login in the image publish and deploy workflows.
+
+Future Server B deployment secrets may include:
+
+```text
 SERVER_B_HOST
 SERVER_B_USER
 SERVER_B_SSH_KEY
-GHCR_TOKEN or GITHUB_TOKEN
-SERVER_A_PROD_ENV
 DVC or S3 credentials, if deployment runs dvc pull
 ```
 
