@@ -1,0 +1,26 @@
+# lucas__smoke_4__clap_cell_plus_knn — hyperparameters
+#
+# Phase 1 has no training (frozen CLAP). `training:` is reserved for a
+# learned combiner (logistic / MLP over [p_A, p_B, mean_topk_sim, agreement])
+# per PLAN.md §6.
+
+training: {}
+
+inference:
+  model_id: laion/clap-htsat-unfused
+  sample_rate: 48000
+  window_seconds: 10.0
+  pooling: mean
+  l2_normalise: true
+  head_a_variant: audio   # cell-anchor head — "audio" prototypes or "text" zero-shot
+  top_k: 5                # head-B neighbours
+  tau_a: 0.1              # head A softmax temperature
+  tau_b: 0.1              # head B softmax temperature
+  w_a: 0.5                # fusion weight on head A
+  w_b: 0.5                # fusion weight on head B
+  ood_conf_threshold: 0.25
+
+eval:
+  seed: 42
+  val_fraction: 0.2
+  split_disjoint_by: source_clip

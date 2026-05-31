@@ -74,7 +74,9 @@ class CLAPBackbone:
     @torch.no_grad()
     def embed_audio(self, paths: Iterable[str | Path], verbose: bool = False) -> np.ndarray:
         paths = list(paths)
-        out = np.empty((len(paths), self.model.config.projection_dim), dtype=np.float32)
+        rows = np.empty(
+            (len(paths), self.model.config.projection_dim), dtype=np.float32
+        )
         for i, p in enumerate(paths):
             audio = _load_48k_mono(p)
             windows = _window_10s(audio)
@@ -82,13 +84,13 @@ class CLAPBackbone:
                 audio=windows, sampling_rate=TARGET_SR, return_tensors="pt"
             )
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            out = self.model.get_audio_features(**inputs)
-            feats = out.pooler_output  # (n_win, projection_dim), already projected
+            model_out = self.model.get_audio_features(**inputs)
+            feats = model_out.pooler_output  # (n_win, projection_dim), already projected
             pooled = _l2_norm(feats.mean(dim=0, keepdim=True)).squeeze(0)
-            out[i] = pooled.float().cpu().numpy()
+            rows[i] = pooled.float().cpu().numpy()
             if verbose and (i + 1) % 100 == 0:
                 print(f"  embedded {i + 1}/{len(paths)}")
-        return out
+        return rows
 
     @torch.no_grad()
     def embed_text(self, strs: Iterable[str]) -> np.ndarray:
