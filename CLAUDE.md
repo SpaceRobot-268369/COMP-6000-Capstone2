@@ -135,6 +135,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │       └── generation_quality_analysis.md
     ├── dev/                               # Developer workflows: git, DVC, S3
     │   ├── dev_workflow.md                # Stage workflow: smoke → mvp/prod loop
+    │   ├── server_training_workflow.md    # Train on serverB → push branch → pull locally → PR
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
     │   ├── s3_bucket_layout.md
@@ -163,6 +164,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
 | Generation quality analysis | [.claude/context/data/logs/generation_quality_analysis.md](.claude/context/data/logs/generation_quality_analysis.md) |
 | **Stage workflow** (smoke → mvp/prod loop, generation mode) | [.claude/context/dev/dev_workflow.md](.claude/context/dev/dev_workflow.md) |
+| **Server training workflow** (train on serverB → push branch → pull locally → PR) | [.claude/context/dev/server_training_workflow.md](.claude/context/dev/server_training_workflow.md) |
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
