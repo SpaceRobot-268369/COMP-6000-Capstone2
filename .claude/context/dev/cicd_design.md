@@ -1,7 +1,7 @@
 # CI/CD Design
 
-**Status:** Draft  
-**Branch:** `infra/jay/cicd-pipeline`  
+**Status:** Draft
+**Branch:** `infra/jay/cicd-pipeline`
 **Last updated:** 2026-05-31
 
 ## Purpose
