@@ -112,4 +112,5 @@ acoustic_ai/=*
 
 # Claude
 /.claude/worktrees
+/.claude/launch.json
 .antigravitycli/
