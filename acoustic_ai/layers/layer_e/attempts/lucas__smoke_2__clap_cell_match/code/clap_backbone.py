@@ -79,7 +79,7 @@ class CLAPBackbone:
             audio = _load_48k_mono(p)
             windows = _window_10s(audio)
             inputs = self.processor(
-                audios=windows, sampling_rate=TARGET_SR, return_tensors="pt"
+                audio=windows, sampling_rate=TARGET_SR, return_tensors="pt"
             )
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             feats = self.model.get_audio_features(**inputs)
