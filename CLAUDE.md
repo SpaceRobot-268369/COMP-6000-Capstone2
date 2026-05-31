@@ -64,7 +64,8 @@ COMP-6000-Capstone2/
 │
 ├── frontend/                # React + Vite UI scaffold (Docker, port 5173)
 ├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
-├── services/dev/            # docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
+├── services/dev/            # local docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
+├── services/server-a/       # Server A deployment compose + env template
 │
 ├── acoustic_ai/             # Python AI module (FastAPI app runs natively on serverB for inference)
 │   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
@@ -136,7 +137,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── dev_workflow.md                # Stage workflow: smoke → mvp/prod loop
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
-    │   └── s3_bucket_layout.md
+    │   ├── s3_bucket_layout.md
+    │   └── cicd_design.md
     └── setup/                             # How to run the system
         ├── local/
         │   └── services.md                # Local-mac service topology, ports, env vars
@@ -164,7 +166,9 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
+| CI/CD design | [.claude/context/dev/cicd_design.md](.claude/context/dev/cicd_design.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
+| Server A deployment compose | [services/server-a/README.md](services/server-a/README.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
 | DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |

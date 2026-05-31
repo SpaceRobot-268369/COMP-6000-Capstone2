@@ -1,0 +1,173 @@
+name: Server A Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-a-preflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate Server A deploy prerequisites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate secrets and production env
+        id: validate
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_USER: ${{ secrets.SERVER_A_USER }}
+          SERVER_A_SSH_KEY: ${{ secrets.SERVER_A_SSH_KEY }}
+          SERVER_A_DEPLOY_DIR: ${{ secrets.SERVER_A_DEPLOY_DIR }}
+          SERVER_A_PROD_ENV: ${{ secrets.SERVER_A_PROD_ENV }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for name in SERVER_A_HOST SERVER_A_USER SERVER_A_SSH_KEY SERVER_A_DEPLOY_DIR SERVER_A_PROD_ENV; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name secret is required"
+              missing=1
+            else
+              echo "$name is configured"
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          get_env_value() {
+            local key="$1"
+            printf '%s\n' "$SERVER_A_PROD_ENV" | awk -v key="$key" '
+              /^[[:space:]]*($|#)/ { next }
+              index($0, "=") == 0 { next }
+              {
+                name = substr($0, 1, index($0, "=") - 1)
+                value = substr($0, index($0, "=") + 1)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+                gsub(/\r$/, "", value)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                if (name == key) {
+                  print value
+                  found = 1
+                  exit
+                }
+              }
+              END { if (!found) exit 1 }
+            '
+          }
+
+          for key in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB BACKEND_PORT FRONTEND_PORT FRONTEND_URL VITE_API_URL SESSION_SECRET SERVERB_PEM_PATH; do
+            if ! value="$(get_env_value "$key")" || [ -z "$value" ]; then
+              echo "::error::$key is missing from SERVER_A_PROD_ENV"
+              missing=1
+            else
+              echo "$key is configured in SERVER_A_PROD_ENV"
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          serverb_pem_path="$(get_env_value SERVERB_PEM_PATH)"
+          case "$serverb_pem_path" in
+            /*) ;;
+            *)
+              echo "::error::SERVERB_PEM_PATH must be an absolute path on Server A"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "serverb_pem_path<<EOF"
+            echo "$serverb_pem_path"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_SSH_KEY: ${{ secrets.SERVER_A_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_A_SSH_KEY" > ~/.ssh/server_a_key
+          chmod 600 ~/.ssh/server_a_key
+          ssh-keyscan -T 20 -H "$SERVER_A_HOST" >> ~/.ssh/known_hosts
+
+      - name: Check Server A host
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_USER: ${{ secrets.SERVER_A_USER }}
+          SERVER_A_DEPLOY_DIR: ${{ secrets.SERVER_A_DEPLOY_DIR }}
+          SERVERB_PEM_PATH: ${{ steps.validate.outputs.serverb_pem_path }}
+        run: |
+          set -euo pipefail
+
+          ssh_opts=(
+            -i "$HOME/.ssh/server_a_key"
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=20
+          )
+          remote_env="EXPECTED_USER=$(printf '%q' "$SERVER_A_USER") SERVER_A_DEPLOY_DIR=$(printf '%q' "$SERVER_A_DEPLOY_DIR") SERVERB_PEM_PATH=$(printf '%q' "$SERVERB_PEM_PATH")"
+
+          ssh "${ssh_opts[@]}" "$SERVER_A_USER@$SERVER_A_HOST" "$remote_env bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          echo "Connected to $(hostname)"
+          actual_user="$(whoami)"
+          if [ "$actual_user" != "$EXPECTED_USER" ]; then
+            echo "::error::Connected as $actual_user, expected $EXPECTED_USER"
+            exit 1
+          fi
+          echo "Connected as expected deploy user"
+
+          if [ -d "$SERVER_A_DEPLOY_DIR" ]; then
+            echo "Deploy directory exists"
+          else
+            echo "::notice::Deploy directory does not exist yet; deploy workflow will create it"
+          fi
+
+          deploy_parent="$(dirname "$SERVER_A_DEPLOY_DIR")"
+          if [ -d "$deploy_parent" ]; then
+            if [ -w "$deploy_parent" ]; then
+              echo "Deploy parent directory is writable"
+            else
+              echo "::warning::Deploy parent directory exists but is not writable by the deploy user"
+            fi
+          else
+            echo "::notice::Deploy parent directory does not exist yet"
+          fi
+
+          git --version
+          curl --version | head -n 1
+          docker --version
+          docker compose version
+          docker info >/dev/null
+
+          if [ ! -f "$SERVERB_PEM_PATH" ]; then
+            echo "::error::Server B pem file does not exist at SERVERB_PEM_PATH"
+            exit 1
+          fi
+          if [ ! -r "$SERVERB_PEM_PATH" ]; then
+            echo "::error::Server B pem file is not readable by the deploy user"
+            exit 1
+          fi
+
+          pem_mode="$(stat -c '%a' "$SERVERB_PEM_PATH")"
+          if [ "$pem_mode" != "600" ] && [ "$pem_mode" != "400" ]; then
+            echo "::warning::Server B pem permissions are $pem_mode; SSH may reject keys that are too open"
+          fi
+
+          timeout 10s ssh-keygen -y -f "$SERVERB_PEM_PATH" >/dev/null
+          echo "Server B pem file is present, readable, and parseable"
+          REMOTE

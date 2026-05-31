@@ -52,6 +52,8 @@ coverage/
 
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
+services/server-a/.env
+!services/server-a/.env.example
 
 # Resources - keep generated/source data out of git by default
 resources/**
