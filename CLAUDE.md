@@ -136,7 +136,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── dev_workflow.md                # Stage workflow: smoke → mvp/prod loop
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
-    │   └── s3_bucket_layout.md
+    │   ├── s3_bucket_layout.md
+    │   └── cicd_design.md
     └── setup/                             # How to run the system
         ├── local/
         │   └── services.md                # Local-mac service topology, ports, env vars
@@ -164,6 +165,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
+| CI/CD design | [.claude/context/dev/cicd_design.md](.claude/context/dev/cicd_design.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
