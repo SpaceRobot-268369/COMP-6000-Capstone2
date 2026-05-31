@@ -43,7 +43,8 @@ References:
 - Run fast, reliable checks for every pull request.
 - Build deployable frontend, backend, and ai-tunnel artifacts from `main`.
 - Deploy Server A through Docker images and Docker Compose.
-- Deploy Server B's AI service through a native Python restart flow.
+- Automatically deploy Server A after a pull request is merged to `main` and
+  GHCR images are published.
 - Keep Server B private. CI/CD must not expose its FastAPI port publicly.
 - Keep secrets, SSH keys, `.pem` files, model binaries, and generated audio out
   of git and out of Docker images.
@@ -57,6 +58,9 @@ References:
   phase. The current design runs it natively on `shinypokemon`.
 - Do not auto-start Server B from CI/CD. RONIN dashboard startup is currently a
   manual action.
+- Do not deploy the Server B AI worker, job polling loop, Discord bot, or
+  idle-shutdown automation in the current CI/CD scope. Those are runtime
+  orchestration components.
 
 ## Pipeline Overview
 
@@ -73,7 +77,6 @@ Merge to main
   -> build Docker images
   -> push images to registry
   -> deploy Server A
-  -> optionally deploy Server B AI service
 ```
 
 ## CI: Pull Request Checks
@@ -264,8 +267,8 @@ Suggested workflow file:
 Triggers:
 
 ```text
-workflow_dispatch
-push to main after image build succeeds
+workflow_run after Images succeeds on main
+workflow_dispatch for manual redeploy / rollback
 ```
 
 Target:
@@ -297,16 +300,18 @@ Responsibilities:
 
 Deployment flow:
 
-```bash
-ssh server-a '
-  cd /home/ubuntu/eco-acoustic/COMP-6000-Capstone2 &&
-  git pull --ff-only origin main &&
-  docker login ghcr.io &&
-  cd services/server-a &&
-  docker compose pull &&
-  docker compose up -d &&
-  docker compose ps
-'
+```text
+PR merged to main
+  -> CI runs on main
+  -> Images workflow builds/pushes GHCR images tagged `main`
+  -> Deploy Server A workflow starts after Images succeeds
+  -> SSH to spacerobot-268369
+  -> cd /home/ubuntu/eco-acoustic/COMP-6000-Capstone2
+  -> git pull --ff-only origin main
+  -> cd services/server-a
+  -> docker compose pull
+  -> docker compose up -d
+  -> docker compose ps
 ```
 
 Post-deploy checks:
@@ -322,13 +327,27 @@ Server B may be stopped by design. Production Server A must still start the
 frontend and backend when `ai-tunnel` is unhealthy; the backend status endpoint
 should report the AI link state rather than blocking the whole app.
 
+Server B runtime behavior is intentionally outside this deployment workflow:
+operators start Server B manually in RONIN, then Server B reads Server A's job
+list, runs work, reports status, posts Discord notifications, and shuts itself
+down when idle.
+
 Rollback strategy:
 
 - keep the previous image SHA in the deploy metadata;
 - redeploy the previous SHA if post-deploy checks fail;
 - preserve logs from the failed deployment for review.
 
-## CD: Server B AI Service
+## Future: Server B AI Service Deployment
+
+This is not part of the current CI/CD scope. The current deployment target is:
+
+```text
+PR merge to main -> GHCR images -> automatic Server A deploy
+```
+
+The notes below are retained for a later Server B worker/service deployment
+phase.
 
 Suggested workflow file:
 
@@ -538,7 +557,6 @@ verification if the current API surface is not sufficient.
 - Add `frontend` and `backend` check scripts.
 - Add `.github/workflows/ci.yml`.
 - Validate Docker builds and Compose config.
-- Keep all deploy steps manual.
 
 ### Phase 2: Image Publishing
 
@@ -546,16 +564,22 @@ verification if the current API surface is not sufficient.
 - Build and tag frontend, backend, and ai-tunnel images.
 - Store image SHA metadata for rollback.
 
-### Phase 3: Manual Server A Deploy
+### Phase 3: Automatic Server A Deploy
 
-- Add `workflow_dispatch` deploy to Server A.
+- Add automatic deploy to Server A after the `Images` workflow succeeds on
+  `main`.
+- Keep `workflow_dispatch` for manual redeploy / rollback.
 - Use GHCR images.
 - Run post-deploy checks.
-- Keep production approval manual.
+- For direct auto-deploy, the GitHub `production` environment must not require
+  manual reviewers. If reviewers are configured, deployment will pause for
+  approval.
 
-### Phase 4: Manual Server B AI Deploy
+### Phase 4: Future Server B AI Deploy
 
-- Add `workflow_dispatch` deploy to Server B.
+- Out of current scope.
+- Later, add `workflow_dispatch` deploy to Server B if the team wants CI/CD to
+  update the worker/service code.
 - Update `~/shiny-pikachu` only from `main`.
 - Restart uvicorn and verify `/health`.
 - Add optional targeted DVC pull for production model artifacts.
@@ -570,12 +594,8 @@ verification if the current API surface is not sufficient.
 
 ## Open Decisions
 
-- Which GitHub Environment names should be used?
-- Should Server A deploy be automatic on every merge to `main`, or manual
-  approval only?
-- What is the canonical production path on Server A?
-- Should Server A store the Server B pem as a host file, Docker secret, or
-  injected CI secret?
+- Should the GitHub `production` environment require manual reviewers, or stay
+  unprotected to allow direct automatic deploy?
 - Which DVC/S3 credentials are safe for Server B deployment automation?
 - Should `frontend` be served as a static production build or continue through
   Vite dev server for the MVP?

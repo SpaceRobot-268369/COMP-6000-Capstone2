@@ -1,6 +1,13 @@
 name: Deploy Server A
 
 on:
+  workflow_run:
+    workflows:
+      - Images
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       image_tag:
@@ -12,10 +19,15 @@ permissions:
   contents: read
   packages: read
 
+concurrency:
+  group: server-a-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to spacerobot-268369
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment: production
     steps:
       - name: Configure SSH
@@ -41,7 +53,7 @@ jobs:
           SERVER_A_PROD_ENV: ${{ secrets.SERVER_A_PROD_ENV }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || 'main' }}
         run: |
           set -euo pipefail
           : "${SERVER_A_HOST:?SERVER_A_HOST secret is required}"
