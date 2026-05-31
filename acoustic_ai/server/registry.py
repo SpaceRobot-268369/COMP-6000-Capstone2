@@ -165,6 +165,7 @@ def list_layers() -> list[dict]:
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
                 "status":  att.get("status", ""),
+                "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],

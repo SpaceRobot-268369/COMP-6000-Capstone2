@@ -246,7 +246,7 @@ export default function LayerATestPage({
     : allowedLayerIds.map((id) => ({ value: id, label: id }));
   const attemptOptions = (currentLayer?.attempts || []).map((a) => ({
     value: a.id,
-    label: `${a.label}  (${a.stage}, ${a.status})${a.available === false ? " — unavailable" : ""}`,
+    label: `${a.status === "production" ? "🏆 " : ""}${a.label}  (${a.stage}, ${a.status})${a.available === false ? " — unavailable" : ""}`,
   }));
   const registryBanner = regError
     ? `Failed to load layer registry: ${regError}. Controls shown for preview only — AI server unreachable.`
@@ -302,6 +302,28 @@ export default function LayerATestPage({
                 </div>
               </section>
 
+              <section className="dev-controls-section">
+                <p className="dev-controls-section-label">
+                  Description
+                  {currentAttempt?.author && (
+                    <span className="dev-controls-section-pill">
+                      by {currentAttempt.author}
+                    </span>
+                  )}
+                </p>
+                {currentAttempt?.description ? (
+                  currentAttempt.description
+                    .split(/\n\s*\n/)
+                    .map((para, i) => (
+                      <p key={i} className="dev-model-description">{para.trim()}</p>
+                    ))
+                ) : (
+                  <p className="dev-model-description">
+                    Description placeholder — to be authored by the model owner.
+                  </p>
+                )}
+              </section>
+
               {usesCells && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
@@ -332,18 +354,15 @@ export default function LayerATestPage({
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
-                  <LabeledNumber
-                    label="Seed"
+                  <SeedField
                     value={seed}
-                    min={0}
-                    max={2147483647}
+                    onChange={setSeed}
+                    disabled={!usesSeed}
                     hint={
                       usesSeed
                         ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
                     }
-                    onChange={setSeed}
-                    disabled={!usesSeed}
                   />
                   <button
                     type="button"
@@ -660,6 +679,40 @@ function Placeholder({ kind, loading, children }) {
       </div>
       <p className="dev-placeholder-caption">{children}</p>
     </div>
+  );
+}
+
+function SeedField({ value, onChange, disabled, hint }) {
+  const randomize = () => {
+    onChange(Math.floor(Math.random() * 2147483648));
+  };
+  return (
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
+      <span>Seed</span>
+      <div className="dev-seed-input-row">
+        <input
+          className="layer-a-input"
+          type="number"
+          value={value}
+          min={0}
+          max={2147483647}
+          step={1}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button
+          type="button"
+          className="dev-seed-random-btn"
+          onClick={randomize}
+          disabled={disabled}
+          title="Pick a random seed"
+          aria-label="Pick a random seed"
+        >
+          🎲
+        </button>
+      </div>
+      {hint && <small>{hint}</small>}
+    </label>
   );
 }
 

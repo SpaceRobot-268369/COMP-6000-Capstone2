@@ -108,6 +108,12 @@ layers:
         uses_seed: true
         uses_cells: true
         checkpoint: model/production/layer_a_ambient
+        description: |
+          Generates a 10-second ambient bed for a chosen season + time of day. Under the hood: 16 LoRA adapters (r=8, α=32) on top of `cvssp/audioldm2`, a frozen latent text-to-audio diffusion model — the server picks the adapter matching your scene and runs a locked per-cell caption.
+
+          Trained on ~1,583 ten-second clips from site_257 Bowra dry woodland (caption schema v2, cap 200/cell, wind ≤5.5 m/s). Inference: 10 s mono @ 16 kHz, 200 diffusion steps, guidance 2.0, RMS-normalised with an 80 Hz high-pass.
+
+          Promoted 2026-05-31 from `mvp_2`. Caveats: no long-form yet; `summer_afternoon` and `autumn_dawn` show mild overfit; `winter_morning`, `summer_morning`, `autumn_morning` are source-thin.
         params:
           base_model: cvssp/audioldm2
           guidance_scale: 2.0
