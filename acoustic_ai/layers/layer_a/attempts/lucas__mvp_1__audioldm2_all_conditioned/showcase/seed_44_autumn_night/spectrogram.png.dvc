@@ -1,0 +1,5 @@
+outs:
+- md5: b74e76c580fe671f13d105a0116196ba
+  size: 540601
+  hash: md5
+  path: spectrogram.png
