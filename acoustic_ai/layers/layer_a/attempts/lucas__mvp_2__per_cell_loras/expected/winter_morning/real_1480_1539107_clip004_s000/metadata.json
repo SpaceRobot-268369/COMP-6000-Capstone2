@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 11.911875,
+    "peak": 0.040252685546875,
+    "rms": 0.007950598374009132,
+    "sample_rate": 16000
+  },
+  "cell": "winter_morning",
+  "selection_reason": "top-recording_id pick for cell winter_morning (recording_id=1539107)",
+  "source": "real_audio",
+  "source_clip_id": "1480_1539107_clip004_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_winter_morning.csv",
+  "source_metadata": {
+    "caption": "morning winter ambient soundscape, Bowra dry woodland, Australia, cold (14C), moderate humidity, moderate wind, recorded 2024-06-29, no music, no machinery",
+    "clip_id": "1480_1539107_clip004_s000",
+    "diel_bin": "morning",
+    "duration_s": 11.912,
+    "env": {
+      "humidity_pct": 68.04,
+      "temperature_c": 13.56,
+      "wind_speed_ms": 3.08
+    },
+    "recording_date": "2024-06-29",
+    "recording_id": "1539107",
+    "season": "winter",
+    "segment_id": "1539107_clip004_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/1480_1539107_clip004_s000/audio.wav"
+  },
+  "tier": "expected"
+}

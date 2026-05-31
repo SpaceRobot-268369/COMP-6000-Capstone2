@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 12.1440625,
+    "peak": 0.006103515625,
+    "rms": 0.0011591585353016853,
+    "sample_rate": 16000
+  },
+  "cell": "spring_night",
+  "selection_reason": "top-recording_id pick for cell spring_night (recording_id=1399626)",
+  "source": "real_audio",
+  "source_clip_id": "0928_1399626_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_spring_night.csv",
+  "source_metadata": {
+    "caption": "night spring ambient soundscape, Bowra dry woodland, Australia, mild (16C), dry air, light breeze, recorded 2023-09-12, no music, no machinery",
+    "clip_id": "0928_1399626_clip001_s000",
+    "diel_bin": "night",
+    "duration_s": 12.144,
+    "env": {
+      "humidity_pct": 29.15,
+      "temperature_c": 15.82,
+      "wind_speed_ms": 1.33
+    },
+    "recording_date": "2023-09-12",
+    "recording_id": "1399626",
+    "season": "spring",
+    "segment_id": "1399626_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0928_1399626_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

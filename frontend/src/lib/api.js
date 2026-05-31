@@ -72,12 +72,14 @@ export async function fetchAttemptSamples(layerId, attemptId) {
 }
 
 /**
- * Build a playable URL for a cached sample WAV. The Express backend proxies
- * the request through to FastAPI; the browser <audio> tag points at this URL.
+ * Build a playable URL for a cached sample WAV. The server returns a fully
+ * formed `wav_url` per sample (it knows the layout — flat / case-dir /
+ * cell-grouped); the frontend just prefixes the API base + `/api`.
  */
-export function sampleWavUrl(layerId, attemptId, tier, stem) {
+export function sampleWavUrl(sample) {
+  if (!sample?.wav_url) return null;
   const base = API_BASE || "";
-  return `${base}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`;
+  return `${base}/api${sample.wav_url}`;
 }
 
 // ─── Stage-3 product endpoints (placeholders) ─────────────────────────────────
