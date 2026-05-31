@@ -48,8 +48,10 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     seed: Optional[int] = None
-    # Forward-compat: extra fields are ignored unless the handler accepts them.
-    # We keep this minimal because Layer A's dev contract is "seed only".
+    # Cell selector for bank attempts (e.g. Layer A mvp_2 per-cell LoRAs).
+    # Single-adapter attempts ignore these (their handler swallows extras).
+    season: Optional[str] = None
+    diel: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -89,9 +91,14 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     metadata block.
     """
     try:
-        result = registry.generate(layer_id, attempt_id, seed=body.seed)
+        result = registry.generate(
+            layer_id, attempt_id,
+            seed=body.seed, season=body.season, diel=body.diel,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except NotImplementedError as exc:
         raise HTTPException(status_code=501, detail=str(exc))
     except Exception as exc:

@@ -32,7 +32,7 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 
 | Layer | Role | Status |
 |---|---|---|
-| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1 (spring night) ✓, smoke-2 (insects) ✓ |
+| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1/2 ✓ · **prod-1 per-cell bank (16 season×diel) promoted** → `model/production/layer_a_ambient/` |
 | layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
 | layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
 | layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
@@ -77,7 +77,7 @@ COMP-6000-Capstone2/
 │
 ├── model/                   # trained checkpoints
 │   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
-│   └── production/<role>/                     # promoted slots — empty until explicit promotion
+│   └── production/<role>/                     # promoted slots (layer_a_ambient ✓)
 │
 ├── resources/               # source recordings + manifests (DVC-tracked)
 │   └── site_257_bowra-dry-a/                  # only site live right now
@@ -125,6 +125,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   │   └── layer_c_smoke_1_birds.md
     │   └── logs/
     │       ├── mvp_decision_log.md
+    │       ├── caption_schema_log.md
     │       └── audioldm2_transition_log.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
@@ -154,6 +155,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
+| Caption schema log (Layer A) | [.claude/context/ai/logs/caption_schema_log.md](.claude/context/ai/logs/caption_schema_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
@@ -216,11 +218,15 @@ model/production/<role>/                                           # promoted sl
 `<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
 in [.claude/context/conventions.md](.claude/context/conventions.md).
 
-At this stage of the project, **nothing is in production**. Every trained
-checkpoint — including the VAE and vocoder used by the smoke-4 inference
-path — is a candidate. A `model/production/<role>/` slot will be created
+First production promotion: **`model/production/layer_a_ambient/`** — the
+Layer A per-cell ambient bank, promoted from
+`lucas__mvp_2__per_cell_loras` (served via attempt
+`lucas__prod_1__per_cell_loras`, the layer_a registry default). Promoted
+**with documented caveats** — see the production card's audit section.
+Everything else — including the VAE and vocoder used by the smoke-4 inference
+path — remains a candidate. A `model/production/<role>/` slot is created
 only after an explicit promotion decision (validation, sign-off, release
-tagging).
+tagging) per [conventions §5.4](.claude/context/conventions.md).
 
 Rules (team workflow):
 - One folder per member, one folder per attempt — never overwrite another member's work.
@@ -258,14 +264,16 @@ is `42` (showcase + Dev UI only — `expected/` is real audio). Full rules:
 
 ### Layer A dev-generation contract
 
-The Layer A smoke LoRAs are trained on tiny datasets, so the dev generation path is locked down server-side:
+The Layer A LoRAs are trained on narrow datasets, so the dev generation path is locked down server-side:
 
-- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`).
-- Express backend forwards **only** `{ seed }`.
-- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass.
-- Server returns all parameters in response metadata for debugging.
+- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`), plus — for **bank attempts** that declare `uses_cells: true` — a `(season, diel)` cell selector (two dropdowns populated from the attempt's `cells` list).
+- Express backend forwards **only** `{ seed }`, plus `{ season, diel }` when both are valid (`season ∈ {spring,summer,autumn,winter}`, `diel ∈ {dawn,morning,afternoon,night}`); invalid/absent selectors are dropped and the server falls back to `default_cell`.
+- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass. For bank attempts it routes `(season, diel)` → the matching per-cell LoRA adapter (PEFT `set_adapter`) and uses that cell's locked prompt.
+- Server returns all parameters (including the resolved `cell`) in response metadata for debugging.
 
-Seed is **not** temperature — it initializes the diffusion noise. Same seed + same params + same code path = effectively the same audio.
+Seed is **not** temperature — it initializes the diffusion noise. Same seed + same cell + same params + same code path = effectively the same audio.
+
+The first bank attempt is `lucas__mvp_2__per_cell_loras` (16 season×diel adapters). See [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) once a Phase-3 runbook is added.
 
 ### Git branch naming
 
@@ -302,8 +310,14 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 | AI server | Native on serverB | `serverB:127.0.0.1:8000` via SSH tunnel |
 
 The Docker backend reaches serverB through the Compose `ai-tunnel` sidecar.
-The FastAPI process itself runs natively on serverB; keep SSH keys outside the
-repository and use the key convention in `services/dev/README.md`.
+The FastAPI process itself runs natively on serverB out of
+`~/shiny-pikachu/` — a dedicated clone pinned to `main`; never `git
+checkout` another branch in that tree. Per-member experiment clones live
+beside it (e.g. `~/lucano/COMP-6000-Capstone2/`) and are free to switch
+branches. Startup / health / stop commands and the working-tree
+convention: [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md).
+Keep SSH keys outside the repository and use the key convention in
+`services/dev/README.md`.
 
 Commands, env vars, ports: [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md).
 

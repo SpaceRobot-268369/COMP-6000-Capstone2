@@ -77,7 +77,7 @@ def _resolve_checkpoint(value: Any) -> Path | None:
 _WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pt")
 
 
-def _ckpt_availability(ckpt_dir: Path | None) -> dict:
+def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = None) -> dict:
     """Inspect a checkpoint directory and report whether the actual weight
     blobs are materialised on disk (as opposed to only DVC pointer files).
 
@@ -98,6 +98,24 @@ def _ckpt_availability(ckpt_dir: Path | None) -> dict:
             "available": False,
             "reason": f"checkpoint directory missing: {ckpt_dir}",
             "missing": [],
+        }
+
+    # Bank layout: weights live in per-cell subdirs (ckpt_dir/<cell>/adapter…).
+    # Available iff every declared cell has its weight on disk; otherwise list
+    # the missing pointers so the UI can name the exact `dvc pull` targets.
+    if cell_names:
+        missing = []
+        for cell in cell_names:
+            w = ckpt_dir / cell / "adapter_model.safetensors"
+            if not w.is_file():
+                missing.append(f"{cell}/adapter_model.safetensors")
+        if not missing:
+            return {"available": True, "reason": None, "missing": []}
+        return {
+            "available": False,
+            "reason": (f"{len(missing)}/{len(cell_names)} cell adapters not on disk. "
+                       f"Run `dvc pull` under {ckpt_dir}."),
+            "missing": missing,
         }
 
     has_weight = any(
@@ -138,7 +156,9 @@ def list_layers() -> list[dict]:
         attempts = []
         for att_id, att in layer_block["attempts"].items():
             ckpt = _resolve_checkpoint(att.get("checkpoint"))
-            avail = _ckpt_availability(ckpt)
+            params = att.get("params") or {}
+            cells = sorted((params.get("cells") or {}).keys())
+            avail = _ckpt_availability(ckpt, cell_names=cells)
             attempts.append({
                 "id":      att_id,
                 "label":   att.get("label", att_id),
@@ -149,6 +169,10 @@ def list_layers() -> list[dict]:
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
+                "uses_seed":        bool(att.get("uses_seed", False)),
+                "uses_cells":       bool(att.get("uses_cells", False)),
+                "cells":            cells,
+                "default_cell":     params.get("default_cell"),
             })
         out.append({
             "id":      layer_id,

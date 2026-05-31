@@ -208,6 +208,53 @@ Open TODOs:
 - Decide Discord webhook owner for `shinypokemon-bot-general` and
   `shinypokemon-bot-warning`.
 
+## Server B Working-Tree Layout
+
+`shinypokemon` keeps separate clones for the deployed service and for
+in-flight experiments so that running an experiment branch never disturbs
+the live worker.
+
+| Path | Branch | Purpose |
+|---|---|---|
+| `~/shiny-pikachu/` | tracks `origin/main` | Runs the deployed AI service. Only ever updated by `git pull` on main; never `git checkout` another branch here. |
+| `~/<member>/COMP-6000-Capstone2/` (e.g. `~/lucano/...`) | any | Per-member experiment clones. Free to switch branches, hold uncommitted work, run training. |
+
+Rules:
+
+- The `shiny-pikachu/` clone owns the served process. Restart flow is
+  `cd ~/shiny-pikachu && git pull && systemctl restart …` (or equivalent).
+- Each clone has its own `acoustic_ai/.venv` — no sharing or symlinking,
+  so a `requirements.txt` change on an experiment branch cannot break the
+  live service.
+- DVC cache can be shared across clones via the user-site DVC config; only
+  `.dvc/cache` is heavy. Current dev setup symlinks
+  `~/shiny-pikachu/.dvc/cache -> ~/lucano/COMP-6000-Capstone2/.dvc/cache`.
+
+### Starting / stopping the service (current dev state)
+
+The MVP runs `uvicorn` directly under `nohup`; no systemd unit yet.
+
+```bash
+# start
+ssh shinypokemon 'cd ~/shiny-pikachu && \
+  nohup ./acoustic_ai/.venv/bin/python -m uvicorn \
+    acoustic_ai.server.server:app --host 127.0.0.1 --port 8000 \
+    > /tmp/shiny-pikachu-ai.log 2>&1 & echo $! > /tmp/shiny-pikachu-ai.pid'
+
+# health (inside serverB)
+ssh shinypokemon 'curl -s http://127.0.0.1:8000/health'
+
+# stop
+ssh shinypokemon 'kill $(cat /tmp/shiny-pikachu-ai.pid)'
+
+# logs
+ssh shinypokemon 'tail -f /tmp/shiny-pikachu-ai.log'
+```
+
+The server must bind `127.0.0.1` only — public ingress is denied by design
+(see Network Topology). Reach it from server A through the
+`ai-tunnel` Compose sidecar at `http://ai-tunnel:8000`.
+
 ## Server B Health Check API
 
 `shinypokemon` should expose a lightweight health-check API that Server A can

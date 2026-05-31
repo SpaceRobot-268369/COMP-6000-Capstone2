@@ -11,8 +11,17 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const PgSession = connectPgSimple(session);
 
+const allowedOrigins = new Set(
+  (process.env.FRONTEND_URL || "http://localhost:5173,http://127.0.0.1:5173")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -480,21 +489,36 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/:stem.wav", requireA
   }
 });
 
-// Per-attempt generation — only `seed` is forwarded (Layer A dev-generation
-// contract, see CLAUDE.md). The handler picks up every other parameter from
-// the attempt's registry.yaml entry.
+// Per-attempt generation. Forwarded runtime params (Layer A dev-generation
+// contract, see CLAUDE.md): `seed` always, plus the optional cell selector
+// `(season, diel)` for bank attempts. The handler picks up every other
+// parameter (prompt, guidance, steps, …) from the attempt's registry entry.
+const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
+const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
+
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
   const operation = `generate ${layer}/${attempt}`;
   try {
     const requestedSeed = Number(req.body?.seed);
     const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null;
+
+    // Cell selector — only forwarded if both are valid; otherwise omitted
+    // (server falls back to the attempt's default_cell).
+    const season = typeof req.body?.season === "string" ? req.body.season.toLowerCase() : null;
+    const diel = typeof req.body?.diel === "string" ? req.body.diel.toLowerCase() : null;
+    const payload = { seed };
+    if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
+      payload.season = season;
+      payload.diel = diel;
+    }
+
     const r = await fetchAi(
       `/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/generate`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seed }),
+        body: JSON.stringify(payload),
       },
       operation,
     );

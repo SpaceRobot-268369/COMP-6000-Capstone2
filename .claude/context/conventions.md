@@ -87,7 +87,7 @@ COMP-6000-Capstone2/
 │   │   ├── metrics.json                        🟢   once evals exist
 │   │   ├── *.pt | *.safetensors | *.bin        🔵 (via matching .dvc files)
 │   │   └── *.dvc                               🟢   pointers
-│   └── production/<role>/                      ── promoted slot (currently empty — nothing promoted yet)
+│   └── production/<role>/                      ── promoted slot (layer_a_ambient: per-cell bank ✓)
 │
 ├── resources/
 │   └── site_257_bowra-dry-a/                   🔵   source recordings + manifests (DVC-tracked)

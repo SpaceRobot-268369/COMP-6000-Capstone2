@@ -30,6 +30,8 @@ export default function LayerATestPage({
 
   // Generation state
   const [seed,     setSeed]     = useState(DEFAULT_SEED);
+  const [season,   setSeason]   = useState("");        // bank attempts only
+  const [diel,     setDiel]     = useState("");        // bank attempts only
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -92,6 +94,47 @@ export default function LayerATestPage({
     () => currentLayer?.attempts.find((a) => a.id === attemptId),
     [currentLayer, attemptId],
   );
+  const usesSeed = currentAttempt?.uses_seed === true;
+  const usesCells = currentAttempt?.uses_cells === true;
+  const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+
+  // Derive the season / diel axes from the cell list (handles partial banks).
+  const seasonOptions = useMemo(() => {
+    const seen = [...new Set(cells.map((c) => c.split("_")[0]))];
+    return seen.map((s) => ({ value: s, label: s }));
+  }, [cells]);
+  const dielOptions = useMemo(() => {
+    const seen = [...new Set(
+      cells.filter((c) => c.startsWith(`${season}_`)).map((c) => c.split("_")[1]),
+    )];
+    return seen.map((d) => ({ value: d, label: d }));
+  }, [cells, season]);
+
+  // When the attempt changes, seed the (season, diel) selectors from the
+  // attempt's default_cell (or the first available cell).
+  useEffect(() => {
+    if (!usesCells || !cells.length) {
+      setSeason("");
+      setDiel("");
+      return;
+    }
+    const base = currentAttempt?.default_cell && cells.includes(currentAttempt.default_cell)
+      ? currentAttempt.default_cell
+      : cells[0];
+    const [s, d] = base.split("_");
+    setSeason(s);
+    setDiel(d);
+  }, [usesCells, cells, currentAttempt]);
+
+  // Keep diel valid when season changes (pick the first diel for that season).
+  useEffect(() => {
+    if (!usesCells || !season) return;
+    if (!cells.includes(`${season}_${diel}`)) {
+      const firstDiel = dielOptions[0]?.value || "";
+      setDiel(firstDiel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [season, usesCells]);
 
   // Flatten cached samples in display order (expected first, then showcase).
   const expectedEntries = useMemo(() => {
@@ -147,9 +190,12 @@ export default function LayerATestPage({
     setErrorMsg("");
     setResult(null);
     try {
-      const data = await generateAttempt(layerId, attemptId, {
-        seed: Number(seed) || DEFAULT_SEED,
-      });
+      const runParams = usesSeed ? { seed: Number(seed) || DEFAULT_SEED } : {};
+      if (usesCells && season && diel) {
+        runParams.season = season;
+        runParams.diel = diel;
+      }
+      const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
       setStatus("done");
     } catch (err) {
@@ -177,36 +223,22 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}__seed${seed || DEFAULT_SEED}`;
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}__seed${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
-  if (regError) {
-    return (
-      <section className="generation-page">
-        <header className="generation-topbar">
-          <div className="generation-brandline">
-            <p className="eyebrow">{eyebrow}</p>
-            <span>{title}</span>
-          </div>
-        </header>
-        <p className="analysis-error">Failed to load layer registry: {regError}</p>
-      </section>
-    );
-  }
-
-  if (!registry) {
-    return (
-      <section className="generation-page">
-        <header className="generation-topbar">
-          <div className="generation-brandline">
-            <p className="eyebrow">{eyebrow}</p>
-            <span>{title}</span>
-          </div>
-        </header>
-        <p>Loading registry…</p>
-      </section>
-    );
-  }
+  const registryReady = Boolean(registry);
+  const layerOptions = registryReady
+    ? registry.layers.map((l) => ({ value: l.id, label: l.label }))
+    : allowedLayerIds.map((id) => ({ value: id, label: id }));
+  const attemptOptions = (currentLayer?.attempts || []).map((a) => ({
+    value: a.id,
+    label: `${a.label}  (${a.stage}, ${a.status})${a.available === false ? " — unavailable" : ""}`,
+  }));
+  const registryBanner = regError
+    ? `Failed to load layer registry: ${regError}. Controls shown for preview only — AI server unreachable.`
+    : !registryReady
+      ? "Loading registry…"
+      : "";
 
   return (
     <section className="generation-page">
@@ -216,6 +248,10 @@ export default function LayerATestPage({
           <span>{title}</span>
         </div>
       </header>
+
+      {registryBanner && (
+        <p className={regError ? "analysis-error" : ""}>{registryBanner}</p>
+      )}
 
       <div className="dev-controls-row">
         {/* ── Top: controls (own row) ── */}
@@ -238,26 +274,45 @@ export default function LayerATestPage({
                 label="Layer"
                 value={layerId}
                 onChange={setLayerId}
-                options={registry.layers.map((l) => ({ value: l.id, label: l.label }))}
+                options={layerOptions}
               />
 
               <LabeledSelect
                 label="Model / Attempt"
                 value={attemptId}
                 onChange={setAttemptId}
-                options={(currentLayer?.attempts || []).map((a) => ({
-                  value: a.id,
-                  label: `${a.label}  (${a.stage}, ${a.status})${a.available === false ? " — unavailable" : ""}`,
-                }))}
+                options={attemptOptions}
               />
+
+              {usesCells && (
+                <div className="layer-a-cell-row">
+                  <LabeledSelect
+                    label="Season"
+                    value={season}
+                    onChange={setSeason}
+                    options={seasonOptions}
+                  />
+                  <LabeledSelect
+                    label="Time of day"
+                    value={diel}
+                    onChange={setDiel}
+                    options={dielOptions}
+                  />
+                </div>
+              )}
 
               <LabeledNumber
                 label="Seed"
                 value={seed}
                 min={0}
                 max={2147483647}
-                hint="Same seed + same attempt = same audio."
+                hint={
+                  usesSeed
+                    ? "Same seed + same attempt = same audio."
+                    : "This model does not use a seed."
+                }
                 onChange={setSeed}
+                disabled={!usesSeed}
               />
 
               <div className="dev-controls-action">
@@ -265,7 +320,7 @@ export default function LayerATestPage({
                   type="button"
                   className="gen-primary-btn"
                   onClick={handleRun}
-                  disabled={isLoading || !attemptId || currentAttempt?.available === false}
+                  disabled={isLoading || !attemptId || !registryReady || currentAttempt?.available === false}
                   title={
                     currentAttempt?.available === false
                       ? currentAttempt?.unavailable_reason || "Model weights unavailable"
@@ -560,12 +615,13 @@ function Placeholder({ kind, loading, children }) {
   );
 }
 
-function LabeledNumber({ label, value, min, max, step = 1, hint, onChange }) {
+function LabeledNumber({ label, value, min, max, step = 1, hint, onChange, disabled = false }) {
   return (
-    <label className="layer-a-field">
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
       <span>{label}</span>
       <input className="layer-a-input" type="number"
              value={value} min={min} max={max} step={step}
+             disabled={disabled}
              onChange={(e) => onChange(e.target.value)} />
       {hint && <small>{hint}</small>}
     </label>

@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
-import { analyseUpload } from "../lib/api.js";
+import { analyseUpload, fetchLayerRegistry } from "../lib/api.js";
+
+const HEADS = [
+  { id: "ambient", code: "E-A", label: "Ambient context" },
+  { id: "weather", code: "E-B", label: "Weather" },
+  { id: "events",  code: "E-C", label: "Events" },
+];
 
 /**
  * Dev page for Analysis Mode (Layer E).
@@ -31,6 +37,33 @@ export default function DevAnalysisPage() {
   const [errorMsg,  setErrorMsg]  = useState("");
   const [dragging,  setDragging]  = useState(false);
   const [progress,  setProgress]  = useState(0);
+
+  // Registry-backed per-head attempt pickers. UI-only for now — the backend
+  // POST /api/analysis call is not yet attempt-aware. When Layer E grows real
+  // per-head attempts, the selected IDs will be forwarded to the API.
+  const [registry,    setRegistry]    = useState(null);
+  const [regError,    setRegError]    = useState("");
+  const [headAttempts, setHeadAttempts] = useState({
+    ambient: "", weather: "", events: "",
+  });
+
+  useEffect(() => {
+    fetchLayerRegistry()
+      .then((doc) => {
+        setRegistry(doc);
+        const layerE = (doc.layers || []).find((l) => l.id === "layer_e");
+        const def = layerE?.default || layerE?.attempts?.[0]?.id || "";
+        if (def) {
+          setHeadAttempts({ ambient: def, weather: def, events: def });
+        }
+      })
+      .catch((e) => setRegError(e.message));
+  }, []);
+
+  const layerEAttempts = useMemo(() => {
+    const layerE = registry?.layers?.find((l) => l.id === "layer_e");
+    return layerE?.attempts || [];
+  }, [registry]);
 
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
 
@@ -194,9 +227,27 @@ export default function DevAnalysisPage() {
           <div className="dev-result-body">
             {isAnalysing && <ProgressBlock progress={progress} />}
 
-            <AmbientHead report={report} loading={isAnalysing} done={isDone} />
-            <WeatherHead report={report} loading={isAnalysing} done={isDone} />
-            <EventsHead  report={report} loading={isAnalysing} done={isDone} />
+            <AmbientHead
+              report={report} loading={isAnalysing} done={isDone}
+              attemptId={headAttempts.ambient}
+              attempts={layerEAttempts}
+              regError={regError}
+              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, ambient: id }))}
+            />
+            <WeatherHead
+              report={report} loading={isAnalysing} done={isDone}
+              attemptId={headAttempts.weather}
+              attempts={layerEAttempts}
+              regError={regError}
+              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, weather: id }))}
+            />
+            <EventsHead
+              report={report} loading={isAnalysing} done={isDone}
+              attemptId={headAttempts.events}
+              attempts={layerEAttempts}
+              regError={regError}
+              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, events: id }))}
+            />
 
             <ReviewSection title="{ } Raw report">
               {isDone && report ? (
@@ -220,12 +271,19 @@ export default function DevAnalysisPage() {
 
 // ─── Per-head sections ──────────────────────────────────────────────────────
 
-function AmbientHead({ report, loading, done }) {
+function AmbientHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
   const a = report?.ambient;
   const cond = a?.estimated_conditions;
   const sims = a?.similar_clips || [];
   return (
     <ReviewSection title="◫ E-A — Ambient context">
+      <AttemptPicker
+        headCode="E-A"
+        attemptId={attemptId}
+        attempts={attempts}
+        regError={regError}
+        onChange={onAttemptChange}
+      />
       {done && a ? (
         <div className="dev-controls-meta">
           <div className="gen-info-block">
@@ -265,10 +323,17 @@ function AmbientHead({ report, loading, done }) {
   );
 }
 
-function WeatherHead({ report, loading, done }) {
+function WeatherHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
   const w = report?.weather;
   return (
     <ReviewSection title="≋ E-B — Weather">
+      <AttemptPicker
+        headCode="E-B"
+        attemptId={attemptId}
+        attempts={attempts}
+        regError={regError}
+        onChange={onAttemptChange}
+      />
       {done && w ? (
         <div className="dev-controls-meta">
           <div className="gen-info-block">
@@ -292,11 +357,18 @@ function WeatherHead({ report, loading, done }) {
   );
 }
 
-function EventsHead({ report, loading, done }) {
+function EventsHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
   const e = report?.events;
   const dets = e?.detections || [];
   return (
     <ReviewSection title="✦ E-C — Events">
+      <AttemptPicker
+        headCode="E-C"
+        attemptId={attemptId}
+        attempts={attempts}
+        regError={regError}
+        onChange={onAttemptChange}
+      />
       {done && e ? (
         <div className="dev-controls-meta">
           <div className="gen-info-block">
@@ -334,6 +406,36 @@ function EventsHead({ report, loading, done }) {
         </Placeholder>
       )}
     </ReviewSection>
+  );
+}
+
+function AttemptPicker({ headCode, attemptId, attempts, regError, onChange }) {
+  const hint = regError
+    ? `Registry unavailable: ${regError}`
+    : attempts.length === 0
+      ? "Loading attempts…"
+      : "Per-head attempt selection — not yet wired to /api/analysis.";
+  return (
+    <div className="dev-controls-meta" style={{ marginBottom: 8 }}>
+      <label className="layer-a-field" style={{ gridColumn: "1 / -1" }}>
+        <span>{headCode} attempt</span>
+        <select
+          className="layer-a-input"
+          value={attemptId}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={attempts.length === 0}
+        >
+          {attempts.length === 0 && <option value="">—</option>}
+          {attempts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label}  ({a.stage}, {a.status})
+              {a.available === false ? " — unavailable" : ""}
+            </option>
+          ))}
+        </select>
+        <small>{hint}</small>
+      </label>
+    </div>
   );
 }
 
