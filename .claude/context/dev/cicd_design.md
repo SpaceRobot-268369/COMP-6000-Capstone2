@@ -274,6 +274,19 @@ Target:
 spacerobot-268369
 ```
 
+Confirmed SSH target:
+
+```text
+HostName: SPACEROBOT-268369.ADELAIDEUNI.CLOUD
+User: ubuntu
+```
+
+Confirmed production deployment checkout:
+
+```text
+/home/ubuntu/eco-acoustic/COMP-6000-Capstone2
+```
+
 Responsibilities:
 
 - pull approved Docker images;
@@ -286,9 +299,10 @@ Deployment flow:
 
 ```bash
 ssh server-a '
-  cd /path/to/deploy/checkout &&
+  cd /home/ubuntu/eco-acoustic/COMP-6000-Capstone2 &&
   git pull --ff-only origin main &&
   docker login ghcr.io &&
+  cd services/server-a &&
   docker compose pull &&
   docker compose up -d &&
   docker compose ps
@@ -303,6 +317,10 @@ Post-deploy checks:
 - `ai-tunnel` container is either healthy or reports a clear ServerB-not-running
   state;
 - no private key is present in image layers.
+
+Server B may be stopped by design. Production Server A must still start the
+frontend and backend when `ai-tunnel` is unhealthy; the backend status endpoint
+should report the AI link state rather than blocking the whole app.
 
 Rollback strategy:
 
@@ -381,9 +399,10 @@ Required GitHub Actions secrets will depend on the final deploy host names and
 registry permissions. Expected set:
 
 ```text
-SERVER_A_HOST
-SERVER_A_USER
+SERVER_A_HOST=SPACEROBOT-268369.ADELAIDEUNI.CLOUD
+SERVER_A_USER=ubuntu
 SERVER_A_SSH_KEY
+SERVER_A_DEPLOY_DIR=/home/ubuntu/eco-acoustic/COMP-6000-Capstone2
 SERVER_B_HOST
 SERVER_B_USER
 SERVER_B_SSH_KEY
@@ -425,7 +444,7 @@ Production should prefer an explicit host path variable so the path does not
 depend on which user runs `docker compose`:
 
 ```text
-SERVERB_PEM_PATH=/home/deploy/.ssh/itds-eap/shinypokemon.pem
+SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 ```
 
 Then Compose can use:

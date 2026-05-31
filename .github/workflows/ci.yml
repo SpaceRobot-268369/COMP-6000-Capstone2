@@ -131,4 +131,8 @@ jobs:
         run: docker build -t eco-ai-tunnel-ci ./services/dev/ai-tunnel
 
       - name: Validate Compose config
-        run: docker compose -f services/dev/docker-compose.yml config --quiet
+        run: |
+          docker compose -f services/dev/docker-compose.yml config --quiet
+          cp services/server-a/.env.example services/server-a/.env
+          touch /tmp/shinypokemon.pem
+          SERVERB_PEM_PATH=/tmp/shinypokemon.pem docker compose -f services/server-a/docker-compose.yml config --quiet

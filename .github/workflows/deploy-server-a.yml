@@ -1,0 +1,81 @@
+name: Deploy Server A
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: GHCR image tag to deploy
+        required: true
+        default: main
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy to spacerobot-268369
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure SSH
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_SSH_KEY: ${{ secrets.SERVER_A_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          : "${SERVER_A_HOST:?SERVER_A_HOST secret is required}"
+          : "${SERVER_A_SSH_KEY:?SERVER_A_SSH_KEY secret is required}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_A_SSH_KEY" > ~/.ssh/server_a_key
+          chmod 600 ~/.ssh/server_a_key
+          ssh-keyscan -H "$SERVER_A_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy Compose stack
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_USER: ${{ secrets.SERVER_A_USER }}
+          SERVER_A_DEPLOY_DIR: ${{ secrets.SERVER_A_DEPLOY_DIR }}
+          SERVER_A_PROD_ENV: ${{ secrets.SERVER_A_PROD_ENV }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          : "${SERVER_A_HOST:?SERVER_A_HOST secret is required}"
+          : "${SERVER_A_USER:?SERVER_A_USER secret is required}"
+          : "${SERVER_A_DEPLOY_DIR:?SERVER_A_DEPLOY_DIR secret is required}"
+          : "${SERVER_A_PROD_ENV:?SERVER_A_PROD_ENV secret is required}"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "mkdir -p '$SERVER_A_DEPLOY_DIR'"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "if [ ! -d '$SERVER_A_DEPLOY_DIR/.git' ]; then git clone https://github.com/SpaceRobot-268369/COMP-6000-Capstone2.git '$SERVER_A_DEPLOY_DIR'; fi"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "cd '$SERVER_A_DEPLOY_DIR' && git fetch origin && git checkout main && git pull --ff-only origin main"
+
+          printf '%s\n' "$SERVER_A_PROD_ENV" | ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "cat > '$SERVER_A_DEPLOY_DIR/services/server-a/.env'"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "printf '%s\n' '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "cd '$SERVER_A_DEPLOY_DIR/services/server-a' && IMAGE_TAG='$IMAGE_TAG' docker compose pull && IMAGE_TAG='$IMAGE_TAG' docker compose up -d"
+
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "cd '$SERVER_A_DEPLOY_DIR/services/server-a' && docker compose ps"
+
+      - name: Verify backend health
+        shell: bash
+        env:
+          SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
+          SERVER_A_USER: ${{ secrets.SERVER_A_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
+            "curl -fsS http://127.0.0.1:4000/api/health"
