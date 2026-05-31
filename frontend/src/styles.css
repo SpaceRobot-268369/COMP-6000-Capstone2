@@ -4483,6 +4483,174 @@ textarea {
   color: #004060;
 }
 
+/* ─── Developer Tools Light Theme Overrides ───────────────────────────────── */
+
+/* Result cards (Expected Results & Generated Results) */
+[data-theme="light"] .dev-result-card {
+  border-color: rgba(0, 100, 140, 0.13);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.82));
+}
+
+/* Control section groupings inside dev settings */
+[data-theme="light"] .dev-controls-section {
+  border-color: rgba(0, 100, 140, 0.13);
+  background: rgba(0, 0, 0, 0.015);
+}
+[data-theme="light"] .dev-controls-section-label {
+  color: #005d85;
+}
+[data-theme="light"] .dev-controls-section-pill {
+  border-color: rgba(0, 120, 165, 0.25);
+  background: rgba(0, 120, 165, 0.08);
+  color: #005070;
+}
+[data-theme="light"] .dev-model-description {
+  color: rgba(13, 26, 34, 0.75);
+}
+
+/* Special styling for the run section */
+[data-theme="light"] .dev-controls-section-run {
+  border-color: rgba(0, 100, 140, 0.2);
+  background:
+    linear-gradient(180deg, rgba(0, 160, 210, 0.04), transparent),
+    rgba(0, 0, 0, 0.01);
+}
+
+/* Interactive elements */
+[data-theme="light"] .dev-seed-random-btn {
+  border-color: rgba(0, 100, 140, 0.22);
+  background: rgba(0, 160, 210, 0.06);
+  color: #005070;
+}
+[data-theme="light"] .dev-seed-random-btn:hover:not(:disabled) {
+  background: rgba(0, 160, 210, 0.14);
+  border-color: rgba(0, 100, 140, 0.4);
+}
+[data-theme="light"] .analyse-btn {
+  background: linear-gradient(90deg, #0088bb, #00a898);
+  color: #ffffff;
+}
+
+/* Metadata chips & chips labels */
+[data-theme="light"] .dev-controls-meta {
+  border-top-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] .dev-meta-chip {
+  border-color: rgba(0, 0, 0, 0.07);
+  background: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .dev-meta-chip-label {
+  color: rgba(0, 30, 50, 0.55);
+}
+[data-theme="light"] .dev-meta-chip code {
+  color: #0d1a22;
+}
+
+/* Placeholders inside results panel */
+[data-theme="light"] .dev-placeholder {
+  border-color: rgba(0, 100, 140, 0.18);
+  background: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .dev-placeholder-waveform span {
+  background: linear-gradient(180deg, rgba(0, 136, 187, 0.25), rgba(0, 136, 187, 0.06));
+}
+[data-theme="light"] .dev-placeholder-image {
+  background:
+    linear-gradient(135deg, rgba(0, 100, 140, 0.06), rgba(0, 100, 140, 0.02)),
+    repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.015) 0 10px,
+      transparent 10px 20px
+    );
+}
+[data-theme="light"] .dev-placeholder-json span {
+  background: rgba(0, 100, 140, 0.1);
+}
+[data-theme="light"] .dev-placeholder-caption {
+  color: rgba(13, 26, 34, 0.62);
+}
+
+/* Cached sample tabs */
+[data-theme="light"] .dev-sample-tabs {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .dev-sample-tab {
+  border-color: rgba(0, 100, 140, 0.14);
+  background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 25, 45, 0.65);
+}
+[data-theme="light"] .dev-sample-tab:hover {
+  border-color: rgba(0, 100, 140, 0.3);
+  color: #003d60;
+}
+[data-theme="light"] .dev-sample-tab.active {
+  border-color: rgba(0, 100, 140, 0.4);
+  background: rgba(0, 120, 165, 0.08);
+  color: #005f8a;
+}
+
+/* Prompt details overlay display */
+[data-theme="light"] .prompt-display {
+  border-color: rgba(0, 100, 140, 0.16);
+  background: rgba(0, 160, 210, 0.05);
+}
+[data-theme="light"] .prompt-display-cell {
+  border-color: rgba(0, 100, 140, 0.25);
+  background: rgba(0, 120, 165, 0.08);
+  color: #005070;
+}
+[data-theme="light"] .prompt-display-locked {
+  border-color: rgba(180, 110, 0, 0.25);
+  background: rgba(200, 130, 0, 0.08);
+  color: #7a4800;
+}
+[data-theme="light"] .prompt-display-text {
+  color: #0d1a22;
+}
+
+/* Error states and offline model status indicators */
+[data-theme="light"] .dev-unavailable-pill {
+  border-color: rgba(180, 50, 0, 0.25);
+  background: rgba(200, 70, 0, 0.08);
+  color: #902000;
+}
+[data-theme="light"] .dev-availability-warn {
+  border-color: rgba(180, 50, 0, 0.2);
+  background: rgba(200, 70, 0, 0.05);
+}
+[data-theme="light"] .dev-availability-title {
+  color: #902000;
+}
+[data-theme="light"] .dev-availability-reason {
+  color: rgba(13, 26, 34, 0.75);
+}
+[data-theme="light"] .dev-availability-cmd {
+  background: rgba(0, 0, 0, 0.05);
+  color: #601500;
+}
+
+/* Review details headers */
+[data-theme="light"] .dev-review-section h3 {
+  color: rgba(0, 30, 50, 0.75);
+}
+
+/* Event logs table & species similarity list details */
+.dev-event-table th,
+.dev-event-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.dev-event-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+[data-theme="light"] .dev-event-table th,
+[data-theme="light"] .dev-event-table td {
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .dev-event-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 @media (max-width: 980px) {
   .layer-a-grid {
     grid-template-columns: 1fr;
