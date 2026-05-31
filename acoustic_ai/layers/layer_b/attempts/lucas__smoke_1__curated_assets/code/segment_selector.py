@@ -379,7 +379,7 @@ def _resolve_asset_path(file_path: str) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
-def _load_asset_intensity_index(index_path: Path = DEFAULT_ASSET_INDEX) -> dict[str, str]:
+def _load_asset_intensity_index(index_path: Path = DEFAULT_ASSET_INDEX) -> dict[str, dict[str, str]]:
     if not index_path.exists():
         return {}
 
@@ -387,12 +387,16 @@ def _load_asset_intensity_index(index_path: Path = DEFAULT_ASSET_INDEX) -> dict[
     with index_path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             clip_path = row.get("clip_path", "")
-            intensity = _normalize_intensity(row.get("intensity", ""))
-            if not clip_path or not intensity:
+            if not clip_path:
                 continue
+            intensities = {
+                "wind": _normalize_intensity(row.get("wind_intensity", "")),
+                "rain": _normalize_intensity(row.get("rain_intensity", "")),
+                "thunder": _normalize_intensity(row.get("thunder_intensity", "")),
+            }
             resolved = str(_resolve_asset_path(clip_path))
-            intensity_index[resolved] = intensity
-            intensity_index[Path(clip_path).name] = intensity
+            intensity_index[resolved] = intensities
+            intensity_index[Path(clip_path).name] = intensities
 
     return intensity_index
 
@@ -407,7 +411,12 @@ def _apply_intensity_preference(
     annotated = []
     for candidate in candidates:
         resolved = str(_resolve_asset_path(candidate["file"]))
-        asset_intensity = intensity_index.get(resolved) or intensity_index.get(Path(candidate["file"]).name)
+        asset_intensities = (
+            intensity_index.get(resolved)
+            or intensity_index.get(Path(candidate["file"]).name)
+            or {}
+        )
+        asset_intensity = asset_intensities.get(weather_type, "")
         item = {
             **candidate,
             "asset_intensity": asset_intensity or "unknown",
