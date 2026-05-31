@@ -220,11 +220,16 @@ subdirectory** with **fixed filenames** `audio.wav`, `spectrogram.png`,
 | Tier | Case-dir pattern | Filenames | Example |
 |---|---|---|---|
 | `expected/` | `real_<source_clip_id>/` | `audio.wav` + `audio.wav.dvc` + `spectrogram.png` + `metadata.json` | `real_001_5392_clip001_s000/` |
+| `expected/` (bank, `uses_cells: true`) | `<cell>/real_<source_clip_id>/` — case dirs grouped under the (season×diel) cell | same triplet as above; metadata.json adds `"cell": "<cell>"` | `spring_night/real_0771_5392_clip001_s000/` |
 | `showcase/` | `seed_<N>_<short_label>/` (snake_case label) | `audio.wav` + `spectrogram.png` + `metadata.json`, each with `.dvc` pointer | `seed_42_baseline/`, `seed_43_variation_a/` |
 
 Mirrors how source clips are already laid out (`audio.wav` + `meta.json`)
 and keeps every case self-contained — you can `cp -r` one case dir
 anywhere and it still makes sense.
+
+For bank attempts the dev UI filters `expected/` by the currently
+selected `(season, diel)` cell, so each cell ships 2–3 cases under its
+own sub-folder. Generated automatically per the [per-cell extractor](../../acoustic_ai/scripts/extract_expected_samples_per_cell.py).
 
 ### 2.7 Where the attempt name appears
 

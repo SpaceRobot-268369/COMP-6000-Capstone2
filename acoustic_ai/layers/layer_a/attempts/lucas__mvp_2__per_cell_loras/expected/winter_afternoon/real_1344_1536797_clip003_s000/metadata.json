@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 10.936625,
+    "peak": 0.065185546875,
+    "rms": 0.009776863269507885,
+    "sample_rate": 16000
+  },
+  "cell": "winter_afternoon",
+  "selection_reason": "top-recording_id pick for cell winter_afternoon (recording_id=1536797)",
+  "source": "real_audio",
+  "source_clip_id": "1344_1536797_clip003_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_winter_afternoon.csv",
+  "source_metadata": {
+    "caption": "afternoon winter ambient soundscape, Bowra dry woodland, Australia, mild (20C), dry air, moderate wind, recorded 2024-06-12, no music, no machinery",
+    "clip_id": "1344_1536797_clip003_s000",
+    "diel_bin": "afternoon",
+    "duration_s": 10.937,
+    "env": {
+      "humidity_pct": 39.39,
+      "temperature_c": 20.12,
+      "wind_speed_ms": 5.33
+    },
+    "recording_date": "2024-06-12",
+    "recording_id": "1536797",
+    "season": "winter",
+    "segment_id": "1536797_clip003_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/1344_1536797_clip003_s000/audio.wav"
+  },
+  "tier": "expected"
+}

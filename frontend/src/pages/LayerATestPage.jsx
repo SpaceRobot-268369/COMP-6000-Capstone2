@@ -137,16 +137,30 @@ export default function LayerATestPage({
   }, [season, usesCells]);
 
   // Flatten cached samples in display order (expected first, then showcase).
+  // For bank attempts (uses_cells), filter to entries whose `cell` matches the
+  // currently selected (season, diel) so the Expected panel mirrors the run.
   const expectedEntries = useMemo(() => {
     if (!samples) return [];
+    const activeCell = usesCells && season && diel ? `${season}_${diel}` : null;
     const tiers = [
       { tier: "expected", entries: samples.expected || [] },
       { tier: "showcase", entries: samples.showcase || [] },
     ];
     return tiers.flatMap((t) =>
-      t.entries.map((s) => ({ tier: t.tier, sample: s, key: `${t.tier}/${s.stem}` })),
+      t.entries
+        .filter((s) => {
+          if (!activeCell) return true;
+          // Cell-grouped entries match the active cell; cell-less entries
+          // (e.g. legacy flat samples) are kept as-is.
+          return !s.cell || s.cell === activeCell;
+        })
+        .map((s) => ({
+          tier: t.tier,
+          sample: s,
+          key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
+        })),
     );
-  }, [samples]);
+  }, [samples, usesCells, season, diel]);
 
   // Auto-select the first expected sample when entries change.
   useEffect(() => {
@@ -270,66 +284,82 @@ export default function LayerATestPage({
 
           <div className="dev-controls-body">
             <div className="dev-controls-form">
-              <LabeledSelect
-                label="Layer"
-                value={layerId}
-                onChange={setLayerId}
-                options={layerOptions}
-              />
-
-              <LabeledSelect
-                label="Model / Attempt"
-                value={attemptId}
-                onChange={setAttemptId}
-                options={attemptOptions}
-              />
-
-              {usesCells && (
-                <div className="layer-a-cell-row">
+              <section className="dev-controls-section">
+                <p className="dev-controls-section-label">Model</p>
+                <div className="dev-controls-section-grid two-col">
                   <LabeledSelect
-                    label="Season"
-                    value={season}
-                    onChange={setSeason}
-                    options={seasonOptions}
+                    label="Layer"
+                    value={layerId}
+                    onChange={setLayerId}
+                    options={layerOptions}
                   />
                   <LabeledSelect
-                    label="Time of day"
-                    value={diel}
-                    onChange={setDiel}
-                    options={dielOptions}
+                    label="Model / Attempt"
+                    value={attemptId}
+                    onChange={setAttemptId}
+                    options={attemptOptions}
                   />
                 </div>
+              </section>
+
+              {usesCells && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Scene
+                    {season && diel && (
+                      <span className="dev-controls-section-pill">
+                        {season} · {diel}
+                      </span>
+                    )}
+                  </p>
+                  <div className="dev-controls-section-grid two-col">
+                    <LabeledSelect
+                      label="Season"
+                      value={season}
+                      onChange={setSeason}
+                      options={seasonOptions}
+                    />
+                    <LabeledSelect
+                      label="Time of day"
+                      value={diel}
+                      onChange={setDiel}
+                      options={dielOptions}
+                    />
+                  </div>
+                </section>
               )}
 
-              <LabeledNumber
-                label="Seed"
-                value={seed}
-                min={0}
-                max={2147483647}
-                hint={
-                  usesSeed
-                    ? "Same seed + same attempt = same audio."
-                    : "This model does not use a seed."
-                }
-                onChange={setSeed}
-                disabled={!usesSeed}
-              />
-
-              <div className="dev-controls-action">
-                <button
-                  type="button"
-                  className="gen-primary-btn"
-                  onClick={handleRun}
-                  disabled={isLoading || !attemptId || !registryReady || currentAttempt?.available === false}
-                  title={
-                    currentAttempt?.available === false
-                      ? currentAttempt?.unavailable_reason || "Model weights unavailable"
-                      : undefined
-                  }
-                >
-                  {isLoading ? "Generating..." : "Generate"}
-                </button>
-              </div>
+              <section className="dev-controls-section dev-controls-section-run">
+                <p className="dev-controls-section-label">Run</p>
+                <div className="dev-controls-run-grid">
+                  <LabeledNumber
+                    label="Seed"
+                    value={seed}
+                    min={0}
+                    max={2147483647}
+                    hint={
+                      usesSeed
+                        ? "Same seed + same attempt = same audio."
+                        : "This model does not use a seed."
+                    }
+                    onChange={setSeed}
+                    disabled={!usesSeed}
+                  />
+                  <button
+                    type="button"
+                    className="gen-primary-btn dev-run-btn"
+                    onClick={handleRun}
+                    disabled={isLoading || !attemptId || !registryReady || currentAttempt?.available === false}
+                    title={
+                      currentAttempt?.available === false
+                        ? currentAttempt?.unavailable_reason || "Model weights unavailable"
+                        : undefined
+                    }
+                  >
+                    {isLoading ? "Generating..." : "▶ Generate"}
+                  </button>
+                </div>
+              </section>
             </div>
 
             {currentAttempt && currentAttempt.available === false && (
@@ -355,19 +385,25 @@ export default function LayerATestPage({
 
             {errorMsg && <p className="analysis-error">{errorMsg}</p>}
 
+            <PromptDisplay
+              prompt={result?.metadata?.prompt}
+              cell={result?.metadata?.cell}
+              locked={Boolean(result?.metadata?.prompt_locked)}
+              show={isDone}
+              loading={isLoading}
+            />
+
             <div className="dev-controls-meta">
-              <div className="gen-info-block">
-                <p>Attempt ID</p>
+              <div className="dev-meta-chip">
+                <span className="dev-meta-chip-label">Attempt</span>
                 <code>{attemptId || "—"}</code>
               </div>
-
-              <div className="gen-info-block">
-                <p>Run tag</p>
+              <div className="dev-meta-chip">
+                <span className="dev-meta-chip-label">Run tag</span>
                 <code>{isDone ? tag : "—"}</code>
               </div>
-
-              <div className="gen-info-block">
-                <p>Audio stats</p>
+              <div className="dev-meta-chip">
+                <span className="dev-meta-chip-label">Audio stats</span>
                 <code>
                   {isDone && result?.metadata?.audio
                     ? `RMS ${result.metadata.audio.rms?.toFixed?.(4)} · peak ${result.metadata.audio.peak?.toFixed?.(4)}`
@@ -378,7 +414,9 @@ export default function LayerATestPage({
 
             {isDone && result?.metadata?.prompt_locked && (
               <p className="mock-badge">
-                Fixed prompt active — user prompts disabled
+                {usesCells
+                  ? "Prompt fixed per scene — pick season + time of day to change it · free-text disabled"
+                  : "Fixed prompt active — user prompts disabled"}
               </p>
             )}
           </div>
@@ -403,19 +441,28 @@ export default function LayerATestPage({
 
             {expectedEntries.length > 1 && (
               <div className="dev-sample-tabs" role="tablist" aria-label="Cached samples">
-                {expectedEntries.map((e) => (
-                  <button
-                    key={e.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={e.key === expectedKey}
-                    className={`dev-sample-tab${e.key === expectedKey ? " active" : ""}`}
-                    onClick={() => setExpectedKey(e.key)}
-                  >
-                    <span className="dev-sample-tab-tier">{e.tier}</span>
-                    <span className="dev-sample-tab-stem">{e.sample.stem}</span>
-                  </button>
-                ))}
+                {expectedEntries.map((e, i) => {
+                  // For cell-grouped entries every tab is the same (tier, cell);
+                  // shorten the label to a numeric index + clip stem so the tabs
+                  // don't all repeat the cell name.
+                  const displayStem = e.sample.stem.startsWith("real_")
+                    ? e.sample.stem.slice("real_".length)
+                    : e.sample.stem;
+                  const eyebrow = e.sample.cell ? `Sample ${i + 1}` : e.tier;
+                  return (
+                    <button
+                      key={e.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={e.key === expectedKey}
+                      className={`dev-sample-tab${e.key === expectedKey ? " active" : ""}`}
+                      onClick={() => setExpectedKey(e.key)}
+                    >
+                      <span className="dev-sample-tab-tier">{eyebrow}</span>
+                      <span className="dev-sample-tab-stem">{displayStem}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -515,10 +562,11 @@ export default function LayerATestPage({
 }
 
 function ExpectedSample({ layerId, attemptId, tier, sample, loading, empty }) {
+  // `layerId` / `attemptId` / `tier` kept in the signature for callers; the
+  // playable URL comes from the server-built `sample.wav_url`.
+  void layerId; void attemptId; void tier;
   const hasSample = Boolean(sample);
-  const wavSrc = hasSample && sample.has_wav
-    ? sampleWavUrl(layerId, attemptId, tier, sample.stem)
-    : null;
+  const wavSrc = hasSample && sample.has_wav ? sampleWavUrl(sample) : null;
 
   const audioCaption = loading
     ? "Loading cached samples…"
@@ -675,6 +723,29 @@ function ReviewSection({ title, children }) {
     <section className="dev-review-section">
       <h3>{title}</h3>
       {children}
+    </section>
+  );
+}
+
+function PromptDisplay({ prompt, cell, locked, show, loading }) {
+  return (
+    <section className="prompt-display">
+      <div className="prompt-display-head">
+        <h3>✎ Prompt used</h3>
+        <div className="prompt-display-tags">
+          {cell && <span className="prompt-display-cell">{cell}</span>}
+          {locked && <span className="prompt-display-locked">locked</span>}
+        </div>
+      </div>
+      {show && prompt ? (
+        <p className="prompt-display-text">{prompt}</p>
+      ) : (
+        <p className="prompt-display-empty">
+          {loading
+            ? "Resolving prompt…"
+            : "The server-side prompt for this run appears here after you generate."}
+        </p>
+      )}
     </section>
   );
 }

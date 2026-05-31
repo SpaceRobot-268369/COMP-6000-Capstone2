@@ -231,11 +231,133 @@ def _samples_root(spec: AttemptSpec) -> Path:
     return _AI_ROOT / "layers" / spec.layer / "attempts" / spec.id
 
 
+def _is_case_dir(d: Path) -> bool:
+    """A case dir holds the fixed triplet {audio.wav, spectrogram.png, metadata.json}
+    (plus matching .dvc pointers). Presence of audio.wav or its DVC pointer is
+    the canonical signal."""
+    return (d / "audio.wav").is_file() or (d / "audio.wav.dvc").is_file()
+
+
+def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
+                   case: Path, *, cell: str | None) -> dict:
+    """Build one sample entry from a case sub-directory (canonical layout
+    per conventions.md §2.6). Reads audio.wav / .wav.dvc, spectrogram.png /
+    .png.dvc and metadata.json / .json.dvc.
+
+    `wav_url` mirrors the on-disk path so the frontend doesn't have to know
+    the layout — it just resolves the returned URL.
+    """
+    import base64 as _b64
+    import json as _json
+
+    rel_parts = [tier]
+    if cell:
+        rel_parts.append(cell)
+    rel_parts.append(case.name)
+    rel_wav = "/".join(rel_parts + ["audio.wav"])
+
+    entry = {
+        "stem":    case.name,
+        "cell":    cell,
+        "has_wav": False, "has_png": False, "has_json": False,
+        "png_b64": None, "metadata": None, "wav_url": None,
+    }
+
+    audio_wav = case / "audio.wav"
+    audio_dvc = case / "audio.wav.dvc"
+    if audio_wav.is_file() or audio_dvc.is_file():
+        entry["has_wav"] = True
+        entry["wav_url"] = (
+            f"/layers/{layer_id}/attempts/{attempt_id}/samples/{rel_wav}"
+        )
+
+    png = case / "spectrogram.png"
+    if png.is_file():
+        entry["has_png"] = True
+        try:
+            entry["png_b64"] = _b64.b64encode(png.read_bytes()).decode("ascii")
+        except OSError:
+            pass
+    elif (case / "spectrogram.png.dvc").is_file():
+        entry["has_png"] = True
+
+    md = case / "metadata.json"
+    if md.is_file():
+        entry["has_json"] = True
+        try:
+            entry["metadata"] = _json.loads(md.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+    elif (case / "metadata.json.dvc").is_file():
+        entry["has_json"] = True
+
+    return entry
+
+
+def _read_flat_entries(layer_id: str, attempt_id: str, tier: str, d: Path) -> list[dict]:
+    """Legacy fallback: read flat files `expected/<stem>.{wav,png,metadata.json}`
+    (older attempts that pre-date the case-dir convention)."""
+    import base64 as _b64
+    import json as _json
+
+    entries: dict[str, dict] = {}
+    for f in sorted(d.iterdir()):
+        if f.is_dir() or f.name in {".gitkeep", ".gitignore"}:
+            continue
+        stem = f.name
+        for suffix in (".wav.dvc", ".png.dvc", ".metadata.json.dvc",
+                       ".wav", ".png", ".metadata.json"):
+            if stem.endswith(suffix):
+                stem = stem[: -len(suffix)]
+                break
+        e = entries.setdefault(stem, {
+            "stem":    stem,
+            "cell":    None,
+            "has_wav": False, "has_png": False, "has_json": False,
+            "png_b64": None, "metadata": None, "wav_url": None,
+        })
+        n = f.name
+        if n.endswith(".png"):
+            e["has_png"] = True
+            try:
+                e["png_b64"] = _b64.b64encode(f.read_bytes()).decode("ascii")
+            except OSError:
+                pass
+        elif n.endswith(".metadata.json"):
+            e["has_json"] = True
+            try:
+                e["metadata"] = _json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+        elif n.endswith(".wav"):
+            e["has_wav"] = True
+            e["wav_url"] = (
+                f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+            )
+        elif n.endswith(".png.dvc"):
+            e["has_png"] = True
+        elif n.endswith(".wav.dvc"):
+            e["has_wav"] = True
+            if not e["wav_url"]:
+                e["wav_url"] = (
+                    f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+                )
+        elif n.endswith(".metadata.json.dvc"):
+            e["has_json"] = True
+    return list(entries.values())
+
+
 def list_samples(layer_id: str, attempt_id: str) -> dict:
-    """Enumerate what's actually present on disk under <attempt>/expected and
-    <attempt>/showcase. Returns artefact descriptors the server can hand to the
-    frontend; PNG/JSON contents are inlined (small) and WAV presence is a
-    flag (caller fetches separately if wanted).
+    """Enumerate samples present on disk under <attempt>/expected and
+    <attempt>/showcase. Three layouts are supported:
+
+      tier/<case>/{audio.wav, spectrogram.png, metadata.json}              ← canonical
+      tier/<cell>/<case>/{audio.wav, spectrogram.png, metadata.json}       ← bank (uses_cells)
+      tier/<stem>.{wav,png,metadata.json}                                  ← legacy flat
+
+    PNG/JSON contents are inlined (small). `wav_url` is built to match the
+    actual on-disk path so the frontend can play it without knowing the
+    layout.
     """
     spec = get_attempt(layer_id, attempt_id)
     root = _samples_root(spec)
@@ -245,50 +367,30 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
         d = root / tier
         if not d.is_dir():
             return []
-        entries: dict[str, dict] = {}
-        for f in sorted(d.iterdir()):
-            if f.name in {".gitkeep", ".gitignore"}:
+        entries: list[dict] = []
+        has_dirs = False
+        for child in sorted(d.iterdir()):
+            if child.name in {".gitkeep", ".gitignore"}:
                 continue
-            # Strip suffixes to a triplet stem.
-            stem = f.name
-            for suffix in (".wav.dvc", ".png.dvc", ".metadata.json.dvc",
-                           ".wav", ".png", ".metadata.json"):
-                if stem.endswith(suffix):
-                    stem = stem[: -len(suffix)]
-                    break
-            triplet = entries.setdefault(stem, {
-                "stem": stem,
-                "has_png": False, "has_wav": False, "has_json": False,
-                "png_b64": None, "metadata": None, "wav_url": None,
-            })
-            name = f.name
-            if name.endswith(".png"):
-                triplet["has_png"] = True
-                try:
-                    import base64 as _b64
-                    triplet["png_b64"] = _b64.b64encode(f.read_bytes()).decode("ascii")
-                except OSError:
-                    pass
-            elif name.endswith(".metadata.json"):
-                triplet["has_json"] = True
-                try:
-                    import json as _json
-                    triplet["metadata"] = _json.loads(f.read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    pass
-            elif name.endswith(".wav"):
-                triplet["has_wav"] = True
-                triplet["wav_url"] = (
-                    f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+            if not child.is_dir():
+                continue
+            has_dirs = True
+            if _is_case_dir(child):
+                entries.append(
+                    _read_case_dir(layer_id, attempt_id, tier, child, cell=None)
                 )
-            # .dvc pointers count as "exists" but we can't inline contents.
-            elif name.endswith(".png.dvc"):
-                triplet["has_png"] = True
-            elif name.endswith(".wav.dvc"):
-                triplet["has_wav"] = True
-            elif name.endswith(".metadata.json.dvc"):
-                triplet["has_json"] = True
-        return list(entries.values())
+            else:
+                # Cell-grouped: walk one level deeper.
+                for case in sorted(child.iterdir()):
+                    if case.is_dir() and _is_case_dir(case):
+                        entries.append(
+                            _read_case_dir(layer_id, attempt_id, tier, case,
+                                           cell=child.name)
+                        )
+        # If no case dirs were found, fall back to legacy flat layout.
+        if not has_dirs and not entries:
+            entries.extend(_read_flat_entries(layer_id, attempt_id, tier, d))
+        return entries
 
     return {
         "attempt":        attempt_id,
@@ -299,13 +401,17 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
     }
 
 
-def sample_wav_path(layer_id: str, attempt_id: str, tier: str, stem: str) -> Path:
-    """Resolve an <attempt>/<tier>/<stem>.wav path, restricted to legal tiers."""
+def sample_wav_path(layer_id: str, attempt_id: str, tier: str, rel_path: str) -> Path:
+    """Resolve a `samples/{tier}/{rel_path}` URL to a filesystem path. The
+    rel_path is the remainder of the URL after the tier — anywhere from
+    `<stem>.wav` (legacy flat) to `<cell>/<case>/audio.wav` (bank)."""
     if tier not in {"expected", "showcase"}:
         raise ValueError(f"illegal tier: {tier}")
     spec = get_attempt(layer_id, attempt_id)
-    safe_stem = stem.replace("/", "_").replace("..", "_")
-    return _samples_root(spec) / tier / f"{safe_stem}.wav"
+    parts = [p for p in rel_path.replace("\\", "/").split("/") if p not in {"", "."}]
+    if any(p == ".." for p in parts):
+        raise ValueError(f"illegal path: {rel_path!r}")
+    return (_samples_root(spec) / tier).joinpath(*parts)
 
 
 # --- handler dispatch ------------------------------------------------------

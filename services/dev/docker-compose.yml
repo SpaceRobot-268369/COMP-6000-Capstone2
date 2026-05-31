@@ -61,6 +61,9 @@ services:
       AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
       AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
       AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
+      # Cached expected/showcase samples are served straight from the repo
+      # checkout (no AI-worker round-trip). Mount point matches the volume below.
+      AI_LAYERS_ROOT: /acoustic_ai/layers
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -71,6 +74,9 @@ services:
     volumes:
       - ../../backend:/app
       - backend_node_modules:/app/node_modules
+      # Read-only mount of the attempts tree so Express can serve cached
+      # expected/showcase artefacts (PNG/JSON/WAV) without waking serverB.
+      - ../../acoustic_ai:/acoustic_ai:ro
     networks:
       - app_net
 

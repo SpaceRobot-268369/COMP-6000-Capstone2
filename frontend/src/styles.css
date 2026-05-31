@@ -1688,28 +1688,102 @@ textarea {
 
 .dev-controls-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 160px) auto;
+  gap: 16px;
+}
+
+.dev-controls-section {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dev-controls-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: rgba(186, 238, 248, 0.62);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.dev-controls-section-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(150, 190, 255, 0.4);
+  background: rgba(120, 160, 255, 0.14);
+  color: #cfe1ff;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.dev-controls-section-grid {
+  display: grid;
   gap: 14px 18px;
   align-items: end;
 }
 
-.dev-controls-action {
-  display: flex;
-  align-items: stretch;
+.dev-controls-section-grid.two-col {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
 }
 
-.dev-controls-action .gen-primary-btn {
-  min-width: 140px;
-  height: 44px;
-  align-self: end;
+.dev-controls-section-run {
+  border-color: rgba(150, 220, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(34, 228, 255, 0.04), rgba(34, 228, 255, 0)),
+    rgba(255, 255, 255, 0.02);
+}
+
+.dev-controls-run-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
+  gap: 14px 18px;
+  align-items: end;
+}
+
+.dev-run-btn {
+  height: 48px;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
 }
 
 .dev-controls-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px 18px;
+  gap: 10px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dev-meta-chip {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  min-width: 0;
+}
+
+.dev-meta-chip-label {
+  color: rgba(186, 238, 248, 0.55);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dev-meta-chip code {
+  display: block;
+  color: #d8eef6;
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .dev-controls-row .layer-a-input {
@@ -1720,13 +1794,13 @@ textarea {
 }
 
 @media (max-width: 900px) {
-  .dev-controls-form {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  .dev-controls-section-grid.two-col {
+    grid-template-columns: 1fr;
   }
-  .dev-controls-action {
-    grid-column: 1 / -1;
+  .dev-controls-run-grid {
+    grid-template-columns: 1fr;
   }
-  .dev-controls-action .gen-primary-btn {
+  .dev-run-btn {
     width: 100%;
   }
   .dev-controls-meta {
@@ -1824,6 +1898,64 @@ textarea {
 
 .dev-review-section {
   min-width: 0;
+}
+
+/* Prompt-used panel (Layer A dev page) */
+.prompt-display {
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(150, 190, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(120, 160, 255, 0.07);
+}
+.prompt-display-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.prompt-display-head h3 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+.prompt-display-tags {
+  display: flex;
+  gap: 6px;
+}
+.prompt-display-cell,
+.prompt-display-locked {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.prompt-display-cell {
+  border: 1px solid rgba(150, 190, 255, 0.45);
+  background: rgba(120, 160, 255, 0.16);
+  color: #bcd4ff;
+}
+.prompt-display-locked {
+  border: 1px solid rgba(255, 210, 140, 0.4);
+  background: rgba(255, 190, 110, 0.12);
+  color: #ffd9a8;
+}
+.prompt-display-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: italic;
+  color: #e7eefc;
+}
+.prompt-display-empty {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.55;
 }
 
 .dev-review-section h3 {

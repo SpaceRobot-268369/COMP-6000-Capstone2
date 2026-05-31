@@ -1,9 +1,13 @@
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import cors from "cors";
 import express from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
+
+import { listSamples, resolveSampleWavPath } from "./samples.js";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -448,45 +452,43 @@ app.get("/api/layers", requireAuth, async (_req, res) => {
   }
 });
 
-// Cached samples for an attempt — drives the "view reference / showcase"
-// preview in the frontend. See .claude/context/dev/artifact_policy.md.
-app.get("/api/layers/:layer/attempts/:attempt/samples", requireAuth, async (req, res) => {
+// Cached samples for an attempt — drives the "Expected Results" preview in the
+// frontend. Served straight from the repo checkout (AI_LAYERS_ROOT), NOT the
+// AI worker: these are static artefacts with no model dependency, so serverB
+// needn't be awake to view them. See backend/src/samples.js.
+app.get("/api/layers/:layer/attempts/:attempt/samples", requireAuth, (req, res) => {
   const { layer, attempt } = req.params;
-  const operation = `list samples for ${layer}/${attempt}`;
   try {
-    const r = await fetchAi(
-      `/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples`,
-      {},
-      operation,
-    );
-    const body = await readAiJson(r, operation);
-    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
-    res.status(r.status).json(body);
+    res.json(listSamples(layer, attempt));
   } catch (err) {
-    sendAiProxyError(res, err, operation);
+    res.status(500).json({
+      ok: false,
+      message: `Failed to list samples for ${layer}/${attempt}: ${err.message || err}`,
+    });
   }
 });
 
-// Stream a cached sample WAV through the proxy (browser plays it via <audio>).
-app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/:stem.wav", requireAuth, async (req, res) => {
-  const { layer, attempt, tier, stem } = req.params;
-  const operation = `stream sample WAV for ${layer}/${attempt}/${tier}/${stem}`;
-  try {
-    const r = await fetchAi(
-      `/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/samples/${encodeURIComponent(tier)}/${encodeURIComponent(stem)}.wav`,
-      {},
-      operation,
-    );
-    if (!r.ok) {
-      const body = await r.json().catch(() => ({}));
-      return sendAiUpstreamError(res, r, body, operation);
-    }
-    res.setHeader("content-type", r.headers.get("content-type") || "audio/wav");
-    const buf = Buffer.from(await r.arrayBuffer());
-    res.send(buf);
-  } catch (err) {
-    sendAiProxyError(res, err, operation);
+// Stream a cached sample WAV from the local checkout (browser plays it via
+// <audio>). `relPath` is the remainder after the tier — supports all three
+// layouts (flat, case-dir, cell-grouped). WAVs are DVC-tracked: a missing blob
+// (only the .dvc pointer present) yields a 404 with a `dvc pull` hint.
+app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (req, res) => {
+  const { layer, attempt, tier } = req.params;
+  const relPath = req.params[0] || "";
+  if (!relPath.endsWith(".wav")) {
+    return res.status(404).json({ message: "only .wav samples are served" });
   }
+  const filePath = resolveSampleWavPath(layer, attempt, tier, relPath);
+  if (!filePath) {
+    return res.status(404).json({ message: `illegal sample path: ${tier}/${relPath}` });
+  }
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({
+      message: `WAV not materialised locally (${path.basename(filePath)}). Run \`dvc pull\` then retry.`,
+    });
+  }
+  res.type("audio/wav");
+  res.sendFile(filePath);
 });
 
 // Per-attempt generation. Forwarded runtime params (Layer A dev-generation
