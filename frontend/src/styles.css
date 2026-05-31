@@ -1752,6 +1752,56 @@ textarea {
   letter-spacing: 0.18em;
 }
 
+.dev-model-description {
+  margin: 0;
+  color: rgba(216, 238, 246, 0.78);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dev-seed-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.dev-seed-input-row .layer-a-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dev-seed-random-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  padding: 0;
+  border: 1px solid rgba(150, 220, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(34, 228, 255, 0.06);
+  color: #d8eef6;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.dev-seed-random-btn:hover:not(:disabled) {
+  background: rgba(34, 228, 255, 0.14);
+  border-color: rgba(150, 220, 255, 0.4);
+}
+
+.dev-seed-random-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.dev-seed-random-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .dev-controls-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
