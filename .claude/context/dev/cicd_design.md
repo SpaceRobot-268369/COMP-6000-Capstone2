@@ -401,6 +401,48 @@ Important rules:
 - Do not expose Server B FastAPI to the public internet.
 - Do not print secrets in workflow logs.
 
+## Server B Pem Handling
+
+The GHCR image must not contain the Server B pem. The pem lives on Server A at
+a documented host path. Deployment pulls the latest `ai-tunnel` image, then
+Docker Compose mounts the host-side pem into the container.
+
+Current development Compose convention:
+
+```yaml
+secrets:
+  shinypokemon_pem:
+    file: ${HOME}/.ssh/itds-eap/shinypokemon.pem
+```
+
+Container convention:
+
+```text
+/run/secrets/shinypokemon.pem
+```
+
+Production should prefer an explicit host path variable so the path does not
+depend on which user runs `docker compose`:
+
+```text
+SERVERB_PEM_PATH=/home/deploy/.ssh/itds-eap/shinypokemon.pem
+```
+
+Then Compose can use:
+
+```yaml
+secrets:
+  shinypokemon_pem:
+    file: ${SERVERB_PEM_PATH}
+```
+
+The deployment preflight should verify:
+
+- the pem exists on Server A;
+- permissions are `600`;
+- owner is the deploy user or otherwise readable by the deploy process;
+- `ai-tunnel` receives it only through the secret mount.
+
 ## Environment Strategy
 
 Recommended environments:
@@ -423,6 +465,31 @@ GitHub Environment protections:
 - require manual approval for production deploys;
 - restrict production secrets to production workflows;
 - keep Server B deploy manual until the worker lifecycle is more mature.
+
+Current local development uses `services/dev/.env` as the shared Compose env
+file for PostgreSQL, backend, frontend, and ai-tunnel. The frontend also has
+`frontend/.env` for direct Vite runs.
+
+Production should separate public frontend config from backend secrets:
+
+```text
+Server A Compose env
+  - ports
+  - non-secret AI tunnel labels / hosts
+  - image tags
+
+Backend secrets / env
+  - DATABASE_URL
+  - SESSION_SECRET
+  - APP_SECRET
+  - database password
+
+Frontend public env
+  - VITE_API_URL
+```
+
+Anything exposed through `VITE_*` is browser-visible after build and must not
+contain secrets.
 
 ## Current Gaps Before Implementation
 

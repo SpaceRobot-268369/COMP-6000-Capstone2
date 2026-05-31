@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+      - "data/**"
+      - "model/**"
+      - "infra/**"
+      - "refactor/**"
+      - "docs/**"
+      - "exp/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit tracked files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bad_paths="$(
+            git ls-files | grep -E '(^|/)(node_modules|dist|build|out|coverage)/|(^|/)services/dev/postgresql/data/|(^|/)package-lock\.json$|(^|/)(id_rsa|id_ed25519)$|(\.pem|\.key|\.p8|\.wav|\.pt|\.ckpt|\.bin|\.safetensors)$|(^|/)\.env\.local$|(^|/)\.env\.[^/]*\.local$' || true
+          )"
+
+          if [ -n "$bad_paths" ]; then
+            echo "The following tracked paths should not be committed:"
+            echo "$bad_paths"
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run frontend checks
+        run: npm run check
+
+  backend:
+    name: Backend check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run backend checks
+        run: npm run check
+
+  acoustic-ai:
+    name: Acoustic AI light check
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPYCACHEPREFIX: /tmp/eco-acoustic-pycache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lightweight API dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install fastapi uvicorn pydantic numpy pyyaml
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall acoustic_ai/server acoustic_ai/scripts acoustic_ai/layers script
+
+      - name: Import FastAPI app
+        run: |
+          python - <<'PY'
+          from acoustic_ai.server.server import app
+
+          print(app.title)
+          PY
+
+  docker:
+    name: Docker and Compose validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -t eco-frontend-ci ./frontend
+
+      - name: Build backend image
+        run: docker build -t eco-backend-ci ./backend
+
+      - name: Build AI tunnel image
+        run: docker build -t eco-ai-tunnel-ci ./services/dev/ai-tunnel
+
+      - name: Validate Compose config
+        run: docker compose -f services/dev/docker-compose.yml config --quiet
