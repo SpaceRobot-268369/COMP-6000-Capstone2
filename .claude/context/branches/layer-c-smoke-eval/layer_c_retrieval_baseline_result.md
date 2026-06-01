@@ -55,10 +55,10 @@ Policy:
 Retrieval code:
 
 ```text
-acoustic_ai/modules/events/event_index.py
-acoustic_ai/modules/events/retriever.py
-acoustic_ai/modules/events/scheduler.py
-acoustic_ai/modules/events/run_layer_c_retrieval.py
+acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/event_index.py
+acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/retriever.py
+acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/scheduler.py
+acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/run_layer_c_retrieval.py
 ```
 
 Index:
@@ -105,14 +105,14 @@ it is not used for the final smoke bundles.
 Build index:
 
 ```bash
-./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/modules/events/event_index.py
+./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/event_index.py
 ```
 
 Run final Cuckoo retrieval:
 
 ```bash
 MPLCONFIGDIR=/private/tmp/mpl \
-./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/modules/events/run_layer_c_retrieval.py \
+./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/run_layer_c_retrieval.py \
   --species "Horsfield's Bronze-cuckoo" \
   --diel-bin morning \
   --season summer \
@@ -126,7 +126,7 @@ Run final Fairywren retrieval:
 
 ```bash
 MPLCONFIGDIR=/private/tmp/mpl \
-./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/modules/events/run_layer_c_retrieval.py \
+./acoustic_ai/.venv-audiogen/bin/python acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/code/run_layer_c_retrieval.py \
   --species "Splendid Fairywren" \
   --diel-bin dawn \
   --season summer \

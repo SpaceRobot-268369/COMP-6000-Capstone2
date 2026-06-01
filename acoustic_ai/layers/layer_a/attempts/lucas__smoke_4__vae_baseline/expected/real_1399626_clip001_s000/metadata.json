@@ -1,0 +1,21 @@
+{
+  "audio": {
+    "duration_s": 12.143990929705215,
+    "peak": 0.006622314453125,
+    "rms": 0.0012202071957290173,
+    "sample_rate": 22050
+  },
+  "selection_reason": "night / spring \u2014 matches smoke_1's specific case for cross-attempt comparison",
+  "source": "real_audio",
+  "source_clip_id": "1399626_clip001_s000",
+  "source_kind": "webm_slice",
+  "source_manifest": "acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/ambient/ambient_index.csv",
+  "source_metadata": {
+    "diel_bin": "night",
+    "season": "spring",
+    "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1399626/site_257_item_1399626_clip_001.webm",
+    "t_end": 270.048,
+    "t_start": 257.904
+  },
+  "tier": "expected"
+}

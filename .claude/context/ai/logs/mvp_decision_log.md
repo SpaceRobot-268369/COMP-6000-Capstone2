@@ -793,3 +793,71 @@ If AudioGen LoRA fails the smoke-test bar across seeds, the fallback ladder is:
 - `.claude/context/ai/architecture.md` — Module C section and data-ownership table
 - `.claude/context/ai/pipeline_design.md` — Layer C section
 - `CLAUDE.md` — AI Module Details table, generation pipeline description
+
+---
+
+## Layer A MVP-2 — pivot to per-cell LoRAs (2026-05-30)
+
+### Context
+
+`lucas__mvp_1__audioldm2_all_conditioned` trained successfully (1,082 clips,
+16 (season, diel) cells, single shared LoRA r=8). Training was clean:
+train_loss 0.147 → 0.123 → 0.119, val_loss tracking. But per-cell showcase
+samples (seed 42 spring night, seed 43 summer afternoon, seed 44 autumn night)
+came in **below the smoke_1 / smoke_2 quality bar by ear**. The single LoRA
+spreads ~2.9 M trainable params across 16 cells × 5 temp × 3 humidity × 3 wind
+buckets, so each scene receives ~5–10 % of the per-scene capacity that the
+smoke LoRAs enjoyed. Plan §10 flagged this as the top failure mode under the
+label "average ambient insensitive to caption fields".
+
+### Decision
+
+Adopt the §10 / §11 pre-decided fallback as the production architecture:
+
+1. **Per-cell LoRAs.** One adapter per (season, diel) cell, trained on that
+   cell's clips only. Each adapter ≈ a smoke-style run scaled to that cell's
+   data. Future production path; mvp_1's single-shared LoRA is kept as a
+   roll-backable historical reference.
+2. **Inference router.** `handler.py` receives `(season, diel, temp,
+   humidity, wind, seed)`, picks the matching cell's LoRA, builds the
+   caption, samples. Documented under §9 of the MVP-1 implementation plan
+   (was "tentative", now scheduled).
+3. **Thin cells expanded, not dropped.** Cells with <40 clips
+   (winter morning 22, summer morning 24, winter afternoon 25,
+   summer afternoon 29, autumn morning 38) get:
+   - Filter relaxation pass (raise wind threshold 4.5 → 5.5 m/s, crest 30 →
+     40) — gentle, expected +20–50 % clips.
+   - Audio augmentation at training time (pitch ±1 semitone, time stretch
+     ±5 %, light EQ tilt, mild 1/f noise) — ~6× effective multiplier.
+   - Future: download refresh from BirdNET-Audio site 257 to mine any new
+     recordings.
+4. **Caption v3 (drop date).** Date token removed; high-cardinality
+   per-recording token added noise without inference benefit. Logged in
+   `caption_schema_log.md`.
+
+### Phasing
+
+- **Phase 1A** (`lucas__mvp_1_1__spring_night_replica`) — smoke-style single
+  LoRA on the spring-night subset. Hypothesis: data filter pipeline is not
+  the problem. If quality matches smoke_1 → confirms data is fine, proceed
+  to per-cell. If not → halt and fix data pipeline before any architecture
+  change.
+- **Phase 1B** (`lucas__mvp_1_2__shared_lora_maxed`) — single LoRA at r=64
+  alpha=128, 8 epochs, caption v3. The "shared ceiling" reference point —
+  per-cell must beat this to justify its complexity.
+- **Phase 2** (`lucas__mvp_2__per_cell_loras`) — the per-cell bank.
+- **Phase 2.5** — thin-cell filter relax + augmentation, separate attempt id
+  `lucas__mvp_2_1__per_cell_loras_thin_expanded`.
+- **Phase 3** — router + 16×3 showcase grid + smoke regression A/B.
+- **Phase 4** (optional) — full UNet fine-tune of weakest cell, OR inference
+  sweep (steps 200→400, guidance {3,5,7,10}).
+
+### Discipline (applies retroactively to mvp_1 and forward)
+
+- Each attempt has a self-contained `DEVLOG.md` inside its attempt folder —
+  hypothesis, setup, run log, listening notes, decisions, retrospective.
+- Each attempt = one commit, subject prefixed `model(layer-a): <id> ...`.
+- Each attempt commit gets a `git tag attempt/<id>` for one-keystroke rollback.
+- `.claude/context/ai/logs/` is for cross-attempt narrative only;
+  `mvp_decision_log.md` and `caption_schema_log.md` index into per-attempt
+  DEVLOGs, not duplicate their content.

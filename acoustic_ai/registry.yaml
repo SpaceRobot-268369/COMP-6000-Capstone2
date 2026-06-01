@@ -1,0 +1,219 @@
+# Layer / attempt registry.
+#
+# Declarative source of truth for which models exist per layer. The FastAPI
+# server reads this on startup to:
+#   - serve GET /layers (for the frontend dropdown)
+#   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
+#
+# Naming rules:    .claude/context/dev/attempt_naming.md
+# Artifact policy: .claude/context/dev/artifact_policy.md
+# Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# IDs use snake_case on disk; dropdown labels use human-readable strings.
+# Canonical seed for samples/reference/ is 42 unless an attempt overrides it
+# under `samples: { canonical_seed: <N> }`.
+
+layers:
+
+  layer_a:
+    label: "Layer A — Ambient bed"
+    default: lucas__prod_1__per_cell_loras
+    attempts:
+
+      lucas__smoke_1__audioldm2_spring_night:
+        label: "Spring night (AudioLDM2 LoRA)"
+        author: lucas
+        stage: smoke_1
+        status: smoke_test_1_success
+        uses_seed: true
+        checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            quiet spring night ambient soundscape, Bowra dry woodland, Australia,
+            distant environmental bed, no foreground events, no music, no machinery
+          guidance_scale: 2.0
+          num_inference_steps: 100
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+        notes:
+          - Layer A dev endpoint is locked to the spring-night smoke prompt.
+          - No user-specified prompts while the model is trained on the small smoke dataset.
+
+      lucas__smoke_2__audioldm2_insects:
+        label: "Insects/cicadas (AudioLDM2 LoRA)"
+        author: lucas
+        stage: smoke_2
+        status: smoke_test_2_insects_success
+        uses_seed: true
+        checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            summer afternoon insect-rich ambient soundscape, cicada and insect texture,
+            Bowra dry woodland, Australia, dry hot air, distant environmental bed,
+            no birds, no foreground events, no music, no machinery, no strong wind
+          guidance_scale: 2.0
+          num_inference_steps: 100
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+        notes:
+          - Training data excludes annotated event overlaps and strong-wind rows.
+
+      lucas__mvp_2__per_cell_loras:
+        label: "Per-cell bank (16 season×diel LoRAs)"
+        author: lucas
+        stage: mvp_2
+        status: mvp_2_per_cell_passed
+        uses_seed: true
+        uses_cells: true
+        checkpoint: model/candidates/lucas/mvp_2__per_cell_loras
+        params:
+          base_model: cvssp/audioldm2
+          guidance_scale: 2.0
+          num_inference_steps: 200
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+          default_cell: spring_night
+          cells:
+            spring_dawn:      {prompt: "dawn spring ambient soundscape, Bowra dry woodland, Australia, mild (18C), dry air, moderate wind, recorded 2019-10-04, no music, no machinery"}
+            spring_morning:   {prompt: "morning spring ambient soundscape, Bowra dry woodland, Australia, mild (16C), dry air, moderate wind, recorded 2019-09-23, no music, no machinery"}
+            spring_afternoon: {prompt: "afternoon spring ambient soundscape, Bowra dry woodland, Australia, warm (26C), dry air, light breeze, recorded 2019-09-01, no music, no machinery"}
+            spring_night:     {prompt: "night spring ambient soundscape, Bowra dry woodland, Australia, mild (15C), dry air, light breeze, recorded 2019-09-01, no music, no machinery"}
+            summer_dawn:      {prompt: "dawn summer ambient soundscape, Bowra dry woodland, Australia, warm (27C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_morning:   {prompt: "morning summer ambient soundscape, Bowra dry woodland, Australia, hot (34C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_afternoon: {prompt: "afternoon summer ambient soundscape, Bowra dry woodland, Australia, very hot (42C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_night:     {prompt: "night summer ambient soundscape, Bowra dry woodland, Australia, warm (28C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            autumn_dawn:      {prompt: "dawn autumn ambient soundscape, Bowra dry woodland, Australia, mild (24C), dry air, light breeze, recorded 2020-03-02, no music, no machinery"}
+            autumn_morning:   {prompt: "morning autumn ambient soundscape, Bowra dry woodland, Australia, warm (31C), dry air, moderate wind, recorded 2020-03-02, no music, no machinery"}
+            autumn_afternoon: {prompt: "afternoon autumn ambient soundscape, Bowra dry woodland, Australia, hot (33C), dry air, moderate wind, recorded 2020-03-21, no music, no machinery"}
+            autumn_night:     {prompt: "night autumn ambient soundscape, Bowra dry woodland, Australia, cold (14C), humid air, light breeze, recorded 2020-04-04, no music, no machinery"}
+            winter_dawn:      {prompt: "dawn winter ambient soundscape, Bowra dry woodland, Australia, cold (10C), dry air, moderate wind, recorded 2019-08-18, no music, no machinery"}
+            winter_morning:   {prompt: "morning winter ambient soundscape, Bowra dry woodland, Australia, cold (7C), moderate humidity, moderate wind, recorded 2019-08-14, no music, no machinery"}
+            winter_afternoon: {prompt: "afternoon winter ambient soundscape, Bowra dry woodland, Australia, mild (20C), dry air, still, recorded 2019-08-14, no music, no machinery"}
+            winter_night:     {prompt: "night winter ambient soundscape, Bowra dry woodland, Australia, cold (9C), moderate humidity, light breeze, recorded 2019-08-14, no music, no machinery"}
+        notes:
+          - 16 per-cell LoRAs (one per season×diel). Router swaps PEFT adapter by (season, diel).
+          - Dev contract: runtime accepts seed + (season, diel); prompt locked per cell server-side.
+          - summer_afternoon and autumn_dawn flagged for Phase 2.5 augmentation.
+
+      lucas__prod_1__per_cell_loras:
+        label: "Per-cell bank — PRODUCTION (16 season×diel LoRAs)"
+        author: lucas
+        stage: prod_1
+        status: production
+        uses_seed: true
+        uses_cells: true
+        checkpoint: model/production/layer_a_ambient
+        description: |
+          Generates a 10-second ambient bed for a chosen season + time of day. Under the hood: 16 LoRA adapters (r=8, α=32) on top of `cvssp/audioldm2`, a frozen latent text-to-audio diffusion model — the server picks the adapter matching your scene and runs a locked per-cell caption.
+
+          Trained on ~1,583 ten-second clips from site_257 Bowra dry woodland (caption schema v2, cap 200/cell, wind ≤5.5 m/s). Inference: 10 s mono @ 16 kHz, 200 diffusion steps, guidance 2.0, RMS-normalised with an 80 Hz high-pass.
+
+          Promoted 2026-05-31 from `mvp_2`. Caveats: no long-form yet; `summer_afternoon` and `autumn_dawn` show mild overfit; `winter_morning`, `summer_morning`, `autumn_morning` are source-thin.
+        params:
+          base_model: cvssp/audioldm2
+          guidance_scale: 2.0
+          num_inference_steps: 200
+          audio_length_in_s: 10.0
+          output_target_rms: 0.0015
+          highpass_hz: 80.0
+          default_cell: spring_night
+          cells:
+            spring_dawn:      {prompt: "dawn spring ambient soundscape, Bowra dry woodland, Australia, mild (18C), dry air, moderate wind, recorded 2019-10-04, no music, no machinery"}
+            spring_morning:   {prompt: "morning spring ambient soundscape, Bowra dry woodland, Australia, mild (16C), dry air, moderate wind, recorded 2019-09-23, no music, no machinery"}
+            spring_afternoon: {prompt: "afternoon spring ambient soundscape, Bowra dry woodland, Australia, warm (26C), dry air, light breeze, recorded 2019-09-01, no music, no machinery"}
+            spring_night:     {prompt: "night spring ambient soundscape, Bowra dry woodland, Australia, mild (15C), dry air, light breeze, recorded 2019-09-01, no music, no machinery"}
+            summer_dawn:      {prompt: "dawn summer ambient soundscape, Bowra dry woodland, Australia, warm (27C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_morning:   {prompt: "morning summer ambient soundscape, Bowra dry woodland, Australia, hot (34C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_afternoon: {prompt: "afternoon summer ambient soundscape, Bowra dry woodland, Australia, very hot (42C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            summer_night:     {prompt: "night summer ambient soundscape, Bowra dry woodland, Australia, warm (28C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery"}
+            autumn_dawn:      {prompt: "dawn autumn ambient soundscape, Bowra dry woodland, Australia, mild (24C), dry air, light breeze, recorded 2020-03-02, no music, no machinery"}
+            autumn_morning:   {prompt: "morning autumn ambient soundscape, Bowra dry woodland, Australia, warm (31C), dry air, moderate wind, recorded 2020-03-02, no music, no machinery"}
+            autumn_afternoon: {prompt: "afternoon autumn ambient soundscape, Bowra dry woodland, Australia, hot (33C), dry air, moderate wind, recorded 2020-03-21, no music, no machinery"}
+            autumn_night:     {prompt: "night autumn ambient soundscape, Bowra dry woodland, Australia, cold (14C), humid air, light breeze, recorded 2020-04-04, no music, no machinery"}
+            winter_dawn:      {prompt: "dawn winter ambient soundscape, Bowra dry woodland, Australia, cold (10C), dry air, moderate wind, recorded 2019-08-18, no music, no machinery"}
+            winter_morning:   {prompt: "morning winter ambient soundscape, Bowra dry woodland, Australia, cold (7C), moderate humidity, moderate wind, recorded 2019-08-14, no music, no machinery"}
+            winter_afternoon: {prompt: "afternoon winter ambient soundscape, Bowra dry woodland, Australia, mild (20C), dry air, still, recorded 2019-08-14, no music, no machinery"}
+            winter_night:     {prompt: "night winter ambient soundscape, Bowra dry woodland, Australia, cold (9C), moderate humidity, light breeze, recorded 2019-08-14, no music, no machinery"}
+        notes:
+          - PRODUCTION promotion of lucas__mvp_2__per_cell_loras (conventions §5.4).
+          - Checkpoint = model/production/layer_a_ambient (pointer copy of the candidate bank).
+          - Promoted with caveats — see the production card audit section.
+
+      lucas__smoke_4__vae_baseline:
+        label: "VAE + HiFi-GAN baseline (legacy /analysis backing)"
+        author: lucas
+        stage: smoke_4
+        status: superseded
+        checkpoint: model/candidates/lucas/vae-site257-30epoch
+        extra_checkpoints:
+          vocoder: model/candidates/lucas/vocoder-hifigan-site257
+        params:
+          sample_rate: 22050
+          n_mels: 128
+          latent_dim: 256
+        notes:
+          - Pre-AudioLDM2 retrieval+VAE+vocoder pipeline. Still backs /analysis.
+
+  layer_b:
+    label: "Layer B — Weather"
+    default: lucas__smoke_1__curated_assets
+    attempts:
+      lucas__smoke_1__curated_assets:
+        label: "Curated wind/rain assets"
+        author: lucas
+        stage: smoke_1
+        status: placeholder
+        checkpoint: null
+        params: {}
+        notes:
+          - Asset library + parameter mixing, no trained model.
+
+  layer_c:
+    label: "Layer C — Events"
+    default: lucas__smoke_1__audiogen_boobook
+    attempts:
+      lucas__smoke_1__audiogen_boobook:
+        label: "Boobook owl (AudioGen LoRA)"
+        author: lucas
+        stage: smoke_1
+        status: smoke_test_1_success
+        uses_seed: true
+        checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
+        params:
+          base_model: facebook/audiogen-medium
+          sample_rate: 16000
+        notes:
+          - Per-species LoRA; 16 kHz native.
+
+  layer_d:
+    label: "Layer D — Mixer"
+    default: lucas__smoke_1__layered_mix
+    attempts:
+      lucas__smoke_1__layered_mix:
+        label: "Layered mix (placeholder)"
+        author: lucas
+        stage: smoke_1
+        status: placeholder
+        checkpoint: null
+        params: {}
+        notes:
+          - Combines A+B+C outputs into final WAV + explanation JSON.
+
+  layer_e:
+    label: "Layer E — Analysis"
+    default: lucas__smoke_1__detectors
+    attempts:
+      lucas__smoke_1__detectors:
+        label: "Weather + event detectors"
+        author: lucas
+        stage: smoke_1
+        status: partial
+        checkpoint: null
+        params: {}
+        notes:
+          - Weather + event detectors. Ambient similarity uses the layer_a smoke_4 VAE encoder.

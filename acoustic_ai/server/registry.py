@@ -1,0 +1,462 @@
+"""Registry loader: reads ``acoustic_ai/registry.yaml`` and resolves attempts
+to their handler modules.
+
+The FastAPI server uses this to:
+  - serve ``GET /layers`` (drives the frontend dropdown)
+  - dispatch ``POST /layers/{layer}/attempts/{attempt_id}/generate``
+
+Naming rules: ``.claude/context/dev/attempt_naming.md``
+Handler interface (each attempt's ``handler.py`` must expose these):
+
+    load(checkpoint_dir: Path | None, params: dict) -> object
+        # One-time load. Returns whatever generate() needs.
+        # `checkpoint_dir` is None when registry's `checkpoint:` is null.
+
+    generate(state, seed: int | None, **runtime_params) -> dict
+        # Returns {
+        #     "wav_bytes": bytes,
+        #     "mel_db":    np.ndarray | None,
+        #     "metadata":  dict,
+        # }
+"""
+
+from __future__ import annotations
+
+import importlib
+import threading
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+# --- paths -----------------------------------------------------------------
+
+_AI_ROOT = Path(__file__).resolve().parent.parent     # acoustic_ai/
+_PROJECT_ROOT = _AI_ROOT.parent
+_REGISTRY_PATH = _AI_ROOT / "registry.yaml"
+
+# --- types -----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AttemptSpec:
+    layer:   str           # "layer_a"
+    id:      str           # "lucas__smoke_1__audioldm2_spring_night"
+    label:   str
+    author:  str
+    stage:   str           # "smoke_1" | "mvp_1" | "prod_1" | ...
+    status:  str
+    checkpoint: Path | None
+    extra_checkpoints: dict[str, Path]
+    params:  dict[str, Any]
+    notes:   list[str]
+
+    @property
+    def handler_module(self) -> str:
+        return f"layers.{self.layer}.attempts.{self.id}.code.handler"
+
+
+# --- loading ---------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def _registry_doc() -> dict:
+    with _REGISTRY_PATH.open("r", encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def _resolve_checkpoint(value: Any) -> Path | None:
+    if value is None or value == "":
+        return None
+    return (_PROJECT_ROOT / str(value)).resolve()
+
+
+# Weight-file extensions we treat as "real" model binaries (i.e. not pointers).
+_WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pt")
+
+
+def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = None) -> dict:
+    """Inspect a checkpoint directory and report whether the actual weight
+    blobs are materialised on disk (as opposed to only DVC pointer files).
+
+    Returns:
+        {
+            "available": bool,
+            "reason":    str | None,    # human-readable when not available
+            "missing":   list[str],     # base filenames that need `dvc pull`
+        }
+    """
+    if ckpt_dir is None:
+        # Attempts without a checkpoint (placeholders) are considered
+        # available — the handler doesn't need any weights.
+        return {"available": True, "reason": None, "missing": []}
+
+    if not ckpt_dir.exists():
+        return {
+            "available": False,
+            "reason": f"checkpoint directory missing: {ckpt_dir}",
+            "missing": [],
+        }
+
+    # Bank layout: weights live in per-cell subdirs (ckpt_dir/<cell>/adapter…).
+    # Available iff every declared cell has its weight on disk; otherwise list
+    # the missing pointers so the UI can name the exact `dvc pull` targets.
+    if cell_names:
+        missing = []
+        for cell in cell_names:
+            w = ckpt_dir / cell / "adapter_model.safetensors"
+            if not w.is_file():
+                missing.append(f"{cell}/adapter_model.safetensors")
+        if not missing:
+            return {"available": True, "reason": None, "missing": []}
+        return {
+            "available": False,
+            "reason": (f"{len(missing)}/{len(cell_names)} cell adapters not on disk. "
+                       f"Run `dvc pull` under {ckpt_dir}."),
+            "missing": missing,
+        }
+
+    has_weight = any(
+        p.is_file() and p.suffix in _WEIGHT_SUFFIXES
+        for p in ckpt_dir.iterdir()
+    )
+    if has_weight:
+        return {"available": True, "reason": None, "missing": []}
+
+    # No real weights — list any `.dvc` pointer files so the UI can tell the
+    # user exactly which paths to `dvc pull`.
+    pointers = sorted(
+        p.name[:-4]  # strip ".dvc"
+        for p in ckpt_dir.iterdir()
+        if p.is_file() and p.name.endswith(".dvc")
+        and any(p.name.endswith(s + ".dvc") for s in _WEIGHT_SUFFIXES)
+    )
+    if pointers:
+        return {
+            "available": False,
+            "reason": (
+                "Weights are DVC-tracked but not on disk locally. "
+                f"Run `dvc pull` for: {', '.join(pointers)}"
+            ),
+            "missing": pointers,
+        }
+    return {
+        "available": False,
+        "reason": f"no weight files found in {ckpt_dir}",
+        "missing": [],
+    }
+
+
+def list_layers() -> list[dict]:
+    """Return the dropdown payload — one entry per layer, with attempt list."""
+    out: list[dict] = []
+    for layer_id, layer_block in _registry_doc()["layers"].items():
+        attempts = []
+        for att_id, att in layer_block["attempts"].items():
+            ckpt = _resolve_checkpoint(att.get("checkpoint"))
+            params = att.get("params") or {}
+            cells = sorted((params.get("cells") or {}).keys())
+            avail = _ckpt_availability(ckpt, cell_names=cells)
+            attempts.append({
+                "id":      att_id,
+                "label":   att.get("label", att_id),
+                "stage":   att.get("stage", ""),
+                "author":  att.get("author", ""),
+                "status":  att.get("status", ""),
+                "description": att.get("description", ""),
+                "checkpoint":       str(ckpt) if ckpt else None,
+                "available":        avail["available"],
+                "unavailable_reason": avail["reason"],
+                "missing_files":    avail["missing"],
+                "uses_seed":        bool(att.get("uses_seed", False)),
+                "uses_cells":       bool(att.get("uses_cells", False)),
+                "cells":            cells,
+                "default_cell":     params.get("default_cell"),
+            })
+        out.append({
+            "id":      layer_id,
+            "label":   layer_block.get("label", layer_id),
+            "default": layer_block.get("default"),
+            "attempts": attempts,
+        })
+    return out
+
+
+def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
+    doc = _registry_doc()
+    layers = doc.get("layers", {})
+    if layer_id not in layers:
+        raise KeyError(f"unknown layer: {layer_id!r}")
+    attempts = layers[layer_id].get("attempts", {})
+    if attempt_id not in attempts:
+        raise KeyError(f"unknown attempt: {layer_id}/{attempt_id}")
+
+    att = attempts[attempt_id]
+    extras = {
+        k: _resolve_checkpoint(v)
+        for k, v in (att.get("extra_checkpoints") or {}).items()
+    }
+    return AttemptSpec(
+        layer=layer_id,
+        id=attempt_id,
+        label=att.get("label", attempt_id),
+        author=att.get("author", ""),
+        stage=att.get("stage", ""),
+        status=att.get("status", ""),
+        checkpoint=_resolve_checkpoint(att.get("checkpoint")),
+        extra_checkpoints=extras,
+        params=dict(att.get("params") or {}),
+        notes=list(att.get("notes") or []),
+    )
+
+
+# --- handler dispatch ------------------------------------------------------
+
+# --- samples ---------------------------------------------------------------
+
+_CANONICAL_SEED_DEFAULT = 42
+
+
+def canonical_seed(spec: AttemptSpec) -> int:
+    """Per-attempt canonical seed (registry override, else project default)."""
+    samples_cfg = spec.params.get("samples") if isinstance(spec.params, dict) else None
+    if isinstance(samples_cfg, dict) and "canonical_seed" in samples_cfg:
+        return int(samples_cfg["canonical_seed"])
+    return _CANONICAL_SEED_DEFAULT
+
+
+def _samples_root(spec: AttemptSpec) -> Path:
+    """Attempt root — the `expected/` and `showcase/` tiers live directly here."""
+    return _AI_ROOT / "layers" / spec.layer / "attempts" / spec.id
+
+
+def _is_case_dir(d: Path) -> bool:
+    """A case dir holds the fixed triplet {audio.wav, spectrogram.png, metadata.json}
+    (plus matching .dvc pointers). Presence of audio.wav or its DVC pointer is
+    the canonical signal."""
+    return (d / "audio.wav").is_file() or (d / "audio.wav.dvc").is_file()
+
+
+def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
+                   case: Path, *, cell: str | None) -> dict:
+    """Build one sample entry from a case sub-directory (canonical layout
+    per conventions.md §2.6). Reads audio.wav / .wav.dvc, spectrogram.png /
+    .png.dvc and metadata.json / .json.dvc.
+
+    `wav_url` mirrors the on-disk path so the frontend doesn't have to know
+    the layout — it just resolves the returned URL.
+    """
+    import base64 as _b64
+    import json as _json
+
+    rel_parts = [tier]
+    if cell:
+        rel_parts.append(cell)
+    rel_parts.append(case.name)
+    rel_wav = "/".join(rel_parts + ["audio.wav"])
+
+    entry = {
+        "stem":    case.name,
+        "cell":    cell,
+        "has_wav": False, "has_png": False, "has_json": False,
+        "png_b64": None, "metadata": None, "wav_url": None,
+    }
+
+    audio_wav = case / "audio.wav"
+    audio_dvc = case / "audio.wav.dvc"
+    if audio_wav.is_file() or audio_dvc.is_file():
+        entry["has_wav"] = True
+        entry["wav_url"] = (
+            f"/layers/{layer_id}/attempts/{attempt_id}/samples/{rel_wav}"
+        )
+
+    png = case / "spectrogram.png"
+    if png.is_file():
+        entry["has_png"] = True
+        try:
+            entry["png_b64"] = _b64.b64encode(png.read_bytes()).decode("ascii")
+        except OSError:
+            pass
+    elif (case / "spectrogram.png.dvc").is_file():
+        entry["has_png"] = True
+
+    md = case / "metadata.json"
+    if md.is_file():
+        entry["has_json"] = True
+        try:
+            entry["metadata"] = _json.loads(md.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+    elif (case / "metadata.json.dvc").is_file():
+        entry["has_json"] = True
+
+    return entry
+
+
+def _read_flat_entries(layer_id: str, attempt_id: str, tier: str, d: Path) -> list[dict]:
+    """Legacy fallback: read flat files `expected/<stem>.{wav,png,metadata.json}`
+    (older attempts that pre-date the case-dir convention)."""
+    import base64 as _b64
+    import json as _json
+
+    entries: dict[str, dict] = {}
+    for f in sorted(d.iterdir()):
+        if f.is_dir() or f.name in {".gitkeep", ".gitignore"}:
+            continue
+        stem = f.name
+        for suffix in (".wav.dvc", ".png.dvc", ".metadata.json.dvc",
+                       ".wav", ".png", ".metadata.json"):
+            if stem.endswith(suffix):
+                stem = stem[: -len(suffix)]
+                break
+        e = entries.setdefault(stem, {
+            "stem":    stem,
+            "cell":    None,
+            "has_wav": False, "has_png": False, "has_json": False,
+            "png_b64": None, "metadata": None, "wav_url": None,
+        })
+        n = f.name
+        if n.endswith(".png"):
+            e["has_png"] = True
+            try:
+                e["png_b64"] = _b64.b64encode(f.read_bytes()).decode("ascii")
+            except OSError:
+                pass
+        elif n.endswith(".metadata.json"):
+            e["has_json"] = True
+            try:
+                e["metadata"] = _json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+        elif n.endswith(".wav"):
+            e["has_wav"] = True
+            e["wav_url"] = (
+                f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+            )
+        elif n.endswith(".png.dvc"):
+            e["has_png"] = True
+        elif n.endswith(".wav.dvc"):
+            e["has_wav"] = True
+            if not e["wav_url"]:
+                e["wav_url"] = (
+                    f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
+                )
+        elif n.endswith(".metadata.json.dvc"):
+            e["has_json"] = True
+    return list(entries.values())
+
+
+def list_samples(layer_id: str, attempt_id: str) -> dict:
+    """Enumerate samples present on disk under <attempt>/expected and
+    <attempt>/showcase. Three layouts are supported:
+
+      tier/<case>/{audio.wav, spectrogram.png, metadata.json}              ← canonical
+      tier/<cell>/<case>/{audio.wav, spectrogram.png, metadata.json}       ← bank (uses_cells)
+      tier/<stem>.{wav,png,metadata.json}                                  ← legacy flat
+
+    PNG/JSON contents are inlined (small). `wav_url` is built to match the
+    actual on-disk path so the frontend can play it without knowing the
+    layout.
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    root = _samples_root(spec)
+    seed = canonical_seed(spec)
+
+    def _scan(tier: str) -> list[dict]:
+        d = root / tier
+        if not d.is_dir():
+            return []
+        entries: list[dict] = []
+        has_dirs = False
+        for child in sorted(d.iterdir()):
+            if child.name in {".gitkeep", ".gitignore"}:
+                continue
+            if not child.is_dir():
+                continue
+            has_dirs = True
+            if _is_case_dir(child):
+                entries.append(
+                    _read_case_dir(layer_id, attempt_id, tier, child, cell=None)
+                )
+            else:
+                # Cell-grouped: walk one level deeper.
+                for case in sorted(child.iterdir()):
+                    if case.is_dir() and _is_case_dir(case):
+                        entries.append(
+                            _read_case_dir(layer_id, attempt_id, tier, case,
+                                           cell=child.name)
+                        )
+        # If no case dirs were found, fall back to legacy flat layout.
+        if not has_dirs and not entries:
+            entries.extend(_read_flat_entries(layer_id, attempt_id, tier, d))
+        return entries
+
+    return {
+        "attempt":        attempt_id,
+        "layer":          layer_id,
+        "canonical_seed": seed,
+        "expected":       _scan("expected"),
+        "showcase":       _scan("showcase"),
+    }
+
+
+def sample_wav_path(layer_id: str, attempt_id: str, tier: str, rel_path: str) -> Path:
+    """Resolve a `samples/{tier}/{rel_path}` URL to a filesystem path. The
+    rel_path is the remainder of the URL after the tier — anywhere from
+    `<stem>.wav` (legacy flat) to `<cell>/<case>/audio.wav` (bank)."""
+    if tier not in {"expected", "showcase"}:
+        raise ValueError(f"illegal tier: {tier}")
+    spec = get_attempt(layer_id, attempt_id)
+    parts = [p for p in rel_path.replace("\\", "/").split("/") if p not in {"", "."}]
+    if any(p == ".." for p in parts):
+        raise ValueError(f"illegal path: {rel_path!r}")
+    return (_samples_root(spec) / tier).joinpath(*parts)
+
+
+# --- handler dispatch ------------------------------------------------------
+
+_state_cache: dict[str, object] = {}
+_state_lock = threading.Lock()
+
+
+def _get_handler_module(spec: AttemptSpec):
+    return importlib.import_module(spec.handler_module)
+
+
+def _get_state(spec: AttemptSpec):
+    cache_key = f"{spec.layer}/{spec.id}"
+    if cache_key in _state_cache:
+        return _state_cache[cache_key]
+    with _state_lock:
+        if cache_key in _state_cache:
+            return _state_cache[cache_key]
+        mod = _get_handler_module(spec)
+        state = mod.load(spec.checkpoint, dict(spec.params), extra=spec.extra_checkpoints)
+        _state_cache[cache_key] = state
+        return state
+
+
+def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params) -> dict:
+    """Dispatch to the attempt's handler.generate().
+
+    Returns whatever the handler returns (typically dict with wav_bytes,
+    mel_db, metadata).
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    mod = _get_handler_module(spec)
+    state = _get_state(spec)
+    result = mod.generate(state, seed=seed, **runtime_params)
+    # Always attach the spec snapshot for traceability.
+    md = result.setdefault("metadata", {})
+    md.setdefault("attempt", {
+        "layer":  spec.layer,
+        "id":     spec.id,
+        "label":  spec.label,
+        "stage":  spec.stage,
+        "author": spec.author,
+        "status": spec.status,
+        "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
+    })
+    return result

@@ -28,17 +28,77 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 | 3 | AI module | Python / PyTorch (`acoustic_ai/`) | Layer A smoke ✓, Layer C smoke ✓ |
 | 4 | Metadata DB (optional) | PostgreSQL | Not started |
 
-### AI modules
+### AI modules (per-layer codes)
 
-| Module | Role | Status |
+| Layer | Role | Status |
 |---|---|---|
-| A — Ambient | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | Smoke 1 (spring night) ✓, Smoke 2 (insects) ✓ |
-| B — Weather | Curated wind/rain assets + parameter mixing | Placeholder |
-| C — Events | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | Smoke 1 (boobook) ✓ |
-| D — Mixer | Combine A+B+C → WAV + explanation JSON | Placeholder |
-| E — Analysis | Ambient similarity + weather + event detectors | Partial (A working) |
+| layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1/2 ✓ · **prod-1 per-cell bank (16 season×diel) promoted** → `model/production/layer_a_ambient/` |
+| layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
+| layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
+| layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
+| layer-e (Analysis) | Ambient similarity + weather + event detectors | Partial (layer-a working) |
+
+Each layer hosts independent attempts under
+`acoustic_ai/layers/<layer-code>/attempts/<member>__<stage>__<slug>/`.
+Stage tokens (`smoke-N` / `mvp-N` / `prod-N`) and the full naming rules
+live in [.claude/context/conventions.md](.claude/context/conventions.md).
+The set of available attempts is declared in `acoustic_ai/registry.yaml`
+— the FastAPI server reads it to serve `GET /layers` for the frontend
+dropdown.
 
 **Generative model strategy:** Layers A and C use frozen large base models + LoRA adapters for the MVP. Migration to in-house distilled models is a future option, gated on (1) LoRA path proven across species/contexts, (2) demonstrated latency/VRAM bottleneck, (3) team capacity. See [distillation strategy](.claude/context/ai/distillation_strategy.md).
+
+---
+
+## Repo layout
+
+Top-level map. Each entry links to its canonical deep-dive doc where one exists.
+
+```
+COMP-6000-Capstone2/
+├── CLAUDE.md                # this file — agent guidance + structural index
+├── AGENTS.md                # points agents at CLAUDE.md
+├── Makefile                 # convenience targets
+├── dvc.yaml / dvc.lock      # DVC pipeline definition + lock
+├── params.yaml              # hyperparameters for stages declared in dvc.yaml
+│
+├── frontend/                # React + Vite UI scaffold (Docker, port 5173)
+├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
+├── services/dev/            # local docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
+├── services/server-a/       # Server A deployment compose + env template
+│
+├── acoustic_ai/             # Python AI module (FastAPI app runs natively on serverB for inference)
+│   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
+│   ├── layers/              # per-layer attempts (layer_a, layer_b, layer_c, …)
+│   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see conventions.md
+│   ├── scripts/             # extract_expected_samples.py, regenerate_samples.py
+│   ├── registry.yaml        # declares which attempts the server exposes via GET /layers
+│   ├── requirements.txt
+│   └── .venv/               # gitignored — the ONLY Python interpreter for AI work (see "Python environment")
+│
+├── model/                   # trained checkpoints
+│   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
+│   └── production/<role>/                     # promoted slots (layer_a_ambient ✓)
+│
+├── resources/               # source recordings + manifests (DVC-tracked)
+│   └── site_257_bowra-dry-a/                  # only site live right now
+│
+├── script/                  # data prep & download utilities (one-shot scripts, not pipeline stages)
+│   ├── dataset/             # manifest builders, segment prep, spectrogram rendering for datasets
+│   ├── download/            # site_257 clip/annotation/event downloaders, recording fetcher
+│   └── env/                 # NASA env-feature fetcher
+│
+├── debug/                   # local-only diagnostics workspace (per-layer subfolders; see debug/README.md)
+└── .claude/                 # agent context loaded on demand — full tree in next section
+```
+
+Conventions for top-level entries:
+- **frontend/**, **backend/**, **services/dev/** → containerised; run via Docker Compose in `services/dev/`.
+- **acoustic_ai/** → native only (Apple Silicon MPS); never `pip install` outside `acoustic_ai/.venv` (DVC is the documented exception — see "Python environment").
+- **model/**, **resources/** → binaries are DVC, metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git.
+- **script/** vs **acoustic_ai/scripts/** → top-level `script/` is for data preparation (one-shot, ad-hoc); `acoustic_ai/scripts/` is for AI-module utilities that read/write artefacts under `acoustic_ai/`.
+
+When a top-level dir is added/removed/renamed, this section must be updated in the same commit (same discipline as the `.claude/` map below).
 
 ---
 
@@ -51,9 +111,12 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ├── settings.local.json
 ├── commands/                              # Custom slash-command definitions
 ├── skills/                                # Reusable agent skills
-│   └── training_data_filtering_policy.md
+│   ├── commit_changes.md
+│   └── dvc_push.md
 └── context/                               # Project context the agent loads on demand
+    ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
+    │   ├── prerequisites.md               # Conceptual on-ramp: audio fundamentals, encoder/decoder, LoRA, ecosystem
     │   ├── architecture.md
     │   ├── pipeline_design.md
     │   ├── distillation_strategy.md
@@ -63,60 +126,63 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   │   └── layer_c_smoke_1_birds.md
     │   └── logs/
     │       ├── mvp_decision_log.md
+    │       ├── caption_schema_log.md
     │       └── audioldm2_transition_log.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
     │   ├── known_issues.md
     │   └── logs/
     │       └── generation_quality_analysis.md
-    ├── dev/                               # Developer workflows, specs, stage goals, testing, diagrams
+    ├── dev/                               # Developer workflows: git, DVC, S3
+    │   ├── dev_workflow.md                # Stage workflow: smoke → mvp/prod loop
     │   ├── git_workflow.md
     │   ├── dvc_workflow.md
     │   ├── s3_bucket_layout.md
-    │   ├── model_readme_standard.md
-    │   ├── stages/                        # Per-stage goals + exit criteria (stage_1.md, …)
-    │   ├── testing/
-    │   │   ├── analysis_test_cases.md
-    │   │   └── layer_verification_formats.md
-    │   └── diagrams/
-    │       └── workflow_diagrams.md
-    ├── setup/                             # How to run the system
-    │   ├── local/
-    │   │   └── services.md                # Local-mac service topology, ports, env vars
-    │   └── server/
-    │       └── on_demand_ai_worker.md     # Server A/B job orchestration topology
-    └── branches/                          # Ephemeral per-branch scratch (<branch-slug>/)
-                                           # Deleted in the merge PR, or content promoted first.
+    │   └── cicd_design.md
+    └── setup/                             # How to run the system
+        ├── local/
+        │   └── services.md                # Local-mac service topology, ports, env vars
+        └── server/
+            └── on_demand_ai_worker.md     # Server A/B job orchestration topology
 ```
 
 ### Quick-link table
 
 | Need | Doc |
 |---|---|
+| **Conventions** (repo structure, naming, tracking, artifact tiers, attempt internals, model README) | [.claude/context/conventions.md](.claude/context/conventions.md) |
+| **AI prerequisites** (audio fundamentals, encoder/decoder, LoRA, pre-trained ecosystem) | [.claude/context/ai/prerequisites.md](.claude/context/ai/prerequisites.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
+| Caption schema log (Layer A) | [.claude/context/ai/logs/caption_schema_log.md](.claude/context/ai/logs/caption_schema_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
 | Generation quality analysis | [.claude/context/data/logs/generation_quality_analysis.md](.claude/context/data/logs/generation_quality_analysis.md) |
+| **Stage workflow** (smoke → mvp/prod loop, generation mode) | [.claude/context/dev/dev_workflow.md](.claude/context/dev/dev_workflow.md) |
 | Git workflow (full) | [.claude/context/dev/git_workflow.md](.claude/context/dev/git_workflow.md) |
 | DVC workflow | [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md) |
 | S3 bucket layout | [.claude/context/dev/s3_bucket_layout.md](.claude/context/dev/s3_bucket_layout.md) |
-| Model README standard | [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md) |
-| Project stage goals | [.claude/context/dev/stages/](.claude/context/dev/stages/) |
-| Analysis test cases | [.claude/context/dev/testing/analysis_test_cases.md](.claude/context/dev/testing/analysis_test_cases.md) |
-| Layer verification & handoff formats | [.claude/context/dev/testing/layer_verification_formats.md](.claude/context/dev/testing/layer_verification_formats.md) |
-| Workflow diagrams | [.claude/context/dev/diagrams/workflow_diagrams.md](.claude/context/dev/diagrams/workflow_diagrams.md) |
+| CI/CD design | [.claude/context/dev/cicd_design.md](.claude/context/dev/cicd_design.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
+| Server A deployment compose | [services/server-a/README.md](services/server-a/README.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
-| Training data filtering policy (site 257 MVP sample) | [.claude/skills/training_data_filtering_policy.md](.claude/skills/training_data_filtering_policy.md) |
+| Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
+| DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
 
 ---
 
 ## Critical conventions
+
+> Canonical doc for project-wide naming, layout, and policy rules:
+> [.claude/context/conventions.md](.claude/context/conventions.md). The
+> subsections below are the **canonical home** for CLAUDE.md-only rules
+> (Storage rule, Python environment, Pipeline-vs-attempt params, Layer A
+> dev-generation contract). Everything else — repo structure, attempt
+> naming, artifact tiers, model README — lives in `conventions.md`.
 
 ### Storage rule
 
@@ -127,17 +193,13 @@ All Claude-loadable context lives under `.claude/` — never at the project root
 | Architecture / design docs | `.claude/context/ai/`, `.claude/context/data/` |
 | Runbooks (smoke tests, training workflows) | `.claude/context/ai/runbooks/` |
 | Dev workflow specs (DVC, S3, git, model README standard) | `.claude/context/dev/` |
-| Stage goals | `.claude/context/dev/stages/` |
-| Testing specs & diagrams | `.claude/context/dev/testing/`, `.claude/context/dev/diagrams/` |
+| Sample artifacts (expected/showcase/dev-artifacts-self-testing) | `acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/` (rules: `.claude/context/conventions.md`) |
 | Setup (local services; server reserved) | `.claude/context/setup/local/`, `.claude/context/setup/server/` |
-| Branch-scoped dev logs (ephemeral) | `.claude/context/branches/<branch-slug>/` |
 | Custom slash commands | `.claude/commands/` |
 | Reusable skills | `.claude/skills/` |
 | Settings | `.claude/settings.local.json` |
 
 CLAUDE.md is a **hub**, not a manual. If a section grows past ~5 lines or is referenced from elsewhere, it moves into `.claude/context/` and CLAUDE.md links to it.
-
-Branch-scoped scratch in `.claude/context/branches/<branch-slug>/` must be deleted in the merge PR, **or** their durable content promoted to a permanent doc first.
 
 ### Python environment
 
@@ -145,42 +207,77 @@ Always use `acoustic_ai/.venv` for AI training and inference (`./acoustic_ai/.ve
 
 DVC and its S3 deps are the exception: they live at user-site (`pip3 install --user ...`), **not** in the venv. Git hooks call `dvc` and must work without venv activation. See [.claude/context/dev/dvc_workflow.md](.claude/context/dev/dvc_workflow.md).
 
-### Model checkpoint layout
+### Attempts and checkpoints
+
+Layer code lives under `acoustic_ai/layers/<layer-code>/attempts/`, and the
+matching checkpoints live under `model/candidates/<member>/`. Both sides share
+the same naming convention:
 
 ```
-model/
-├── candidates/<member>/<run-id>/    # per-experiment checkpoints (DVC-tracked)
-└── production/<role>/               # promoted checkpoint slots, created only after sign-off
+acoustic_ai/layers/layer-<X>/attempts/<member>__<stage>__<slug>/   # code
+model/candidates/<member>/<stage>__<slug>/                         # checkpoint
+model/production/<role>/                                           # promoted slot
 ```
 
-At this stage of the project, **nothing is in production**. Every trained
-checkpoint — including the VAE and vocoder used by the current inference path
-— is a candidate. A `model/production/<role>/` slot will be created only after
-an explicit promotion decision (validation, sign-off, release tagging).
+`<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
+in [.claude/context/conventions.md](.claude/context/conventions.md).
+
+First production promotion: **`model/production/layer_a_ambient/`** — the
+Layer A per-cell ambient bank, promoted from
+`lucas__mvp_2__per_cell_loras` (served via attempt
+`lucas__prod_1__per_cell_loras`, the layer_a registry default). Promoted
+**with documented caveats** — see the production card's audit section.
+Everything else — including the VAE and vocoder used by the smoke-4 inference
+path — remains a candidate. A `model/production/<role>/` slot is created
+only after an explicit promotion decision (validation, sign-off, release
+tagging) per [conventions §5.4](.claude/context/conventions.md).
 
 Rules (team workflow):
-- One folder per member, one folder per run — never overwrite another member's candidates.
-- Train into `candidates/<member>/...`.
+- One folder per member, one folder per attempt — never overwrite another member's work.
+- Attempts are **self-contained**: each `acoustic_ai/layers/.../attempts/<id>/` folder owns its `data/`, `precompute/`, `debug/`, `train.py`, `sample.py`, `handler.py`, `README.md`. No shared `common/` folder; duplication between attempts is intentional.
 - Each model folder under `model/candidates/...` or `model/production/...` ships with `README.md` + DVC pointer(s); candidate folders also ship with `params.yaml`, and add `metrics.json` once evals exist.
-- Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/dev/model_readme_standard.md](.claude/context/dev/model_readme_standard.md); keep the audit section empty until developers provide evaluation notes or review findings.
+- Model `README.md` files are required experiment / checkpoint logs. Use [.claude/context/conventions.md § Model checkpoint README](.claude/context/conventions.md#6-model-checkpoint-readme); keep the audit section empty until developers provide evaluation notes or review findings.
 
 Binaries (`.pt`, `.safetensors`, `.bin`, `.ckpt`) are DVC-tracked; metadata (`*.json`, `*.yaml`, `*.md`, `*.dvc`) is git-tracked.
 
-### Pipeline vs. candidate hyperparameters
+**Sample artifacts** (audio + spectrograms) per attempt live in three tiers
+directly under the attempt root:
+`acoustic_ai/layers/<layer>/attempts/<id>/{expected,showcase,dev-artifacts-self-testing}/`.
+Each case (one source clip or one generated seed) is its own subdirectory
+with fixed filenames `{audio.wav, spectrogram.png, metadata.json}`:
 
-- Root `params.yaml` → only contains hyperparameters for stages declared in `dvc.yaml` (currently `ambient` and `vocoder`). Changes here trigger `dvc repro` re-runs.
-- `model/candidates/<member>/<run-id>/params.yaml` → all per-candidate experiment hyperparameters, sectioned `training:` and `inference:`.
+- `expected/real_<clip_id>/` — **real-audio** ground truth; PNG + JSON in
+  git, WAV via `.wav.dvc`.
+- `showcase/seed_<N>_<label>/` — author-curated **generated** samples; all
+  three files DVC-tracked.
+- `dev-artifacts-self-testing/` — ad-hoc dev scratch; folder tracked via
+  `.gitkeep`, all other contents gitignored.
+
+Spectrogram PNGs also carry baked-in metadata: a visible overlay
+(header/subline/footer) and lossless PNG `tEXt` chunks mirroring the JSON
+sidecar. Python source for the attempt lives under `code/`. Canonical seed
+is `42` (showcase + Dev UI only — `expected/` is real audio). Full rules:
+[.claude/context/conventions.md](.claude/context/conventions.md). Regenerate via
+`acoustic_ai/scripts/regenerate_samples.py`.
+
+### Pipeline vs. attempt hyperparameters
+
+- Root `params.yaml` → only contains hyperparameters for stages declared in `dvc.yaml`. Changes here trigger `dvc repro` re-runs.
+- `acoustic_ai/layers/<layer>/attempts/<id>/params.yaml` → per-attempt experiment hyperparameters, sectioned `training:` and `inference:`.
+- `model/candidates/<member>/<stage>__<slug>/params.yaml` → frozen snapshot of the params used to train the checkpoint (matches the attempt's `params.yaml` at training time).
 
 ### Layer A dev-generation contract
 
-The Layer A smoke LoRAs are trained on tiny datasets, so the dev generation path is locked down server-side:
+The Layer A LoRAs are trained on narrow datasets, so the dev generation path is locked down server-side:
 
-- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`).
-- Express backend forwards **only** `{ seed }`.
-- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass.
-- Server returns all parameters in response metadata for debugging.
+- Frontend exposes **only** a non-negative integer `seed` (range `0`–`2147483647`), plus — for **bank attempts** that declare `uses_cells: true` — a `(season, diel)` cell selector (two dropdowns populated from the attempt's `cells` list).
+- Express backend forwards **only** `{ seed }`, plus `{ season, diel }` when both are valid (`season ∈ {spring,summer,autumn,winter}`, `diel ∈ {dawn,morning,afternoon,night}`); invalid/absent selectors are dropped and the server falls back to `default_cell`.
+- FastAPI AI server owns the prompt, checkpoint, guidance, step count, audio length, RMS, and high-pass. For bank attempts it routes `(season, diel)` → the matching per-cell LoRA adapter (PEFT `set_adapter`) and uses that cell's locked prompt.
+- Server returns all parameters (including the resolved `cell`) in response metadata for debugging.
 
-Seed is **not** temperature — it initializes the diffusion noise. Same seed + same params + same code path = effectively the same audio.
+Seed is **not** temperature — it initializes the diffusion noise. Same seed + same cell + same params + same code path = effectively the same audio.
+
+The first bank attempt is `lucas__mvp_2__per_cell_loras` (16 season×diel adapters). See [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) once a Phase-3 runbook is added.
 
 ### Git branch naming
 
@@ -213,9 +310,18 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 | Frontend | Docker | `http://localhost:5173` |
 | Backend | Docker | `http://localhost:4000` |
 | PostgreSQL | Docker | `localhost:5432` |
-| AI server | **Native only** (GPU/MPS) | `http://localhost:8000` |
+| AI tunnel | Docker sidecar | `ai-tunnel:8000` inside Compose |
+| AI server | Native on serverB | `serverB:127.0.0.1:8000` via SSH tunnel |
 
-Docker cannot access macOS MPS — the AI server **must** run natively.
+The Docker backend reaches serverB through the Compose `ai-tunnel` sidecar.
+The FastAPI process itself runs natively on serverB out of
+`~/shiny-pikachu/` — a dedicated clone pinned to `main`; never `git
+checkout` another branch in that tree. Per-member experiment clones live
+beside it (e.g. `~/lucano/COMP-6000-Capstone2/`) and are free to switch
+branches. Startup / health / stop commands and the working-tree
+convention: [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md).
+Keep SSH keys outside the repository and use the key convention in
+`services/dev/README.md`.
 
 Commands, env vars, ports: [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md).
 

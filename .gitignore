@@ -26,6 +26,13 @@ acoustic_ai/venv/
 acoustic_ai/.venv/
 acoustic_ai/.venv-*/
 
+# Private keys and local SSH material
+*.pem
+*.key
+*.p8
+**/.ssh/
+services/dev/secrets/
+
 # Logs and caches
 *.log
 npm-debug.log*
@@ -45,6 +52,8 @@ coverage/
 
 # Local database files (Docker volume bind)
 services/dev/postgresql/data/
+services/server-a/.env
+!services/server-a/.env.example
 
 # Resources - keep generated/source data out of git by default
 resources/**
@@ -57,6 +66,10 @@ resources/**
 !resources/site_257_bowra-dry-a/site_257_all_items.csv
 !resources/site_257_bowra-dry-a/all_items_annotation/
 !resources/site_257_bowra-dry-a/all_items_annotation/README.md
+!resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/
+!resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/**
+!resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/
+!resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/**
 
 # IDE and editors
 .idea/
@@ -99,3 +112,4 @@ acoustic_ai/=*
 
 # Claude
 /.claude/worktrees
+.antigravitycli/

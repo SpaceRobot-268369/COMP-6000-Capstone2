@@ -1,0 +1,36 @@
+# Layer A AudioLDM2 LoRA — MVP-1.1: spring-night smoke replica.
+#
+# Diagnostic attempt. Same architecture and code as MVP-1; the ONLY differences:
+#   - Dataset is a 100-row subset of the MVP-1 manifest (spring + night cell).
+#   - Hyperparameters revert to smoke-style (r=8, 5 epochs) so the comparison
+#     to lucas__smoke_1__audioldm2_spring_night is apples-to-apples.
+#   - Caption schema is unchanged (v2 — date INCLUDED). Date drop is a Phase 1B
+#     decision; not introduced here to keep the variable count to 1 (data).
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/spring_night_subset.csv
+  num_epochs: 5
+  batch_size: 4
+  learning_rate: 1.0e-5
+  normalize_audio: false
+  mixed_precision: fp16
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+# Inference exemplar matches smoke_1's spring-night prompt as closely as the
+# v2 caption template allows. Used by sample_audioldm2.py for showcase
+# generation and the A/B vs smoke_1 listening test.
+inference:
+  prompt: >-
+    night spring ambient soundscape, Bowra dry woodland, Australia,
+    mild (18C), moderate humidity, still, recorded 2024-09-15,
+    no music, no machinery
+  num_inference_steps: 200
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80

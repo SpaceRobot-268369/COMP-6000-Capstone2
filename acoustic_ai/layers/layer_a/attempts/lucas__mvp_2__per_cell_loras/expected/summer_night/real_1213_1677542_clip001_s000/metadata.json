@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 13.3283125,
+    "peak": 0.04254150390625,
+    "rms": 0.008003534749150276,
+    "sample_rate": 16000
+  },
+  "cell": "summer_night",
+  "selection_reason": "top-recording_id pick for cell summer_night (recording_id=1677542)",
+  "source": "real_audio",
+  "source_clip_id": "1213_1677542_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_summer_night.csv",
+  "source_metadata": {
+    "caption": "night summer ambient soundscape, Bowra dry woodland, Australia, warm (32C), dry air, moderate wind, recorded 2024-12-17, no music, no machinery",
+    "clip_id": "1213_1677542_clip001_s000",
+    "diel_bin": "night",
+    "duration_s": 13.328,
+    "env": {
+      "humidity_pct": 35.49,
+      "temperature_c": 31.88,
+      "wind_speed_ms": 3.83
+    },
+    "recording_date": "2024-12-17",
+    "recording_id": "1677542",
+    "season": "summer",
+    "segment_id": "1677542_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/1213_1677542_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

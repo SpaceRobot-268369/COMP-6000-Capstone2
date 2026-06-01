@@ -1,0 +1,46 @@
+# Layer A AudioLDM2 LoRA — MVP-1: all-clean site-257 ambient, fully conditioned.
+#
+# Method is identical to smoke_1/smoke_2 (AudioLDM2 + LoRA via PEFT).
+# What changes vs the smokes:
+#   - Dataset is the full clean ambient pool from site 257
+#     (built by script/dataset/build_mvp1_all_conditioned_dataset.py).
+#   - Captions are a uniform conditioned template encoding
+#     (season, diel_bin, temperature bucket, humidity bucket, wind bucket,
+#     recording date).
+#   - No insect/scene restriction.
+#
+# Hyperparameters below are the FIRST-RUN proposal. Tune after the first
+# training loss curve + showcase samples are reviewed.
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/manifest.csv
+  num_epochs: 3
+  batch_size: 4              # CUDA training; bump to 8 if VRAM allows
+  learning_rate: 1.0e-5
+  normalize_audio: false     # keep raw field-recording levels (see smoke_1 negative result)
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+# Inference contract — TENTATIVE.
+#
+# For smoke_1/smoke_2 the prompt is locked server-side. MVP-1 should accept a
+# *conditioned* prompt assembled from runtime fields (season, diel, temperature
+# bucket, humidity bucket, wind bucket). That contract change is deferred until
+# after the first training run validates that captions actually drive the model
+# — at which point handler.py + the dev endpoint will be updated together.
+#
+# The `prompt` below is a documented exemplar used by sample_audioldm2.py for
+# baseline showcase generation. Same template as captions.
+inference:
+  prompt: >-
+    night spring ambient soundscape, Bowra dry woodland, Australia,
+    mild (12C), moderate humidity, light breeze, no music, no machinery
+  num_inference_steps: 100
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80

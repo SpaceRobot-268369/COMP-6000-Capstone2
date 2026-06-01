@@ -1,0 +1,21 @@
+{
+  "audio": {
+    "duration_s": 12.72498866213152,
+    "peak": 0.073211669921875,
+    "rms": 0.01208093948662281,
+    "sample_rate": 22050
+  },
+  "selection_reason": "afternoon / summer \u2014 matches smoke_2's daytime cicada case",
+  "source": "real_audio",
+  "source_clip_id": "1401228_clip001_s000",
+  "source_kind": "webm_slice",
+  "source_manifest": "acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/ambient/ambient_index.csv",
+  "source_metadata": {
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1401228/site_257_item_1401228_clip_001.webm",
+    "t_end": 254.63,
+    "t_start": 241.905
+  },
+  "tier": "expected"
+}

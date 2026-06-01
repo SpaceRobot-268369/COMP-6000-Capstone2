@@ -90,7 +90,6 @@ Stop and confirm with the user before any staging if any of the following hold:
   - Free artifact → `dvc add <path>`
   - Output of a stage declared in `dvc.yaml` → `dvc commit -f <stage-name>` (DVC refuses `dvc add` on these with "overlaps with an output of stage X").
 - A bucket C path is not in `.gitignore` yet. Propose the exact lines to add (with a short inline comment) and whether `git rm --cached <path>` is also needed.
-- Branch-scoped scratch under `.claude/context/branches/<slug>/` exists on a branch that looks ready to merge — remind the user to delete or promote.
 - `dvc status` reports tracked data dirty (needs `dvc commit`).
 - Any file > 1 MB is about to be staged to git.
 - A structural change under `.claude/` (file added / moved / renamed / removed) is staged but the `.claude/ directory map` section in `CLAUDE.md` was not updated in the same diff — `CLAUDE.md` declares this section the single source of truth and that agents should refuse such commits. Propose the CLAUDE.md edit or stop.

@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 10.5883125,
+    "peak": 0.01751708984375,
+    "rms": 0.0029932179022580385,
+    "sample_rate": 16000
+  },
+  "cell": "autumn_morning",
+  "selection_reason": "top-recording_id pick for cell autumn_morning (recording_id=1675916)",
+  "source": "real_audio",
+  "source_clip_id": "0274_1675916_clip012_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_autumn_morning.csv",
+  "source_metadata": {
+    "caption": "morning autumn ambient soundscape, Bowra dry woodland, Australia, mild (18C), moderate humidity, moderate wind, recorded 2025-05-07, no music, no machinery",
+    "clip_id": "0274_1675916_clip012_s000",
+    "diel_bin": "morning",
+    "duration_s": 10.588,
+    "env": {
+      "humidity_pct": 67.16,
+      "temperature_c": 17.89,
+      "wind_speed_ms": 2.53
+    },
+    "recording_date": "2025-05-07",
+    "recording_id": "1675916",
+    "season": "autumn",
+    "segment_id": "1675916_clip012_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0274_1675916_clip012_s000/audio.wav"
+  },
+  "tier": "expected"
+}

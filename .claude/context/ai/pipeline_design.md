@@ -1,5 +1,15 @@
 # Pipeline Design — Generation & Analysis Modes
 
+> **Layout note (post-restructure):** code lives under
+> `acoustic_ai/layers/layer_<X>/attempts/<member>__<stage>__<slug>/`.
+> Available attempts are declared in `acoustic_ai/registry.yaml` and
+> served via `GET /layers` for the frontend dropdown. Naming rules:
+> [../conventions.md](../conventions.md). Per-layer
+> "Module" sections describe the *role*; concrete implementations live
+> across one or more attempts per layer.
+
+
+
 ---
 
 ## Generation Mode — Layer Design
@@ -58,7 +68,7 @@ Stage 2 — runtime retrieval:
 
 VAE reconstruction is **not** part of the MVP path for Layer A — the existing VAE was trained on event-contaminated full clips, so its latent space mixes ambient with events and is the wrong tool for this layer. Keep VAE for transformation mode and Module E analysis.
 
-**Code:** `modules/ambient/retrieval.py` [PLACEHOLDER]
+**Code:** `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/retrieval.py` [PLACEHOLDER]
 **Data:** `data/ambient/ambient_segments/`, `data/ambient/ambient_index.csv` (cleaned ambient-only pool — to be built)
 **Legacy data:** `data/ambient/latents/latent_clips.npy` (5,318 per-clip latents over uncleaned clips — retained for transformation/analysis, not used for Layer A retrieval)
 
@@ -81,7 +91,7 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 | `2 ≤ precipitation_mm < 5` | Moderate rain |
 | `precipitation_mm ≥ 5` | Dense heavy rain |
 
-**Code:** `modules/weather/asset_index.py`, `modules/weather/mixer.py` [PLACEHOLDERS]
+**Code:** `layers/layer_b/attempts/lucas__smoke_1__curated_assets/asset_index.py`, `layers/layer_b/attempts/lucas__smoke_1__curated_assets/mixer.py` [PLACEHOLDERS]
 **Data:** `data/weather/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/`
 
 ---
@@ -95,7 +105,7 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 We fine-tune `facebook/audiogen-medium` with LoRA adapters on per-species snippet manifests built from A2O / BirdNET annotations. AudioGen is chosen over AudioLDM2 for events specifically because its token-based EnCodec representation preserves transients (the leading edge of a call), its training corpus already contains AudioSet animal/environmental labels, and its native operating range matches event clip durations. Retrieval and DSP variation are kept as fallbacks if a given species LoRA fails the smoke-test bar.
 
 **Pre-condition:** annotation audit must complete before training any LoRA.
-Run `modules/events/annotation_audit.py` and review `data/events/annotation_label_report.md` to produce per-species manifests filtered by score, duration, and diel context.
+Run `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.py` and review `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/data/events/annotation_label_report.md` to produce per-species manifests filtered by score, duration, and diel context.
 
 **Per-species selection policy (apply in order):**
 
@@ -138,7 +148,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 
 **Tooling:** Meta's `audiocraft` + PEFT. Use a separate environment at `acoustic_ai/.venv-audiogen` to avoid torch/torchaudio conflicts with the AudioLDM2 stack.
 
-**Code:** `modules/events/annotation_audit.py`, `modules/events/dataset.py`, `modules/events/train_audiogen.py`, `modules/events/sample_audiogen.py`, `modules/events/scheduler.py` [PLACEHOLDERS]
+**Code:** `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/dataset.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/train_audiogen_lora.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/sample_audiogen_lora.py`, `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/scheduler.py` [PLACEHOLDERS]
 **Data:** `data/events/<species>/manifest.csv` + extracted snippets per species (DVC-tracked)
 **Checkpoints:** `model/candidates/<member>/layer-c-audiogen-<species>-<context>/` per LoRA (DVC-tracked)
 
@@ -168,7 +178,7 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 | `env_match_score` | Similarity between request and retrieved clips |
 | `limitations` | Notes about speculative nature and dataset gaps |
 
-**Code:** `modules/mixer/audio_mixer.py` [PLACEHOLDER]
+**Code:** `layers/layer_d/attempts/lucas__smoke_1__layered_mix/audio_mixer.py` [PLACEHOLDER]
 
 ---
 
@@ -185,76 +195,208 @@ Run `modules/events/annotation_audit.py` and review `data/events/annotation_labe
 
 ## Analysis Mode — Component Design
 
-### Pipeline
+### Design principle: direct detection, no decomposer
+
+Analysis does **not** mirror generation. A "reverse architecture" that first
+decomposes the uploaded clip into ambient / weather / event stems and then
+runs a detector on each stem is a trap for ecoacoustic mixtures:
+
+- **No pre-trained decomposer exists** for this domain. Music source
+  separation (Demucs, Spleeter) does not transfer — natural soundscapes are
+  diffuse, overlapping, and unlike vocals+drums.
+- **Training one is infeasible here:** it would require source-isolated
+  ground truth (clean ambient, clean wind, clean species) which we do not
+  have and cannot collect at the scale a separator needs.
+- **Errors compound:** a bad separation poisons every downstream head.
+- **Pre-trained detectors already work on mixed audio.** BirdNET, PANNs,
+  CLAP — all were trained on real-world mixtures. They are designed to find
+  their target signal *in the presence of* everything else, not after it has
+  been removed.
+
+So analysis runs **three detector heads in parallel on the raw mixture**,
+each owning its own question. There is no shared "separated stem" — only
+labels, embeddings, and confidences.
 
 ```
-Uploaded audio clip
-    → Preprocessing (mel spectrogram + waveform features)
-    → Component A: Ambient similarity encoder
-    → Component B: Weather detector
-    → Component C: Species/event detector
-    → Analysis report (estimated conditions + layer breakdown + confidence)
+   Uploaded clip ─► Preprocess ──┬──► E-A  Ambient context (similarity / k-NN)
+   (mel + waveform)   (shared)   │       "what kind of bed is this?"
+                                 │
+                                 ├──► E-B  Weather detector
+                                 │       "wind / rain intensity?"
+                                 │
+                                 └──► E-C  Event detector
+                                         "which species, when?"
+                                              │
+                                              ▼
+                                      Layer E aggregator
+                                              │
+                                              ▼
+                                       Report JSON
+                                  (per-head label + confidence)
 ```
+
+**Tradeoff to flag:** direct detection cannot produce a *playable* decomposed
+stem — the user gets **labels + context**, not three isolated waveforms. If
+the analysis UX later requires playback of "the ambient layer we extracted,"
+the decision above must be revisited.
 
 ---
 
-### Component A — Ambient Similarity Encoder
+### Reuse from generation models
 
-**Purpose:** locate the uploaded clip in soundscape space; estimate broad context
-(season, diel bin, similar training recordings, plausible env ranges).
+The Layer A and Layer C generation paths already load large base models.
+Their **encoder halves transfer to analysis for free** — same model, no
+retraining; only the decoder halves stay locked to generation.
 
-**MVP implementation:** VAE latent nearest-neighbour (already working in `inference.py`).
-- `encode_clip()` → latent `mu` (256-dim)
-- Compare against `data/ambient/latents/latent_clips.npy`
-- Average top-k neighbours → estimated env conditions
+```
+   Generation path (text → audio)
+   ─────────────────────────────────────────────
+                   ┌─────────────┐
+   "spring night"──► Text encoder│──┐
+                   └─────────────┘  │
+                                    ▼
+                              ┌──────────┐    ┌──────────┐
+                              │  joint   │───►│ Decoder  │──► audio
+                              │ embedding│    │ (U-Net / │
+                              └──────────┘    │   AR)    │      ✗ one-way only
+                                    ▲         └──────────┘
+                   ┌─────────────┐  │
+   audio ─────────►│ Audio enc.  │──┘
+                   └─────────────┘
+                          ▲
+                          │
+              ┌───────────┴──────────────────────┐
+              │  REUSABLE for analysis:          │
+              │  audio↔text encoder gives        │
+              │  zero-shot tagging + similarity  │
+              │  with no further training        │
+              └──────────────────────────────────┘
+```
 
-Optional enhancement: add acoustic indices (ACI, entropy, spectral centroid) as supporting evidence.
+| Asset | Source | Reuse in analysis? | Why |
+|---|---|---|---|
+| **CLAP audio+text encoder** | inside `cvssp/audioldm2` (Layer A base) | ✅ as-is, no retraining | shared embedding space; audio↔text both directions; powers E-A similarity + zero-shot E-B/E-C |
+| **EnCodec audio tokenizer** | inside `facebook/audiogen-medium` (Layer C base) | ✅ as-is, no retraining | discrete-token features for an event classifier; optional |
+| AudioLDM2 diffusion U-Net | Layer A base | ❌ | generator only — no audio→labels path |
+| AudioGen AR transformer | Layer C base | ❌ | generator only — no audio→labels path |
+| **Project LoRA checkpoints** (`layer-a-audioldm2-raw-smoke`, future Layer C LoRAs) | trained on this project | ❌ | LoRA fine-tunes decoder attention; analysis path does not touch the decoder |
 
-**Code:** `inference.py` — `encode_clip()`, `estimate_env_conditions()`
+**Bottom line:** the *base* generation models contribute their encoders to
+analysis for free; the *fine-tuned LoRAs* do not.
 
 ---
 
-### Component B — Weather Detector
+### E-A — Ambient context (similarity, not detection)
 
-**Purpose:** detect audible wind and rain intensity in the uploaded clip.
+**Purpose:** locate the uploaded clip in soundscape space — estimate broad
+context (season, diel bin), surface similar training recordings, and infer
+plausible env ranges from the neighbours.
+
+**Approach:** embed the clip with a pre-trained audio encoder, k-NN against
+the cleaned `ambient_index.csv` segment pool (the same pool Layer A
+retrieval uses in generation), average top-k env metadata for the estimate.
+
+**Output:**
+```json
+{
+  "estimated_conditions": {"diel_bin": "...", "season": "...", "hour": ..., "month": ...},
+  "similar_clips": [{"segment_id": "...", "similarity": 0.0}],
+  "confidence": 0.0
+}
+```
+
+**Pre-trained model options:**
+
+| Model | Type | What it gives | Notes / tradeoff |
+|---|---|---|---|
+| **LAION-CLAP** | audio+text contrastive | general embedding + free zero-shot text queries ("dry sclerophyll dawn chorus") | already loaded via AudioLDM2 — zero marginal cost |
+| **Google Perch** | bioacoustic embedding | site/biome similarity; trained on iNaturalist + Xeno-canto | strongest for ecoacoustic similarity; extra dependency |
+| **Project VAE** (`vae-site257-30epoch`) | site-specific latent | already on disk; matches site 257 distribution | trained on event-contaminated clips — weaker as a clean ambient embedding |
+
+Optional supporting evidence: hand-crafted acoustic indices (ACI, entropy,
+spectral centroid) — cheap to compute, useful for explainability.
+
+**Code:** `layers/layer_e/attempts/<id>/ambient_similarity.py` [PLACEHOLDER]
+**Data:** `data/ambient/ambient_index.csv` (shared with Layer A retrieval)
+
+---
+
+### E-B — Weather detector
+
+**Purpose:** detect audible wind and rain intensity directly in the mixture.
+Wind and rain have stable spectral signatures (broadband low-freq for wind,
+dense high-freq texture + impulses for rain) — no separation needed.
 
 **Output:**
 ```json
 {
   "wind_intensity": "none | light | moderate | strong",
   "rain_intensity": "none | light | moderate | heavy",
-  "confidence": 0.0–1.0
+  "confidence": 0.0
 }
 ```
 
-**MVP implementation:** start with curated labels (same clips used for Layer B asset library).
-- Manually tag a small set of clips with wind/rain intensity.
-- Use spectral heuristics first (broadband energy, low-freq modulation, high-freq texture).
-- Upgrade to a small classifier after labels accumulate.
+**Pre-trained model options:**
 
-**Code:** `modules/analysis/weather_detector.py` [PLACEHOLDER]
+| Model | Type | What it gives | Notes / tradeoff |
+|---|---|---|---|
+| **PANNs CNN14** | AudioSet tagger (527 classes) | direct `Wind`, `Rain`, `Raindrop`, `Thunderstorm` logits | strongest off-the-shelf weather baseline |
+| **YAMNet** | AudioSet tagger (521 classes) | same label space, lighter | smaller, faster, slightly weaker than CNN14 |
+| **LAION-CLAP zero-shot** | audio↔text | score against prompts like `"strong wind in trees"`, `"light rain"` | free if CLAP already loaded for E-A |
+| **DSP features** (sub-200 Hz RMS, 2–8 kHz flatness) | hand-crafted | cheap explainability channel; sanity-check ML output | not a primary detector — calibration / XAI only |
+
+**MVP path:** PANNs zero-shot baseline → fine-tune a small head on the
+curated wind/rain assets in `data/weather/weather_assets/` once labels
+accumulate.
+
+**Code:** `layers/layer_e/attempts/<id>/weather_detector.py` [PLACEHOLDER]
 **Shared data:** `data/weather/asset_index.csv` (weather intensity labels)
 
 ---
 
-### Component C — Species and Event Detector
+### E-C — Species and event detector
 
-**Purpose:** identify biologically meaningful events in the uploaded clip.
+**Purpose:** identify biologically meaningful events on the raw mixture,
+with onsets/offsets. Pre-trained bioacoustic detectors were *built* for
+mixed-source audio — that's their entire reason for existing.
 
 **Output:**
 ```json
 [
-  {"label": "str", "confidence": 0.0–1.0, "onset_s": float, "offset_s": float}
+  {"label": "str", "confidence": 0.0, "onset_s": 0.0, "offset_s": 0.0}
 ]
 ```
 
-**MVP implementation:** BirdNET pseudo-labels or high-confidence A2O annotations.
-- Run BirdNET over the uploaded audio.
-- Cross-reference with `data/events/annotation_event_index.csv` where available.
-- Use existing A2O annotations as validation or overrides.
+**Pre-trained model options:**
 
-**Code:** `modules/analysis/event_detector.py` [PLACEHOLDER]
+| Model | Type | What it gives | Notes / tradeoff |
+|---|---|---|---|
+| **BirdNET-Analyzer** | bird classifier (~6k species) | direct species labels + onsets; covers most Australian birds | primary detector; already used as Layer A audit tool |
+| **Google Perch** | bioacoustic embedding | embeddings for a small fine-tuned head where BirdNET is weak (frogs, insects, mammals) | extra training but covers BirdNET's blind spots |
+| **A2O annotation index** | curated dataset labels | high-confidence overrides / cross-reference | not a detector — validation channel |
+| **LAION-CLAP zero-shot** | audio↔text | open-vocabulary fallback ("Southern Boobook call", "helicopter") | catches anything not in BirdNET's label set |
+| **AudioGen EnCodec tokens** | discrete audio features | features for a custom event classifier | optional; only worth it if BirdNET + Perch are insufficient |
+
+**MVP path:** BirdNET as primary; A2O cross-reference for overrides;
+CLAP zero-shot as the open-vocabulary fallback.
+
+**Code:** `layers/layer_e/attempts/<id>/event_detector.py` [PLACEHOLDER]
 **Shared data:** `data/events/annotation_event_index.csv`
+
+---
+
+### MVP-1 build order (analysis)
+
+```
+   Step 1 ─ CLAP embedding service   (load once, shared by E-A + zero-shot fallbacks)
+   Step 2 ─ BirdNET subprocess       (E-C primary)
+   Step 3 ─ PANNs wind/rain head     (E-B primary)
+   Step 4 ─ Aggregator               (Report JSON)
+```
+
+No new training required to reach an end-to-end smoke. Fine-tuned heads
+(weather classifier, Perch-based event head) come later, once labels
+accumulate.
 
 ---
 
@@ -262,9 +404,9 @@ Optional enhancement: add acoustic indices (ACI, entropy, spectral centroid) as 
 
 | Field | Source |
 |---|---|
-| `estimated_conditions` | Component A — top-k NN average |
-| `similar_clips` | Component A — top-k clip IDs and similarity scores |
-| `wind_intensity`, `rain_intensity` | Component B |
-| `detected_events` | Component C |
-| `confidence` | Per-component confidence scores |
+| `estimated_conditions` | E-A — top-k NN average |
+| `similar_clips` | E-A — top-k segment IDs and similarity scores |
+| `wind_intensity`, `rain_intensity` | E-B |
+| `detected_events` | E-C |
+| `confidence` | Per-head confidence scores |
 | `limitations` | Notes on model limitations and dataset coverage |

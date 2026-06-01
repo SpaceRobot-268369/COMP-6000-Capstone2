@@ -1,0 +1,56 @@
+# Layer A AudioLDM2 LoRA — MVP-1.2: shared LoRA maxed (Phase 1B).
+#
+# Diagnostic for the capacity hypothesis. MVP-1.1 confirmed the data
+# pipeline is sound (smoke-1 quality recovered on the single spring-night
+# cell). This attempt asks: with 8× the LoRA capacity vs MVP-1 (r=64 vs
+# r=8) and a longer schedule, can ONE shared LoRA differentiate all 16
+# (season, diel) cells, or is per-cell partitioning required?
+#
+# Single-variable contrast vs MVP-1:
+#   - Caption v3 (date dropped). recording_date stays in the manifest as a
+#     log column but no longer enters the caption text — testing whether
+#     the date string was carrying useful signal or just noise.
+#   - LoRA r 8 → 64, alpha 32 → 128.
+#   - Epochs 3 → 8.
+# Everything else (manifest, content filters, audio handling, RMS-off,
+# inference settings) is identical to MVP-1.
+
+training:
+  base_model: cvssp/audioldm2
+  manifest: resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/manifest_v3.csv
+  num_epochs: 8
+  batch_size: 4
+  learning_rate: 1.0e-5
+  normalize_audio: false
+  mixed_precision: fp16
+  lora:
+    r: 64
+    alpha: 128
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+# Inference exemplars match MVP-1's caption schema minus the date field.
+# Used by sample_audioldm2.py for the 3-cell showcase A/B vs MVP-1.
+inference:
+  default_prompt: >-
+    night spring ambient soundscape, Bowra dry woodland, Australia,
+    mild (18C), moderate humidity, still,
+    no music, no machinery
+  showcase_prompts:
+    spring_night: >-
+      night spring ambient soundscape, Bowra dry woodland, Australia,
+      mild (18C), moderate humidity, still,
+      no music, no machinery
+    summer_afternoon: >-
+      afternoon summer ambient soundscape, Bowra dry woodland, Australia,
+      hot (33C), dry air, moderate wind,
+      no music, no machinery
+    autumn_night: >-
+      night autumn ambient soundscape, Bowra dry woodland, Australia,
+      cool (12C), moderate humidity, still,
+      no music, no machinery
+  num_inference_steps: 200
+  guidance_scale: 2.0
+  audio_length_s: 10
+  output_target_rms: 0.0015
+  highpass_hz: 80

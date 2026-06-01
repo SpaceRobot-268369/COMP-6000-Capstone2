@@ -1,44 +1,38 @@
-"""FastAPI inference server for the SoundscapeModel.
+"""FastAPI server for the Soundscape layer registry.
 
-Runs on port 8000 (internal only — not exposed to the browser directly).
-Express backend proxies requests here.
+Generic dropdown-driven endpoints — no per-layer hard-coding. All available
+attempts are declared in ``acoustic_ai/registry.yaml`` and dispatched to a
+per-attempt ``handler.py``.
 
 Endpoints:
-  POST /analysis    — encode an uploaded .wav clip → latent vector JSON
-  POST /generation  — env conditions JSON → generated spectrogram as base64 PNG
-  GET  /health      — liveness check
-
-Usage (from acoustic_ai/):
-  pip install -r requirements.txt
-  uvicorn server.server:app --reload --port 8000
+  GET  /health
+  GET  /layers
+  GET  /layers/{layer_id}/attempts
+  POST /layers/{layer_id}/attempts/{attempt_id}/generate
 """
+
+from __future__ import annotations
 
 import base64
 import io
 import sys
-import tempfile
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-# Ensure acoustic_ai root is importable (for modules.* and server.*)
+# Make `layers.*` importable.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from server.inference import (
-    encode_clip, generate_ambient_audio, estimate_env_conditions,
-    generate_layer_a_ambient_audio, generate_layer_a_smoke_test_audio,
-    DEFAULT_CKPT, CLIPS_PATH,
-)
+from server import registry  # noqa: E402
 
-from modules.ambient.diffusion.layer_a_visualization import render_layer_a_mel_png_bytes
 
-app = FastAPI(title="Soundscape Inference API", version="0.1.0")
-
+app = FastAPI(title="Soundscape Inference API", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],
@@ -48,230 +42,147 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# Request / response schemas
+# Schemas
 # ---------------------------------------------------------------------------
 
-class EnvFeatures(BaseModel):
-    temperature_c:          float = 20.0
-    humidity_pct:           float = 60.0
-    wind_speed_ms:          float = 2.0
-    precipitation_mm:       float = 0.0
-    solar_radiation_wm2:    float = 300.0
-    cloud_clearness_index:  float = 0.5
-    surface_pressure_kpa:   float = 101.3
-    temp_max_c:             float = 25.0
-    temp_min_c:             float = 15.0
-    precipitation_daily_mm: float = 0.0
-    wind_max_ms:            float = 5.0
-    days_since_rain:        float = 3.0
-    daylight_hours:         float = 11.0
-    hour_utc:               float = 6.0
-    hour_local:             float = 16.0
-    wind_direction_deg:     float = 180.0
-    month:                  float = 9.0
-    day_of_year:            float = 260.0
-    season:                 str   = "spring"
-    sample_bin:             str   = "afternoon"
-    noise_std:              float = 0.5   # generation only
-    seed:                   Optional[int] = None
+
+class GenerateRequest(BaseModel):
+    seed: Optional[int] = None
+    # Cell selector for bank attempts (e.g. Layer A mvp_2 per-cell LoRAs).
+    # Single-adapter attempts ignore these (their handler swallows extras).
+    season: Optional[str] = None
+    diel: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
-def health():
-    return {"ok": True, "checkpoint": str(DEFAULT_CKPT), "exists": DEFAULT_CKPT.exists()}
-
-
-@app.post("/analysis")
-async def analysis(
-    file: UploadFile = File(...),
-    temperature_c:          float = 20.0,
-    humidity_pct:           float = 60.0,
-    wind_speed_ms:          float = 2.0,
-    precipitation_mm:       float = 0.0,
-    solar_radiation_wm2:    float = 300.0,
-    cloud_clearness_index:  float = 0.5,
-    surface_pressure_kpa:   float = 101.3,
-    temp_max_c:             float = 25.0,
-    temp_min_c:             float = 15.0,
-    precipitation_daily_mm: float = 0.0,
-    wind_max_ms:            float = 5.0,
-    days_since_rain:        float = 3.0,
-    daylight_hours:         float = 11.0,
-    hour_utc:               float = 6.0,
-    hour_local:             float = 16.0,
-    wind_direction_deg:     float = 180.0,
-    month:                  float = 9.0,
-    day_of_year:            float = 260.0,
-    season:                 str   = "spring",
-    sample_bin:             str   = "afternoon",
-):
-    """Encode an uploaded audio file into a latent vector.
-
-    Accepts multipart/form-data with a 'file' field (.wav or .webm.wav).
-    Returns the 256-dim latent vector as a JSON array.
-    """
-    if not DEFAULT_CKPT.exists():
-        raise HTTPException(status_code=503, detail="Model checkpoint not found.")
-
-    env_dict = {
-        "temperature_c": temperature_c, "humidity_pct": humidity_pct,
-        "wind_speed_ms": wind_speed_ms, "precipitation_mm": precipitation_mm,
-        "solar_radiation_wm2": solar_radiation_wm2,
-        "cloud_clearness_index": cloud_clearness_index,
-        "surface_pressure_kpa": surface_pressure_kpa,
-        "temp_max_c": temp_max_c, "temp_min_c": temp_min_c,
-        "precipitation_daily_mm": precipitation_daily_mm,
-        "wind_max_ms": wind_max_ms, "days_since_rain": days_since_rain,
-        "daylight_hours": daylight_hours, "hour_utc": hour_utc,
-        "hour_local": hour_local, "wind_direction_deg": wind_direction_deg,
-        "month": month, "day_of_year": day_of_year,
-        "season": season, "sample_bin": sample_bin,
-    }
-
-    # Save upload to a temp file so librosa can read it
-    suffix = Path(file.filename or "audio.wav").suffix or ".wav"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-
-    try:
-        latent = encode_clip(tmp_path, env_dict)
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Encoding failed: {exc}")
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
-
-    # Nearest-neighbour env estimation — requires latent_clips.npy
-    estimated_conditions: dict = {}
-    if CLIPS_PATH.exists():
-        try:
-            import numpy as _np
-            clips = _np.load(str(CLIPS_PATH), allow_pickle=True).item()
-            estimated_conditions = estimate_env_conditions(latent, clips, top_k=5)
-        except Exception as exc:
-            print(f"[WARN] Env estimation failed: {exc}")
-
+def health() -> dict:
+    layers = registry.list_layers()
     return {
-        "ok":                    True,
-        "latent_dim":            len(latent),
-        "latent":                latent.tolist(),
-        "estimated_conditions":  estimated_conditions,
+        "ok": True,
+        "registry_layers": [l["id"] for l in layers],
+        "total_attempts": sum(len(l["attempts"]) for l in layers),
     }
 
 
-@app.post("/generation")
-def generation(body: EnvFeatures):
-    """Generate a spectrogram from environmental conditions.
-
-    Returns a base64-encoded PNG of the mel-spectrogram and the raw
-    dB matrix as a nested JSON array.
-    """
-    if not DEFAULT_CKPT.exists():
-        raise HTTPException(status_code=503, detail="Model checkpoint not found.")
-
-    env_dict = body.model_dump(exclude={"noise_std", "seed"})
-
-    try:
-        mel_db, wav_bytes = generate_ambient_audio(env_dict, noise_std=body.noise_std, seed=body.seed)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {exc}")
-
-    png_b64 = _mel_to_png_b64(mel_db)
-
-    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8") if wav_bytes else ""
-
-    return {
-        "ok":        True,
-        "shape":     list(mel_db.shape),
-        "image_b64": png_b64,
-        "audio_b64": audio_b64,
-    }
+@app.get("/layers")
+def list_layers() -> dict:
+    """Frontend dropdown payload: every layer + its registered attempts."""
+    return {"layers": registry.list_layers()}
 
 
-# ---------------------------------------------------------------------------
-# Layer A — Ambient bed (dev test endpoint)
-# ---------------------------------------------------------------------------
+@app.get("/layers/{layer_id}/attempts")
+def list_attempts(layer_id: str) -> dict:
+    for layer in registry.list_layers():
+        if layer["id"] == layer_id:
+            return layer
+    raise HTTPException(status_code=404, detail=f"unknown layer: {layer_id}")
 
-class LayerARequest(BaseModel):
-    seed: Optional[int] = 42
 
+@app.post("/layers/{layer_id}/attempts/{attempt_id}/generate")
+def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
+    """Dispatch a generation call to the attempt's handler.
 
-@app.post("/layer_a/generate")
-def layer_a_generate(body: LayerARequest):
-    """Generate Layer A with the trained AudioLDM2 LoRA smoke-test model.
-
-    The prompt and checkpoint are fixed at this stage because the model has only
-    been validated on the tiny smoke dataset.
+    Returns JSON containing base64-encoded WAV + PNG and the handler's
+    metadata block.
     """
     try:
-        mel_db, wav_bytes, metadata = generate_layer_a_ambient_audio(seed=body.seed)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
-
-    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
-    png_b64 = _layer_a_mel_to_png_b64(mel_db, metadata["audio"]["duration_s"])
-
-    return {
-        "ok":         True,
-        "audio_b64":  audio_b64,
-        "image_b64":  png_b64,
-        "metadata":   metadata,
-        "gain_db":    0.0,
-        "sample_rate": metadata["audio"]["sample_rate"],
-        "duration_s": metadata["audio"]["duration_s"],
-    }
-
-
-@app.post("/layer_a/smoke_test_1/generate")
-def layer_a_smoke_test_1_generate(body: LayerARequest):
-    """Generate Layer A smoke test 1 with the spring-night LoRA."""
-    return _layer_a_smoke_test_response("smoke_test_1", body.seed)
-
-
-@app.post("/layer_a/smoke_test_2/generate")
-def layer_a_smoke_test_2_generate(body: LayerARequest):
-    """Generate Layer A smoke test 2 with the insect/cicada LoRA."""
-    return _layer_a_smoke_test_response("smoke_test_2", body.seed)
-
-
-def _layer_a_smoke_test_response(smoke_test_id: str, seed: Optional[int]):
-    try:
-        mel_db, wav_bytes, metadata = generate_layer_a_smoke_test_audio(
-            smoke_test_id,
-            seed=seed,
+        result = registry.generate(
+            layer_id, attempt_id,
+            seed=body.seed, season=body.season, diel=body.diel,
         )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Layer A generation failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
-    audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
-    png_b64 = _layer_a_mel_to_png_b64(mel_db, metadata["audio"]["duration_s"])
+    wav_bytes = result.get("wav_bytes", b"")
+    mel_db = result.get("mel_db")
+    metadata = result.get("metadata", {})
+    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
+    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+
+    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s)
 
     return {
-        "ok":         True,
-        "audio_b64":  audio_b64,
-        "image_b64":  png_b64,
-        "metadata":   metadata,
-        "gain_db":    0.0,
-        "sample_rate": metadata["audio"]["sample_rate"],
-        "duration_s": metadata["audio"]["duration_s"],
+        "ok":          True,
+        "audio_b64":   base64.b64encode(wav_bytes).decode("utf-8"),
+        "image_b64":   png_b64,
+        "metadata":    metadata,
+        "sample_rate": sample_rate,
+        "duration_s":  duration_s,
     }
 
 
-def _layer_a_mel_to_png_b64(mel_db: np.ndarray, duration_s: float) -> str:
-    png_bytes = render_layer_a_mel_png_bytes(mel_db, duration_s)
-    return base64.b64encode(png_bytes).decode("utf-8")
+@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")
+def list_samples(layer_id: str, attempt_id: str) -> dict:
+    """Cached reference + showcase samples for an attempt (see
+    .claude/context/dev/artifact_policy.md). The frontend uses this to show
+    a preview without running generation."""
+    try:
+        return registry.list_samples(layer_id, attempt_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.get("/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{rel_path:path}")
+def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
+    """Serve a sample WAV inline (so the browser <audio> tag can play it).
+
+    `rel_path` is whatever the sample's `wav_url` puts after the tier — see
+    registry.list_samples() for the three supported layouts. Examples:
+        expected/<stem>.wav                       (legacy flat)
+        expected/<case>/audio.wav                 (canonical case-dir)
+        expected/<cell>/<case>/audio.wav          (cell-grouped bank)
+    """
+    if not rel_path.endswith(".wav"):
+        raise HTTPException(status_code=404, detail="only .wav samples are served")
+    try:
+        path = registry.sample_wav_path(layer_id, attempt_id, tier, rel_path)
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"WAV not materialised locally ({path.name}). Run `dvc pull` then retry.",
+        )
+    return FileResponse(path, media_type="audio/wav", filename=path.name)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _mel_to_png_b64(mel_db: np.ndarray) -> str:
-    """Convert a (128, T) dB spectrogram to a base64 PNG string."""
+
+def _mel_to_png_b64(layer_id: str, attempt_id: str,
+                    mel_db, duration_s: float) -> str:
+    """Render a mel-spectrogram PNG. For Layer A we use the attempt-local
+    visualization helper to keep visual style consistent across attempts.
+    """
+    if mel_db is None:
+        return ""
+
+    # Try attempt-local renderer first (Layer A + Layer C ship one).
+    try:
+        import importlib
+        viz_mod = importlib.import_module(
+            f"layers.{layer_id}.attempts.{attempt_id}.layer_a_visualization"
+        )
+        return base64.b64encode(
+            viz_mod.render_layer_a_mel_png_bytes(mel_db, duration_s)
+        ).decode("utf-8")
+    except ModuleNotFoundError:
+        pass
+
+    # Generic fallback.
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -282,23 +193,22 @@ def _mel_to_png_b64(mel_db: np.ndarray) -> str:
                   vmin=-80, vmax=0)
         ax.set_xlabel("Time frames")
         ax.set_ylabel("Mel bins")
-        ax.set_title("Generated Mel-Spectrogram")
+        ax.set_title(f"{layer_id} / {attempt_id}")
         plt.colorbar(ax.images[0], ax=ax, label="dB")
         plt.tight_layout()
-
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=100)
         plt.close(fig)
         buf.seek(0)
         return base64.b64encode(buf.read()).decode("utf-8")
     except ImportError:
-        # matplotlib not installed — return empty string, mel_db still returned
         return ""
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     uvicorn.run("server.server:app", host="0.0.0.0", port=8000, reload=False)

@@ -1,15 +1,28 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import TransformationPage from "./pages/TransformationPage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
+import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
+import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
+import ServerStatus from "./components/ServerStatus.jsx";
+import {
+  checkServerBStatus,
+  createCheckingStatus,
+  createStatusLogEntry,
+} from "./lib/serverBStatus.js";
 
 const accountStorageKey = "sonic-lab-account-name";
+const minServerBCheckingMs = 350;
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 function sidebarLinkClass({ isActive }) {
   return `nav-item${isActive ? " active" : ""}`;
@@ -21,6 +34,11 @@ function sidebarActionClass({ isActive }) {
 
 export default function App() {
   const [accountName, setAccountName] = useState("");
+  const [serverBStatus, setServerBStatus] = useState(() => createCheckingStatus());
+  const [serverBLogs, setServerBLogs] = useState([]);
+  const [serverBChecking, setServerBChecking] = useState(false);
+  const serverBCheckInFlightRef = useRef(false);
+  const serverBPollStartedRef = useRef(false);
   const isLoggedIn = Boolean(accountName);
 
   useEffect(() => {
@@ -29,6 +47,52 @@ export default function App() {
       setAccountName(storedAccountName);
     }
   }, []);
+
+  const runServerBCheck = useCallback(async (source = "auto") => {
+    if (serverBCheckInFlightRef.current) {
+      return null;
+    }
+
+    serverBCheckInFlightRef.current = true;
+    const checkingStatus = createCheckingStatus(source);
+    setServerBChecking(true);
+    setServerBStatus(checkingStatus);
+    setServerBLogs((current) => [
+      createStatusLogEntry(checkingStatus, source),
+      ...current,
+    ].slice(0, 80));
+
+    const startedAt = performance.now();
+    try {
+      const result = await checkServerBStatus();
+      const remainingMs = minServerBCheckingMs - (performance.now() - startedAt);
+      if (remainingMs > 0) {
+        await wait(remainingMs);
+      }
+
+      setServerBStatus(result);
+      setServerBLogs((current) => [
+        createStatusLogEntry(result, source),
+        ...current,
+      ].slice(0, 80));
+      return result;
+    } finally {
+      serverBCheckInFlightRef.current = false;
+      setServerBChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!serverBPollStartedRef.current) {
+      serverBPollStartedRef.current = true;
+      runServerBCheck("initial");
+    }
+
+    const timer = window.setInterval(() => {
+      runServerBCheck("auto");
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [runServerBCheck]);
 
   function handleAuthenticate(value) {
     const nextValue = value.trim();
@@ -72,18 +136,20 @@ export default function App() {
               <span className="nav-icon">≋</span>
               <span>Transformation</span>
             </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-1" className={sidebarLinkClass}>
+            <NavLink to="/dev/layers" className={sidebarLinkClass}>
               <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 1 (spring night)</span>
+              <span>Dev — Generation</span>
             </NavLink>
-            <NavLink to="/dev/layer-a/smoking-test-2" className={sidebarLinkClass}>
-              <span className="nav-icon">⌬</span>
-              <span>Dev - Layer A - Smoking Test 2</span>
+            <NavLink to="/dev/analysis" className={sidebarLinkClass}>
+              <span className="nav-icon">◉</span>
+              <span>Dev — Analysis</span>
             </NavLink>
           </nav>
         </div>
 
         <ThemeToggle />
+
+        <ServerStatus status={serverBStatus} />
 
         <section className="sidebar-user panel" aria-label="Account status">
           <div className="sidebar-user-head">
@@ -122,9 +188,28 @@ export default function App() {
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           <Route path="/transformation" element={<TransformationPage />} />
-          <Route path="/dev/layer-a" element={<Navigate to="/dev/layer-a/smoking-test-1" replace />} />
-          <Route path="/dev/layer-a/smoking-test-1" element={<LayerATestPage variant="springNight" />} />
-          <Route path="/dev/layer-a/smoking-test-2" element={<LayerATestPage variant="insects" />} />
+          <Route
+            path="/dev/layers"
+            element={
+              <LayerATestPage
+                mode="generation"
+                eyebrow="DEVELOPER TOOLS — GENERATION"
+                title="Generation Layers Dev Test"
+              />
+            }
+          />
+          <Route path="/dev/analysis" element={<DevAnalysisPage />} />
+          <Route
+            path="/server-b"
+            element={
+              <ServerBStatusPage
+                status={serverBStatus}
+                logs={serverBLogs}
+                checking={serverBChecking}
+                onRecheck={() => runServerBCheck("manual")}
+              />
+            }
+          />
           <Route
             path="/login"
             element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}

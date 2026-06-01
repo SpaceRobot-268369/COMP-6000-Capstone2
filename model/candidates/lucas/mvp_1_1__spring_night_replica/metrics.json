@@ -1,0 +1,47 @@
+{
+  "attempt_id": "lucas__mvp_1_1__spring_night_replica",
+  "trained_at": "2026-05-30T14:18:12+09:30",
+  "hardware": {
+    "gpu": "Tesla T4",
+    "vram_gb": 16,
+    "host": "shinypokemon"
+  },
+  "environment": {
+    "torch": "2.12.0+cu130",
+    "accelerate_mixed_precision": "fp16",
+    "python": "3.10.12"
+  },
+  "training": {
+    "num_examples_train": 90,
+    "num_examples_val": 10,
+    "num_epochs": 5,
+    "batch_size": 4,
+    "learning_rate": 1.0e-5,
+    "total_optimization_steps": 115,
+    "wall_clock_seconds": 156,
+    "audio_rms_normalization": false
+  },
+  "lora": {
+    "r": 8,
+    "alpha": 32,
+    "dropout": 0.1,
+    "target_modules": ["to_q", "to_k", "to_v", "to_out.0"],
+    "trainable_params": 2936832,
+    "total_params": 349880328,
+    "trainable_fraction": 0.008394
+  },
+  "epochs": [
+    {"epoch": 1, "train_loss": 0.1749, "val_loss": 0.0586},
+    {"epoch": 2, "train_loss": 0.1258, "val_loss": 0.0578},
+    {"epoch": 3, "train_loss": 0.2062, "val_loss": 0.0580},
+    {"epoch": 4, "train_loss": 0.1399, "val_loss": 0.0573},
+    {"epoch": 5, "train_loss": 0.1649, "val_loss": 0.0565}
+  ],
+  "qualitative_outcome": "matches_smoke_1",
+  "decision_gate": "pass_proceed_to_phase_1b",
+  "promoted": false,
+  "parent_attempt": "lucas__mvp_1__audioldm2_all_conditioned",
+  "successor_attempts": [
+    "lucas__mvp_1_2__shared_lora_maxed"
+  ]
+}

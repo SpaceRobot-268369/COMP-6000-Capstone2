@@ -1,0 +1,45 @@
+{
+  "attempt_id": "lucas__mvp_1__audioldm2_all_conditioned",
+  "trained_at": "2026-05-30T11:08:00+09:30",
+  "hardware": {
+    "gpu": "Tesla T4",
+    "vram_gb": 16,
+    "host": "shinypokemon"
+  },
+  "environment": {
+    "torch": "2.12.0+cu130",
+    "accelerate_mixed_precision": "fp16",
+    "python": "3.10.12"
+  },
+  "training": {
+    "num_examples_train": 971,
+    "num_examples_val": 107,
+    "num_epochs": 3,
+    "batch_size": 4,
+    "learning_rate": 1.0e-5,
+    "total_optimization_steps": 729,
+    "wall_clock_seconds": 1010,
+    "gpu_peak_gb": 8.3
+  },
+  "lora": {
+    "r": 8,
+    "alpha": 32,
+    "dropout": 0.1,
+    "target_modules": ["to_q", "to_k", "to_v", "to_out.0"],
+    "trainable_params": 2936832,
+    "total_params": 349880328,
+    "trainable_fraction": 0.008394
+  },
+  "epochs": [
+    {"epoch": 1, "train_loss": 0.1473, "val_loss": 0.1540},
+    {"epoch": 2, "train_loss": 0.1232, "val_loss": 0.1362},
+    {"epoch": 3, "train_loss": 0.1192, "val_loss": 0.1316}
+  ],
+  "qualitative_outcome": "below_smoke_quality_per_cell",
+  "promoted": false,
+  "successor_attempts": [
+    "lucas__mvp_1_1__spring_night_replica",
+    "lucas__mvp_1_2__shared_lora_maxed",
+    "lucas__mvp_2__per_cell_loras"
+  ]
+}

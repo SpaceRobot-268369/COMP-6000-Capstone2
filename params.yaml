@@ -25,6 +25,10 @@ vocoder:
   batch_size: 8
   lr: 0.0002
 
-# Per-candidate hyperparameters live with the candidate, e.g.
-#   model/candidates/<member>/<run-id>/params.yaml
-# Only stages declared in dvc.yaml (currently `ambient` and `vocoder`) go here.
+# Per-attempt hyperparameters live with the attempt, e.g.
+#   acoustic_ai/layers/<layer>/attempts/<member>__<stage>__<slug>/params.yaml
+# Frozen training-time snapshots live with the checkpoint at
+#   model/candidates/<member>/<stage>__<slug>/params.yaml
+# Only stages declared in dvc.yaml read from root params.yaml.
+# See CLAUDE.md "Pipeline vs. attempt hyperparameters" and
+# .claude/context/dev/attempt_naming.md.

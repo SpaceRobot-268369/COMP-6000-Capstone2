@@ -1,0 +1,21 @@
+{
+  "audio": {
+    "duration_s": 10.495963718820862,
+    "peak": 0.08782958984375,
+    "rms": 0.013250375166535378,
+    "sample_rate": 22050
+  },
+  "selection_reason": "dawn / autumn \u2014 first row of ambient_index, baseline dawn chorus",
+  "source": "real_audio",
+  "source_clip_id": "1313184_clip009_s000",
+  "source_kind": "webm_slice",
+  "source_manifest": "acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/ambient/ambient_index.csv",
+  "source_metadata": {
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313184/site_257_item_1313184_clip_009.webm",
+    "t_end": 75.651,
+    "t_start": 65.155
+  },
+  "tier": "expected"
+}

@@ -1,5 +1,10 @@
 # DVC + S3 Workflow
 
+> Part of the project [conventions](../conventions.md). This is the canonical
+> doc for DVC commands, the git vs. DVC tracking split, and the daily /
+> fresh-clone discipline. Bucket paths live in [s3_bucket_layout.md](s3_bucket_layout.md);
+> per-attempt artifact rules live in [conventions.md § Artifact tiers](../conventions.md#4-artifact-tiers).
+
 DVC tracks large binary artifacts (audio clips, model checkpoints, latent
 databases) so they stay out of git history. Git stores only the `.dvc` pointer
 files (~100 bytes each); the actual bytes live in S3.
@@ -32,9 +37,9 @@ git checkout <branch>  →  post-checkout hook fires
 | Downloaded annotations | `resources/site_257_bowra-dry-a/downloaded_annotations/` | sparse CSVs |
 | VAE checkpoint | `model/candidates/lucas/vae-site257-30epoch/best.pt` | 213 MB |
 | Vocoder checkpoint | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` | 11 MB |
-| Per-clip latent database | `acoustic_ai/data/ambient/latents/latent_clips.npy` | tens of MB |
-| Weather assets | `acoustic_ai/data/weather/weather_assets/` | curated wind/rain clips |
-| Event snippets | `acoustic_ai/data/events/event_snippets/` | extracted annotation clips |
+| Per-clip latent database | `acoustic_ai/layers/layer_a/attempts/lucas__smoke_4__vae_baseline/data/ambient/latents/latent_clips.npy` | tens of MB |
+| Weather assets | `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/weather_assets/` | curated wind/rain clips |
+| Event snippets | `acoustic_ai/layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/data/events/event_snippets/` | extracted annotation clips |
 | Per-candidate LoRA / checkpoint binaries | `model/candidates/<member>/<run-id>/*.{pt,safetensors}` | 11 MB – 280 MB each |
 
 ### Git (not DVC)
@@ -42,7 +47,7 @@ git checkout <branch>  →  post-checkout hook fires
 | File | Why |
 |---|---|
 | `resources/site_257_bowra-dry-a/site_257_*.csv` | Small metadata |
-| `acoustic_ai/data/weather/asset_index.csv` | Asset index headers |
+| `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv` | Asset index headers |
 | All `.dvc` pointer files | Pointers to DVC artifacts |
 | `dvc.yaml`, `dvc.lock` | Pipeline stage definitions + lockfile |
 | `params.yaml` (root) | Pipeline-stage hyperparameters |
@@ -100,7 +105,7 @@ tagging.
 Every model checkpoint folder ships with:
 
 - `.dvc` pointer for the binary checkpoint(s)
-- `README.md` — model log / model card following [model_readme_standard.md](model_readme_standard.md)
+- `README.md` — model log / model card following [conventions.md § Model checkpoint README](../conventions.md#6-model-checkpoint-readme)
 
 Candidate folders also ship with:
 
@@ -127,6 +132,74 @@ git add dvc.yaml dvc.lock
 git commit -m "Add <stage-name> pipeline stage"
 dvc push
 ```
+
+## Sample artifacts
+
+Each attempt has `expected/`, `showcase/`, and `dev-artifacts-self-testing/`
+tiers directly at attempt root. See
+[conventions.md § Artifact tiers](../conventions.md#4-artifact-tiers) for the
+full rules; the DVC-relevant bits:
+
+Each case (source clip or generated seed) is its own subdir with fixed
+filenames `{audio.wav, spectrogram.png, metadata.json}`. `expected/` is real
+audio (PNG + JSON in git, WAV via DVC); `showcase/` is generated samples
+(all three DVC-tracked).
+
+```
+acoustic_ai/layers/<layer>/attempts/<id>/
+├── expected/                                      # real-audio ground truth
+│   └── real_<clip_id>/
+│       ├── audio.wav.dvc            # git pointer → S3
+│       ├── spectrogram.png          # git (renders inline on GitHub)
+│       └── metadata.json            # git
+├── showcase/                                      # author-curated generated samples
+│   └── seed_<N>_<label>/
+│       ├── audio.wav.dvc            # git pointer → S3
+│       ├── spectrogram.png.dvc      # git pointer → S3
+│       └── metadata.json.dvc        # git pointer → S3
+└── dev-artifacts-self-testing/      # folder tracked via .gitkeep, contents gitignored
+    └── .gitkeep
+```
+
+**Re-extract + commit expected samples** (real audio, not generated — there
+is no seed; runs `extract_expected_samples.py`):
+
+```bash
+acoustic_ai/.venv/bin/python acoustic_ai/scripts/extract_expected_samples.py
+
+ATT=acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night
+dvc add  $ATT/expected/*/audio.wav
+git add  $ATT/expected/                                # picks up spectrogram.png, metadata.json, audio.wav.dvc
+git commit -m "data: refresh smoke_1 expected samples"
+git push && dvc push
+```
+
+**Add a showcase sample** (generated; everything DVC-tracked):
+
+```bash
+acoustic_ai/.venv/bin/python acoustic_ai/scripts/regenerate_samples.py \
+    layer_a lucas__smoke_1__audioldm2_spring_night --seed 7 --label quiet
+
+ATT=acoustic_ai/layers/layer_a/attempts/lucas__smoke_1__audioldm2_spring_night
+dvc add  $ATT/showcase/seed_7_quiet/audio.wav \
+         $ATT/showcase/seed_7_quiet/spectrogram.png \
+         $ATT/showcase/seed_7_quiet/metadata.json
+git add  $ATT/showcase/seed_7_quiet/*.dvc
+git commit -m "model: add smoke_1 showcase seed=7 (quiet)"
+git push && dvc push
+```
+
+**Branch-switching UX:** the `dvc install` hook (next section) auto-runs
+`dvc checkout` after every `git checkout`, so cached samples on a teammate's
+branch materialise locally without extra commands.
+
+**Garbage collection** (monthly, or before a release):
+
+```bash
+dvc gc --cloud --all-branches --all-tags   # prunes S3 blobs unreferenced anywhere
+```
+
+Don't run on a shallow clone — it will over-prune.
 
 ## Automatic git hooks
 
@@ -193,9 +266,9 @@ params changed.
 | Stage | Command | Key outputs |
 |---|---|---|
 | `precompute_spectrograms` | `precompute/precompute_spectrograms.py` | `data/shared/wavs/`, `data/shared/spectrograms/` |
-| `train_vae` | `modules/ambient/train.py` | `model/candidates/lucas/vae-site257-30epoch/best.pt` |
+| `train_vae` | `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train.py` | `model/candidates/lucas/vae-site257-30epoch/best.pt` |
 | `precompute_latents` | `precompute/precompute_latents.py` | `data/ambient/latents/latent_clips.npy`, `latent_templates.npy` |
-| `train_vocoder` | `modules/ambient/train_vocoder.py` | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` |
+| `train_vocoder` | `layers/layer_a/attempts/lucas__smoke_4__vae_baseline/train_vocoder.py` | `model/candidates/lucas/vocoder-hifigan-site257/best.pt` |
 
 Hyperparameters that affect stage reruns are tracked in root `params.yaml`.
 Compare params between branches: `dvc params diff main`.
