@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 const FFT_SIZE  = 256;   // must be power-of-2; 128 bins output
 const MAX_COLS  = 400;   // time frames to draw
-const MIN_DB    = -80;
+const MIN_DB    = -120;  // clamp floor before normalisation
+const DB_RANGE  = 70;    // visible dynamic range below the per-clip peak
 
 // ─── Radix-2 FFT (in-place) ───────────────────────────────────────────────────
 function fft(re, im) {
@@ -39,8 +40,8 @@ function fft(re, im) {
 }
 
 // ─── Colour map (dark → cyan → white, matching design palette) ───────────────
-function dbToRgb(db) {
-  const t = Math.max(0, Math.min(1, (db - MIN_DB) / -MIN_DB));
+// `t` is a normalised intensity in [0, 1] (0 = floor, 1 = per-clip peak).
+function intensityToRgb(t) {
   if (t < 0.45) {
     const s = t / 0.45;
     return [0, Math.round(s * 80), Math.round(s * 100)];
@@ -66,6 +67,7 @@ function buildSpectrogram(samples, sampleRate) {
   );
 
   const matrix = new Float32Array(numCols * numRows);
+  let maxDb = MIN_DB;
 
   for (let col = 0; col < numCols; col++) {
     const offset = col * step * FFT_SIZE;
@@ -81,12 +83,13 @@ function buildSpectrogram(samples, sampleRate) {
     for (let row = 0; row < numRows; row++) {
       const mag = Math.sqrt(re[row] * re[row] + im[row] * im[row]) / FFT_SIZE;
       const db  = mag > 1e-10 ? Math.max(MIN_DB, 20 * Math.log10(mag)) : MIN_DB;
+      if (db > maxDb) maxDb = db;
       // store rows bottom-to-top (low freq at bottom)
       matrix[(numRows - 1 - row) * numCols + col] = db;
     }
   }
 
-  return { matrix, numCols, numRows };
+  return { matrix, numCols, numRows, maxDb };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -114,7 +117,7 @@ export default function SpectrogramCanvas({ file }) {
         if (cancelled) return;
 
         const samples = audioBuffer.getChannelData(0);
-        const { matrix, numCols, numRows } = buildSpectrogram(samples, audioBuffer.sampleRate);
+        const { matrix, numCols, numRows, maxDb } = buildSpectrogram(samples, audioBuffer.sampleRate);
 
         if (cancelled) return;
 
@@ -127,8 +130,11 @@ export default function SpectrogramCanvas({ file }) {
         const imgData = ctx.createImageData(numCols, numRows);
         const px    = imgData.data;
 
+        // Normalise against the loudest bin in this clip so broadband field
+        // recordings use the full colour range instead of rendering near-black.
         for (let i = 0; i < numCols * numRows; i++) {
-          const [r, g, b] = dbToRgb(matrix[i]);
+          const t = Math.max(0, Math.min(1, (matrix[i] - maxDb + DB_RANGE) / DB_RANGE));
+          const [r, g, b] = intensityToRgb(t);
           const base = i * 4;
           px[base]     = r;
           px[base + 1] = g;

@@ -404,22 +404,26 @@ function AttemptPicker({ headCode, attemptId, attempts, onChange }) {
 }
 
 function ConfidenceBar({ value, label = "Confidence" }) {
-  const pct = typeof value === "number"
-    ? Math.max(0, Math.min(100, Math.round(value * 100)))
-    : null;
+  const hasValue = typeof value === "number";
+  const clamped = hasValue ? Math.max(0, Math.min(1, value)) : null;
+  const pct = clamped == null ? null : Math.round(clamped * 100);
   return (
     <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
       <p>{label}</p>
-      {pct == null ? (
+      {clamped == null ? (
         <code>—</code>
       ) : (
-        <div className="gen-progress-track"
-             role="progressbar"
-             aria-valuemin="0" aria-valuemax="100" aria-valuenow={pct}
-             aria-label={label}
-             style={{ marginTop: 4 }}>
-          <i style={{ width: `${Math.max(4, pct)}%` }} />
-          <span style={{ marginLeft: 8, fontSize: 12 }}>{pct}%</span>
+        <div className="dev-score-gauge">
+          <div className="dev-score-track"
+               role="meter"
+               aria-valuemin="0" aria-valuemax="1" aria-valuenow={value}
+               aria-label={label}>
+            <i style={{ width: `${Math.max(4, pct)}%` }} />
+            <span className="dev-score-tick" style={{ left: "25%" }} />
+            <span className="dev-score-tick" style={{ left: "50%" }} />
+            <span className="dev-score-tick" style={{ left: "75%" }} />
+          </div>
+          <code className="dev-score-readout">{value.toFixed(3)} / 1.00</code>
         </div>
       )}
     </div>
