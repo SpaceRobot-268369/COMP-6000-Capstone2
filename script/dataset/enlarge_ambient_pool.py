@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enlarge the Layer E ambient pool by batched download -> extract -> discard.
+"""Enlarge the Layer E ambient pool by batched stage -> extract -> discard.
 
 Builds a NEW pool `ambient_pool_v2` = existing 1,982 segments + freshly extracted
 segments from the additional site-257 recordings in site_257_filtered_items_ext.csv.
@@ -7,7 +7,9 @@ Source clips are downloaded per batch and DELETED after extraction (they are lar
 untracked intermediates) so peak disk stays bounded.
 
 Pipeline per batch (count range [s, e] over the ext CSV):
-  1. download_site_257_clips.py  --csv-path EXT --start-item s --end-item e
+  1. stage clips from either:
+       - A2O API via download_site_257_clips.py, or
+       - the S3 raw mirror at dataset/original/.../downloaded_clips/
   2. build_training_manifest.py  --filtered-csv <batch slice> --env-csv ENV --output <batch manifest>
   3. build_ambient_index.py      --manifest <batch manifest> --out-dir POOL/ambient_segments --index-csv <batch index>
   4. rm the batch's downloaded_clips/site_257_item_<id> folders (discard)
@@ -41,11 +43,70 @@ SEG_DIR = POOL / "ambient_segments"
 WORK = POOL / "_work"
 
 PY = str((ROOT / "acoustic_ai/.venv/bin/python"))
+DEFAULT_S3_CLIPS_PREFIX = (
+    "s3://eco-acoustic-data.store.adelaideuni.cloud/"
+    "dataset/original/site_257_bowra-dry-a/downloaded_clips"
+)
 
 
 def run(cmd: list[str]) -> None:
     print(f"\n$ {' '.join(cmd)}", flush=True)
     subprocess.run(cmd, check=True)
+
+
+def check_s3_prefix_exists(uri: str, aws_profile: str, aws_region: str) -> bool:
+    cmd = ["aws", "s3", "ls", uri]
+    if aws_profile:
+        cmd.extend(["--profile", aws_profile])
+    if aws_region:
+        cmd.extend(["--region", aws_region])
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return res.returncode == 0
+
+
+def sync_s3_prefix(src_uri: str, dst: Path, aws_profile: str, aws_region: str) -> None:
+    cmd = ["aws", "s3", "sync", "--only-show-errors", src_uri, str(dst)]
+    if aws_profile:
+        cmd.extend(["--profile", aws_profile])
+    if aws_region:
+        cmd.extend(["--region", aws_region])
+    run(cmd)
+
+
+def stage_batch_from_s3(
+    batch_rows: list[dict],
+    clips_dir: Path,
+    s3_clips_prefix: str,
+    aws_profile: str,
+    aws_region: str,
+    fail_on_missing: bool,
+) -> list[dict]:
+    staged_rows: list[dict] = []
+    missing: list[str] = []
+    s3_clips_prefix = s3_clips_prefix.rstrip("/")
+
+    for row in batch_rows:
+        item_id = row["id"]
+        folder_name = f"site_257_item_{item_id}"
+        src = f"{s3_clips_prefix}/{folder_name}/"
+        dst = clips_dir / folder_name
+
+        if not check_s3_prefix_exists(src, aws_profile, aws_region):
+            missing.append(item_id)
+            print(f"[S3 SKIP] item {item_id}: no S3 folder at {src}", flush=True)
+            continue
+
+        sync_s3_prefix(src, dst, aws_profile, aws_region)
+        staged_rows.append(row)
+
+    if missing and fail_on_missing:
+        raise RuntimeError(
+            f"S3 mirror is missing {len(missing)} item folders: {', '.join(missing)}"
+        )
+    if missing:
+        print(f"[S3] skipped {len(missing)} missing item folders", flush=True)
+    print(f"[S3] staged {len(staged_rows)} of {len(batch_rows)} item folders", flush=True)
+    return staged_rows
 
 
 def read_rows(path: Path) -> tuple[list[str], list[dict]]:
@@ -73,6 +134,32 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--skip-env", action="store_true", help="Reuse an existing env CSV.")
     ap.add_argument("--keep-clips", action="store_true", help="Do not delete clips after extract.")
+    ap.add_argument(
+        "--clip-source",
+        choices=("api", "s3"),
+        default="api",
+        help="Where to stage source clips from before extraction.",
+    )
+    ap.add_argument(
+        "--s3-clips-prefix",
+        default=DEFAULT_S3_CLIPS_PREFIX,
+        help="S3 prefix containing site_257_item_<id>/ clip folders when --clip-source=s3.",
+    )
+    ap.add_argument(
+        "--aws-profile",
+        default="capstone2",
+        help="AWS profile for S3 staging. Use empty string to rely on the default provider chain.",
+    )
+    ap.add_argument(
+        "--aws-region",
+        default="ap-southeast-2",
+        help="AWS region for S3 staging. Use empty string to omit --region.",
+    )
+    ap.add_argument(
+        "--fail-on-missing-s3",
+        action="store_true",
+        help="Fail instead of skipping recordings absent from the S3 raw mirror.",
+    )
     args = ap.parse_args()
 
     fieldnames, all_rows = read_rows(EXT_CSV)
@@ -95,12 +182,29 @@ def main() -> None:
         print(f"\n===== BATCH count {s}..{e} ({len(batch_rows)} items) =====", flush=True)
 
         slice_csv = WORK / f"ext_{s}_{e}.csv"
-        write_slice(fieldnames, batch_rows, slice_csv)
+        staged_rows = batch_rows
 
-        run([PY, str(ROOT / "script/download/download_site_257_clips.py"),
-             "--csv-path", str(EXT_CSV), "--output-dir", str(CLIPS_DIR),
-             "--start-item", str(s), "--end-item", str(e),
-             "--workers", str(args.workers)])
+        if args.clip_source == "api":
+            write_slice(fieldnames, batch_rows, slice_csv)
+            run([PY, str(ROOT / "script/download/download_site_257_clips.py"),
+                 "--csv-path", str(EXT_CSV), "--output-dir", str(CLIPS_DIR),
+                 "--start-item", str(s), "--end-item", str(e),
+                 "--workers", str(args.workers)])
+        else:
+            staged_rows = stage_batch_from_s3(
+                batch_rows=batch_rows,
+                clips_dir=CLIPS_DIR,
+                s3_clips_prefix=args.s3_clips_prefix,
+                aws_profile=args.aws_profile,
+                aws_region=args.aws_region,
+                fail_on_missing=args.fail_on_missing_s3,
+            )
+            write_slice(fieldnames, staged_rows, slice_csv)
+
+        if not staged_rows:
+            print("  no staged clip folders for this batch; skipping extraction", flush=True)
+            s = e + 1
+            continue
 
         batch_manifest = WORK / f"manifest_{s}_{e}.csv"
         run([PY, str(ROOT / "script/dataset/build_training_manifest.py"),
@@ -116,11 +220,11 @@ def main() -> None:
 
         # Step — discard this batch's source clips.
         if not args.keep_clips:
-            for row in batch_rows:
+            for row in staged_rows:
                 folder = CLIPS_DIR / f"site_257_item_{row['id']}"
                 if folder.exists():
                     shutil.rmtree(folder, ignore_errors=True)
-            print(f"  discarded {len(batch_rows)} clip folders", flush=True)
+            print(f"  discarded {len(staged_rows)} clip folders", flush=True)
         s = e + 1
 
     # Step 2 — merge: existing pool + all new batch indexes -> POOL/ambient_index.csv,
