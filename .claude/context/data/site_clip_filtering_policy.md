@@ -157,6 +157,23 @@ Use this pattern for future rain expansion:
 - do not spend more expansion effort on wind until rain is closer to the MVP
   target.
 
+Follow-up rain scout 005 on 2026-06-01 tested whether unseen/manual-unreviewed
+rain-prior recordings could improve the site rain pool. The practical exclude
+list omitted recordings already manually reviewed or promoted into the MVP
+rain-ish pool. The run produced 12 scored windows, but CLAP still preferred wind
+for 10/12 rows and no row reached the `candidate` gate. A top-3 listening check
+found biological foreground too dominant in every sample.
+
+MVP decision after scout 005:
+
+- stop expanding site-derived rain for this MVP;
+- keep the small accepted site `rain_primary` / `rain_wind_mixed` subset as
+  site provenance signal;
+- use the curated sound-library fallback for clean rain, thunder, and storm
+  material;
+- do not spend further manual review time on site rain unless new metadata or a
+  stronger rain detector is added.
+
 ## Candidate Pool Policy
 
 After `audit_002`, do not continue full manual review loops. Use manual audit

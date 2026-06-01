@@ -227,12 +227,14 @@ def build_window_rows(
     balanced: bool,
     target_quotas: dict[str, int],
     max_recordings_per_target: int,
+    exclude_recordings: set[str],
 ) -> list[dict[str, object]]:
     items_by_id = {row["id"]: row for row in items_rows}
     eligible_env = [
         row
         for row in env_rows
         if row["recording_id"] in items_by_id and row["recording_id"] in listing
+        and row["recording_id"] not in exclude_recordings
     ]
 
     if balanced:
@@ -729,6 +731,16 @@ def write_summary(path: Path, rows: list[dict[str, object]]) -> None:
     path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
 
+def read_recording_id_set(path: Path | None) -> set[str]:
+    if path is None:
+        return set()
+    return {
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--items-csv", type=Path, required=True)
@@ -747,12 +759,18 @@ def main() -> None:
     parser.add_argument("--clap-audio-batch-size", type=int, default=8)
     parser.add_argument("--export-mp3-previews", action="store_true")
     parser.add_argument("--skip-clap", action="store_true")
+    parser.add_argument(
+        "--exclude-recordings-file",
+        type=Path,
+        help="Optional newline-delimited recording ids to exclude from candidate window selection.",
+    )
     args = parser.parse_args()
 
     items_rows = read_csv(args.items_csv)
     env_rows = read_csv(args.env_csv)
     listing = parse_s3_listing(args.s3_listing)
     target_quotas = parse_target_quotas(args.target_quotas)
+    exclude_recordings = read_recording_id_set(args.exclude_recordings_file)
     rows = build_window_rows(
         items_rows=items_rows,
         env_rows=env_rows,
@@ -763,6 +781,7 @@ def main() -> None:
         balanced=args.balanced,
         target_quotas=target_quotas,
         max_recordings_per_target=args.max_recordings_per_target,
+        exclude_recordings=exclude_recordings,
     )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)

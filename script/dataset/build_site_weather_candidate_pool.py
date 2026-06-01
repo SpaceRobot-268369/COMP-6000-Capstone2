@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 
-POLICY_VERSION = "site_weather_candidate_pool_v0.2"
+POLICY_VERSION = "site_weather_candidate_pool_v0.3"
 LAYER_D_TARGET_SAMPLE_RATE_HZ = 22050
 CLIPPING_REJECT_THRESHOLD = 0.005
 
@@ -102,9 +102,9 @@ def classify_row(row: dict[str, str]) -> dict[str, str]:
 
     if target == "rain":
         if (
-            rain_score >= 0.33
-            and target_vs_other >= 0.05
-            and weather_margin >= 0.10
+            rain_score >= 0.35
+            and target_vs_other >= 0.10
+            and weather_margin >= 0.14
             and not bio_close
         ):
             result.update(
@@ -117,21 +117,22 @@ def classify_row(row: dict[str, str]) -> dict[str, str]:
                 }
             )
         elif (
-            rain_score >= 0.34
-            and target_vs_other >= -0.18
-            and weather_margin >= 0.04
+            rain_score >= 0.36
+            and target_vs_other >= -0.08
+            and weather_margin >= 0.08
             and wind_score >= rain_score
+            and not bio_close
         ):
             result.update(
                 {
                     "pool_decision": "accept",
                     "pool_category": "rain_wind_mixed",
                     "pool_label": "rain+wind",
-                    "pool_reason": "usable_rain_with_wind_overlap",
+                    "pool_reason": "site_rain_wind_mixed_texture_not_pure_rain",
                     "manual_review_priority": "sample",
                 }
             )
-        elif rain_score >= 0.28 and weather_margin >= -0.08 and not bio_dominant:
+        elif rain_score >= 0.32 and weather_margin >= 0.00 and not bio_dominant:
             result.update(
                 {
                     "pool_decision": "backup",

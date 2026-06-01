@@ -252,6 +252,54 @@ creates the actual 22.05 kHz mono WAV asset and writes its durable storage URI
 back to the candidate pool index. Until that exists, the row is a retrieval
 candidate, not a mixer input.
 
+## Rain Scout 005 Close-Out
+
+Run on Server B (`shinypokemon`) on 2026-06-01 with:
+
+```text
+AWS_PROFILE=capstone2
+target-quotas rain=12,wind=0,thunder=0
+max-recordings-per-target=12
+windows-per-recording=1
+exclude-recordings-file debug/site_weather_rain_scout_005_exclude_manual_recordings.txt
+```
+
+The scout excluded recordings already manually reviewed or promoted into the
+MVP rain-ish site pool. It generated 12 windows from different rain-prior
+recordings and scored them with CLAP on Server B.
+
+CLAP result:
+
+| Metric | Count |
+|---|---:|
+| Total windows | 12 |
+| CLAP top label `wind` | 10 |
+| CLAP top label `rain` | 2 |
+| `candidate` gate | 0 |
+| `maybe_target_confused_with_other_weather` | 3 |
+| `reject_target_outcompeted_by_other_weather` | 7 |
+| `reject_contamination_dominant` | 2 |
+
+Top-3 manual confirmation:
+
+```text
+debug/site_weather_rain_scout_005_top3/listen.html
+```
+
+Human result: all three were rejected because biological foreground was too
+dominant. This closes site-rain expansion for the MVP.
+
+Final Layer B MVP pool decision:
+
+| Weather need | Source strategy |
+|---|---|
+| Wind | Site-first from `wind_primary` |
+| Rain | Small site `rain_primary` / `rain_wind_mixed` subset, then sound-library fallback |
+| Thunder / storm | Sound-library fallback by default |
+
+Do not continue broad site-rain scans for the MVP. The remaining rain-prior
+recordings are too sparse and too contaminated to justify more manual review.
+
 ## Layer D Asset Promotion 001
 
 Run on Server A (`spacerobot-268369`) on 2026-05-31.
