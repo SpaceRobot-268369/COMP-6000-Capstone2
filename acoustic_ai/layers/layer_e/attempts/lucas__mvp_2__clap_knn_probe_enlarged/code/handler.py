@@ -129,6 +129,21 @@ class AmbientAnalyzer:
         return self.analyze_embedding(q)
 
 
+def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> AmbientAnalyzer:
+    return AmbientAnalyzer(
+        k=int(params.get("k", 5)),
+        tau=float(params.get("tau", 0.1)),
+        ood_conf_threshold=float(params.get("ood_conf_threshold", 0.25)),
+    )
+
+
+def generate(state: AmbientAnalyzer, seed: int | None = None, **_ignored) -> dict:
+    raise NotImplementedError(
+        "Layer E ambient analysis is upload-based. Use AmbientAnalyzer.analyze(audio_path) "
+        "or wire an upload analysis endpoint before calling this through /generate."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("audio_path", type=str)
