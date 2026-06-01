@@ -1,0 +1,71 @@
+{
+  "predicted_cell": "summer_dawn",
+  "season": "summer",
+  "diel": "dawn",
+  "caption": "dawn summer ambient soundscape, Bowra dry woodland, Australia, warm (27C), dry air, moderate wind, recorded 2019-12-11, no music, no machinery",
+  "estimated_conditions": {
+    "season": "summer",
+    "diel_bin": "dawn",
+    "hour": 8.04,
+    "month": 1.29
+  },
+  "similar_clips": [
+    {
+      "segment_id": "1534211_clip023_s001",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1534211/site_257_item_1534211_clip_023.webm",
+      "similarity": 0.9467065930366516
+    },
+    {
+      "segment_id": "215467_clip024_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_215467/site_257_item_215467_clip_024.webm",
+      "similarity": 0.9436277151107788
+    },
+    {
+      "segment_id": "215467_clip021_s004",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_215467/site_257_item_215467_clip_021.webm",
+      "similarity": 0.9427662491798401
+    },
+    {
+      "segment_id": "214836_clip017_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_214836/site_257_item_214836_clip_017.webm",
+      "similarity": 0.9422187209129333
+    },
+    {
+      "segment_id": "1534209_clip008_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1534209/site_257_item_1534209_clip_008.webm",
+      "similarity": 0.9411593675613403
+    }
+  ],
+  "head_a_cell": "spring_morning",
+  "head_b_cell": "summer_dawn",
+  "head_agreement": false,
+  "confidence": 0.22757441713938292,
+  "ood_flag": true,
+  "topk": [
+    {
+      "cell": "summer_dawn",
+      "score": 0.22757441713938292
+    },
+    {
+      "cell": "spring_morning",
+      "score": 0.15478521823320174
+    },
+    {
+      "cell": "autumn_morning",
+      "score": 0.13405288961890402
+    }
+  ],
+  "params": {
+    "head_a_variant": "audio",
+    "k": 5,
+    "tau_a": 0.1,
+    "tau_b": 0.1,
+    "w_a": 0.5,
+    "w_b": 0.5
+  },
+  "ground_truth": {
+    "cell": "summer_dawn",
+    "season": "summer",
+    "diel": "dawn"
+  }
+}

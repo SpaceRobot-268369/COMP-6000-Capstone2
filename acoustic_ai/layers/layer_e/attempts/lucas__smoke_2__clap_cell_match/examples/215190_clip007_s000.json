@@ -1,0 +1,27 @@
+{
+  "predicted_cell": "autumn_night",
+  "season": "autumn",
+  "diel": "night",
+  "caption": "night autumn ambient soundscape, Bowra dry woodland, Australia, cold (14C), humid air, light breeze, recorded 2020-04-04, no music, no machinery",
+  "confidence": 0.16639478504657745,
+  "topk": [
+    {
+      "cell": "autumn_night",
+      "score": 0.16639478504657745
+    },
+    {
+      "cell": "spring_night",
+      "score": 0.1648377776145935
+    },
+    {
+      "cell": "winter_dawn",
+      "score": 0.1531497836112976
+    }
+  ],
+  "variant": "audio",
+  "ground_truth": {
+    "cell": "summer_night",
+    "season": "summer",
+    "diel": "night"
+  }
+}

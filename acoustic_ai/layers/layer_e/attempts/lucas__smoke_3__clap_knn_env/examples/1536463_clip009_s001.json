@@ -1,0 +1,44 @@
+{
+  "estimated_conditions": {
+    "season": "autumn",
+    "diel_bin": "afternoon",
+    "hour": 14.0,
+    "month": 5.55
+  },
+  "similar_clips": [
+    {
+      "segment_id": "1536130_clip002_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1536130/site_257_item_1536130_clip_002.webm",
+      "similarity": 0.9616293907165527
+    },
+    {
+      "segment_id": "1536130_clip023_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1536130/site_257_item_1536130_clip_023.webm",
+      "similarity": 0.9536073207855225
+    },
+    {
+      "segment_id": "1536559_clip002_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1536559/site_257_item_1536559_clip_002.webm",
+      "similarity": 0.944669246673584
+    },
+    {
+      "segment_id": "1534156_clip022_s001",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1534156/site_257_item_1534156_clip_022.webm",
+      "similarity": 0.9445544481277466
+    },
+    {
+      "segment_id": "1536463_clip020_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1536463/site_257_item_1536463_clip_020.webm",
+      "similarity": 0.9432985782623291
+    }
+  ],
+  "confidence": 0.9495517611503601,
+  "k": 5,
+  "tau": 0.1,
+  "ground_truth": {
+    "season": "autumn",
+    "diel_bin": "afternoon",
+    "hour": 14.0,
+    "month": 5.0
+  }
+}

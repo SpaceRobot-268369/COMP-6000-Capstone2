@@ -1,0 +1,14 @@
+{
+  "arch": "mlp",
+  "best_val_season_acc": 0.4910486042499542,
+  "epochs": 500,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "seed": 42,
+  "season_order": [
+    "spring",
+    "summer",
+    "autumn",
+    "winter"
+  ]
+}

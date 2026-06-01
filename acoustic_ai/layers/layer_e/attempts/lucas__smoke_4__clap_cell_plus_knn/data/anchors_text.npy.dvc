@@ -1,0 +1,5 @@
+outs:
+- md5: 820f69b38220d20143c7cc64807b6a22
+  size: 32896
+  hash: md5
+  path: anchors_text.npy

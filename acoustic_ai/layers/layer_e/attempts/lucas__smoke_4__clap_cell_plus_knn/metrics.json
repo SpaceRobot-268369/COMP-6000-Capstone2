@@ -1,0 +1,46 @@
+{
+  "params": {
+    "head_a_variant": "audio",
+    "k": 5,
+    "tau_a": 0.1,
+    "tau_b": 0.1,
+    "w_a": 0.5,
+    "w_b": 0.5
+  },
+  "n_val": 391,
+  "metrics": {
+    "a": {
+      "cell_top1": 0.3375959079283887,
+      "cell_top3": 0.618925831202046,
+      "season_acc": 0.45524296675191817,
+      "diel_acc": 0.6317135549872123,
+      "mean_confidence": 0.16260021924972534
+    },
+    "b": {
+      "cell_top1": 0.43478260869565216,
+      "cell_top3": 0.6879795396419437,
+      "season_acc": 0.5242966751918159,
+      "diel_acc": 0.6828644501278772,
+      "mean_confidence": 0.5513701966419328
+    },
+    "fused": {
+      "cell_top1": 0.4219948849104859,
+      "cell_top3": 0.7058823529411765,
+      "season_acc": 0.5294117647058824,
+      "diel_acc": 0.639386189258312,
+      "mean_confidence": 0.34815870411780403
+    }
+  },
+  "agreement": {
+    "agreement_rate": 0.37595907928388744,
+    "n_agree": 147,
+    "n_disagree": 244,
+    "acc_given_agree": 0.564625850340136,
+    "acc_given_disagree": 0.3360655737704918,
+    "error_correlation": 0.27938737096959637
+  },
+  "smoke_bar": {
+    "fused_top1": ">= max(head_a.top1, head_b.top1)",
+    "acc_given_agree": "> acc_given_disagree"
+  }
+}

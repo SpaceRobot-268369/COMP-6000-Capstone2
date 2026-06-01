@@ -1,0 +1,5 @@
+outs:
+- md5: c295b8f55bab7cad87d390d25257f8b3
+  size: 532047
+  hash: md5
+  path: season_probe.pt

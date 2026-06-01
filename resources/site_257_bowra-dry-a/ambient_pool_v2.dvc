@@ -1,0 +1,6 @@
+outs:
+- md5: 53c0abaec590942593d44d792e9d5d26.dir
+  size: 3465524511
+  nfiles: 6143
+  hash: md5
+  path: ambient_pool_v2

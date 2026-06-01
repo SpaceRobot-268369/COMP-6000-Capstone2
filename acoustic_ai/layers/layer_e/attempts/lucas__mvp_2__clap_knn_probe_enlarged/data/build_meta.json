@@ -1,0 +1,28 @@
+{
+  "seed": 42,
+  "val_frac": 0.2,
+  "n_train": 4854,
+  "n_val": 1239,
+  "n_train_clips": 3106,
+  "n_val_clips": 785,
+  "embedding_dim": 512,
+  "model_id": "laion/clap-htsat-unfused",
+  "cell_order": [
+    "spring_dawn",
+    "spring_morning",
+    "spring_afternoon",
+    "spring_night",
+    "summer_dawn",
+    "summer_morning",
+    "summer_afternoon",
+    "summer_night",
+    "autumn_dawn",
+    "autumn_morning",
+    "autumn_afternoon",
+    "autumn_night",
+    "winter_dawn",
+    "winter_morning",
+    "winter_afternoon",
+    "winter_night"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "predicted_cell": "winter_afternoon",
+  "season": "winter",
+  "diel": "afternoon",
+  "caption": "afternoon winter ambient soundscape, Bowra dry woodland, Australia, mild (20C), dry air, still, recorded 2019-08-14, no music, no machinery",
+  "confidence": 0.12576016783714294,
+  "topk": [
+    {
+      "cell": "winter_afternoon",
+      "score": 0.12576016783714294
+    },
+    {
+      "cell": "summer_dawn",
+      "score": 0.1133468821644783
+    },
+    {
+      "cell": "spring_afternoon",
+      "score": 0.11235856264829636
+    }
+  ],
+  "variant": "audio",
+  "ground_truth": {
+    "cell": "autumn_afternoon",
+    "season": "autumn",
+    "diel": "afternoon"
+  }
+}

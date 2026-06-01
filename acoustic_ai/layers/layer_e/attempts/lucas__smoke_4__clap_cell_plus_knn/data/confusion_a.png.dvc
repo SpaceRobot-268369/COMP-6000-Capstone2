@@ -1,0 +1,5 @@
+outs:
+- md5: 3676e8b4b0c08b4002e97cca5de79b78
+  size: 61949
+  hash: md5
+  path: confusion_a.png
