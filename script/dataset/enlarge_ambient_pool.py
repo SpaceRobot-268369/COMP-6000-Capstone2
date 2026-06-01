@@ -98,7 +98,8 @@ def main() -> None:
         write_slice(fieldnames, batch_rows, slice_csv)
 
         run([PY, str(ROOT / "script/download/download_site_257_clips.py"),
-             "--csv-path", str(EXT_CSV), "--start-item", str(s), "--end-item", str(e),
+             "--csv-path", str(EXT_CSV), "--output-dir", str(CLIPS_DIR),
+             "--start-item", str(s), "--end-item", str(e),
              "--workers", str(args.workers)])
 
         batch_manifest = WORK / f"manifest_{s}_{e}.csv"
