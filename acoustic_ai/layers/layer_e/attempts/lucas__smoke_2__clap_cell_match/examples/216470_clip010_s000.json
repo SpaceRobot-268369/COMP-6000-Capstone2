@@ -1,0 +1,27 @@
+{
+  "predicted_cell": "autumn_morning",
+  "season": "autumn",
+  "diel": "morning",
+  "caption": "morning autumn ambient soundscape, Bowra dry woodland, Australia, warm (31C), dry air, moderate wind, recorded 2020-03-02, no music, no machinery",
+  "confidence": 0.09951937198638916,
+  "topk": [
+    {
+      "cell": "autumn_morning",
+      "score": 0.09951937198638916
+    },
+    {
+      "cell": "summer_morning",
+      "score": 0.09920646995306015
+    },
+    {
+      "cell": "spring_afternoon",
+      "score": 0.09287963062524796
+    }
+  ],
+  "variant": "audio",
+  "ground_truth": {
+    "cell": "autumn_afternoon",
+    "season": "autumn",
+    "diel": "afternoon"
+  }
+}

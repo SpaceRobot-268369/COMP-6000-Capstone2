@@ -1,0 +1,23 @@
+# lucas__smoke_3__clap_knn_env — hyperparameters
+#
+# Phase 1 has no training (frozen CLAP). `training:` is reserved for the
+# Phase 2 regression / metric-learning head described in PLAN.md §6.
+
+training: {}
+
+inference:
+  model_id: laion/clap-htsat-unfused
+  sample_rate: 48000
+  window_seconds: 10.0
+  pooling: mean
+  l2_normalise: true
+  top_k: 5
+  softmax_tau: 0.1
+
+eval:
+  seed: 42
+  query_fraction: 0.2
+  split_disjoint_by: source_clip
+  sweep:
+    ks: [1, 3, 5, 10]
+    taus: [0.05, 0.1, 0.2]

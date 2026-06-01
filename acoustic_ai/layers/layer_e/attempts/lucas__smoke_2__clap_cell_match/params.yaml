@@ -1,0 +1,19 @@
+# lucas__smoke_2__clap_cell_match — hyperparameters
+#
+# Phase 1 has no training (frozen CLAP). `training:` is reserved for the
+# Phase 2 linear / MLP probe described in PLAN.md §6.
+
+training: {}
+
+inference:
+  model_id: laion/clap-htsat-unfused
+  sample_rate: 48000
+  window_seconds: 10.0
+  pooling: mean
+  l2_normalise: true
+  softmax_tau: 0.1
+
+eval:
+  seed: 42
+  val_fraction: 0.2
+  split_disjoint_by: source_clip

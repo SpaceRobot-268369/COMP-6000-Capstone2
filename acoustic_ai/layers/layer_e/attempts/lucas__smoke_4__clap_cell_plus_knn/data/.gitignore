@@ -1,0 +1,7 @@
+/embeddings_cache.npy
+/index_embeddings.npy
+/anchors_text.npy
+/anchors_audio.npy
+/confusion_a.png
+/confusion_b.png
+/confusion_fused.png

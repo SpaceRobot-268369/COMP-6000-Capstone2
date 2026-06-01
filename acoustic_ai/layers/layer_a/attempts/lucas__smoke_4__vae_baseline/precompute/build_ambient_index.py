@@ -31,10 +31,10 @@ import soundfile as sf
 from scipy.ndimage import maximum_filter1d, median_filter
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "code"))
 from preprocess import SPEC_CFG, load_audio  # noqa: E402
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[6]
 MANIFEST_PATH = PROJECT_ROOT / "resources" / "site_257_bowra-dry-a" / "site_257_training_manifest.csv"
 OUT_DIR = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_segments"
 INDEX_CSV = PROJECT_ROOT / "acoustic_ai" / "data" / "ambient" / "ambient_index.csv"

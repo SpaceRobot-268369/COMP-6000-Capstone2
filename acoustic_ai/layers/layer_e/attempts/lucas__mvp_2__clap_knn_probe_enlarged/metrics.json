@@ -1,0 +1,35 @@
+{
+  "n_val": 1239,
+  "probe_season_acc": 0.552865213882163,
+  "knn_season_acc": 0.5117029862792575,
+  "diel_acc": 0.7062146892655368,
+  "hour_mae": 1.9722522094330093,
+  "month_mae": 1.795391476145418,
+  "agreement_rate": 0.36803874092009686,
+  "season_acc_given_agree": 0.6425438596491229,
+  "season_acc_given_disagree": 0.5006385696040868,
+  "per_season_probe": {
+    "spring": {
+      "n": 396,
+      "acc": 0.4898989898989899
+    },
+    "summer": {
+      "n": 305,
+      "acc": 0.6754098360655738
+    },
+    "autumn": {
+      "n": 262,
+      "acc": 0.4351145038167939
+    },
+    "winter": {
+      "n": 276,
+      "acc": 0.6195652173913043
+    }
+  },
+  "bar": {
+    "probe_season_acc": "> 0.60 (stretch 0.70)",
+    "diel_acc": ">= 0.683 (no regression vs smoke_3)",
+    "hour_mae": "< 2.5",
+    "month_mae": "< 2.0"
+  }
+}

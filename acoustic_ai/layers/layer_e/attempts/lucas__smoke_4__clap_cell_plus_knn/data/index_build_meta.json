@@ -1,0 +1,10 @@
+{
+  "n_index": 1591,
+  "n_query": 391,
+  "n_index_clips": 1030,
+  "n_query_clips": 266,
+  "embedding_dim": 512,
+  "model_id": "laion/clap-htsat-unfused",
+  "seed": 42,
+  "query_frac": 0.2
+}

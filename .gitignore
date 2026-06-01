@@ -56,20 +56,26 @@ services/server-a/.env
 !services/server-a/.env.example
 
 # Resources - keep generated/source data out of git by default
-resources/**
+resources/*
 !resources/
 !resources/site_257_bowra-dry-a/
+resources/site_257_bowra-dry-a/*
 !resources/site_257_bowra-dry-a/site_257_all_items.json
 !resources/site_257_bowra-dry-a/site_257_training_manifest.csv
 !resources/site_257_bowra-dry-a/site_257_filtered_items.csv
 !resources/site_257_bowra-dry-a/site_257_env_data.csv
 !resources/site_257_bowra-dry-a/site_257_all_items.csv
+!resources/site_257_bowra-dry-a/.gitignore
 !resources/site_257_bowra-dry-a/all_items_annotation/
+resources/site_257_bowra-dry-a/all_items_annotation/*
 !resources/site_257_bowra-dry-a/all_items_annotation/README.md
 !resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/
 !resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/**
 !resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/
 !resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/**
+!resources/site_257_bowra-dry-a/*.dvc
+!resources/site_257_bowra-dry-a/ambient_pool_v2/
+!resources/site_257_bowra-dry-a/ambient_pool_v2.dvc
 
 # IDE and editors
 .idea/
@@ -112,4 +118,5 @@ acoustic_ai/=*
 
 # Claude
 /.claude/worktrees
+/.claude/launch.json
 .antigravitycli/

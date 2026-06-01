@@ -1,0 +1,18 @@
+# mvp_1 clap_knn_probe — per-attempt hyperparameters.
+# Backbone is frozen CLAP (laion/clap-htsat-unfused); only the season probe trains.
+
+training:
+  seed: 42
+  val_frac: 0.2            # source-clip-disjoint split (train -> index + probe; val -> eval)
+  probe:
+    arch: linear           # linear | mlp (escalate to mlp only if linear underfits)
+    hidden: 256            # used only when arch=mlp
+    epochs: 300
+    lr: 0.001
+    weight_decay: 0.0001
+    class_weighting: inverse_frequency
+
+inference:
+  k: 5                     # k-NN neighbours for diel/hour/month + similar_clips
+  tau: 0.1                 # softmax temperature over neighbour cosine sims
+  ood_conf_threshold: 0.25 # flag OOD when heads disagree AND season confidence < this
