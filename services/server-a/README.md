@@ -49,6 +49,25 @@ SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.
 
+## TLS / HTTPS
+
+The reverse proxy terminates HTTPS on `:443` for the public hostname
+`spacerobot-268369.adelaideuni.cloud` using a Let's Encrypt certificate. This
+matters because browsers default to HTTPS-First when a user types the bare
+hostname — without `:443` they hit a dead port and the site appears
+unreachable (the raw IP still works because IPs aren't auto-upgraded).
+
+- Cert material lives on the host at `/etc/letsencrypt`, mounted read-only into
+  the `nginx` container by `docker-compose.override.yml`. The `:443` server
+  block in `nginx/default.conf` references the `live/<domain>/` symlinks.
+- The bare IP stays on `:80` with **no forced http→https redirect** (it has no
+  cert), so `http://16.176.232.101/...` keeps working.
+- Initial issuance used the certbot container in `--standalone` mode (HTTP-01
+  over the already-open `:80`, nginx briefly stopped).
+- Renewal: `/usr/local/bin/renew-letsencrypt.sh` (root cron, weekly) renews only
+  within 30 days of expiry — it stops nginx, runs `certbot renew --standalone`,
+  and brings nginx back up. Logs to `/var/log/letsencrypt-renew.log`.
+
 Before enabling automatic deployment, run the manual `Server A Preflight`
 GitHub Actions workflow. It verifies the five Server A repository secrets, SSH
 access to `spacerobot-268369`, Docker/Compose availability, and the host-side
