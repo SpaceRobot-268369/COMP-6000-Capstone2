@@ -111,5 +111,12 @@ verdict below once smoke_3/smoke_4 are scored on the same split.
 
 ## Bake-off verdict
 
-_Filled in once smoke_3 and smoke_4 have also been scored on the same
-split._
+**Winner: smoke_3 (`clap_knn_env`).** Single-head k-NN retrieval is the
+strongest engine (cell top-1 0.435, season 0.524, diel 0.683) and uniquely
+adds continuous hour/month estimates + neighbour evidence. Cell-match
+(smoke_2) is dominated; fusion (smoke_4) regresses on diel and does not beat
+k-NN on cell top-1 — its only keeper is the head-agreement confidence/OOD
+signal (acc 0.336 -> 0.565 on agreement), worth carrying as a cheap optional
+flag on top of the k-NN engine. Season (~0.52 best) is a frozen-CLAP ceiling
+for all three; the PLAN §6 linear probe is the recommended first mvp lever.
+Full analysis: [smoke_4 README](../lucas__smoke_4__clap_cell_plus_knn/README.md#bake-off-verdict).

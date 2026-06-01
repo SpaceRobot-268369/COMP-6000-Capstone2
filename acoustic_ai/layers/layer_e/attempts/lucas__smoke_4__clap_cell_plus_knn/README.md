@@ -73,10 +73,56 @@ A clean negative result — "fusion doesn't help, pick the simpler sibling"
 
 ## Results
 
-_Empty until eval has been run. Filled in once `metrics.json` exists with
-the A vs B vs Fused numbers and the agreement analysis._
+Scored on the held-out val split (n_val = 391, source-clip-disjoint).
+params: head_a=audio prototypes, k=5, tau=0.1, w_a=w_b=0.5.
+
+| metric | head A (cell) | head B (knn) | fused |
+|---|---|---|---|
+| cell top-1 | 0.338 | **0.435** | 0.422 |
+| cell top-3 | 0.619 | 0.688 | **0.706** |
+| season acc | 0.455 | 0.524 | **0.529** |
+| diel acc | 0.632 | **0.683** | 0.639 |
+| mean confidence | 0.163 | 0.551 | 0.348 |
+
+**Hypothesis 1 (fusion >= best single head): FAILS on the headline metric.**
+Fused cell top-1 0.422 < head B 0.435, and fusion *hurts* diel (0.639 vs
+0.683). It edges ahead only on cell top-3 (0.706) and season (ties, 0.529).
+The 50/50 blend drags the stronger k-NN head toward the weaker cell-match
+head. The smoke bar (fused top-1 >= max(A,B)) is not met.
+
+**Hypothesis 2 (agreement signals correctness): PASSES.**
+- agreement rate 0.376 (the two heads pick the same cell 37.6% of the time)
+- acc | agree    = 0.565 (n=147)
+- acc | disagree = 0.336 (n=244)
+- error-correlation A vs B = 0.279 (only moderate — the heads are not
+  redundant despite sharing one CLAP embedding)
+
+Agreement is a real, cheap confidence / OOD signal: when both independent
+heads concur, accuracy nearly doubles relative to disagreement.
+
+Confusion matrices: `data/confusion_{a,b,fused}.png`.
 
 ## Bake-off verdict
 
-_Recommendation across the three smokes lives here once all three have
-been scored on the same source-clip-disjoint val split._
+**Winner: smoke_3 (`clap_knn_env`) — graduate it to mvp. Do NOT graduate
+this fused attempt.**
+
+Single-head k-NN (head B) is the strongest engine across the board — cell
+top-1 0.435, season 0.524, diel 0.683, and well-calibrated confidence
+(0.551) — while also delivering the continuous hour/month estimate
+(hour MAE 2.25 h, month 1.96 mo, both crushing trivial baselines) and the
+explainable neighbour evidence that cell-match cannot produce. Cell-match
+(smoke_2) is strictly dominated. Fusion (smoke_4) does not beat k-NN on the
+primary metric and regresses on diel, so the second head is not worth its
+cost as a *classifier*.
+
+**Carry forward (cheap, optional):** keep the cell-match head only as an
+agreement-based confidence / OOD flag on top of the k-NN engine — run both,
+surface `head_agreement` and gate low-confidence / off-distribution inputs
+(acc jumps 0.336 -> 0.565 on agreement). This is a lightweight add-on to
+the smoke_3 design, not a reason to ship the 50/50 fusion.
+
+**Known ceiling:** season is the hard axis for all three methods
+(best ~0.52) — a frozen-CLAP embedding limitation, not a method artefact.
+The PLAN §6 linear probe on the cached embeddings is the obvious next
+lever and is the recommended first mvp experiment.
