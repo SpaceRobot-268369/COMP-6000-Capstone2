@@ -1,7 +1,9 @@
-# Adds an HTTP reverse proxy in front of the server-a stack so the app is
-# reachable on the only public port (80). HTTPS/443 is deferred (no TLS certs
-# provisioned yet). The browser talks to the backend same-origin via /api/*,
-# so VITE_API_URL is left empty in .env and ports 4000/5173 need not be public.
+# Adds a reverse proxy in front of the server-a stack on ports 80 and 443.
+# HTTPS terminates here with a Let's Encrypt cert for the public hostname
+# (mounted from the host /etc/letsencrypt); the bare IP keeps working over
+# :80 with no forced redirect. The browser talks to the backend same-origin
+# via /api/*, so VITE_API_URL is left empty in .env and ports 4000/5173 need
+# not be public.
 services:
   # Cached "expected"/"showcase" sample artefacts are served straight from the
   # checkout (no AI-worker hop). Mount the attempts tree read-only and point the
@@ -16,8 +18,12 @@ services:
     image: nginx:1.27-alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Let's Encrypt cert material, issued on the host by certbot. Read-only;
+      # the :443 server block in default.conf references the live/ symlinks.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
