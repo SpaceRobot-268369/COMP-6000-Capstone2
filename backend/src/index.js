@@ -491,12 +491,13 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
   res.sendFile(filePath);
 });
 
-// Per-attempt generation. Forwarded runtime params (Layer A dev-generation
-// contract, see CLAUDE.md): `seed` always, plus the optional cell selector
-// `(season, diel)` for bank attempts. The handler picks up every other
-// parameter (prompt, guidance, steps, …) from the attempt's registry entry.
+// Per-attempt generation. Forwarded runtime params: `seed` always, optional
+// `(season, diel)` for bank attempts, and Layer B weather-stem controls.
+// The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
+const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
+const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
@@ -513,6 +514,22 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
     if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
       payload.season = season;
       payload.diel = diel;
+    }
+    const weatherType = typeof req.body?.weather_type === "string"
+      ? req.body.weather_type.toLowerCase()
+      : null;
+    const intensity = typeof req.body?.intensity === "string"
+      ? req.body.intensity.toLowerCase()
+      : null;
+    const requestedDuration = Number(req.body?.duration_s);
+    if (ALLOWED_WEATHER_TYPES.has(weatherType)) {
+      payload.weather_type = weatherType;
+    }
+    if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
+      payload.intensity = intensity;
+    }
+    if (Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30) {
+      payload.duration_s = requestedDuration;
     }
 
     const r = await fetchAi(

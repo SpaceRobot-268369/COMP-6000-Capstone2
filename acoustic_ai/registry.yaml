@@ -161,8 +161,34 @@ layers:
 
   layer_b:
     label: "Layer B — Weather"
-    default: lucas__smoke_1__curated_assets
+    default: murphy__mvp_1__weather_stem_selector
     attempts:
+      murphy__mvp_1__weather_stem_selector:
+        label: "Weather stem selector — MVP"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Selects a short weather-only audio stem for Layer D. Runtime controls choose weather type, intensity, duration, and seed. The seed controls both which asset is selected and where the segment starts inside longer assets.
+
+          Supported weather types: rain, wind, thunder, storm. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+        params:
+          asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+          default_weather_type: rain
+          default_intensity: medium
+          default_duration_s: 10.0
+          target_rms:
+            light: 0.035
+            medium: 0.050
+            heavy: 0.070
+          peak_ceiling: 0.95
+        notes:
+          - First frontend-facing Layer B MVP.
+          - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
+          - Runtime parameters are weather_type, intensity, duration_s, and seed.
+
       lucas__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: lucas

@@ -76,9 +76,13 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 
 ### Layer B — Weather Sound Engine
 
-**Purpose:** generate or mix direct weather sounds (wind, rain).
+**Purpose:** generate or mix direct weather sounds (wind, rain, thunder).
 
-**MVP implementation:** curated asset library + parameter-controlled mixing.
+**MVP implementation:** `murphy__mvp_1__weather_stem_selector` returns a short
+weather-only stem. The frontend supplies `weather_type`, `intensity`,
+`duration_s`, and `seed`; the handler selects from the curated asset index,
+uses the seed for both asset choice and start offset, applies basic loudness
+normalization, and returns WAV + metadata for Layer D.
 
 | Condition | Behaviour |
 |---|---|
@@ -90,9 +94,10 @@ VAE reconstruction is **not** part of the MVP path for Layer A — the existing 
 | `0 < precipitation_mm < 2` | Sparse light rain |
 | `2 ≤ precipitation_mm < 5` | Moderate rain |
 | `precipitation_mm ≥ 5` | Dense heavy rain |
+| thunder / storm requested | Select thunder or storm asset from library fallback |
 
-**Code:** `layers/layer_b/attempts/lucas__smoke_1__curated_assets/asset_index.py`, `layers/layer_b/attempts/lucas__smoke_1__curated_assets/mixer.py` [PLACEHOLDERS]
-**Data:** `data/weather/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/`
+**Code:** `layers/layer_b/attempts/murphy__mvp_1__weather_stem_selector/code/handler.py`
+**Asset index:** `layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv`
 
 ---
 

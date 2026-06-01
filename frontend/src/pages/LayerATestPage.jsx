@@ -7,6 +7,17 @@ import {
 } from "../lib/api.js";
 
 const DEFAULT_SEED = 42;
+const WEATHER_TYPE_OPTIONS = [
+  { value: "rain", label: "rain" },
+  { value: "wind", label: "wind" },
+  { value: "thunder", label: "thunder" },
+  { value: "storm", label: "storm" },
+];
+const WEATHER_INTENSITY_OPTIONS = [
+  { value: "light", label: "light" },
+  { value: "medium", label: "medium" },
+  { value: "heavy", label: "heavy" },
+];
 
 const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
 const ANALYSIS_LAYER_IDS   = ["layer_e"];
@@ -32,6 +43,9 @@ export default function LayerATestPage({
   const [seed,     setSeed]     = useState(DEFAULT_SEED);
   const [season,   setSeason]   = useState("");        // bank attempts only
   const [diel,     setDiel]     = useState("");        // bank attempts only
+  const [weatherType, setWeatherType] = useState("rain");
+  const [weatherIntensity, setWeatherIntensity] = useState("medium");
+  const [weatherDuration, setWeatherDuration] = useState(10);
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -96,6 +110,7 @@ export default function LayerATestPage({
   );
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
+  const usesWeatherControls = layerId === "layer_b";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
@@ -209,6 +224,11 @@ export default function LayerATestPage({
         runParams.season = season;
         runParams.diel = diel;
       }
+      if (usesWeatherControls) {
+        runParams.weather_type = weatherType;
+        runParams.intensity = weatherIntensity;
+        runParams.duration_s = Number(weatherDuration) || 10;
+      }
       const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
       setStatus("done");
@@ -237,7 +257,7 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}__seed${seed || DEFAULT_SEED}`;
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__seed${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -351,6 +371,40 @@ export default function LayerATestPage({
                 </section>
               )}
 
+              {usesWeatherControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Weather stem
+                    <span className="dev-controls-section-pill">
+                      {weatherType} · {weatherIntensity}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <LabeledSelect
+                      label="Weather type"
+                      value={weatherType}
+                      onChange={setWeatherType}
+                      options={WEATHER_TYPE_OPTIONS}
+                    />
+                    <LabeledSelect
+                      label="Intensity"
+                      value={weatherIntensity}
+                      onChange={setWeatherIntensity}
+                      options={WEATHER_INTENSITY_OPTIONS}
+                    />
+                    <LabeledNumber
+                      label="Duration"
+                      value={weatherDuration}
+                      min={1}
+                      max={30}
+                      step={1}
+                      hint="seconds"
+                      onChange={setWeatherDuration}
+                    />
+                  </div>
+                </section>
+              )}
+
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
@@ -359,8 +413,10 @@ export default function LayerATestPage({
                     onChange={setSeed}
                     disabled={!usesSeed}
                     hint={
-                      usesSeed
-                        ? "Same seed + same attempt = same audio."
+                      usesWeatherControls
+                        ? "Same seed + same weather settings = same asset and start point."
+                        : usesSeed
+                          ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
                     }
                   />

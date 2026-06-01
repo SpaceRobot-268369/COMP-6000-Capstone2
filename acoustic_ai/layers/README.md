@@ -30,7 +30,8 @@ The FastAPI server reads it to drive `GET /layers` (frontend dropdown) and
 | layer_a | `lucas__smoke_1__audioldm2_spring_night` | ✓ active |
 | layer_a | `lucas__smoke_2__audioldm2_insects` | ✓ active (duplicates smoke_1 code with different prompt/LoRA) |
 | layer_a | `lucas__smoke_4__vae_baseline` | superseded, but still backs `/analysis` |
-| layer_b | `lucas__smoke_1__curated_assets` | placeholder |
+| layer_b | `murphy__mvp_1__weather_stem_selector` | MVP candidate: short weather stems by type/intensity/seed |
+| layer_b | `lucas__smoke_1__curated_assets` | placeholder / shared asset-index host |
 | layer_c | `lucas__smoke_1__audiogen_boobook` | ✓ active |
 | layer_d | `lucas__smoke_1__layered_mix` | placeholder |
 | layer_e | `lucas__smoke_1__detectors` | partial |

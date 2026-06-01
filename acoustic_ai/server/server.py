@@ -52,6 +52,10 @@ class GenerateRequest(BaseModel):
     # Single-adapter attempts ignore these (their handler swallows extras).
     season: Optional[str] = None
     diel: Optional[str] = None
+    # Layer B weather-stem controls. Other attempts ignore these.
+    weather_type: Optional[str] = None
+    intensity: Optional[str] = None
+    duration_s: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +98,9 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         result = registry.generate(
             layer_id, attempt_id,
             seed=body.seed, season=body.season, diel=body.diel,
+            weather_type=body.weather_type,
+            intensity=body.intensity,
+            duration_s=body.duration_s,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
