@@ -1,0 +1,71 @@
+{
+  "predicted_cell": "autumn_night",
+  "season": "autumn",
+  "diel": "night",
+  "caption": "night autumn ambient soundscape, Bowra dry woodland, Australia, cold (14C), humid air, light breeze, recorded 2020-04-04, no music, no machinery",
+  "estimated_conditions": {
+    "season": "autumn",
+    "diel_bin": "night",
+    "hour": 22.95,
+    "month": 6.54
+  },
+  "similar_clips": [
+    {
+      "segment_id": "1313828_clip004_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313828/site_257_item_1313828_clip_004.webm",
+      "similarity": 0.9837886095046997
+    },
+    {
+      "segment_id": "1535532_clip020_s005",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1535532/site_257_item_1535532_clip_020.webm",
+      "similarity": 0.9826719760894775
+    },
+    {
+      "segment_id": "1672840_clip004_s001",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1672840/site_257_item_1672840_clip_004.webm",
+      "similarity": 0.9822635650634766
+    },
+    {
+      "segment_id": "5296_clip003_s000",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_5296/site_257_item_5296_clip_003.webm",
+      "similarity": 0.9810697436332703
+    },
+    {
+      "segment_id": "1535532_clip020_s001",
+      "source_clip": "resources/site_257_bowra-dry-a/downloaded_clips/site_257_item_1535532/site_257_item_1535532_clip_020.webm",
+      "similarity": 0.9810002446174622
+    }
+  ],
+  "head_a_cell": "autumn_night",
+  "head_b_cell": "autumn_night",
+  "head_agreement": true,
+  "confidence": 0.2825490449523954,
+  "ood_flag": false,
+  "topk": [
+    {
+      "cell": "autumn_night",
+      "score": 0.2825490449523954
+    },
+    {
+      "cell": "winter_night",
+      "score": 0.2714797542075157
+    },
+    {
+      "cell": "winter_dawn",
+      "score": 0.1782124720946511
+    }
+  ],
+  "params": {
+    "head_a_variant": "audio",
+    "k": 5,
+    "tau_a": 0.1,
+    "tau_b": 0.1,
+    "w_a": 0.5,
+    "w_b": 0.5
+  },
+  "ground_truth": {
+    "cell": "summer_night",
+    "season": "summer",
+    "diel": "night"
+  }
+}

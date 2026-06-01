@@ -1,0 +1,27 @@
+{
+  "predicted_cell": "spring_morning",
+  "season": "spring",
+  "diel": "morning",
+  "caption": "morning spring ambient soundscape, Bowra dry woodland, Australia, mild (16C), dry air, moderate wind, recorded 2019-09-23, no music, no machinery",
+  "confidence": 0.11174821853637695,
+  "topk": [
+    {
+      "cell": "spring_morning",
+      "score": 0.11174821853637695
+    },
+    {
+      "cell": "spring_dawn",
+      "score": 0.10387906432151794
+    },
+    {
+      "cell": "summer_afternoon",
+      "score": 0.10312032699584961
+    }
+  ],
+  "variant": "audio",
+  "ground_truth": {
+    "cell": "summer_dawn",
+    "season": "summer",
+    "diel": "dawn"
+  }
+}
