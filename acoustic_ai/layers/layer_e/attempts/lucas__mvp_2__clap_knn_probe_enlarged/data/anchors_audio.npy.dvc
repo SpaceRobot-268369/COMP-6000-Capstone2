@@ -1,0 +1,5 @@
+outs:
+- md5: 68d4272828406d408a827210df1c3cbc
+  size: 32896
+  hash: md5
+  path: anchors_audio.npy

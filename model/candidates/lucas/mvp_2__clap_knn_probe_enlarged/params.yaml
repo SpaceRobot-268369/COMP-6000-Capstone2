@@ -1,0 +1,15 @@
+training:
+  seed: 42
+  val_frac: 0.2
+  probe:
+    arch: mlp
+    hidden: 256
+    epochs: 500
+    lr: 0.001
+    weight_decay: 0.0001
+    class_weighting: inverse_frequency
+
+inference:
+  k: 5
+  tau: 0.1
+  ood_conf_threshold: 0.25
