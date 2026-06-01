@@ -78,9 +78,36 @@ Single-clip classification:
 
 ## Results
 
-_Empty until eval has been run. Fill in once `metrics.json` exists with
-text-vs-audio numbers, the bar verdict, and a short read of the confusion
-structure._
+Scored on the held-out val split (n_val = 391, source-clip-disjoint from
+train), softmax tau = 0.1.
+
+| metric | text anchors | audio prototypes | bar |
+|---|---|---|---|
+| cell top-1 | 0.077 | **0.338** | — (chance 0.063) |
+| cell top-3 | 0.340 | **0.619** | >= 0.50 PASS |
+| season acc | 0.233 | **0.455** | >= 0.70 FAIL |
+| diel acc | 0.547 | **0.632** | >= 0.55 PASS |
+| mean confidence | 0.132 | 0.163 | — |
+
+**Bar verdict: 2 of 3 met (audio prototypes).** cell top-3 and diel acc
+clear their bars; season acc (0.455) falls short of 0.70 though it is well
+above the 0.25 chance floor. Audio prototypes beat text anchors on every
+metric — zero-shot text anchors are near chance on season (0.233) and cell
+top-1 (0.077), confirming the locked captions carry non-acoustic tokens
+(dates, temperatures) that CLAP cannot hear.
+
+**Weak axis is season, not diel** — the reverse of the PLAN §7 prediction.
+Diel (time-of-day) is the more separable axis in CLAP space here; season is
+the confuser. Per-cell (audio): night/afternoon cells with many segments do
+best (spring_night 0.69, autumn_afternoon 0.53, spring_morning 0.56,
+summer_night 0.51), while source-thin or acoustically ambiguous cells
+collapse to 0 (spring_afternoon, summer_dawn, autumn_morning). Errors are
+structured (mass on same-diel / adjacent-season cells), not uniform noise —
+see `data/confusion_audio.png`.
+
+Phase-2 (linear probe on the frozen embeddings, PLAN §6) is the natural
+lever for the season gap, but that decision is deferred to the bake-off
+verdict below once smoke_3/smoke_4 are scored on the same split.
 
 ## Bake-off verdict
 
