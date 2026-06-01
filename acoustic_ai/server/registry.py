@@ -47,6 +47,7 @@ class AttemptSpec:
     label:   str
     author:  str
     stage:   str           # "smoke_1" | "mvp_1" | "prod_1" | ...
+    head:    str | None    # Layer E only: "ambient" | "weather" | "events"
     status:  str
     checkpoint: Path | None
     extra_checkpoints: dict[str, Path]
@@ -164,6 +165,7 @@ def list_layers() -> list[dict]:
                 "label":   att.get("label", att_id),
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
+                "head":    att.get("head"),
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
@@ -204,6 +206,7 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         label=att.get("label", attempt_id),
         author=att.get("author", ""),
         stage=att.get("stage", ""),
+        head=att.get("head"),
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
         extra_checkpoints=extras,
@@ -450,13 +453,38 @@ def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params)
     result = mod.generate(state, seed=seed, **runtime_params)
     # Always attach the spec snapshot for traceability.
     md = result.setdefault("metadata", {})
-    md.setdefault("attempt", {
+    md.setdefault("attempt", _attempt_snapshot(spec))
+    return result
+
+
+def _attempt_snapshot(spec: AttemptSpec) -> dict:
+    """Compact spec block attached to every dispatch result for traceability."""
+    return {
         "layer":  spec.layer,
         "id":     spec.id,
         "label":  spec.label,
         "stage":  spec.stage,
+        "head":   spec.head,
         "author": spec.author,
         "status": spec.status,
         "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
-    })
-    return result
+    }
+
+
+def analyze(layer_id: str, attempt_id: str, audio_path: str) -> dict:
+    """Dispatch an upload-based analysis call to the attempt's handler.
+
+    Analysis attempts (Layer E) are upload-based rather than seed-based: the
+    handler exposes ``analyze(state, audio_path) -> dict`` returning a per-head
+    report. Returns ``{"report": <handler dict>, "attempt": <spec snapshot>}``.
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    mod = _get_handler_module(spec)
+    if not hasattr(mod, "analyze"):
+        raise NotImplementedError(
+            f"{layer_id}/{attempt_id} handler has no analyze(); this attempt "
+            f"does not support upload analysis."
+        )
+    state = _get_state(spec)
+    report = mod.analyze(state, audio_path)
+    return {"report": report, "attempt": _attempt_snapshot(spec)}

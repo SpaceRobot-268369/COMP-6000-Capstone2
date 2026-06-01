@@ -9,19 +9,22 @@ Endpoints:
   GET  /layers
   GET  /layers/{layer_id}/attempts
   POST /layers/{layer_id}/attempts/{attempt_id}/generate
+  POST /layers/{layer_id}/attempts/{attempt_id}/analyze   (multipart upload)
 """
 
 from __future__ import annotations
 
 import base64
 import io
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -120,6 +123,44 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         "sample_rate": sample_rate,
         "duration_s":  duration_s,
     }
+
+
+@app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
+async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) -> dict:
+    """Dispatch an upload-based analysis call to the attempt's handler.
+
+    Layer E analysis is upload-based (not seed-based): the client posts an
+    audio clip as multipart ``file``; the handler embeds it and returns a
+    per-head report. Returns ``{ok, report, attempt}``.
+    """
+    suffix = Path(file.filename or "upload.wav").suffix or ".wav"
+    try:
+        data = await file.read()
+    finally:
+        await file.close()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty upload")
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    try:
+        with os.fdopen(tmp_fd, "wb") as fh:
+            fh.write(data)
+        result = registry.analyze(layer_id, attempt_id, tmp_path)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"analysis failed: {exc}")
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    return {"ok": True, **result}
 
 
 @app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")
