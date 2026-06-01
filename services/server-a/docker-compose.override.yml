@@ -1,0 +1,26 @@
+# Adds an HTTP reverse proxy in front of the server-a stack so the app is
+# reachable on the only public port (80). HTTPS/443 is deferred (no TLS certs
+# provisioned yet). The browser talks to the backend same-origin via /api/*,
+# so VITE_API_URL is left empty in .env and ports 4000/5173 need not be public.
+services:
+  # Cached "expected"/"showcase" sample artefacts are served straight from the
+  # checkout (no AI-worker hop). Mount the attempts tree read-only and point the
+  # backend's sample reader at it; without this the /samples listing is empty.
+  backend:
+    environment:
+      AI_LAYERS_ROOT: /acoustic_ai/layers
+    volumes:
+      - ../../acoustic_ai:/acoustic_ai:ro
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app_net
+    restart: unless-stopped
