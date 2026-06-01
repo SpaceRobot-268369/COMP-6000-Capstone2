@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
+    // Vite 5.4+ blocks requests whose Host header is a domain not in this list
+    // (DNS-rebinding guard); raw IPs and localhost are always allowed. The
+    // public deployment is reached via the adelaideuni.cloud hostname, so allow
+    // that zone explicitly — otherwise the domain 403s while the bare IP works.
+    allowedHosts: [".adelaideuni.cloud"],
     watch: { usePolling: true },
     proxy: {
       "/api": {
