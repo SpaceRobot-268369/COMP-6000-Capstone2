@@ -26,6 +26,7 @@ _USABLE_AUDIT_STATUSES = {
     "library_seed",
     "approved_from_audit002",
     "maybe_from_audit002",
+    "site_ready",
     "yes",
     "maybe",
 }
@@ -34,6 +35,7 @@ _INTENSITY_FALLBACKS = {
     "medium": ["medium", "light", "heavy"],
     "heavy": ["heavy", "medium", "light"],
 }
+_MIN_SITE_CANDIDATES_FOR_SITE_ONLY = 3
 
 
 @dataclass(frozen=True)
@@ -59,7 +61,7 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
         for row in csv.DictReader(fh):
             if row.get("layer_d_use") == "reject":
                 continue
-            if row.get("human_audit_status") not in _USABLE_AUDIT_STATUSES:
+            if not _is_usable_audit_status(row.get("human_audit_status", "")):
                 continue
             path = _resolve_path(row.get("clip_path", ""))
             if path.is_file():
@@ -103,8 +105,21 @@ def generate(state: WeatherStemState, seed: int | None = None, **runtime_params)
 
     wav_bytes = _encode_wav(normalized, sample_rate)
     row = asset.row
+    prompt = _build_retrieval_prompt(
+        row=row,
+        weather_type=weather_type,
+        intensity=intensity,
+        duration_s=duration_s,
+        retrieval_seed=run_seed,
+        segment=segment,
+        fallback_used=fallback_used,
+        fallback_reason=fallback_reason,
+    )
     metadata = {
         "seed": run_seed,
+        "retrieval_seed": run_seed,
+        "prompt": prompt,
+        "prompt_locked": False,
         "audio": {
             "duration_s": segment["actual_duration_s"],
             "sample_rate": sample_rate,
@@ -239,7 +254,46 @@ def _intensity_field(weather_type: str) -> str:
 
 def _prefer_primary(assets: list[WeatherAsset]) -> list[WeatherAsset]:
     primary = [asset for asset in assets if asset.row.get("layer_d_use") == "primary"]
-    return primary or assets
+    preferred = primary or assets
+    site = [asset for asset in preferred if asset.row.get("source_type") == "site"]
+    if len(site) >= _MIN_SITE_CANDIDATES_FOR_SITE_ONLY:
+        return site
+    return preferred
+
+
+def _build_retrieval_prompt(
+    *,
+    row: dict[str, str],
+    weather_type: str,
+    intensity: str,
+    duration_s: float,
+    retrieval_seed: int,
+    segment: dict[str, Any],
+    fallback_used: bool,
+    fallback_reason: str,
+) -> str:
+    components = [
+        name for name, present in (
+            ("rain", _truthy(row.get("has_rain", ""))),
+            ("wind", _truthy(row.get("has_wind", ""))),
+            ("thunder", _truthy(row.get("has_thunder", ""))),
+        )
+        if present
+    ]
+    component_text = "+".join(components) if components else row.get("primary_weather", "weather")
+    source = row.get("source_type") or "unknown source"
+    role = row.get("layer_d_role") or "weather stem"
+    asset_id = row.get("asset_id") or "unknown asset"
+    selected_intensity = row.get(_intensity_field(weather_type), intensity)
+    prompt = (
+        f"{duration_s:g}-second Layer B weather stem retrieval, "
+        f"target {weather_type} / {intensity}, selected {source} {role} asset {asset_id}, "
+        f"components {component_text}, asset intensity {selected_intensity}, "
+        f"retrieval_seed {retrieval_seed}, start {segment['start_s']:.3f}s"
+    )
+    if fallback_used and fallback_reason:
+        prompt += f", fallback note: {fallback_reason}"
+    return prompt
 
 
 def _read_seeded_segment(path: Path, duration_s: float, rng: random.Random) -> tuple[np.ndarray, int, dict[str, Any]]:
@@ -306,3 +360,8 @@ def _encode_wav(audio: np.ndarray, sample_rate: int) -> bytes:
 
 def _truthy(value: str) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def _is_usable_audit_status(value: str) -> bool:
+    statuses = {part.strip() for part in str(value).split(";") if part.strip()}
+    return bool(statuses & _USABLE_AUDIT_STATUSES)

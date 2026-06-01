@@ -171,9 +171,11 @@ layers:
         uses_seed: true
         checkpoint: null
         description: |
-          Selects a short weather-only audio stem for Layer D. Runtime controls choose weather type, intensity, duration, and seed. The seed controls both which asset is selected and where the segment starts inside longer assets.
+          Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-first retrieval pool from site_257 Bowra dry woodland is combined with curated sound-library fallback assets; the server filters by weather label and intensity, then uses retrieval_seed to choose a deterministic asset and start offset.
 
-          Supported weather types: rain, wind, thunder, storm. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Pool contents: 101 site-derived 15-second WAV stems promoted from CLAP/env/manual weather screening (6 rain, 7 rain+wind, 88 wind), plus 40 curated library rain/wind/thunder/storm fallback assets. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+
+          Supported weather types: rain, wind, thunder, storm. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
           asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
@@ -187,7 +189,7 @@ layers:
         notes:
           - First frontend-facing Layer B MVP.
           - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
-          - Runtime parameters are weather_type, intensity, duration_s, and seed.
+          - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
 
       lucas__smoke_1__curated_assets:
         label: "Curated wind/rain assets"

@@ -129,9 +129,11 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, season, diel, weather_type, intensity, duration_s } = {},
+  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
 ) {
-  const payload = { seed };
+  const payload = {};
+  if (seed !== undefined) payload.seed = seed;
+  if (retrieval_seed !== undefined) payload.retrieval_seed = retrieval_seed;
   if (season && diel) {
     payload.season = season;
     payload.diel = diel;

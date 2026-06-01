@@ -491,7 +491,8 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
   res.sendFile(filePath);
 });
 
-// Per-attempt generation. Forwarded runtime params: `seed` always, optional
+// Per-attempt generation. Forwarded runtime params: `seed` / `retrieval_seed`,
+// optional
 // `(season, diel)` for bank attempts, and Layer B weather-stem controls.
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
@@ -504,13 +505,20 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
   const operation = `generate ${layer}/${attempt}`;
   try {
     const requestedSeed = Number(req.body?.seed);
+    const requestedRetrievalSeed = Number(req.body?.retrieval_seed);
     const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null;
+    const retrievalSeed = Number.isInteger(requestedRetrievalSeed) && requestedRetrievalSeed >= 0
+      ? requestedRetrievalSeed
+      : null;
 
     // Cell selector — only forwarded if both are valid; otherwise omitted
     // (server falls back to the attempt's default_cell).
     const season = typeof req.body?.season === "string" ? req.body.season.toLowerCase() : null;
     const diel = typeof req.body?.diel === "string" ? req.body.diel.toLowerCase() : null;
     const payload = { seed };
+    if (retrievalSeed !== null) {
+      payload.retrieval_seed = retrievalSeed;
+    }
     if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
       payload.season = season;
       payload.diel = diel;

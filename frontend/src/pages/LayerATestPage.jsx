@@ -219,7 +219,11 @@ export default function LayerATestPage({
     setErrorMsg("");
     setResult(null);
     try {
-      const runParams = usesSeed ? { seed: Number(seed) || DEFAULT_SEED } : {};
+      const runParams = {};
+      if (usesSeed) {
+        if (usesWeatherControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
+        else runParams.seed = Number(seed) || DEFAULT_SEED;
+      }
       if (usesCells && season && diel) {
         runParams.season = season;
         runParams.diel = diel;
@@ -257,7 +261,7 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__seed${seed || DEFAULT_SEED}`;
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -409,12 +413,13 @@ export default function LayerATestPage({
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
                   <SeedField
+                    label={usesWeatherControls ? "Retrieval seed" : "Seed"}
                     value={seed}
                     onChange={setSeed}
                     disabled={!usesSeed}
                     hint={
                       usesWeatherControls
-                        ? "Same seed + same weather settings = same asset and start point."
+                        ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
                         : usesSeed
                           ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
@@ -567,8 +572,10 @@ export default function LayerATestPage({
                          src={`data:audio/wav;base64,${result.audio_b64}`}
                          style={{ width: "100%" }} />
                   <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                    {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s · seed{" "}
-                    {result.metadata?.seed ?? seed}
+                    {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s ·{" "}
+                    {usesWeatherControls
+                      ? `retrieval_seed ${result.metadata?.retrieval_seed ?? result.metadata?.seed ?? seed}`
+                      : `seed ${result.metadata?.seed ?? seed}`}
                   </p>
                 </>
               ) : (
@@ -738,13 +745,13 @@ function Placeholder({ kind, loading, children }) {
   );
 }
 
-function SeedField({ value, onChange, disabled, hint }) {
+function SeedField({ label = "Seed", value, onChange, disabled, hint }) {
   const randomize = () => {
     onChange(Math.floor(Math.random() * 2147483648));
   };
   return (
     <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
-      <span>Seed</span>
+      <span>{label}</span>
       <div className="dev-seed-input-row">
         <input
           className="layer-a-input"
