@@ -139,9 +139,14 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
 
 def generate(state: AmbientAnalyzer, seed: int | None = None, **_ignored) -> dict:
     raise NotImplementedError(
-        "Layer E ambient analysis is upload-based. Use AmbientAnalyzer.analyze(audio_path) "
-        "or wire an upload analysis endpoint before calling this through /generate."
+        "Layer E ambient analysis is upload-based. Use analyze(state, audio_path) "
+        "(the registry /analyze dispatch) instead of /generate."
     )
+
+
+def analyze(state: AmbientAnalyzer, audio_path: str | Path) -> dict:
+    """Registry analyze() entry point — embeds the upload and runs the E-A head."""
+    return state.analyze(audio_path)
 
 
 def main() -> None:

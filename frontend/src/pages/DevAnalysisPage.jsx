@@ -1,204 +1,174 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
 import { analyseUpload, fetchLayerRegistry } from "../lib/api.js";
 
-const HEADS = [
-  { id: "ambient", code: "E-A", label: "Ambient context" },
-  { id: "weather", code: "E-B", label: "Weather" },
-  { id: "events",  code: "E-C", label: "Events" },
-];
-
 /**
- * Dev page for Analysis Mode (Layer E).
+ * Dev page for Analysis Mode (Layer E) — a per-head testing harness.
  *
- * Three components, matching .claude/context/ai/pipeline_design.md
- * § Analysis Mode:
+ * This is NOT a product surface. Per .claude/context/ai/pipeline_design.md
+ * § Analysis Mode, analysis runs three *independent* detector heads on the
+ * raw mixture, each owning its own question and its own model(s):
  *
- *   1. Audio uploader (drag/drop or click).
- *   2. Mel-spectrogram preview of the uploaded clip (client-side render).
- *   3. Analysis results panel — three heads:
- *        E-A  ambient context  (similarity, estimated conditions)
- *        E-B  weather          (wind / rain intensity)
- *        E-C  events           (species detections + onsets)
- *      Each head shows label(s) plus a confidence score.
+ *   E-A  Ambient context  — "what kind of bed is this?" (CLAP k-NN + probe)
+ *   E-B  Weather          — "wind / rain intensity?"      (no model yet)
+ *   E-C  Events           — "which species, when?"        (no model yet)
  *
- * The backend endpoint (POST /api/analysis) is still being wired up; the
- * page surfaces a clear error if the request fails so the UI is testable
- * end-to-end as soon as the server is ready.
+ * So the page does NOT run one analysis for everything. Each head has:
+ *   • its own model picker, filtered to attempts whose registry `head:`
+ *     matches that head (an attempt belongs to exactly one head);
+ *   • its own Analyze button that posts the upload to that one attempt
+ *     (POST /api/layers/layer_e/attempts/{id}/analyze);
+ *   • its own independent loading / result / error state.
+ *
+ * Heads with no real model (E-B, E-C today) render an explicit empty state —
+ * no picker, no button — rather than pretending the ambient models apply.
  */
 
+const LAYER_ID = "layer_e";
+
+const HEADS = [
+  {
+    id: "ambient",
+    code: "E-A",
+    icon: "◫",
+    label: "Ambient context",
+    blurb: "Locate the clip in soundscape space — season / diel estimate plus nearest training clips.",
+    loadingText: "Embedding clip + k-NN against the ambient pool…",
+  },
+  {
+    id: "weather",
+    code: "E-B",
+    icon: "≋",
+    label: "Weather",
+    blurb: "Audible wind / rain intensity, detected directly on the raw mixture.",
+    loadingText: "Scoring weather logits…",
+  },
+  {
+    id: "events",
+    code: "E-C",
+    icon: "✦",
+    label: "Events",
+    blurb: "Species and acoustic events with onsets / offsets.",
+    loadingText: "Running event detection…",
+  },
+];
+
+const emptyHeadState = () => ({ attemptId: "", status: "idle", report: null, error: "" });
+
 export default function DevAnalysisPage() {
-  const fileInputRef = useRef(null);
+  const [file,     setFile]     = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [dragging, setDragging] = useState(false);
 
-  const [file,      setFile]      = useState(null);
-  const [audioUrl,  setAudioUrl]  = useState(null);
-  const [status,    setStatus]    = useState("idle"); // idle | analysing | done | error
-  const [report,    setReport]    = useState(null);
-  const [errorMsg,  setErrorMsg]  = useState("");
-  const [dragging,  setDragging]  = useState(false);
-  const [progress,  setProgress]  = useState(0);
+  const [registry, setRegistry] = useState(null);
+  const [regError, setRegError] = useState("");
 
-  // Registry-backed per-head attempt pickers. UI-only for now — the backend
-  // POST /api/analysis call is not yet attempt-aware. When Layer E grows real
-  // per-head attempts, the selected IDs will be forwarded to the API.
-  const [registry,    setRegistry]    = useState(null);
-  const [regError,    setRegError]    = useState("");
-  const [headAttempts, setHeadAttempts] = useState({
-    ambient: "", weather: "", events: "",
-  });
+  // Independent per-head runtime state (selected attempt + analysis result).
+  const [heads, setHeads] = useState(() => ({
+    ambient: emptyHeadState(),
+    weather: emptyHeadState(),
+    events:  emptyHeadState(),
+  }));
 
+  // Load the registry and pick a default attempt for each head.
   useEffect(() => {
     fetchLayerRegistry()
       .then((doc) => {
         setRegistry(doc);
-        const layerE = (doc.layers || []).find((l) => l.id === "layer_e");
-        const def = layerE?.default || layerE?.attempts?.[0]?.id || "";
-        if (def) {
-          setHeadAttempts({ ambient: def, weather: def, events: def });
-        }
+        const layerE = (doc.layers || []).find((l) => l.id === LAYER_ID);
+        const attempts = layerE?.attempts || [];
+        const def = layerE?.default;
+        setHeads((prev) => {
+          const next = { ...prev };
+          for (const h of HEADS) {
+            const forHead = attempts.filter((a) => a.head === h.id);
+            const chosen =
+              forHead.find((a) => a.id === def)?.id || forHead[0]?.id || "";
+            next[h.id] = { ...prev[h.id], attemptId: chosen };
+          }
+          return next;
+        });
       })
       .catch((e) => setRegError(e.message));
   }, []);
 
-  const layerEAttempts = useMemo(() => {
-    const layerE = registry?.layers?.find((l) => l.id === "layer_e");
-    return layerE?.attempts || [];
+  const attemptsByHead = useMemo(() => {
+    const layerE = registry?.layers?.find((l) => l.id === LAYER_ID);
+    const attempts = layerE?.attempts || [];
+    const map = { ambient: [], weather: [], events: [] };
+    for (const a of attempts) {
+      if (map[a.head]) map[a.head].push(a);
+    }
+    return map;
   }, [registry]);
 
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
-
-  // Fake progress while analysing.
-  useEffect(() => {
-    if (status !== "analysing") {
-      setProgress(status === "done" ? 100 : 0);
-      return undefined;
-    }
-    const startedAt = Date.now();
-    setProgress(6);
-    const timer = window.setInterval(() => {
-      const elapsedS = (Date.now() - startedAt) / 1000;
-      const next = Math.min(92, 6 + (1 - Math.exp(-elapsedS / 12)) * 88);
-      setProgress((cur) => Math.max(cur, Math.round(next)));
-    }, 400);
-    return () => window.clearInterval(timer);
-  }, [status]);
 
   function acceptFile(f) {
     if (!f) return;
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setFile(f);
     setAudioUrl(URL.createObjectURL(f));
-    setReport(null);
-    setErrorMsg("");
-    setStatus("idle");
+    // New file → clear every head's previous result.
+    setHeads((s) => {
+      const next = { ...s };
+      for (const h of HEADS) {
+        next[h.id] = { ...s[h.id], status: "idle", report: null, error: "" };
+      }
+      return next;
+    });
   }
 
-  function onFileChange(e) { acceptFile(e.target.files?.[0] ?? null); }
   function onDrop(e) {
     e.preventDefault();
     setDragging(false);
     acceptFile(e.dataTransfer.files?.[0] ?? null);
   }
 
-  async function runAnalysis() {
-    if (!file) return;
-    setStatus("analysing");
-    setErrorMsg("");
-    setReport(null);
-    try {
-      const data = await analyseUpload(file);
-      setReport(data);
-      setStatus("done");
-    } catch (err) {
-      setErrorMsg(err.message);
-      setStatus("error");
-    }
+  function updateHead(headId, patch) {
+    setHeads((s) => ({ ...s, [headId]: { ...s[headId], ...patch } }));
   }
 
-  const isAnalysing = status === "analysing";
-  const isDone      = status === "done";
+  async function runHead(headId) {
+    const { attemptId } = heads[headId];
+    if (!file || !attemptId) return;
+    updateHead(headId, { status: "analysing", error: "", report: null });
+    try {
+      const data = await analyseUpload(LAYER_ID, attemptId, file);
+      updateHead(headId, { status: "done", report: data.report ?? data });
+    } catch (err) {
+      updateHead(headId, { status: "error", error: err.message });
+    }
+  }
 
   return (
     <section className="generation-page">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS — ANALYSIS</p>
-          <span>Upload · Spectrogram · E-A / E-B / E-C report</span>
+          <span>Per-head Layer E testing · E-A / E-B / E-C run independently</span>
         </div>
       </header>
 
-      {/* ── Row 1: uploader (full width) ─────────────────────────────────── */}
+      {/* ── Row 1: uploader (holds the clip only — no global run) ─────────── */}
       <div className="dev-controls-row">
-        <section
-          className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
+        <FileUploader
+          file={file}
+          audioUrl={audioUrl}
+          dragging={dragging}
+          setDragging={setDragging}
+          onFile={acceptFile}
           onDrop={onDrop}
-          onClick={() => !file && fileInputRef.current?.click()}
-          style={{ cursor: file ? "default" : "pointer" }}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".wav,.flac,.mp3,.ogg,.webm"
-            onChange={onFileChange}
-            style={{ display: "none" }}
-          />
-
-          {!file ? (
-            <>
-              <div className="upload-icon">⇪</div>
-              <h2>DROP AUDIO FOR ANALYSIS</h2>
-              <p>WAV, FLAC, MP3 · click or drag to upload</p>
-            </>
-          ) : (
-            <div className="upload-loaded">
-              <div className="upload-icon">◫</div>
-              <div className="upload-file-info">
-                <strong>{file.name}</strong>
-                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-              </div>
-
-              <div className="upload-actions">
-                <button
-                  type="button"
-                  className="analyse-btn"
-                  onClick={runAnalysis}
-                  disabled={isAnalysing}
-                >
-                  {isAnalysing ? "Analysing…" : "✦ Run Analysis"}
-                </button>
-                <button
-                  type="button"
-                  className="upload-change-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Change file
-                </button>
-              </div>
-
-              {audioUrl && (
-                <audio
-                  controls
-                  src={audioUrl}
-                  style={{ width: "100%", marginTop: 12 }}
-                />
-              )}
-
-              {errorMsg && <p className="analysis-error">{errorMsg}</p>}
-            </div>
-          )}
-        </section>
+        />
       </div>
 
-      {/* ── Row 2: spectrogram + analysis ───────────────────────────────── */}
+      {/* ── Row 2: spectrogram + per-head analysis ──────────────────────── */}
       <div className="dev-results-row">
         <main className="panel dev-result-card">
           <div className="generation-card-head">
             <h2>Mel-Spectrogram</h2>
             <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
           </div>
-
           <div className="dev-result-body">
             <ReviewSection title="▤ Spectral Mapping">
               {file ? (
@@ -214,54 +184,22 @@ export default function DevAnalysisPage() {
 
         <aside className="panel dev-result-card">
           <div className="generation-card-head">
-            <h2>Analysis Results</h2>
-            <p>
-              {isDone
-                ? "Per-head detections + confidence"
-                : isAnalysing
-                  ? "Running E-A / E-B / E-C in parallel…"
-                  : "Three detector heads run on the raw mixture"}
-            </p>
+            <h2>Analysis Heads</h2>
+            <p>Each head picks its own model and runs on its own button</p>
           </div>
-
           <div className="dev-result-body">
-            {isAnalysing && <ProgressBlock progress={progress} />}
-
-            <AmbientHead
-              report={report} loading={isAnalysing} done={isDone}
-              attemptId={headAttempts.ambient}
-              attempts={layerEAttempts}
-              regError={regError}
-              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, ambient: id }))}
-            />
-            <WeatherHead
-              report={report} loading={isAnalysing} done={isDone}
-              attemptId={headAttempts.weather}
-              attempts={layerEAttempts}
-              regError={regError}
-              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, weather: id }))}
-            />
-            <EventsHead
-              report={report} loading={isAnalysing} done={isDone}
-              attemptId={headAttempts.events}
-              attempts={layerEAttempts}
-              regError={regError}
-              onAttemptChange={(id) => setHeadAttempts((s) => ({ ...s, events: id }))}
-            />
-
-            <ReviewSection title="{ } Raw report">
-              {isDone && report ? (
-                <pre className="layer-a-json">
-                  {JSON.stringify(report, null, 2)}
-                </pre>
-              ) : (
-                <Placeholder kind="json" loading={isAnalysing}>
-                  {isAnalysing
-                    ? "Collecting per-head outputs…"
-                    : "Raw report appears after analysis."}
-                </Placeholder>
-              )}
-            </ReviewSection>
+            {HEADS.map((head) => (
+              <HeadCard
+                key={head.id}
+                head={head}
+                state={heads[head.id]}
+                attempts={attemptsByHead[head.id]}
+                regError={regError}
+                hasFile={!!file}
+                onAttemptChange={(id) => updateHead(head.id, { attemptId: id })}
+                onRun={() => runHead(head.id)}
+              />
+            ))}
           </div>
         </aside>
       </div>
@@ -269,215 +207,221 @@ export default function DevAnalysisPage() {
   );
 }
 
-// ─── Per-head sections ──────────────────────────────────────────────────────
+// ─── Uploader ────────────────────────────────────────────────────────────────
 
-function AmbientHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
-  const a = report?.ambient;
-  const cond = a?.estimated_conditions;
-  const sims = a?.similar_clips || [];
+function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop }) {
+  const inputId = "dev-analysis-file";
   return (
-    <ReviewSection title="◫ E-A — Ambient context">
-      <AttemptPicker
-        headCode="E-A"
-        attemptId={attemptId}
-        attempts={attempts}
-        regError={regError}
-        onChange={onAttemptChange}
+    <section
+      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={onDrop}
+    >
+      <input
+        id={inputId}
+        type="file"
+        accept=".wav,.flac,.mp3,.ogg,.webm"
+        onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+        style={{ display: "none" }}
       />
-      {done && a ? (
-        <div className="dev-controls-meta">
-          <div className="gen-info-block">
-            <p>Estimated context</p>
-            <code>
-              {cond
-                ? [cond.diel_bin, cond.season].filter(Boolean).join(" · ") || "—"
-                : "—"}
-            </code>
+
+      {!file ? (
+        <label htmlFor={inputId} style={{ cursor: "pointer", display: "block" }}>
+          <div className="upload-icon">⇪</div>
+          <h2>DROP AUDIO FOR ANALYSIS</h2>
+          <p>WAV, FLAC, MP3 · click or drag to upload · then run each head below</p>
+        </label>
+      ) : (
+        <div className="upload-loaded">
+          <div className="upload-icon">◫</div>
+          <div className="upload-file-info">
+            <strong>{file.name}</strong>
+            <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
           </div>
-          <div className="gen-info-block">
-            <p>Similar clips</p>
-            <code>{sims.length ? `${sims.length} hits` : "—"}</code>
+          <div className="upload-actions">
+            <label htmlFor={inputId} className="upload-change-btn" style={{ cursor: "pointer" }}>
+              Change file
+            </label>
           </div>
-          <ConfidenceBar value={a.confidence} />
-          {sims.length > 0 && (
-            <ul className="dev-sim-list" style={{ margin: "8px 0 0", paddingLeft: 16 }}>
-              {sims.slice(0, 5).map((c, i) => (
-                <li key={c.segment_id || i} style={{ fontSize: 12, opacity: 0.8 }}>
-                  <code>{c.segment_id}</code>
-                  {typeof c.similarity === "number" && (
-                    <> · sim {c.similarity.toFixed(3)}</>
-                  )}
-                </li>
-              ))}
-            </ul>
+          {audioUrl && (
+            <audio controls src={audioUrl} style={{ width: "100%", marginTop: 12 }} />
           )}
         </div>
-      ) : (
-        <Placeholder kind="json" loading={loading}>
-          {loading
-            ? "Embedding clip + k-NN against ambient_index.csv…"
-            : "Awaiting analysis."}
-        </Placeholder>
       )}
-    </ReviewSection>
+    </section>
   );
 }
 
-function WeatherHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
-  const w = report?.weather;
-  return (
-    <ReviewSection title="≋ E-B — Weather">
-      <AttemptPicker
-        headCode="E-B"
-        attemptId={attemptId}
-        attempts={attempts}
-        regError={regError}
-        onChange={onAttemptChange}
-      />
-      {done && w ? (
-        <div className="dev-controls-meta">
-          <div className="gen-info-block">
-            <p>Wind intensity</p>
-            <code>{w.wind_intensity || "—"}</code>
-          </div>
-          <div className="gen-info-block">
-            <p>Rain intensity</p>
-            <code>{w.rain_intensity || "—"}</code>
-          </div>
-          <ConfidenceBar value={w.confidence} />
-        </div>
-      ) : (
-        <Placeholder kind="json" loading={loading}>
-          {loading
-            ? "Scoring PANNs / CLAP weather logits…"
-            : "Awaiting analysis."}
-        </Placeholder>
-      )}
-    </ReviewSection>
-  );
-}
+// ─── Per-head card ────────────────────────────────────────────────────────────
 
-function EventsHead({ report, loading, done, attemptId, attempts, regError, onAttemptChange }) {
-  const e = report?.events;
-  const dets = e?.detections || [];
+function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, onRun }) {
+  const hasModel = attempts.length > 0;
+  const { attemptId, status, report, error } = state;
+  const analysing = status === "analysing";
+  const done = status === "done";
+
   return (
-    <ReviewSection title="✦ E-C — Events">
-      <AttemptPicker
-        headCode="E-C"
-        attemptId={attemptId}
-        attempts={attempts}
-        regError={regError}
-        onChange={onAttemptChange}
-      />
-      {done && e ? (
-        <div className="dev-controls-meta">
-          <div className="gen-info-block">
-            <p>Detections</p>
-            <code>{dets.length ? `${dets.length} events` : "—"}</code>
+    <ReviewSection title={`${head.icon} ${head.code} — ${head.label}`}>
+      <p className="dev-head-blurb" style={{ fontSize: 12, opacity: 0.7, margin: "0 0 8px" }}>
+        {head.blurb}
+      </p>
+
+      {!hasModel ? (
+        <EmptyHead label={head.label} regError={regError} />
+      ) : (
+        <>
+          <AttemptPicker
+            headCode={head.code}
+            attemptId={attemptId}
+            attempts={attempts}
+            onChange={onAttemptChange}
+          />
+
+          <div className="upload-actions" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className="analyse-btn"
+              onClick={onRun}
+              disabled={!hasFile || !attemptId || analysing}
+            >
+              {analysing ? "Analysing…" : `✦ Run ${head.code}`}
+            </button>
+            {!hasFile && (
+              <span style={{ fontSize: 12, opacity: 0.6, alignSelf: "center" }}>
+                Upload a clip first
+              </span>
+            )}
           </div>
-          <ConfidenceBar value={e.confidence} />
-          {dets.length > 0 && (
-            <table className="dev-event-table"
-                   style={{ width: "100%", marginTop: 8, fontSize: 12,
-                            borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ textAlign: "left", opacity: 0.7 }}>
-                  <th>Label</th><th>Onset</th><th>Offset</th><th>Conf.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dets.slice(0, 20).map((d, i) => (
-                  <tr key={i}>
-                    <td><code>{d.label}</code></td>
-                    <td>{fmtTime(d.onset_s)}</td>
-                    <td>{fmtTime(d.offset_s)}</td>
-                    <td>{fmtPct(d.confidence)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          {error && <p className="analysis-error">{error}</p>}
+
+          {done && report ? (
+            <HeadResult headId={head.id} report={report} />
+          ) : (
+            <Placeholder kind="json" loading={analysing}>
+              {analysing ? head.loadingText : "Run this head to see results."}
+            </Placeholder>
           )}
-        </div>
-      ) : (
-        <Placeholder kind="json" loading={loading}>
-          {loading
-            ? "Running BirdNET + zero-shot fallbacks on raw mixture…"
-            : "Awaiting analysis."}
-        </Placeholder>
+
+          {done && report && (
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.7 }}>
+                {"{ } Raw report"}
+              </summary>
+              <pre className="layer-a-json">{JSON.stringify(report, null, 2)}</pre>
+            </details>
+          )}
+        </>
       )}
     </ReviewSection>
   );
 }
 
-function AttemptPicker({ headCode, attemptId, attempts, regError, onChange }) {
-  const hint = regError
-    ? `Registry unavailable: ${regError}`
-    : attempts.length === 0
-      ? "Loading attempts…"
-      : "Per-head attempt selection — not yet wired to /api/analysis.";
+function EmptyHead({ label, regError }) {
+  return (
+    <div className="dev-placeholder dev-placeholder-json">
+      <p className="dev-placeholder-caption">
+        {regError
+          ? `Registry unavailable: ${regError}`
+          : `No ${label.toLowerCase()} model on the AI service yet — nothing to test on this head.`}
+      </p>
+    </div>
+  );
+}
+
+// ─── Per-head result renderers ───────────────────────────────────────────────
+
+function HeadResult({ headId, report }) {
+  if (headId === "ambient") return <AmbientResult report={report} />;
+  // Weather / events have no model yet, so this is unreachable today; fall
+  // back to the raw report so a future detector still renders something.
+  return (
+    <pre className="layer-a-json">{JSON.stringify(report, null, 2)}</pre>
+  );
+}
+
+function AmbientResult({ report }) {
+  const cond = report?.estimated_conditions;
+  const sims = report?.similar_clips || [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Estimated context</p>
+        <code>
+          {cond ? [cond.diel_bin, cond.season].filter(Boolean).join(" · ") || "—" : "—"}
+        </code>
+      </div>
+      <div className="gen-info-block">
+        <p>Hour · Month</p>
+        <code>{cond ? `${fmtNum(cond.hour)} · ${fmtNum(cond.month)}` : "—"}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Season conf.</p>
+        <code>{fmtPct(report?.season_confidence)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>OOD</p>
+        <code>{report?.ood_flag ? "flagged" : "no"}</code>
+      </div>
+      <ConfidenceBar value={report?.confidence} label="Neighbour similarity" />
+      {sims.length > 0 && (
+        <ul className="dev-sim-list" style={{ gridColumn: "1 / -1", margin: "8px 0 0", paddingLeft: 16 }}>
+          {sims.slice(0, 5).map((c, i) => (
+            <li key={c.segment_id || i} style={{ fontSize: 12, opacity: 0.8 }}>
+              <code>{c.segment_id}</code>
+              {typeof c.similarity === "number" && <> · sim {c.similarity.toFixed(3)}</>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Shared bits ──────────────────────────────────────────────────────────────
+
+function AttemptPicker({ headCode, attemptId, attempts, onChange }) {
   return (
     <div className="dev-controls-meta" style={{ marginBottom: 8 }}>
       <label className="layer-a-field" style={{ gridColumn: "1 / -1" }}>
-        <span>{headCode} attempt</span>
+        <span>{headCode} model</span>
         <select
           className="layer-a-input"
           value={attemptId}
           onChange={(e) => onChange?.(e.target.value)}
-          disabled={attempts.length === 0}
         >
-          {attempts.length === 0 && <option value="">—</option>}
           {attempts.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.label}  ({a.stage}, {a.status})
+              {a.label} ({a.stage}, {a.status})
               {a.available === false ? " — unavailable" : ""}
             </option>
           ))}
         </select>
-        <small>{hint}</small>
       </label>
     </div>
   );
 }
 
-// ─── Small helpers ──────────────────────────────────────────────────────────
-
-function ConfidenceBar({ value }) {
+function ConfidenceBar({ value, label = "Confidence" }) {
   const pct = typeof value === "number"
     ? Math.max(0, Math.min(100, Math.round(value * 100)))
     : null;
   return (
     <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
-      <p>Confidence</p>
+      <p>{label}</p>
       {pct == null ? (
         <code>—</code>
       ) : (
         <div className="gen-progress-track"
              role="progressbar"
              aria-valuemin="0" aria-valuemax="100" aria-valuenow={pct}
-             aria-label="Head confidence"
+             aria-label={label}
              style={{ marginTop: 4 }}>
           <i style={{ width: `${Math.max(4, pct)}%` }} />
           <span style={{ marginLeft: 8, fontSize: 12 }}>{pct}%</span>
         </div>
       )}
-    </div>
-  );
-}
-
-function ProgressBlock({ progress }) {
-  return (
-    <div className="gen-progress-block layer-a-progress" aria-live="polite">
-      <div className="gen-progress-line">
-        <strong>{Math.round(progress)}%</strong>
-        <p>Analysing…</p>
-      </div>
-      <div className="gen-progress-track"
-           role="progressbar"
-           aria-valuemin="0" aria-valuemax="100"
-           aria-valuenow={Math.round(progress)}
-           aria-label="Analysis progress">
-        <i style={{ width: `${Math.max(4, Math.min(100, progress))}%` }} />
-      </div>
     </div>
   );
 }
@@ -511,9 +455,8 @@ function Placeholder({ kind, loading, children }) {
   );
 }
 
-function fmtTime(s) {
-  if (typeof s !== "number") return "—";
-  return `${s.toFixed(2)} s`;
+function fmtNum(v) {
+  return typeof v === "number" ? v.toFixed(2) : "—";
 }
 
 function fmtPct(v) {
