@@ -274,6 +274,19 @@ layers:
           - Parked baseline trained on the original 1,982-segment pool.
           - Probe did not beat the k-NN season baseline on v0 data.
 
+      liting__smoke_1__e_b_weather_analysis:
+        label: "Weather detector — Site257 spectral smoke"
+        author: liting
+        stage: smoke_1
+        head: weather
+        status: smoke_baseline
+        checkpoint: null
+        params: {}
+        notes:
+          - E-B weather smoke detector calibrated on Murphy's Server A CLAP-first site257 promoted assets.
+          - No neural model is trained in this smoke attempt; it is a spectral calibration baseline.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas
