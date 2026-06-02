@@ -36,6 +36,9 @@ _INTENSITY_FALLBACKS = {
     "heavy": ["heavy", "medium", "light"],
 }
 _MIN_SITE_CANDIDATES_FOR_SITE_ONLY = 3
+_MEL_BINS = 128
+_FFT_SIZE = 1024
+_HOP_LENGTH = 256
 
 
 @dataclass(frozen=True)
@@ -103,6 +106,7 @@ def generate(state: WeatherStemState, seed: int | None = None, **runtime_params)
         peak_ceiling=float(state.params.get("peak_ceiling", 0.95)),
     )
 
+    mel_db = _compute_log_mel_db(normalized, sample_rate)
     wav_bytes = _encode_wav(normalized, sample_rate)
     row = asset.row
     prompt = _build_retrieval_prompt(
@@ -164,7 +168,7 @@ def generate(state: WeatherStemState, seed: int | None = None, **runtime_params)
             },
         },
     }
-    return {"wav_bytes": wav_bytes, "mel_db": None, "metadata": metadata}
+    return {"wav_bytes": wav_bytes, "mel_db": mel_db, "metadata": metadata}
 
 
 def _resolve_path(value: str) -> Path:
@@ -356,6 +360,72 @@ def _encode_wav(audio: np.ndarray, sample_rate: int) -> bytes:
     buf = io.BytesIO()
     sf.write(buf, audio, sample_rate, subtype="PCM_16", format="WAV")
     return buf.getvalue()
+
+
+def _compute_log_mel_db(audio: np.ndarray, sample_rate: int) -> np.ndarray:
+    mono = audio.mean(axis=1) if audio.ndim == 2 else audio
+    mono = mono.astype(np.float32, copy=False)
+    if mono.size == 0:
+        return np.zeros((_MEL_BINS, 1), dtype=np.float32)
+
+    if mono.size < _FFT_SIZE:
+        mono = np.pad(mono, (0, _FFT_SIZE - mono.size))
+
+    frames = _frame_signal(mono, frame_size=_FFT_SIZE, hop_length=_HOP_LENGTH).astype(np.float64)
+    window = np.hanning(_FFT_SIZE).astype(np.float64)
+    spectrum = np.fft.rfft(frames * window[None, :], n=_FFT_SIZE, axis=1)
+    power = np.maximum(np.abs(spectrum) ** 2, 1e-12)
+    power = np.nan_to_num(power, nan=1e-12, posinf=1e12, neginf=1e-12)
+    mel_filter = _mel_filterbank(sample_rate, n_fft=_FFT_SIZE, n_mels=_MEL_BINS).astype(np.float64)
+    mel_power = np.maximum(np.einsum("mf,tf->mt", mel_filter, power, optimize=True), 1e-12)
+    mel_power = np.nan_to_num(mel_power, nan=1e-12, posinf=1e12, neginf=1e-12)
+    mel_db = 10.0 * np.log10(mel_power)
+    mel_db -= float(np.max(mel_db))
+    return np.clip(mel_db, -80.0, 0.0).astype(np.float32)
+
+
+def _frame_signal(audio: np.ndarray, *, frame_size: int, hop_length: int) -> np.ndarray:
+    if audio.size <= frame_size:
+        return audio[:frame_size][None, :]
+    frame_count = 1 + int(np.ceil((audio.size - frame_size) / hop_length))
+    padded_size = frame_size + (frame_count - 1) * hop_length
+    if audio.size < padded_size:
+        audio = np.pad(audio, (0, padded_size - audio.size))
+    frames = np.empty((frame_count, frame_size), dtype=np.float32)
+    for i in range(frame_count):
+        start = i * hop_length
+        frames[i] = audio[start:start + frame_size]
+    return frames
+
+
+def _mel_filterbank(sample_rate: int, *, n_fft: int, n_mels: int) -> np.ndarray:
+    min_hz = 50.0
+    max_hz = sample_rate / 2.0
+    mel_points = np.linspace(_hz_to_mel(min_hz), _hz_to_mel(max_hz), n_mels + 2)
+    hz_points = _mel_to_hz(mel_points)
+    bin_points = np.floor((n_fft + 1) * hz_points / sample_rate).astype(int)
+    bin_points = np.clip(bin_points, 0, n_fft // 2)
+
+    filters = np.zeros((n_mels, n_fft // 2 + 1), dtype=np.float32)
+    for i in range(n_mels):
+        left, center, right = bin_points[i], bin_points[i + 1], bin_points[i + 2]
+        if center <= left:
+            center = min(left + 1, n_fft // 2)
+        if right <= center:
+            right = min(center + 1, n_fft // 2)
+        if center > left:
+            filters[i, left:center] = (np.arange(left, center) - left) / (center - left)
+        if right > center:
+            filters[i, center:right] = (right - np.arange(center, right)) / (right - center)
+    return filters
+
+
+def _hz_to_mel(hz: float | np.ndarray) -> float | np.ndarray:
+    return 2595.0 * np.log10(1.0 + np.asarray(hz) / 700.0)
+
+
+def _mel_to_hz(mel: float | np.ndarray) -> float | np.ndarray:
+    return 700.0 * (10.0 ** (np.asarray(mel) / 2595.0) - 1.0)
 
 
 def _truthy(value: str) -> bool:

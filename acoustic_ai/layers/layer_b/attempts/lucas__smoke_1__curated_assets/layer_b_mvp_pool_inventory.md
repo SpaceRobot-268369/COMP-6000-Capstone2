@@ -8,22 +8,20 @@ The frontend-facing Layer B MVP reads this index:
 
 `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv`
 
-Current runtime index contents:
+Current site-only runtime index contents:
 
 | Source | Rows | Runtime status |
 | --- | ---: | --- |
-| sound_library | 40 | Active index |
-| site | 0 | Not merged into runtime index yet |
+| site | 101 | Active runtime pool |
+| sound_library | 40 | Marked unavailable; excluded from runtime |
 
 Runtime-usable and locally materialized rows after path cleanup:
 
 | Primary weather | Count |
 | --- | ---: |
-| wind | 5 |
-| rain | 10 |
-| rain+wind | 1 |
-| storm | 10 |
-| thunder | 3 |
+| wind | 88 |
+| rain | 6 |
+| rain+wind | 7 |
 
 The old seed rows previously pointed at `acoustic_ai/data/weather/...`. They
 now point at the current attempt-local data root:
@@ -52,7 +50,7 @@ remains the DVC/S3 cache above.
 
 ## Site-Derived Pool
 
-Site-derived candidates are not yet part of the runtime index.
+Site-derived candidates are now the only runtime pool for the site-only branch.
 
 Important manifests:
 
@@ -79,16 +77,18 @@ They are now staged locally under:
 `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_mvp_002/`
 
 Local staged counts: `rain_primary=6`, `rain_wind_mixed=7`, `wind_primary=88`.
-They should be merged into runtime only after the index rows are converted from
-the server `runs/...` paths to these local staged paths, or after the same assets
-are stored in a durable DVC/S3-backed location.
+The runtime index now points to these local staged paths. The WAV folders remain
+ignored local materialized assets; the CSV index records the active site-only
+runtime pool.
 
 ## MVP Runtime Policy
 
-For the current MVP:
+For the current site-only MVP branch:
 
-- `rain`, `wind`, `thunder`, and `storm` resolve to materialized library assets.
-- `wind` now resolves to pure wind assets instead of falling back to `rain+wind`.
-- Site assets are locally staged but not yet active in the runtime index.
+- `rain` and `wind` resolve to materialized site assets.
+- Sound-library assets are retained in the index for provenance but marked
+  unavailable and excluded from runtime.
+- `thunder` and `storm` are not exposed in the frontend on this branch because
+  there are no reliable site-derived thunder/storm candidates in the pool.
 - Handler fallback is acceptable for intensity mismatch, but not for silently
   replacing a requested weather type with a mixed asset when pure assets exist.
