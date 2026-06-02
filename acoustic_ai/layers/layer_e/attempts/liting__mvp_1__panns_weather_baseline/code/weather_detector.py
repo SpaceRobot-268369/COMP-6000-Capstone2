@@ -35,6 +35,11 @@ PANN_LABEL_GROUPS = {
     "wind": ("Wind", "Rustling leaves", "Wind noise"),
     "thunder": ("Thunderstorm", "Thunder"),
 }
+PANNS_PRESENCE_THRESHOLDS = {
+    "rain": 0.19,
+    "wind": 0.02,
+    "thunder": 0.50,
+}
 _PANNS_CACHE: dict[str, object] | None = None
 
 
@@ -171,20 +176,23 @@ def _get_panns_runtime() -> dict[str, object]:
 
 def _fuse_panns_with_spectral(spectral: dict, panns: PannsEvidence) -> dict:
     result = dict(spectral)
-    result["rain_intensity"] = _panns_score_to_intensity(
+    result["rain_intensity"] = _presence_supported_intensity(
         panns.scores.get("rain", 0.0),
-        ["none", "light", "moderate", "heavy"],
-        fallback=spectral["rain_intensity"],
+        threshold=PANNS_PRESENCE_THRESHOLDS["rain"],
+        spectral_label=spectral["rain_intensity"],
+        present_floor="light",
     )
-    result["wind_intensity"] = _panns_score_to_intensity(
+    result["wind_intensity"] = _presence_supported_intensity(
         panns.scores.get("wind", 0.0),
-        ["none", "light", "moderate", "strong"],
-        fallback=spectral["wind_intensity"],
+        threshold=PANNS_PRESENCE_THRESHOLDS["wind"],
+        spectral_label=spectral["wind_intensity"],
+        present_floor="light",
     )
-    result["thunder_intensity"] = _panns_score_to_intensity(
+    result["thunder_intensity"] = _presence_supported_intensity(
         panns.scores.get("thunder", 0.0),
-        ["none", "moderate", "heavy"],
-        fallback=spectral["thunder_intensity"],
+        threshold=PANNS_PRESENCE_THRESHOLDS["thunder"],
+        spectral_label=spectral["thunder_intensity"],
+        present_floor="moderate",
     )
 
     component_confidence = dict(spectral.get("component_confidence", {}))
@@ -196,15 +204,16 @@ def _fuse_panns_with_spectral(spectral: dict, panns: PannsEvidence) -> dict:
     return result
 
 
-def _panns_score_to_intensity(score: float, labels: list[str], fallback: str) -> str:
-    """Conservative zero-shot bucket mapping until site calibration exists."""
-    if score < 0.08:
-        return "none" if fallback == "none" else fallback
-    if score < 0.20:
-        return labels[1] if len(labels) > 1 else fallback
-    if score < 0.42:
-        return labels[2] if len(labels) > 2 else fallback
-    return labels[-1]
+def _presence_supported_intensity(
+    score: float,
+    threshold: float,
+    spectral_label: str,
+    present_floor: str,
+) -> str:
+    """Use PANNs for presence and site257 spectral calibration for intensity."""
+    if score < threshold:
+        return "none"
+    return spectral_label if spectral_label != "none" else present_floor
 
 
 def _load_panns_labels(panns_mod) -> list[str]:
