@@ -5,7 +5,7 @@ data/weather/asset_index.csv and the audio files under data/weather/.
 
 The index is component-based so a clip can carry rain, wind, thunder, or a
 mixture of those components. See:
-  .claude/context/data/weather_asset_index_schema.md
+  acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/weather_asset_index_schema.md
 
 Intensity buckets:
   wind: none (<2 m/s), light (2-6 m/s), medium (6-10 m/s), heavy (>10 m/s)

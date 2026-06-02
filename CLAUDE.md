@@ -130,8 +130,6 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │       └── audioldm2_transition_log.md
     ├── data/                              # Dataset alignment, env features, known data issues
     │   ├── data_reference.md
-    │   ├── site_clip_filtering_policy.md
-    │   ├── site_weather_audit_v0.md
     │   ├── known_issues.md
     │   └── logs/
     │       └── generation_quality_analysis.md
@@ -163,8 +161,9 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Caption schema log (Layer A) | [.claude/context/ai/logs/caption_schema_log.md](.claude/context/ai/logs/caption_schema_log.md) |
 | AudioLDM2 transition log | [.claude/context/ai/logs/audioldm2_transition_log.md](.claude/context/ai/logs/audioldm2_transition_log.md) |
 | Data alignment & env features | [.claude/context/data/data_reference.md](.claude/context/data/data_reference.md) |
-| Site clip filtering policy | [.claude/context/data/site_clip_filtering_policy.md](.claude/context/data/site_clip_filtering_policy.md) |
-| Site weather audit v0 | [.claude/context/data/site_weather_audit_v0.md](.claude/context/data/site_weather_audit_v0.md) |
+| Layer B site clip filtering policy | [acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/site_clip_filtering_policy.md](acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/site_clip_filtering_policy.md) |
+| Layer B site weather audit v0 | [acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/site_weather_audit_v0.md](acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/site_weather_audit_v0.md) |
+| Layer B weather asset schema | [acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/weather_asset_index_schema.md](acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/weather_asset_index_schema.md) |
 | Known data issues | [.claude/context/data/known_issues.md](.claude/context/data/known_issues.md) |
 | Generation quality analysis | [.claude/context/data/logs/generation_quality_analysis.md](.claude/context/data/logs/generation_quality_analysis.md) |
 | **Stage workflow** (smoke → mvp/prod loop, generation mode) | [.claude/context/dev/dev_workflow.md](.claude/context/dev/dev_workflow.md) |

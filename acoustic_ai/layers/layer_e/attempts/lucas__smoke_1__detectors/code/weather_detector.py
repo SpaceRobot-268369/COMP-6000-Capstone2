@@ -15,7 +15,7 @@ Outputs:
   }
 
 Shared label source:
-  .claude/context/data/weather_asset_index_schema.md
+  acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/weather_asset_index_schema.md
 """
 
 from __future__ import annotations
