@@ -12,7 +12,7 @@ Current site-only runtime index contents:
 
 | Source | Rows | Runtime status |
 | --- | ---: | --- |
-| site | 101 | Active runtime pool |
+| site | 113 | Active runtime pool |
 | sound_library | 40 | Marked unavailable; excluded from runtime |
 
 Runtime-usable and locally materialized rows after path cleanup:
@@ -21,7 +21,8 @@ Runtime-usable and locally materialized rows after path cleanup:
 | --- | ---: |
 | wind | 88 |
 | rain | 6 |
-| rain+wind | 7 |
+| rain+wind | 12 |
+| thunder | 2 |
 
 The old seed rows previously pointed at `acoustic_ai/data/weather/...`. They
 now point at the current attempt-local data root:
@@ -65,8 +66,9 @@ Best observed site-ready counts:
 | Pool label | Count |
 | --- | ---: |
 | rain | 6 |
-| rain+wind | 7 |
-| wind | 88 |
+| rain+wind | 12 |
+| wind | 93 |
+| thunder | 2 |
 
 The Server A ready WAVs were found at:
 
@@ -81,14 +83,36 @@ The runtime index now points to these local staged paths. The WAV folders remain
 ignored local materialized assets; the CSV index records the active site-only
 runtime pool.
 
+Additional Nov 2019 storm-period scout assets were promoted from
+`debug/site_weather_nov2019_storm_scout_001/listen.html` after human review:
+`rain+wind=5`, `wind=5`, `thunder=2`. These WAVs are staged under
+`data/weather/site_nov2019_storm_scout_001/`. The two thunder rows are marked
+`backup` because the human notes still describe them as uncertain thunder-like
+events.
+
 ## MVP Runtime Policy
 
 For the current site-only MVP branch:
 
-- `rain` and `wind` resolve to materialized site assets.
+- `rain` resolves to 6 materialized site assets.
+- `wind` resolves to 93 materialized site assets.
+- `rain+wind` resolves to 12 materialized site mixed-weather assets.
+- `thunder` has 2 site-derived backup rows only; use cautiously because both
+  were marked as uncertain by human review.
 - Sound-library assets are retained in the index for provenance but marked
   unavailable and excluded from runtime.
-- `thunder` and `storm` are not exposed in the frontend on this branch because
-  there are no reliable site-derived thunder/storm candidates in the pool.
+- `storm` / `rain+thunder` / `rain+thunder+wind` are not yet active runtime
+  categories. The Nov 2019 scout improved mixed-weather coverage, but did not
+  produce clean enough site-derived storm clips to promote as primary storm.
 - Handler fallback is acceptable for intensity mismatch, but not for silently
   replacing a requested weather type with a mixed asset when pure assets exist.
+
+Current frontend-facing weather controls:
+
+| Weather type | Active? | Source | Notes |
+| --- | --- | --- | --- |
+| `rain` | yes | site only | Pure rain rows where available; intensity fallback may select nearby rain intensity. |
+| `wind` | yes | site only | Strongest current pool; includes light/medium/heavy wind rows. |
+| `rain+wind` | yes | site only | Mixed weather stem, not pure rain and not pure wind. |
+| `thunder` | backup only | site only | Two uncertain thunder-like rows from Nov 2019 scout; not enough for a reliable primary pool. |
+| `storm` / `rain+thunder` / `rain+thunder+wind` | no | site only target, no active rows | Future category if reliable site storm clips are promoted. |

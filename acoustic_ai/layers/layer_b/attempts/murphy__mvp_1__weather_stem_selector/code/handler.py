@@ -20,7 +20,7 @@ import soundfile as sf
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[6]
-_ALLOWED_WEATHER = {"rain", "wind", "thunder", "storm"}
+_ALLOWED_WEATHER = {"rain", "wind", "rain+wind", "thunder", "storm"}
 _ALLOWED_INTENSITY = {"light", "medium", "heavy"}
 _USABLE_AUDIT_STATUSES = {
     "library_seed",
@@ -211,12 +211,11 @@ def _select_candidates(
     else:
         fallback_notes.append(f"no pure {weather_type}; used mixed component asset")
 
-    field = _intensity_field(weather_type)
     for candidate_intensity in _INTENSITY_FALLBACKS[intensity]:
         exact = [
             asset
             for asset in weather_matches
-            if asset.row.get(field) == candidate_intensity
+            if _matches_intensity(asset.row, weather_type, candidate_intensity)
         ]
         if exact:
             if candidate_intensity != intensity:
@@ -231,6 +230,11 @@ def _select_candidates(
 
 def _matches_weather(row: dict[str, str], weather_type: str) -> bool:
     primary = row.get("primary_weather", "")
+    if weather_type == "rain+wind":
+        return (
+            primary == "rain+wind"
+            or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_wind", "")))
+        )
     if weather_type == "storm":
         return primary == "storm" or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_thunder", "")))
     if primary == weather_type:
@@ -250,7 +254,15 @@ def _is_exact_weather(row: dict[str, str], weather_type: str) -> bool:
     return primary == weather_type
 
 
+def _matches_intensity(row: dict[str, str], weather_type: str, intensity: str) -> bool:
+    if weather_type == "rain+wind":
+        return row.get("rain_intensity") == intensity or row.get("wind_intensity") == intensity
+    return row.get(_intensity_field(weather_type)) == intensity
+
+
 def _intensity_field(weather_type: str) -> str:
+    if weather_type == "rain+wind":
+        return "rain_intensity"
     if weather_type == "storm":
         return "thunder_intensity"
     return f"{weather_type}_intensity"
