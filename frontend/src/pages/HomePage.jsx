@@ -102,7 +102,7 @@ export default function HomePage() {
         active_dims: 1,
         latent_dim: 3,
         diversity: data.weather?.confidence ?? 0,
-        complexity: "E-B Smoke",
+        complexity: data.weather?.stage === "mvp_1" ? "E-B MVP" : "E-B Smoke",
       });
       setEstimated(data.weather ?? null);
       setStatus("done");
@@ -211,7 +211,7 @@ export default function HomePage() {
                   {Math.round((estimated.confidence ?? 0) * 100)}% confidence
                 </span>
               )}
-              <p>{isDone ? "E-B weather detector smoke baseline" : "—"}</p>
+              <p>{isDone ? "E-B weather detector MVP-1" : "—"}</p>
             </div>
           </div>
 
@@ -230,7 +230,7 @@ export default function HomePage() {
               </div>
 
               <p className="metrics-proxy-note" style={{ marginTop: 12 }}>
-                Smoke-test baseline: spectral features calibrated against Layer B weather assets.
+                MVP-1: PANNs CNN14 when available, with site257 spectral calibration fallback.
                 E-A ambient and E-C event heads are placeholders in this demo.
               </p>
             </>
@@ -270,7 +270,7 @@ export default function HomePage() {
               ? `E-B analysed the raw uploaded mixture and estimated wind=${estimated.wind_intensity}, ` +
                 `rain=${estimated.rain_intensity}, thunder=${estimated.thunder_intensity}. ` +
                 `Confidence: ${Math.round((estimated.confidence ?? 0) * 100)}%. ` +
-                `This smoke baseline uses spectral features; PANNs/CLAP integration is planned next.`
+                `Method: ${estimated.method}.`
               : isDone
               ? `Module A encoded the clip into a ${stats?.latent_dim ?? 256}-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
                 `Run precompute_latents.py to enable environmental condition inference.`
@@ -298,7 +298,7 @@ export default function HomePage() {
             <PipelineStage
               state="live"
               label="E-B weather detector"
-              detail={`Layer E-B · spectral smoke baseline · ${rawLatent ? "last upload analysed" : "ready"}`}
+              detail={`Layer E-B · PANNs MVP baseline · ${rawLatent ? "last upload analysed" : "ready"}`}
             />
             <PipelineStage
               state={isDone && estimated && Object.keys(estimated).length > 0 ? "live" : "proxy"}

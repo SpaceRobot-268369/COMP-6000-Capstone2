@@ -31,7 +31,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server import registry  # noqa: E402
-from layers.layer_e.attempts.liting__smoke_1__e_b_weather_analysis.code.weather_detector import (  # noqa: E402
+from layers.layer_e.attempts.liting__mvp_1__panns_weather_baseline.code.weather_detector import (  # noqa: E402
     analyse_weather,
     discover_legacy_weather_assets,
     load_site_promoted_weather_assets,
@@ -92,7 +92,7 @@ def list_attempts(layer_id: str) -> dict:
 
 @app.post("/analysis")
 async def analyse_upload(file: UploadFile = File(...)) -> dict:
-    """Layer E smoke endpoint.
+    """Layer E analysis endpoint.
 
     MVP-1 currently wires the E-B weather detector only. E-A and E-C return
     explicit placeholders so the existing dev analysis UI can render a complete
@@ -126,14 +126,14 @@ async def analyse_upload(file: UploadFile = File(...)) -> dict:
             "status": "not_implemented",
         },
         "limitations": [
-            "E-B is a smoke-test spectral baseline calibrated on Layer B/site-weather labels.",
+            "E-B MVP-1 uses PANNs CNN14 when available, with site257 spectral calibration as fallback.",
             "Murphy's site257 promoted labels come from a Server A CLAP-first candidate policy.",
             "E-A ambient context and E-C event detection are placeholders in this endpoint.",
         ],
         "metadata": {
             "filename": file.filename,
             "content_type": file.content_type,
-            "analysis_heads": {"E-A": "placeholder", "E-B": "smoke", "E-C": "placeholder"},
+            "analysis_heads": {"E-A": "placeholder", "E-B": "mvp_1", "E-C": "placeholder"},
         },
     }
 
