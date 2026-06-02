@@ -206,8 +206,18 @@ layers:
 
   layer_e:
     label: "Layer E — Analysis"
-    default: lucas__smoke_1__detectors
+    default: liting__smoke_1__e_b_weather_analysis
     attempts:
+      liting__smoke_1__e_b_weather_analysis:
+        label: "E-B site weather analysis smoke"
+        author: liting
+        stage: smoke_1
+        status: partial
+        checkpoint: null
+        params: {}
+        notes:
+          - E-B weather smoke detector calibrated on Murphy's Server A CLAP-first site257 promoted assets.
+          - E-A ambient context and E-C event detection remain placeholders in the /analysis response.
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas

@@ -1,0 +1,12 @@
+# Artifact policy: .claude/context/dev/artifact_policy.md
+# Never commit ad-hoc dev / self-testing runs.
+/dev-artifacts-self-testing/
+
+# WAVs must be DVC-tracked; only `.wav.dvc` pointers belong in git.
+*.wav
+.DS_Store
+data/analysis/site257_clap_promoted/assets_wav_22050_mono/
+
+# Showcase PNG/JSON are also DVC-tracked (only expected/ PNG+JSON go to git).
+/showcase/*.png
+/showcase/*.metadata.json

@@ -439,6 +439,29 @@ app.get("/api/ai/health", async (_req, res) => {
   }
 });
 
+app.post("/api/analysis", requireAuth, async (req, res) => {
+  const operation = "analysis upload";
+  try {
+    const headers = {};
+    const contentType = req.headers["content-type"];
+    if (contentType) headers["content-type"] = contentType;
+    const contentLength = req.headers["content-length"];
+    if (contentLength) headers["content-length"] = contentLength;
+
+    const r = await fetchAi("/analysis", {
+      method: "POST",
+      headers,
+      body: req,
+      duplex: "half",
+    }, operation);
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
 // Layer registry — dropdown population
 app.get("/api/layers", requireAuth, async (_req, res) => {
   const operation = "list layer registry";

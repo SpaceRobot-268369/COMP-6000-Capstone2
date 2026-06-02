@@ -16,12 +16,13 @@ from __future__ import annotations
 import base64
 import io
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -30,6 +31,12 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server import registry  # noqa: E402
+from layers.layer_e.attempts.liting__smoke_1__e_b_weather_analysis.code.weather_detector import (  # noqa: E402
+    analyse_weather,
+    discover_legacy_weather_assets,
+    load_site_promoted_weather_assets,
+    load_weather_assets_from_index,
+)
 
 
 app = FastAPI(title="Soundscape Inference API", version="0.2.0")
@@ -83,6 +90,54 @@ def list_attempts(layer_id: str) -> dict:
     raise HTTPException(status_code=404, detail=f"unknown layer: {layer_id}")
 
 
+@app.post("/analysis")
+async def analyse_upload(file: UploadFile = File(...)) -> dict:
+    """Layer E smoke endpoint.
+
+    MVP-1 currently wires the E-B weather detector only. E-A and E-C return
+    explicit placeholders so the existing dev analysis UI can render a complete
+    report shape while those heads are still being implemented.
+    """
+    suffix = Path(file.filename or "upload.wav").suffix or ".wav"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(await file.read())
+
+    try:
+        calibration_assets = _weather_calibration_assets()
+        weather = analyse_weather(tmp_path, calibration_assets=calibration_assets)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"E-B analysis failed: {exc}")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    return {
+        "ok": True,
+        "ambient": {
+            "estimated_conditions": None,
+            "similar_clips": [],
+            "confidence": 0.0,
+            "status": "not_implemented",
+        },
+        "weather": weather,
+        "events": {
+            "detections": [],
+            "confidence": 0.0,
+            "status": "not_implemented",
+        },
+        "limitations": [
+            "E-B is a smoke-test spectral baseline calibrated on Layer B/site-weather labels.",
+            "Murphy's site257 promoted labels come from a Server A CLAP-first candidate policy.",
+            "E-A ambient context and E-C event detection are placeholders in this endpoint.",
+        ],
+        "metadata": {
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "analysis_heads": {"E-A": "placeholder", "E-B": "smoke", "E-C": "placeholder"},
+        },
+    }
+
+
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/generate")
 def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     """Dispatch a generation call to the attempt's handler.
@@ -120,6 +175,49 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         "sample_rate": sample_rate,
         "duration_s":  duration_s,
     }
+
+
+def _weather_calibration_assets() -> list:
+    """Load Layer B labels for E-B calibration when materialised locally."""
+    analysis_dir = (
+        Path(__file__).resolve().parent.parent
+        / "layers"
+        / "layer_e"
+        / "attempts"
+        / "liting__smoke_1__e_b_weather_analysis"
+        / "data"
+        / "analysis"
+    )
+    weather_dir = (
+        Path(__file__).resolve().parent.parent
+        / "layers"
+        / "layer_b"
+        / "attempts"
+        / "lucas__smoke_1__curated_assets"
+        / "data"
+        / "weather"
+    )
+    site_manifest = analysis_dir / "site257_clap_promoted" / "layer_d_ready_manifest.csv"
+    index = weather_dir / "asset_index.csv"
+    assets = []
+    if site_manifest.exists():
+        try:
+            assets = [
+                asset
+                for asset in load_site_promoted_weather_assets(site_manifest)
+                if asset.audio_path.exists()
+            ]
+        except Exception:
+            assets = []
+    if assets:
+        return assets
+
+    if index.exists():
+        try:
+            assets = [asset for asset in load_weather_assets_from_index(index) if asset.audio_path.exists()]
+        except Exception:
+            assets = []
+    return assets or discover_legacy_weather_assets()
 
 
 @app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")

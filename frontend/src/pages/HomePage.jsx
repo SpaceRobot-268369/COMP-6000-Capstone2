@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import AudioPlayer from "../components/AudioPlayer.jsx";
 import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
-import { analyseAudio } from "../lib/api.js";
+import { analyseUpload } from "../lib/api.js";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
 
@@ -95,10 +95,16 @@ export default function HomePage() {
     setStatus("analysing");
     setErrorMsg("");
     try {
-      const data = await analyseAudio(file);
+      const data = await analyseUpload(file);
       setRawLatent(data);
-      setStats(latentStats(data.latent));
-      setEstimated(data.estimated_conditions ?? null);
+      setStats({
+        norm: 0,
+        active_dims: 1,
+        latent_dim: 3,
+        diversity: data.weather?.confidence ?? 0,
+        complexity: "E-B Smoke",
+      });
+      setEstimated(data.weather ?? null);
       setStatus("done");
     } catch (err) {
       const is401 = err.message.includes("401") || err.message.toLowerCase().includes("authenticated");
@@ -205,46 +211,27 @@ export default function HomePage() {
                   {Math.round((estimated.confidence ?? 0) * 100)}% confidence
                 </span>
               )}
-              <p>{isDone ? "Nearest-neighbour inference from latent space" : "—"}</p>
+              <p>{isDone ? "E-B weather detector smoke baseline" : "—"}</p>
             </div>
           </div>
 
           {isDone && estimated && Object.keys(estimated).length > 0 ? (
             <>
-              {/* Season + time of day badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                {estimated.season && (
-                  <span className="pipeline-badge pipeline-badge--live" style={{ textTransform: "capitalize" }}>
-                    {estimated.season}
-                  </span>
-                )}
-                {estimated.sample_bin && (
-                  <span className="pipeline-badge pipeline-badge--live" style={{ textTransform: "capitalize" }}>
-                    {estimated.sample_bin}
-                  </span>
-                )}
+                <span className="pipeline-badge pipeline-badge--live">E-B Weather</span>
+                <span className="pipeline-badge pipeline-badge--proxy">{estimated.method}</span>
               </div>
 
-              {/* Numeric env fields */}
               <div className="metric-list">
-                {ENV_FIELDS.map(({ key, label, unit, format }) => {
-                  const raw = estimated[key];
-                  if (raw === undefined) return null;
-                  const display = format ? format(raw) : `${raw} ${unit}`;
-                  return (
-                    <div key={key} className="metric-row" style={{ alignItems: "center" }}>
-                      <span className="metric-label-row" style={{ width: "100%", justifyContent: "space-between" }}>
-                        <span style={{ color: "var(--text-secondary, #888)", fontSize: "0.78rem" }}>{label}</span>
-                        <strong style={{ fontSize: "0.88rem" }}>{display}</strong>
-                      </span>
-                    </div>
-                  );
-                })}
+                <WeatherMetric label="Wind intensity" value={estimated.wind_intensity} />
+                <WeatherMetric label="Rain intensity" value={estimated.rain_intensity} />
+                <WeatherMetric label="Thunder intensity" value={estimated.thunder_intensity} />
+                <WeatherMetric label="Confidence" value={`${Math.round((estimated.confidence ?? 0) * 100)}%`} />
               </div>
 
               <p className="metrics-proxy-note" style={{ marginTop: 12 }}>
-                Inferred from top-5 nearest clips in learned latent space.
-                Species labels pending Module B (Stage 3).
+                Smoke-test baseline: spectral features calibrated against Layer B weather assets.
+                E-A ambient and E-C event heads are placeholders in this demo.
               </p>
             </>
           ) : isDone ? (
@@ -280,12 +267,10 @@ export default function HomePage() {
           </div>
           <p className="summary-text">
             {isDone && estimated && Object.keys(estimated).length > 0
-              ? `Module A encoded the clip into a 256-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
-                `Nearest-neighbour lookup estimated ${estimated.season} ${estimated.sample_bin} conditions: ` +
-                `${estimated.temperature_c}°C, ${estimated.humidity_pct}% humidity, ` +
-                `${estimated.wind_speed_ms} m/s wind. ` +
+              ? `E-B analysed the raw uploaded mixture and estimated wind=${estimated.wind_intensity}, ` +
+                `rain=${estimated.rain_intensity}, thunder=${estimated.thunder_intensity}. ` +
                 `Confidence: ${Math.round((estimated.confidence ?? 0) * 100)}%. ` +
-                `Semantic species labels pending Module B training.`
+                `This smoke baseline uses spectral features; PANNs/CLAP integration is planned next.`
               : isDone
               ? `Module A encoded the clip into a ${stats?.latent_dim ?? 256}-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
                 `Run precompute_latents.py to enable environmental condition inference.`
@@ -312,16 +297,16 @@ export default function HomePage() {
             />
             <PipelineStage
               state="live"
-              label="VAE encode → latent vector (256-d)"
-              detail={`Module A · VAE · best.pt · ${rawLatent ? `last run: ${rawLatent.latent_dim}-dim` : "ready"}`}
+              label="E-B weather detector"
+              detail={`Layer E-B · spectral smoke baseline · ${rawLatent ? "last upload analysed" : "ready"}`}
             />
             <PipelineStage
               state={isDone && estimated && Object.keys(estimated).length > 0 ? "live" : "proxy"}
-              label="Environmental condition inference"
+              label="Weather intensity inference"
               detail={
                 isDone && estimated && Object.keys(estimated).length > 0
-                  ? `Top-5 nearest neighbours · confidence ${Math.round((estimated.confidence ?? 0) * 100)}%`
-                  : "Requires latent_clips.npy — run precompute_latents.py"
+                  ? `Wind ${estimated.wind_intensity} · rain ${estimated.rain_intensity} · confidence ${Math.round((estimated.confidence ?? 0) * 100)}%`
+                  : "Awaiting uploaded audio"
               }
             />
             <PipelineStage
@@ -348,6 +333,17 @@ export default function HomePage() {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
+
+function WeatherMetric({ label, value }) {
+  return (
+    <div className="metric-row" style={{ alignItems: "center" }}>
+      <span className="metric-label-row" style={{ width: "100%", justifyContent: "space-between" }}>
+        <span style={{ color: "var(--text-secondary, #888)", fontSize: "0.78rem" }}>{label}</span>
+        <strong style={{ fontSize: "0.88rem", textTransform: "capitalize" }}>{value ?? "—"}</strong>
+      </span>
+    </div>
+  );
+}
 
 function WaveBars({ active }) {
   const base = [10, 24, 44, 62, 51, 18, 37, 55, 29, 8, 40, 59, 32, 15, 48, 24, 11, 31, 57, 63, 54, 19, 29, 55, 36, 7, 24];

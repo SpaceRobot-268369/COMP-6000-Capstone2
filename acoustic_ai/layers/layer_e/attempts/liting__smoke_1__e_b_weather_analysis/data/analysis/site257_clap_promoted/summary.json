@@ -1,0 +1,21 @@
+{
+  "policy_version": "site_weather_candidate_promotion_v0.1",
+  "target_sample_rate_hz": 22050,
+  "target_channels": 1,
+  "promoted_rows": 63,
+  "skipped_rows": 115,
+  "promoted_pool_category_counts": {
+    "rain_primary": 4,
+    "rain_wind_mixed": 6,
+    "wind_primary": 53
+  },
+  "promoted_pool_label_counts": {
+    "rain": 4,
+    "rain+wind": 6,
+    "wind": 53
+  },
+  "skip_reason_counts": {
+    "decision_not_selected": 38,
+    "export_action_not_enabled": 77
+  }
+}
