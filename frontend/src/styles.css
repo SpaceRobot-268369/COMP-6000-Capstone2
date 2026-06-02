@@ -1732,6 +1732,10 @@ textarea {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
 }
 
+.dev-controls-section-grid.three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .dev-controls-section-run {
   border-color: rgba(150, 220, 255, 0.18);
   background:
@@ -1845,6 +1849,9 @@ textarea {
 
 @media (max-width: 900px) {
   .dev-controls-section-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+  .dev-controls-section-grid.three-col {
     grid-template-columns: 1fr;
   }
   .dev-controls-run-grid {

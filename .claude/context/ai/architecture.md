@@ -91,15 +91,16 @@ Generation algorithm, dev-path seed contract, the cleaned-segment-pool data depe
 
 | File | Role |
 |---|---|
-| `asset_index.py` | Weather asset library loader [PLACEHOLDER] |
-| `mixer.py` | Parameter → gain/EQ/density mixing [PLACEHOLDER] |
+| `attempts/murphy__mvp_1__weather_stem_selector/code/handler.py` | Frontend-facing MVP selector for short weather stems |
+| `attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv` | Shared weather asset index |
 
-**Data:** `data/weather/weather_assets/wind/{none,light,moderate,strong}/` and `rain/{none,light,moderate,heavy}/` (DVC-tracked)
-**Asset index:** `data/weather/asset_index.csv` (git-tracked, headers only for now)
+**Runtime controls:** weather type, intensity, duration, and seed.
+**Output:** short weather-only WAV stem + metadata for Layer D.
 
 Intensity mapping:
 - wind: none <2 m/s, light 2–6, moderate 6–10, strong >10
 - rain: none 0 mm, light 0–2, moderate 2–5, heavy >5
+- thunder/storm: manual intensity selection from asset metadata
 
 ### Layer C — Species/Event Layer (layers/layer_c/)
 

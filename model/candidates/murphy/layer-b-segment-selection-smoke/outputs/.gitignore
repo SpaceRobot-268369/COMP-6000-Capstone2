@@ -1,0 +1,4 @@
+# Local smoke-test outputs. Commit DVC pointers or curated summaries instead.
+*.wav
+report.json
+manual_audit.md

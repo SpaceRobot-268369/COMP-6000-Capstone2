@@ -69,6 +69,8 @@ resources/site_257_bowra-dry-a/*
 !resources/site_257_bowra-dry-a/all_items_annotation/
 resources/site_257_bowra-dry-a/all_items_annotation/*
 !resources/site_257_bowra-dry-a/all_items_annotation/README.md
+script/resources/
+script/resources/**
 !resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/
 !resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/**
 !resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/
@@ -104,6 +106,7 @@ acoustic_ai/data/module_b/weather_assets/
 acoustic_ai/data/module_c/event_snippets/
 acoustic_ai/data/module_c/birdnet_labels/
 acoustic_ai/data/ambient/latents/
+acoustic_ai/data/weather/metadata/*.npz
 
 # HiFi-GAN speech-domain cache (not needed — using ecoacoustic vocoder)
 acoustic_ai/hifigan_cache/

@@ -51,10 +51,15 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     seed: Optional[int] = None
+    retrieval_seed: Optional[int] = None
     # Cell selector for bank attempts (e.g. Layer A mvp_2 per-cell LoRAs).
     # Single-adapter attempts ignore these (their handler swallows extras).
     season: Optional[str] = None
     diel: Optional[str] = None
+    # Layer B weather-stem controls. Other attempts ignore these.
+    weather_type: Optional[str] = None
+    intensity: Optional[str] = None
+    duration_s: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -94,9 +99,13 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     metadata block.
     """
     try:
+        run_seed = body.retrieval_seed if body.retrieval_seed is not None else body.seed
         result = registry.generate(
             layer_id, attempt_id,
-            seed=body.seed, season=body.season, diel=body.diel,
+            seed=run_seed, season=body.season, diel=body.diel,
+            weather_type=body.weather_type,
+            intensity=body.intensity,
+            duration_s=body.duration_s,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
