@@ -22,6 +22,11 @@ The MVP detector uses a staged weather evidence stack:
 3. **Explainable DSP features** are always included for reporting and sanity
    checking.
 
+After the first PANNs-enabled run, PANNs is used as a **presence detector** and
+the site257 spectral detector remains responsible for intensity. This is because
+raw PANNs scores separate rain/wind presence well, but do not map cleanly to
+`light`/`moderate`/`strong` intensity buckets without site calibration.
+
 Current method string when PANNs is unavailable:
 
 ```text
@@ -33,6 +38,14 @@ Current method string when PANNs is available:
 ```text
 panns_cnn14_audioset__site257_spectral_support
 ```
+
+Current calibrated presence thresholds:
+
+| Component | PANNs score threshold | How it is used |
+|---|---:|---|
+| rain | 0.19 | If present, keep the site257 spectral rain intensity; otherwise suppress rain to `none`. |
+| wind | 0.02 | If present, keep the site257 spectral wind intensity; otherwise suppress wind to `none`. |
+| thunder | 0.50 | Conservative placeholder only; site257 thunder is not a validated MVP output yet. |
 
 ## Data
 
@@ -83,6 +96,18 @@ Run from the repository root:
 ./acoustic_ai/.venv/bin/python acoustic_ai/tests/e_b_weather_mvp_test.py
 ```
 
+Export PANNs calibration evidence:
+
+```bash
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/code/calibrate_panns_weather.py
+```
+
+Calibration outputs are written under:
+
+```text
+debug/e_b_weather_mvp/panns_calibration/
+```
+
 Expected current behaviour on the local Mac:
 
 - If `panns_inference`, torch, or the PANNs checkpoint are not available, the
@@ -95,9 +120,9 @@ Expected current behaviour on the local Mac:
 Latest local PANNs-enabled result:
 
 ```text
-pass=15, partial=31, boundary=6, fail=11
-pass_or_partial_rate=0.73
-policy_aligned_rate=0.83
+pass=28, partial=25, boundary=5, fail=5
+pass_or_partial_rate=0.84
+policy_aligned_rate=0.92
 panns_available_cases=63
 ```
 
@@ -105,11 +130,17 @@ The valid Zenodo `Cnn14_mAP=0.431.pth` checkpoint is 327,428,481 bytes. The
 runtime guard accepts the official checkpoint and rejects much smaller
 HTML/error/partial downloads.
 
-The PANNs-enabled baseline passes the MVP policy-aligned gate, but it performs
-worse than the site257 spectral fallback (`policy_aligned_rate=0.94` in the
-fallback-only run). This is expected for an uncalibrated AudioSet zero-shot
-model and is the reason the next step is threshold/site calibration rather than
-server training.
+Calibration summary from the 57 primary rain/wind assets:
+
+```text
+rain best_presence_threshold=0.19, accuracy=1.00
+wind best_presence_threshold=0.02, accuracy=0.98
+```
+
+The PANNs-enabled baseline now passes the MVP policy-aligned gate and remains
+close to the site257 spectral fallback (`policy_aligned_rate=0.94` in the
+fallback-only run). The remaining gap is mostly from mixed/boundary and a few
+wind assets where PANNs presence is weak.
 
 ## Limitations
 
@@ -123,9 +154,9 @@ server training.
 
 ## Next Steps
 
-1. Record and inspect PANNs logits for the 63 site257 promoted clips.
-2. Calibrate intensity bucket thresholds against Murphy's accepted labels.
-3. Add clean negative/no-weather site examples.
-4. Compare PANNs-only, spectral-only, and fused predictions in a report.
-5. Add a small labelled holdout once more Layer B weather assets accumulate.
-6. Decide whether a small fine-tuned weather head is needed after calibration.
+1. Add clean negative/no-weather site examples.
+2. Compare PANNs-only, spectral-only, and fused predictions in a report.
+3. Add a small labelled holdout once more Layer B weather assets accumulate.
+4. Decide whether a small fine-tuned weather head is needed after calibration.
+5. Keep thunder disabled as a confident MVP output until Murphy/Layer B has a
+   validated thunder asset policy.
