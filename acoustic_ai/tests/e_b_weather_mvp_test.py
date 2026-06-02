@@ -12,6 +12,7 @@ Run from the repository root:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -53,6 +54,16 @@ DEFAULT_SITE_PROMOTED_MANIFEST = (
     / "layer_d_ready_manifest.csv"
 )
 DEFAULT_OUT = PROJECT_ROOT / "debug" / "e_b_weather_mvp" / "report.json"
+DEFAULT_NEGATIVE_MANIFEST = (
+    PROJECT_ROOT
+    / "acoustic_ai"
+    / "layers"
+    / "layer_e"
+    / "attempts"
+    / "liting__mvp_1__panns_weather_baseline"
+    / "data"
+    / "no_weather_negative_manifest.csv"
+)
 
 ADJACENT = {
     "none": {"none", "light"},
@@ -68,12 +79,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run E-B MVP weather analysis test.")
     parser.add_argument("--asset-index", type=Path, default=DEFAULT_MAIN_INDEX)
     parser.add_argument("--site-promoted-manifest", type=Path, default=DEFAULT_SITE_PROMOTED_MANIFEST)
+    parser.add_argument("--negative-manifest", type=Path, default=DEFAULT_NEGATIVE_MANIFEST)
+    parser.add_argument("--skip-negatives", action="store_true")
     parser.add_argument("--legacy-root", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--limit", type=int, default=0, help="Optional max case count.")
     args = parser.parse_args()
 
     assets, source_note = load_assets(args.site_promoted_manifest, args.asset_index, args.legacy_root)
+    negative_assets: list[WeatherAsset] = []
+    if not args.skip_negatives:
+        negative_assets = load_negative_assets(args.negative_manifest)
     if args.limit > 0:
         assets = assets[: args.limit]
 
@@ -81,7 +97,9 @@ def main() -> int:
         print("FAIL: no labelled weather assets found.")
         return 1
 
-    runnable_assets = [asset for asset in assets if asset.audio_path.exists()]
+    positive_assets = [asset for asset in assets if asset.audio_path.exists()]
+    runnable_negatives = [asset for asset in negative_assets if asset.audio_path.exists()]
+    runnable_assets = positive_assets + runnable_negatives
     if not runnable_assets:
         print("FAIL: labelled assets were found, but no WAV files are materialised.")
         return 1
@@ -91,7 +109,10 @@ def main() -> int:
         "component": "E-B",
         "test": "weather_analysis_mvp_1",
         "asset_source": source_note,
+        "negative_source": str(args.negative_manifest) if runnable_negatives else None,
         "case_count": len(runnable_assets),
+        "positive_case_count": len(positive_assets),
+        "negative_case_count": len(runnable_negatives),
         "cases": [],
         "summary": {},
     }
@@ -101,7 +122,7 @@ def main() -> int:
     last_panns_status = ""
 
     for asset in runnable_assets:
-        result = analyse_weather(asset.audio_path, calibration_assets=runnable_assets)
+        result = analyse_weather(asset.audio_path, calibration_assets=positive_assets)
         panns_available_count += 1 if result.get("panns_available") else 0
         last_panns_status = result.get("panns_status", "")
 
@@ -155,6 +176,8 @@ def main() -> int:
         "policy_aligned_rate": round(policy_aligned_rate, 3),
         "panns_available_cases": panns_available_count,
         "panns_status": last_panns_status,
+        "positive_cases": len(positive_assets),
+        "negative_cases": len(runnable_negatives),
     }
     report["ok"] = policy_aligned_rate >= 0.75 and fail <= max(2, len(runnable_assets) // 4)
 
@@ -209,6 +232,37 @@ def load_assets(
     return assets, "legacy_root:acoustic_ai/data/weather/weather_assets"
 
 
+def load_negative_assets(manifest: Path) -> list[WeatherAsset]:
+    if not manifest.exists():
+        return []
+
+    with manifest.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assets: list[WeatherAsset] = []
+    for row in rows:
+        rel = (row.get("audio_path") or "").strip()
+        if not rel:
+            continue
+        audio_path = Path(rel)
+        if not audio_path.is_absolute():
+            audio_path = PROJECT_ROOT / audio_path
+        assets.append(
+            WeatherAsset(
+                asset_id=row.get("asset_id") or audio_path.stem,
+                audio_path=audio_path,
+                labels={"rain": "none", "wind": "none", "thunder": "none"},
+                source=str(manifest),
+                metadata={
+                    **row,
+                    "pool_category": "no_weather_negative",
+                    "pool_label": "no_weather",
+                },
+            )
+        )
+    return assets
+
+
 def compare_label(expected: str, observed: str) -> str:
     if expected == observed:
         return "pass"
@@ -225,6 +279,8 @@ def classify_policy_case(asset: WeatherAsset) -> str:
 
     if pool_category == "rain_wind_mixed" or pool_label in {"rain+wind", "rain_wind"}:
         return "boundary_mixed_rain_wind"
+    if pool_category in {"no_weather_negative", "ambient_negative"} or pool_label in {"no_weather", "ambient"}:
+        return "no_weather_negative"
     if pool_category in {"rain_primary", "wind_primary"}:
         return pool_category
     if "rain_wind_mixed" in layer_d_role:
@@ -242,6 +298,11 @@ def evaluate_case(asset: WeatherAsset, result: dict, policy_class: str) -> tuple
         detects_weather = result["rain_intensity"] != "none" or result["wind_intensity"] != "none"
         case_statuses["policy"] = "boundary" if detects_weather else "fail"
         return ("boundary" if detects_weather else "fail"), case_statuses
+
+    if policy_class == "no_weather_negative":
+        no_weather = result["rain_intensity"] == "none" and result["wind_intensity"] == "none"
+        case_statuses["policy"] = "pass" if no_weather else "fail"
+        return ("pass" if no_weather else "fail"), case_statuses
 
     if "fail" in case_statuses.values():
         return "fail", case_statuses
