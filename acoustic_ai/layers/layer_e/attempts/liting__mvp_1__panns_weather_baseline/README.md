@@ -85,24 +85,31 @@ Run from the repository root:
 
 Expected current behaviour on the local Mac:
 
-- If `panns_inference` and torch are not installed, the test still passes via
-  the spectral/site257 fallback.
+- If `panns_inference`, torch, or the PANNs checkpoint are not available, the
+  test still falls back to the spectral/site257 detector.
 - The report explicitly states whether PANNs was available.
 - `rain_wind_mixed` clips are counted under `boundary`, not as strict failures.
 - The headline MVP metric is `policy_aligned_rate`, which includes `pass`,
   `partial`, and valid `boundary` cases.
 
-Latest local result:
+Latest local PANNs-enabled result:
 
 ```text
-pass=28, partial=25, boundary=6, fail=4
-policy_aligned_rate=0.94
-panns_available_cases=0
+pass=15, partial=31, boundary=6, fail=11
+pass_or_partial_rate=0.73
+policy_aligned_rate=0.83
+panns_available_cases=63
 ```
 
-PANNs is wired into the attempt, but the local checkpoint is not fully
-materialised yet, so the current validation result is produced by the stable
-site257 spectral fallback.
+The valid Zenodo `Cnn14_mAP=0.431.pth` checkpoint is 327,428,481 bytes. The
+runtime guard accepts the official checkpoint and rejects much smaller
+HTML/error/partial downloads.
+
+The PANNs-enabled baseline passes the MVP policy-aligned gate, but it performs
+worse than the site257 spectral fallback (`policy_aligned_rate=0.94` in the
+fallback-only run). This is expected for an uncalibrated AudioSet zero-shot
+model and is the reason the next step is threshold/site calibration rather than
+server training.
 
 ## Limitations
 
@@ -116,9 +123,9 @@ site257 spectral fallback.
 
 ## Next Steps
 
-1. Install and verify `panns_inference`/torch in the correct AI environment.
-2. Record PANNs logits for the 63 site257 promoted clips.
-3. Calibrate intensity bucket thresholds against Murphy's accepted labels.
-4. Add clean negative/no-weather site examples.
-5. Compare PANNs-only, spectral-only, and fused predictions in a report.
-6. Add a small labelled holdout once more Layer B weather assets accumulate.
+1. Record and inspect PANNs logits for the 63 site257 promoted clips.
+2. Calibrate intensity bucket thresholds against Murphy's accepted labels.
+3. Add clean negative/no-weather site examples.
+4. Compare PANNs-only, spectral-only, and fused predictions in a report.
+5. Add a small labelled holdout once more Layer B weather assets accumulate.
+6. Decide whether a small fine-tuned weather head is needed after calibration.
