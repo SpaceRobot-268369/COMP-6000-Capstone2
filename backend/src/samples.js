@@ -24,8 +24,12 @@ import path from "node:path";
 
 // Root of the attempts tree. In Docker the acoustic_ai dir is mounted read-only
 // (see services/dev/docker-compose.yml); on a native host point this at the
-// repo checkout's acoustic_ai/layers.
-const LAYERS_ROOT = process.env.AI_LAYERS_ROOT || "/acoustic_ai/layers";
+// repo checkout's acoustic_ai/layers. Some local stacks provide the acoustic_ai
+// root instead, so accept both shapes.
+const RAW_LAYERS_ROOT = process.env.AI_LAYERS_ROOT || "/acoustic_ai/layers";
+const LAYERS_ROOT = path.basename(RAW_LAYERS_ROOT) === "layers"
+  ? RAW_LAYERS_ROOT
+  : path.join(RAW_LAYERS_ROOT, "layers");
 
 const TIERS = ["expected", "showcase"];
 const CANONICAL_SEED_DEFAULT = 42;
