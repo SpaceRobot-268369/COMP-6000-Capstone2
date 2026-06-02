@@ -287,6 +287,20 @@ layers:
           - No neural model is trained in this smoke attempt; it is a spectral calibration baseline.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
 
+      liting__mvp_1__panns_weather_baseline:
+        label: "Weather detector — PANNs CNN14 baseline"
+        author: liting
+        stage: mvp_1
+        head: weather
+        status: mvp_candidate
+        checkpoint: null
+        params: {}
+        notes:
+          - E-B MVP path from pipeline_design.md: PANNs CNN14 AudioSet weather logits as primary signal.
+          - Uses Site257 / Murphy weather assets and spectral features as calibration and explainability support.
+          - Falls back to the smoke spectral detector when PANNs dependencies or checkpoint are unavailable.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas
