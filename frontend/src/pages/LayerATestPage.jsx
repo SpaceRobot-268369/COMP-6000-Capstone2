@@ -10,8 +10,6 @@ const DEFAULT_SEED = 42;
 const WEATHER_TYPE_OPTIONS = [
   { value: "rain", label: "rain" },
   { value: "wind", label: "wind" },
-  { value: "thunder", label: "thunder" },
-  { value: "storm", label: "storm" },
 ];
 const WEATHER_INTENSITY_OPTIONS = [
   { value: "light", label: "light" },
