@@ -35,6 +35,7 @@ PANN_LABEL_GROUPS = {
     "wind": ("Wind", "Rustling leaves", "Wind noise"),
     "thunder": ("Thunderstorm", "Thunder"),
 }
+_PANNS_CACHE: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -98,38 +99,23 @@ def analyse_weather(
 
 def score_with_panns(audio_path: str | Path, duration_s: float = DEFAULT_DURATION_S) -> PannsEvidence:
     """Return PANNs weather evidence if the optional dependency is available."""
-    panns_home = Path(os.environ.get("PANNS_HOME", "/private/tmp/panns_home"))
-    panns_home.mkdir(parents=True, exist_ok=True)
-    old_home = os.environ.get("HOME")
-    os.environ["HOME"] = str(panns_home)
     try:
-        panns_mod = importlib.import_module("panns_inference")
+        panns_runtime = _get_panns_runtime()
     except Exception as exc:
-        _restore_home(old_home)
-        return _unavailable(f"panns_inference is not available: {exc}")
+        return _unavailable(str(exc))
 
     try:
-        labels = _load_panns_labels(panns_mod)
-        checkpoint_path = panns_home / "panns_data" / "Cnn14_mAP=0.431.pth"
-        if not checkpoint_path.exists() or checkpoint_path.stat().st_size < 340_000_000:
-            return _unavailable(
-                "PANNs checkpoint is not materialised or is incomplete; "
-                f"expected {checkpoint_path}"
-            )
-        tagger_cls = getattr(panns_mod, "AudioTagging")
-        tagger = tagger_cls(checkpoint_path=str(checkpoint_path), device="cpu")
         audio, _sr = librosa.load(audio_path, sr=DEFAULT_SAMPLE_RATE, mono=True, duration=duration_s)
         if audio.size == 0:
             return _unavailable("audio file is empty or unreadable")
 
+        tagger = panns_runtime["tagger"]
         clipwise_output, _embedding = tagger.inference(audio[None, :])
         probs = np.asarray(clipwise_output)[0]
     except Exception as exc:
-        _restore_home(old_home)
         return _unavailable(f"PANNs inference failed: {exc}")
-    finally:
-        _restore_home(old_home)
 
+    labels = panns_runtime["labels"]
     matched: dict[str, dict[str, float]] = {}
     component_scores: dict[str, float] = {}
     for component, names in PANN_LABEL_GROUPS.items():
@@ -147,6 +133,40 @@ def score_with_panns(audio_path: str | Path, duration_s: float = DEFAULT_DURATIO
         scores=component_scores,
         labels=matched,
     )
+
+
+def _get_panns_runtime() -> dict[str, object]:
+    global _PANNS_CACHE
+    if _PANNS_CACHE is not None:
+        return _PANNS_CACHE
+
+    panns_home = Path(os.environ.get("PANNS_HOME", "/private/tmp/panns_home"))
+    panns_home.mkdir(parents=True, exist_ok=True)
+    old_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(panns_home)
+    try:
+        try:
+            panns_mod = importlib.import_module("panns_inference")
+        except Exception as exc:
+            raise RuntimeError(f"panns_inference is not available: {exc}") from exc
+
+        labels = _load_panns_labels(panns_mod)
+        checkpoint_path = panns_home / "panns_data" / "Cnn14_mAP=0.431.pth"
+        # Zenodo's Cnn14_mAP=0.431 checkpoint is 327,428,481 bytes. Keep
+        # the guard below the official size so partial HTML/error downloads
+        # are rejected without misclassifying the valid checkpoint.
+        if not checkpoint_path.exists() or checkpoint_path.stat().st_size < 300_000_000:
+            raise RuntimeError(
+                "PANNs checkpoint is not materialised or is incomplete; "
+                f"expected {checkpoint_path}"
+            )
+        tagger_cls = getattr(panns_mod, "AudioTagging")
+        tagger = tagger_cls(checkpoint_path=str(checkpoint_path), device="cpu")
+    finally:
+        _restore_home(old_home)
+
+    _PANNS_CACHE = {"labels": labels, "tagger": tagger}
+    return _PANNS_CACHE
 
 
 def _fuse_panns_with_spectral(spectral: dict, panns: PannsEvidence) -> dict:
