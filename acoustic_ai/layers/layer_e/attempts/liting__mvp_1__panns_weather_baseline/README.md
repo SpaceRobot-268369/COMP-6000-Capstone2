@@ -58,6 +58,17 @@ acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/a
 
 Those references come from Murphy's Server A Layer B site-weather policy.
 
+This attempt also includes a small local no-weather negative proxy manifest:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/data/no_weather_negative_manifest.csv
+```
+
+These are already-materialised Site257 Layer C/event reference clips that the
+current E-B detector reports as no rain and no wind. They are useful for a first
+false-positive check, but they are proxies rather than final ambient holdout
+clips.
+
 ## Murphy Layer B Alignment
 
 This attempt is aligned with Murphy's current Layer B weather policy:
@@ -78,6 +89,7 @@ The MVP test therefore evaluates asset policy classes separately:
 | `rain_primary` | Murphy accepted the clip as a rain weather asset | Compare expected rain/wind intensities directly. |
 | `wind_primary` | Murphy accepted the clip as a wind weather asset | Compare expected rain/wind intensities directly. |
 | `boundary_mixed_rain_wind` | Murphy accepted the clip as rain+wind overlap | Do not judge it as pure rain or pure wind; count it as policy-aligned if the detector identifies audible weather presence. |
+| `no_weather_negative` | Local proxy clip with no rain/wind detected | Strictly require both rain and wind to be `none`. |
 
 This avoids incorrectly failing the detector for clips that Layer B intentionally
 keeps as mixed/boundary assets.
@@ -108,22 +120,32 @@ Calibration outputs are written under:
 debug/e_b_weather_mvp/panns_calibration/
 ```
 
+Build or refresh the local no-weather negative proxy manifest:
+
+```bash
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/code/build_no_weather_negative_manifest.py
+```
+
 Expected current behaviour on the local Mac:
 
 - If `panns_inference`, torch, or the PANNs checkpoint are not available, the
   test still falls back to the spectral/site257 detector.
 - The report explicitly states whether PANNs was available.
 - `rain_wind_mixed` clips are counted under `boundary`, not as strict failures.
+- `no_weather_negative` clips are strict false-positive checks: rain and wind
+  must both be `none`.
 - The headline MVP metric is `policy_aligned_rate`, which includes `pass`,
   `partial`, and valid `boundary` cases.
 
 Latest local PANNs-enabled result:
 
 ```text
-pass=28, partial=25, boundary=5, fail=5
-pass_or_partial_rate=0.84
+positive_cases=63
+negative_cases=3
+pass=31, partial=25, boundary=5, fail=5
+pass_or_partial_rate=0.85
 policy_aligned_rate=0.92
-panns_available_cases=63
+panns_available_cases=66
 ```
 
 The valid Zenodo `Cnn14_mAP=0.431.pth` checkpoint is 327,428,481 bytes. The
@@ -142,10 +164,16 @@ close to the site257 spectral fallback (`policy_aligned_rate=0.94` in the
 fallback-only run). The remaining gap is mostly from mixed/boundary and a few
 wind assets where PANNs presence is weak.
 
+The current no-weather proxy validation found three local Site257 event clips
+that pass strict no-rain/no-wind checks. This is a useful first false-positive
+guard, but the next stronger validation needs ambient no-weather clips from the
+Site257 DVC clip set.
+
 ## Limitations
 
-- PANNs is optional in the current local environment; the MVP branch is wired
-  for it but may fall back until dependencies and weights are installed.
+- The no-weather negatives are local proxy clips from materialised Site257
+  event/reference data. They should be replaced or expanded with ambient
+  no-weather clips once the Site257 DVC clip set is available locally.
 - The fallback is still a calibration baseline, not a trained classifier.
 - Rain coverage in the current site257 promoted asset pool is much smaller
   than wind coverage.
@@ -154,7 +182,8 @@ wind assets where PANNs presence is weak.
 
 ## Next Steps
 
-1. Add clean negative/no-weather site examples.
+1. Replace proxy no-weather negatives with ambient no-weather clips from the
+   Site257 DVC clip set.
 2. Compare PANNs-only, spectral-only, and fused predictions in a report.
 3. Add a small labelled holdout once more Layer B weather assets accumulate.
 4. Decide whether a small fine-tuned weather head is needed after calibration.
