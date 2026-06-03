@@ -2,6 +2,118 @@
   "rain_val_accuracy": 0.7692307692307693,
   "wind_val_accuracy": 0.7307692307692307,
   "joint_val_accuracy": 0.6153846153846154,
+  "gate": {
+    "status": "pass",
+    "rain_accuracy_min": 0.7,
+    "wind_accuracy_min": 0.7,
+    "single_component_joint_accuracy_min": 0.65,
+    "single_component_joint_accuracy": 0.818,
+    "interpretation": "MVP2 is usable for demo and further calibration."
+  },
+  "confusion_matrix": {
+    "rain": {
+      "none": {
+        "none": 18,
+        "light": 0,
+        "moderate": 4,
+        "heavy": 0
+      },
+      "light": {
+        "none": 0,
+        "light": 0,
+        "moderate": 0,
+        "heavy": 0
+      },
+      "moderate": {
+        "none": 2,
+        "light": 0,
+        "moderate": 2,
+        "heavy": 0
+      },
+      "heavy": {
+        "none": 0,
+        "light": 0,
+        "moderate": 0,
+        "heavy": 0
+      }
+    },
+    "wind": {
+      "none": {
+        "none": 2,
+        "light": 0,
+        "moderate": 0,
+        "strong": 0
+      },
+      "light": {
+        "none": 0,
+        "light": 1,
+        "moderate": 0,
+        "strong": 0
+      },
+      "moderate": {
+        "none": 0,
+        "light": 0,
+        "moderate": 12,
+        "strong": 4
+      },
+      "strong": {
+        "none": 0,
+        "light": 1,
+        "moderate": 2,
+        "strong": 4
+      }
+    }
+  },
+  "policy_breakdown": {
+    "rain_primary": {
+      "count": 2,
+      "rain_pass": 2,
+      "wind_pass": 2,
+      "joint_pass": 2,
+      "rain_accuracy": 1.0,
+      "wind_accuracy": 1.0,
+      "joint_accuracy": 1.0
+    },
+    "mixed_rain_wind": {
+      "count": 2,
+      "rain_pass": 0,
+      "wind_pass": 0,
+      "joint_pass": 0,
+      "rain_accuracy": 0.0,
+      "wind_accuracy": 0.0,
+      "joint_accuracy": 0.0
+    },
+    "wind_primary": {
+      "count": 22,
+      "rain_pass": 18,
+      "wind_pass": 17,
+      "joint_pass": 14,
+      "rain_accuracy": 0.818,
+      "wind_accuracy": 0.773,
+      "joint_accuracy": 0.636
+    }
+  },
+  "demo_summary": {
+    "model": "Frozen PANNs CNN14 + DSP features + two small calibrated linear heads",
+    "training_mode": "Server B training over Site257 weather-labelled clips",
+    "output_contract": {
+      "wind_intensity": [
+        "none",
+        "light",
+        "moderate",
+        "strong"
+      ],
+      "rain_intensity": [
+        "none",
+        "light",
+        "moderate",
+        "heavy"
+      ],
+      "thunder_intensity": "none until Site257 thunder evidence is validated",
+      "confidence": "per-component probability from the calibrated head"
+    },
+    "duration_note": "Feature extraction reads the available audio clip; current Server B run used materialised Site257 weather clips and reports feature/training/total time separately."
+  },
   "validation_rows": [
     {
       "asset_id": "site_mvp002_site257_1313196_000778_000793",
@@ -322,9 +434,9 @@
   "train_count": 75,
   "val_count": 26,
   "timings": {
-    "feature_seconds": 15.132,
-    "training_seconds": 1.359,
-    "total_seconds": 16.501
+    "feature_seconds": 16.796,
+    "training_seconds": 1.447,
+    "total_seconds": 18.255
   },
   "rain_history": [
     {
