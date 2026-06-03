@@ -203,8 +203,232 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: lucas__smoke_1__audiogen_boobook
+    default: burger__mvp_1__retrieval_horsfields_bronze_cuckoo
     attempts:
+      burger__mvp_1__retrieval_horsfields_bronze_cuckoo:
+        label: "Horsfield's Bronze-cuckoo retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C per-species retrieval baseline using audited real
+          Horsfield's Bronze-cuckoo snippets from the unified top8 event
+          library. It generates one 60-second event layer for this target bird.
+        params:
+          method: retrieval
+          species_common_name: "Horsfield's Bronze-cuckoo"
+          event_type: horsfields_bronze_cuckoo
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: dawn
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_splendid_fairywren:
+        label: "Splendid Fairywren retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C per-species retrieval baseline using audited real
+          Splendid Fairywren snippets from the unified top8 event library.
+          It generates one 60-second event layer for this target bird.
+        params:
+          method: retrieval
+          species_common_name: "Splendid Fairywren"
+          event_type: splendid_fairywren
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 12
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_chestnut_rumped_thornbill:
+        label: "Chestnut-rumped Thornbill retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real Chestnut-rumped
+          Thornbill snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "Chestnut-rumped Thornbill"
+          event_type: chestnut_rumped_thornbill
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: dawn
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_crested_bellbird:
+        label: "Crested Bellbird retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real Crested Bellbird
+          snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "Crested Bellbird"
+          event_type: crested_bellbird
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: dawn
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_red_capped_robin:
+        label: "Red-capped Robin retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real Red-capped Robin
+          snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "Red-capped Robin"
+          event_type: red_capped_robin
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: dawn
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_southern_boobook:
+        label: "Southern Boobook retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real Southern Boobook
+          snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "Southern Boobook"
+          event_type: southern_boobook
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: night
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_superb_fairywren:
+        label: "Superb Fairywren retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real Superb Fairywren
+          snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "Superb Fairywren"
+          event_type: superb_fairywren
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 12
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
+      burger__mvp_1__retrieval_white_browed_woodswallow:
+        label: "White-browed Woodswallow retrieval baseline"
+        author: burger
+        stage: mvp_1
+        status: demo_ready
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C retrieval baseline using audited real White-browed
+          Woodswallow snippets from the top35 human-calibrated event library.
+          This is an asset-retrieval baseline, not a generated bird-call model.
+        params:
+          method: retrieval
+          species_common_name: "White-browed Woodswallow"
+          event_type: white_browed_woodswallow
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv
+          duration_s: 60.0
+          count: 10
+          default_season: summer
+          default_diel: dawn
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -1.0
+        notes:
+          - Uses audited real snippets only; no generated bird calls.
+          - Shares the same top8 retrieval index with the other Layer C birds.
+
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
         author: lucas

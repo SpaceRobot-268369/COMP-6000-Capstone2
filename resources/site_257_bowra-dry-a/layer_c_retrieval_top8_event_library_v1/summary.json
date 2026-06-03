@@ -1,0 +1,21 @@
+{
+  "name": "Layer C top8 retrieval event library",
+  "description": "Unified audited real bird-call retrieval index for Layer C MVP baseline.",
+  "total_snippets": 272,
+  "species_counts": {
+    "Chestnut-rumped Thornbill": 35,
+    "Crested Bellbird": 35,
+    "Horsfield's Bronze-cuckoo": 30,
+    "Red-capped Robin": 35,
+    "Southern Boobook": 35,
+    "Splendid Fairywren": 32,
+    "Superb Fairywren": 35,
+    "White-browed Woodswallow": 35
+  },
+  "inputs": [
+    "resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_split_v1/final_pass_library_v1/layer_c_retrieval_final_pass_event_index.csv",
+    "resources/site_257_bowra-dry-a/layer_c_retrieval_top8_species_candidates_v1/final_retrieval_library_top35_human_v1/layer_c_retrieval_top35_event_index.csv"
+  ],
+  "runtime_index": "resources/site_257_bowra-dry-a/layer_c_retrieval_top8_event_library_v1/layer_c_retrieval_top8_event_index.csv",
+  "method": "retrieval from audited real snippets; no generated bird calls"
+}
