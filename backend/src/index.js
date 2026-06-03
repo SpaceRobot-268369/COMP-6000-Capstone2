@@ -498,7 +498,7 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
-const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
+const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind"]);
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
