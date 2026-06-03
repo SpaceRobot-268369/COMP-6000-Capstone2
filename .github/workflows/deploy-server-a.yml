@@ -68,7 +68,30 @@ jobs:
             "if [ ! -d '$SERVER_A_DEPLOY_DIR/.git' ]; then git clone https://github.com/SpaceRobot-268369/COMP-6000-Capstone2.git '$SERVER_A_DEPLOY_DIR'; fi"
 
           ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
-            "cd '$SERVER_A_DEPLOY_DIR' && git fetch origin && git checkout main && git pull --ff-only origin main"
+            "cd '$SERVER_A_DEPLOY_DIR' && git fetch origin && bash -s" <<'REMOTE_DEPLOY_GIT_SYNC'
+          set -euo pipefail
+
+          backup_dir="/tmp/eco-acoustic-deploy-backup-$(date +%Y%m%d%H%M%S)"
+          backup_used=false
+          for path in \
+            services/server-a/docker-compose.override.yml \
+            services/server-a/nginx/default.conf
+          do
+            if { [ -e "$path" ] || [ -L "$path" ]; } && ! git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+              mkdir -p "$backup_dir/$(dirname "$path")"
+              cp -a "$path" "$backup_dir/$path"
+              rm -rf "$path"
+              backup_used=true
+            fi
+          done
+
+          if [ "$backup_used" = true ]; then
+            echo "Backed up pre-existing untracked deploy files to $backup_dir"
+          fi
+
+          git checkout main
+          git pull --ff-only origin main
+          REMOTE_DEPLOY_GIT_SYNC
 
           printf '%s\n' "$SERVER_A_PROD_ENV" | ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
             "cat > '$SERVER_A_DEPLOY_DIR/services/server-a/.env'"
@@ -87,7 +110,36 @@ jobs:
         env:
           SERVER_A_HOST: ${{ secrets.SERVER_A_HOST }}
           SERVER_A_USER: ${{ secrets.SERVER_A_USER }}
+          SERVER_A_DEPLOY_DIR: ${{ secrets.SERVER_A_DEPLOY_DIR }}
         run: |
           set -euo pipefail
+          : "${SERVER_A_DEPLOY_DIR:?SERVER_A_DEPLOY_DIR secret is required}"
+
           ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
-            "curl -fsS http://127.0.0.1:4000/api/health"
+            "cd '$SERVER_A_DEPLOY_DIR/services/server-a' && bash -s" <<'REMOTE_HEALTH_CHECK'
+          set -euo pipefail
+
+          backend_port="$(
+            awk -F= '
+              $1 == "BACKEND_PORT" {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
+                print $2
+              }
+            ' .env | tail -n 1
+          )"
+          backend_port="${backend_port:-4000}"
+          health_url="http://127.0.0.1:${backend_port}/api/health"
+
+          for attempt in $(seq 1 24); do
+            if curl -fsS --max-time 5 "$health_url"; then
+              exit 0
+            fi
+            echo "Backend health not ready yet (attempt $attempt/24)"
+            sleep 5
+          done
+
+          echo "::error::Backend health check failed after waiting for ${health_url}"
+          docker compose ps
+          docker compose logs --tail=80 backend postgres ai-tunnel
+          exit 1
+          REMOTE_HEALTH_CHECK

@@ -1,0 +1,113 @@
+name: Sync Server B Models
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-b-model-sync
+  cancel-in-progress: false
+
+env:
+  DEFAULT_SERVER_B_HOST: shinypokemon.adelaideuni.cloud
+  DEFAULT_SERVER_B_USER: ubuntu
+  DEFAULT_SERVER_B_DEPLOY_DIR: /home/ubuntu/shiny-pikachu
+
+jobs:
+  sync:
+    name: Sync Server B main checkout and production models
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'main' }}
+          fetch-depth: 2
+
+      - name: Check whether Server B sync is needed
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch: sync required"
+            echo "sync_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! git rev-parse HEAD^ >/dev/null 2>&1; then
+            echo "No parent commit available; sync required"
+            echo "sync_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          sync_required=false
+          changed_paths="$(git diff --name-only HEAD^ HEAD)"
+          printf '%s\n' "$changed_paths"
+
+          while IFS= read -r path; do
+            case "$path" in
+              model/production/*|acoustic_ai/registry.yaml|acoustic_ai/server/*|acoustic_ai/layers/*|acoustic_ai/requirements.txt|script/deploy/sync_server_b_models.sh|.github/workflows/sync-server-b-models.yml)
+                sync_required=true
+                ;;
+            esac
+          done <<< "$changed_paths"
+
+          echo "sync_required=$sync_required" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when no Server B sync is needed
+        if: ${{ steps.changes.outputs.sync_required != 'true' }}
+        run: echo "No Server B production model or AI service path changed; skipping sync."
+
+      - name: Configure SSH
+        if: ${{ steps.changes.outputs.sync_required == 'true' }}
+        shell: bash
+        env:
+          SERVER_B_HOST: ${{ secrets.SERVER_B_HOST }}
+          SERVER_B_SSH_KEY: ${{ secrets.SERVER_B_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          server_b_host="${SERVER_B_HOST:-$DEFAULT_SERVER_B_HOST}"
+          : "${SERVER_B_SSH_KEY:?SERVER_B_SSH_KEY secret is required}"
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_B_SSH_KEY" > ~/.ssh/server_b_key
+          chmod 600 ~/.ssh/server_b_key
+          ssh-keyscan -T 20 -H "$server_b_host" >> ~/.ssh/known_hosts
+
+      - name: Sync Server B models
+        if: ${{ steps.changes.outputs.sync_required == 'true' }}
+        shell: bash
+        env:
+          SERVER_B_HOST: ${{ secrets.SERVER_B_HOST }}
+          SERVER_B_USER: ${{ secrets.SERVER_B_USER }}
+          SERVER_B_DEPLOY_DIR: ${{ secrets.SERVER_B_DEPLOY_DIR }}
+        run: |
+          set -euo pipefail
+
+          server_b_host="${SERVER_B_HOST:-$DEFAULT_SERVER_B_HOST}"
+          server_b_user="${SERVER_B_USER:-$DEFAULT_SERVER_B_USER}"
+          server_b_deploy_dir="${SERVER_B_DEPLOY_DIR:-$DEFAULT_SERVER_B_DEPLOY_DIR}"
+
+          remote_env="SERVER_B_DEPLOY_DIR=$(printf '%q' "$server_b_deploy_dir") SERVER_B_MAIN_BRANCH=main SERVER_B_REMOTE=origin SERVER_B_SERVICE_PORT=8000"
+
+          ssh \
+            -i ~/.ssh/server_b_key \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            "$server_b_user@$server_b_host" \
+            "$remote_env bash -s" < script/deploy/sync_server_b_models.sh
