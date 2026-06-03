@@ -59,6 +59,8 @@ def main() -> int:
     parser.add_argument("--wind-model-type", choices=("linear", "mlp"), default="")
     parser.add_argument("--rain-lr", type=float, default=0.0)
     parser.add_argument("--wind-lr", type=float, default=0.0)
+    parser.add_argument("--rain-weight-decay", type=float, default=-1.0)
+    parser.add_argument("--wind-weight-decay", type=float, default=-1.0)
     parser.add_argument("--balance-mode", choices=("weighted", "oversample"), default="weighted")
     parser.add_argument("--hidden-dim", type=int, default=24)
     parser.add_argument("--dropout", type=float, default=0.15)
@@ -126,7 +128,8 @@ def main() -> int:
     wind_model_type = args.wind_model_type or args.model_type
     rain_lr = args.rain_lr if args.rain_lr > 0 else args.lr
     wind_lr = args.wind_lr if args.wind_lr > 0 else args.lr
-    torch.manual_seed(args.seed)
+    rain_weight_decay = args.rain_weight_decay if args.rain_weight_decay >= 0 else args.weight_decay
+    wind_weight_decay = args.wind_weight_decay if args.wind_weight_decay >= 0 else args.weight_decay
     rain_head, rain_history = train_component(
         Xn,
         rows,
@@ -136,7 +139,7 @@ def main() -> int:
         RAIN_CLASSES,
         epochs=args.epochs,
         lr=rain_lr,
-        weight_decay=args.weight_decay,
+        weight_decay=rain_weight_decay,
         model_type=rain_model_type,
         balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
@@ -152,7 +155,7 @@ def main() -> int:
         WIND_CLASSES,
         epochs=args.epochs,
         lr=wind_lr,
-        weight_decay=args.weight_decay,
+        weight_decay=wind_weight_decay,
         model_type=wind_model_type,
         balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
@@ -193,6 +196,8 @@ def main() -> int:
             "wind_model_type": wind_model_type,
             "rain_lr": rain_lr,
             "wind_lr": wind_lr,
+            "rain_weight_decay": rain_weight_decay,
+            "wind_weight_decay": wind_weight_decay,
             "balance_mode": args.balance_mode,
             "hidden_dim": args.hidden_dim,
             "dropout": args.dropout,
