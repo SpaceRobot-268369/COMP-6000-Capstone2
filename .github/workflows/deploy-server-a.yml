@@ -68,7 +68,30 @@ jobs:
             "if [ ! -d '$SERVER_A_DEPLOY_DIR/.git' ]; then git clone https://github.com/SpaceRobot-268369/COMP-6000-Capstone2.git '$SERVER_A_DEPLOY_DIR'; fi"
 
           ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
-            "cd '$SERVER_A_DEPLOY_DIR' && git fetch origin && git checkout main && git pull --ff-only origin main"
+            "cd '$SERVER_A_DEPLOY_DIR' && git fetch origin && bash -s" <<'REMOTE_DEPLOY_GIT_SYNC'
+          set -euo pipefail
+
+          backup_dir="/tmp/eco-acoustic-deploy-backup-$(date +%Y%m%d%H%M%S)"
+          backup_used=false
+          for path in \
+            services/server-a/docker-compose.override.yml \
+            services/server-a/nginx/default.conf
+          do
+            if { [ -e "$path" ] || [ -L "$path" ]; } && ! git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+              mkdir -p "$backup_dir/$(dirname "$path")"
+              cp -a "$path" "$backup_dir/$path"
+              rm -rf "$path"
+              backup_used=true
+            fi
+          done
+
+          if [ "$backup_used" = true ]; then
+            echo "Backed up pre-existing untracked deploy files to $backup_dir"
+          fi
+
+          git checkout main
+          git pull --ff-only origin main
+          REMOTE_DEPLOY_GIT_SYNC
 
           printf '%s\n' "$SERVER_A_PROD_ENV" | ssh -i ~/.ssh/server_a_key "$SERVER_A_USER@$SERVER_A_HOST" \
             "cat > '$SERVER_A_DEPLOY_DIR/services/server-a/.env'"
