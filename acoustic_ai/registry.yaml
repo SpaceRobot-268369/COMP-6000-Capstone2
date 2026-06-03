@@ -283,7 +283,7 @@ layers:
         checkpoint: null
         params: {}
         notes:
-          - E-B weather smoke detector calibrated on Murphy's Server A CLAP-first site257 promoted assets.
+          - E-B weather smoke detector calibrated on audited Site257 promoted weather seed assets.
           - No neural model is trained in this smoke attempt; it is a spectral calibration baseline.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
 
@@ -297,7 +297,7 @@ layers:
         params: {}
         notes:
           - E-B MVP path from pipeline_design.md: PANNs CNN14 AudioSet weather logits as primary signal.
-          - Uses Site257 / Murphy weather assets and spectral features as calibration and explainability support.
+          - Uses Site257 weather seed assets and spectral features as calibration and explainability support.
           - Falls back to the smoke spectral detector when PANNs dependencies or checkpoint are unavailable.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
 

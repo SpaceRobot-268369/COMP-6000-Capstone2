@@ -16,6 +16,24 @@ Given any Site257 audio upload, estimate the audible weather layer:
 wind intensity, rain intensity, thunder status, confidence, and limitations.
 ```
 
+The registry handler aligns with the current main-branch Layer E synthesis
+policy. E-B outputs weather as an authoritative observation:
+
+```json
+{
+  "observations": {
+    "weather": {
+      "wind": {"summary": {"intensity": 0.62, "variability": 0.0, "coverage": 1.0, "label": "moderate", "confidence": 0.83}},
+      "rain": {"summary": {"intensity": 0.0, "variability": 0.0, "coverage": 0.0, "label": "none", "confidence": 0.90}},
+      "thunder": {"intensity": 0.0, "event_count": 0, "events": [], "mean_interval_s": null, "label": "none", "confidence": 0.90}
+    }
+  }
+}
+```
+
+MVP-1 is summary-only. It does not emit weather timeline `segments` yet, and it
+does not infer season or diel; those are aggregator responsibilities.
+
 The current weather-positive pool is useful for calibration and validation
 seeding, but it is not the full feature scope. The MVP must also handle ordinary
 Site257 clips with birds, insects, ambience, mixed weather, and no audible
@@ -260,8 +278,11 @@ Site257 DVC clip set.
 - The fallback is still a calibration baseline, not a trained classifier.
 - Rain coverage in the current site257 promoted asset pool is much smaller
   than wind coverage.
-- This detector returns labels and confidence only; it does not output isolated
+- This detector returns weather observations only; it does not output isolated
   weather audio stems.
+- MVP-1 now exposes main-policy summary objects, but `variability` is currently
+  `0.0` and `coverage` is whole-clip only. Segment-level weather timing is a
+  later upgrade.
 
 ## Next Steps
 

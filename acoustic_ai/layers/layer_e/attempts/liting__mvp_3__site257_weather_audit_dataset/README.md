@@ -8,6 +8,13 @@ The target is an E-B-owned, Site257-only, multi-attribute audit dataset for
 weather-layer analysis. It should support ordinary Site257 uploads, not only
 curated weather-pool clips.
 
+This attempt follows the main-branch Layer E synthesis policy:
+
+- E-B labels weather as an authoritative audio observation.
+- E-B does not infer season or diel in production.
+- Human audit buckets are used to calibrate continuous weather summaries:
+  intensity, label, coverage, variability, and confidence.
+
 This attempt does not replace the existing seed set. The seed set is used as:
 
 ```text
@@ -93,4 +100,3 @@ This attempt is useful when it produces a reviewable candidate queue with:
 
 The first run is allowed to be imperfect. The purpose is to make manual audit
 targeted rather than listening to every Site257 clip blindly.
-

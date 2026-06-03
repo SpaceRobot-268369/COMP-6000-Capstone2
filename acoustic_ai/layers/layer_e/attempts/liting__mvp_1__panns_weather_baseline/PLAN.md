@@ -41,15 +41,44 @@ The output contract is:
 
 ```json
 {
-  "wind": {"intensity": "none | light | moderate | strong", "confidence": 0.0},
-  "rain": {"intensity": "none | light | moderate | heavy", "confidence": 0.0},
+  "wind": {
+    "summary": {
+      "intensity": 0.0,
+      "variability": 0.0,
+      "coverage": 0.0,
+      "label": "none | light | moderate | strong",
+      "confidence": 0.0
+    }
+  },
+  "rain": {
+    "summary": {
+      "intensity": 0.0,
+      "variability": 0.0,
+      "coverage": 0.0,
+      "label": "none | light | moderate | heavy",
+      "confidence": 0.0
+    }
+  },
   "thunder": {
-    "intensity": "none",
+    "intensity": 0.0,
+    "event_count": 0,
+    "events": [],
+    "mean_interval_s": null,
+    "label": "none",
     "confidence": 0.0,
     "status": "insufficient_site_data"
   }
 }
 ```
+
+This follows the current main-branch Layer E synthesis policy:
+
+- E-B owns weather as an **authoritative observation**.
+- E-B does not infer season or diel; the aggregator fuses latent context.
+- `summary.intensity` is the primary continuous value.
+- `summary.label` is the human-readable bucket derived from the continuous
+  value.
+- `segments` are optional and are not required for MVP-1.
 
 Thunder remains in the schema for compatibility, but the MVP should not claim
 thunder detection until Site257-derived thunder examples are found, audited,
@@ -248,7 +277,7 @@ Minimum MVP model target:
 | Trainable/calibrated part | Threshold table, logistic regression, or small MLP head over frozen features. |
 | Training data | E-B-owned Site257 manifest with positives, mixed clips, and no-weather negatives. |
 | Validation data | Held-out Site257 clips, including random site-wide uploads. |
-| Output | Wind/rain intensity + confidence; thunder disabled unless validated. |
+| Output | Wind/rain summary objects with continuous intensity, label, coverage, variability, and confidence; thunder disabled unless validated. |
 
 Do **not** fine-tune the full PANNs backbone for the first MVP. The training
 objective is calibration and small-head learning over frozen features.

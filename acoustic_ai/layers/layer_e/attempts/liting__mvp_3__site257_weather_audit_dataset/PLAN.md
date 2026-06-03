@@ -30,6 +30,15 @@ guide. They are not treated as the full feature scope.
 Each clip can contain multiple simultaneous acoustic conditions. The audit
 schema must not force a single class per clip.
 
+Main-branch alignment:
+
+- The audit labels below are human review labels.
+- E-B inference should convert these labels into the main Layer E weather
+  contract: continuous `summary.intensity`, `summary.label`, `coverage`,
+  `variability`, and `confidence`.
+- E-B does not infer season or diel; any season/diel fields in metadata are
+  dev-only validation aids and diversity controls for sampling.
+
 Required labels:
 
 | Field | Values |
@@ -52,7 +61,7 @@ Signals used in the first pass:
 
 - existing audited weather seed labels,
 - Site257 environmental wind speed metadata,
-- season/diel diversity,
+- season/diel diversity for candidate sampling only,
 - source recording diversity,
 - random holdout sampling.
 
@@ -80,4 +89,3 @@ This attempt should be run on Server B once DVC audio access is available:
 For the urgent MVP path, keep using the existing 63 audited seed clips to run
 the E-B baseline. Use this attempt to prepare the larger dataset without
 blocking the current demo.
-

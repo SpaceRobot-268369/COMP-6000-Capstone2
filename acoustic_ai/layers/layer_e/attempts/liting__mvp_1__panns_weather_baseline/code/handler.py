@@ -35,23 +35,35 @@ def analyze(state: dict, audio_path: str | Path) -> dict:
         audio_path,
         calibration_assets=state.get("calibration_assets") or [],
     )
+    wind = _continuous_weather_summary(
+        label=weather["wind_intensity"],
+        confidence=weather["component_confidence"]["wind"],
+        component="wind",
+    )
+    rain = _continuous_weather_summary(
+        label=weather["rain_intensity"],
+        confidence=weather["component_confidence"]["rain"],
+        component="rain",
+    )
+    thunder = _thunder_summary(
+        label=weather["thunder_intensity"],
+        confidence=weather["component_confidence"]["thunder"],
+    )
     return {
         "head": "weather",
         "component": "E-B",
+        "observations": {
+            "weather": {
+                "wind": {"summary": wind},
+                "rain": {"summary": rain},
+                "thunder": thunder,
+            }
+        },
         "weather": weather,
         "summary": {
-            "wind": {
-                "intensity": weather["wind_intensity"],
-                "confidence": weather["component_confidence"]["wind"],
-            },
-            "rain": {
-                "intensity": weather["rain_intensity"],
-                "confidence": weather["component_confidence"]["rain"],
-            },
-            "thunder": {
-                "intensity": weather["thunder_intensity"],
-                "confidence": weather["component_confidence"]["thunder"],
-            },
+            "wind": wind,
+            "rain": rain,
+            "thunder": thunder,
         },
         "model": {
             "primary": weather.get("primary_model"),
@@ -65,6 +77,43 @@ def analyze(state: dict, audio_path: str | Path) -> dict:
 
 def generate(state: dict, seed: int | None = None, **runtime_params) -> dict:
     raise NotImplementedError("Layer E weather analysis is upload-based; use analyze().")
+
+
+def _continuous_weather_summary(label: str, confidence: float, component: str) -> dict:
+    intensity = _label_to_intensity(label, component)
+    return {
+        "intensity": intensity,
+        "variability": 0.0,
+        "coverage": 0.0 if label == "none" else 1.0,
+        "label": label,
+        "confidence": round(float(confidence), 3),
+    }
+
+
+def _thunder_summary(label: str, confidence: float) -> dict:
+    # Site257 thunder does not yet have enough audited examples for a stable
+    # MVP claim. Keep the schema but suppress provisional PANNs thunder hits.
+    return {
+        "intensity": 0.0,
+        "event_count": 0,
+        "events": [],
+        "mean_interval_s": None,
+        "label": "none",
+        "confidence": round(float(confidence), 3),
+        "status": "insufficient_site_data",
+    }
+
+
+def _label_to_intensity(label: str, component: str) -> float:
+    if label == "none":
+        return 0.0
+    if component == "rain":
+        scale = {"light": 0.30, "moderate": 0.62, "heavy": 0.90, "strong": 0.90}
+    elif component == "wind":
+        scale = {"light": 0.30, "moderate": 0.62, "strong": 0.90, "heavy": 0.90}
+    else:
+        scale = {"light": 0.30, "moderate": 0.62, "strong": 0.90, "heavy": 0.90}
+    return scale.get(label, 0.0)
 
 
 def _weather_calibration_assets() -> list:
