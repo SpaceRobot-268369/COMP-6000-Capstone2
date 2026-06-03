@@ -2124,6 +2124,50 @@ textarea {
   background: linear-gradient(90deg, #b7f7e0, #92eff4);
 }
 
+.phenology-block {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(183, 247, 224, 0.18);
+  border-radius: 8px;
+  background: rgba(183, 247, 224, 0.06);
+}
+
+.phenology-block p {
+  margin: 0;
+  color: rgba(216, 238, 246, 0.64);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.phenology-grid {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.7fr) minmax(0, 1.3fr);
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.phenology-grid span {
+  color: rgba(216, 238, 246, 0.54);
+  font-size: 11px;
+}
+
+.phenology-grid strong {
+  min-width: 0;
+  color: rgba(238, 247, 249, 0.9);
+  font-size: 12px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.phenology-block em {
+  color: rgba(216, 238, 246, 0.68);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .detection-timeline {
   display: grid;
   grid-column: 1 / -1;

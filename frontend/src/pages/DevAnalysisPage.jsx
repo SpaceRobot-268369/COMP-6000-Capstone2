@@ -429,11 +429,34 @@ function EventsResult({ report }) {
               </div>
               <ConfidenceBar value={event.confidence_mean} label="Event confidence" />
               <SpeciesMatchList matches={event.species_matches} />
+              <PhenologyBlock phenology={event.phenology} />
             </article>
           ))}
         </div>
       )}
       <DetectionTimeline windows={report?.diagnostics?.detected_windows} />
+    </div>
+  );
+}
+
+function PhenologyBlock({ phenology }) {
+  if (!phenology) return null;
+  return (
+    <div className="phenology-block">
+      <p>Ecological signal</p>
+      <div className="phenology-grid">
+        <span>Common name</span>
+        <strong>{phenology.common_name || "Unknown"}</strong>
+        <span>Scientific name</span>
+        <strong>{phenology.scientific_name || "Unknown"}</strong>
+        <span>Active time</span>
+        <strong>{formatSignal(phenology.diel_signal)} · {fmtPct(phenology.diel_confidence)}</strong>
+        <span>Season signal</span>
+        <strong>{formatSignal(phenology.season_signal)} · {fmtPct(phenology.season_confidence)}</strong>
+        <span>Habitat</span>
+        <strong>{formatSignal(phenology.habitat_signal)}</strong>
+      </div>
+      {phenology.inference_notes && <em>{phenology.inference_notes}</em>}
     </div>
   );
 }
@@ -608,6 +631,11 @@ function formatSpeciesLabel(value) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatSignal(value) {
+  if (!value) return "Unknown";
+  return String(value).replaceAll("_", " ");
 }
 
 function fmtNum(v) {

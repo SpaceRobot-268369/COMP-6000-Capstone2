@@ -291,6 +291,7 @@ layers:
           - E-C known-species detector for ninox_boobook, laughing_kookaburra, rhipidura_leucophrys, psophodes_cristatus, cincloramphus_mathewsi, podargus_strigoides, red_capped_robin, anas_superciliosa, australian_raven, peaceful_dove, galah, crested_bellbird, and rainbow_bee_eater.
           - Uses frozen LAION-CLAP audio embeddings plus a local MLP probe trained from xeno-canto clips.
           - Local no-magpie 13-class CLAP probe test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Enriches each detected species event with a conservative phenology block for report synthesis.
           - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
 
       lucas__smoke_1__detectors:

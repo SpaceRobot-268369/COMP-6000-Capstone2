@@ -12,7 +12,7 @@ import soundfile as sf
 import torch
 
 from clap_backbone import CLAPBackbone, TARGET_SR
-from common import build_probe, device, load_config, project_path
+from common import build_probe, device, load_config, load_species_phenology, project_path
 
 
 def main() -> int:
@@ -68,6 +68,7 @@ def detect_windows(
 
     cfg = load_config()
     labels = list(cfg["data"]["labels"])
+    phenology_by_label = load_species_phenology()
     model_dir = project_path(cfg["output"]["model_dir"])
     checkpoint_path = checkpoint or model_dir / "best_probe.pt"
     run_device = device()
@@ -126,6 +127,7 @@ def detect_windows(
         detected_windows,
         merge_gap_s=merge_gap_s,
         min_event_windows=effective_min_event_windows,
+        phenology_by_label=phenology_by_label,
     )
 
     return {
@@ -177,6 +179,7 @@ def merge_detected_windows(
     *,
     merge_gap_s: float,
     min_event_windows: int = 1,
+    phenology_by_label: dict[str, dict] | None = None,
 ) -> list[dict]:
     by_label: dict[str, list[dict]] = {}
     for window in windows:
@@ -195,18 +198,34 @@ def merge_detected_windows(
             if gap_s <= merge_gap_s:
                 extend_event(current, window)
             else:
-                append_event(events, current, min_event_windows=min_event_windows)
+                append_event(
+                    events,
+                    current,
+                    min_event_windows=min_event_windows,
+                    phenology_by_label=phenology_by_label,
+                )
                 current = start_event(label, window)
 
         if current is not None:
-            append_event(events, current, min_event_windows=min_event_windows)
+            append_event(
+                events,
+                current,
+                min_event_windows=min_event_windows,
+                phenology_by_label=phenology_by_label,
+            )
 
     return sorted(events, key=lambda row: (row["onset_s"], row["offset_s"], row["label"]))
 
 
-def append_event(events: list[dict], event: dict, *, min_event_windows: int) -> None:
+def append_event(
+    events: list[dict],
+    event: dict,
+    *,
+    min_event_windows: int,
+    phenology_by_label: dict[str, dict] | None = None,
+) -> None:
     if int(event["window_count"]) >= min_event_windows:
-        events.append(finalize_event(event))
+        events.append(finalize_event(event, phenology_by_label=phenology_by_label))
 
 
 def start_event(label: str, window: dict) -> dict:
@@ -237,7 +256,7 @@ def extend_event(event: dict, window: dict) -> None:
         score_sums[key] = float(score_sums.get(key, 0.0)) + float(score)
 
 
-def finalize_event(event: dict) -> dict:
+def finalize_event(event: dict, *, phenology_by_label: dict[str, dict] | None = None) -> dict:
     window_count = int(event["window_count"])
     confidence_mean = float(event["confidence_sum"]) / window_count
     score_sums = dict(event.get("score_sums", {}))
@@ -249,7 +268,7 @@ def finalize_event(event: dict) -> dict:
         for label, score_sum in score_sums.items()
     ]
     species_matches.sort(key=lambda row: (-float(row["score"]), str(row["label"])))
-    return {
+    finalized = {
         "label": event["label"],
         "onset_s": round(float(event["onset_s"]), 3),
         "offset_s": round(float(event["offset_s"]), 3),
@@ -259,6 +278,10 @@ def finalize_event(event: dict) -> dict:
         "window_indices": event["window_indices"],
         "species_matches": species_matches,
     }
+    phenology = (phenology_by_label or {}).get(str(event["label"]))
+    if phenology:
+        finalized["phenology"] = phenology
+    return finalized
 
 
 def build_windows(audio: np.ndarray, *, window_s: float, hop_s: float) -> list[dict]:

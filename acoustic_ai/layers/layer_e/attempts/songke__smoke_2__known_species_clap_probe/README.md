@@ -29,6 +29,16 @@ baseline. Current label set:
 5 s WAV -> frozen LAION-CLAP audio encoder -> 512-d embedding -> MLP probe
 ```
 
+Detected events are enriched with a conservative species phenology lookup:
+
+```
+data/species_phenology.csv
+```
+
+This table adds common name, scientific name, diel signal, seasonal signal,
+habitat signal, inference confidence values, and a source URL per known
+species. It is metadata for report synthesis, not model training data.
+
 Generated training intermediates stay under `local_data/` and are gitignored:
 
 ```

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import random
 from pathlib import Path
@@ -14,6 +15,7 @@ import torch
 ATTEMPT_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[6]
 PARAMS_PATH = ATTEMPT_ROOT / "params.yaml"
+PHENOLOGY_PATH = ATTEMPT_ROOT / "data" / "species_phenology.csv"
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -75,6 +77,42 @@ def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]
 def project_path(value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else PROJECT_ROOT / path
+
+
+def load_species_phenology(path: Path = PHENOLOGY_PATH) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8", newline="") as f:
+        rows = csv.DictReader(f)
+        table: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            label = str(row.get("label", "")).strip()
+            if not label:
+                continue
+            table[label] = {
+                "common_name": clean_text(row.get("common_name")),
+                "scientific_name": clean_text(row.get("scientific_name")),
+                "diel_signal": clean_text(row.get("diel_signal")),
+                "diel_confidence": parse_float(row.get("diel_confidence")),
+                "season_signal": clean_text(row.get("season_signal")),
+                "season_confidence": parse_float(row.get("season_confidence")),
+                "habitat_signal": clean_text(row.get("habitat_signal")),
+                "inference_notes": clean_text(row.get("inference_notes")),
+                "source_url": clean_text(row.get("source_url")),
+            }
+        return table
+
+
+def clean_text(value: Any) -> str | None:
+    text = "" if value is None else str(value).strip()
+    return text or None
+
+
+def parse_float(value: Any) -> float | None:
+    try:
+        return round(float(value), 3)
+    except (TypeError, ValueError):
+        return None
 
 
 def set_seed(seed: int) -> None:
