@@ -1,0 +1,7 @@
+dev-artifacts-self-testing/*
+!dev-artifacts-self-testing/.gitkeep
+*.wav
+*.pt
+*.pth
+*.ckpt
+*.safetensors
