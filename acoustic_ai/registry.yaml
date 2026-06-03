@@ -167,7 +167,7 @@ layers:
         label: "Weather stem selector — MVP"
         author: murphy
         stage: mvp_1
-        status: mvp_candidate
+        status: iteration_checkpoint
         uses_seed: true
         checkpoint: null
         description: |
@@ -322,7 +322,7 @@ layers:
         author: liting
         stage: mvp_3
         head: weather
-        status: mvp_candidate
+        status: iteration_checkpoint
         checkpoint: model/candidates/liting/mvp_3__balanced_weather_head
         params:
           panns_device: auto
@@ -330,7 +330,7 @@ layers:
           - E-B MVP3 hybrid weather head trained on the same 101 materialised Site257 clips as MVP2.
           - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
           - Rain uses a weighted MLP head; wind keeps the more stable weighted linear head.
-          - Goal is to improve MVP2 joint rain+wind accuracy while keeping Server B training under five minutes.
+          - Server B run improved rain/joint over MVP2 but missed the overall wind gate; keep MVP2 as the safer integration default.
           - Thunder remains suppressed until Site257 thunder evidence is validated.
           - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
 

@@ -35,6 +35,22 @@ Expected split:
 The Server B job should report these timings separately so reviewers can see
 that the trainable stage is small.
 
+## Server B Result
+
+Latest run on the same 101 Site257 materialised clips:
+
+- Rain validation accuracy: 0.885
+- Wind validation accuracy: 0.692
+- Joint validation accuracy: 0.654
+- Actual head training time: 2.30 seconds
+- Total runtime including feature extraction: 18.18 seconds
+- Gate status: `needs_iteration`
+
+Interpretation: MVP3 improves rain accuracy and joint accuracy over MVP2, but
+wind accuracy falls slightly below the 0.70 gate. MVP3 is therefore a useful
+iteration checkpoint, while MVP2 remains the more stable default candidate for
+integration unless the team prefers the higher rain/joint trade-off.
+
 ## Outputs
 
 ```text
