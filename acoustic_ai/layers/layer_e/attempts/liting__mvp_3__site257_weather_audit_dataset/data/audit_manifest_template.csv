@@ -1,0 +1,1 @@
+clip_id,audio_path,source_site_id,source_recording_id,start_s,end_s,duration_s,split,candidate_source,candidate_rank,selection_reason,wind_env_bucket,wind_speed_ms,wind_intensity,rain_intensity,thunder_status,mixed_weather,bird_activity,insect_activity,background_noise,weather_confidence,audit_status,auditor,notes
