@@ -169,6 +169,12 @@ The training target is not "recognise the weather pool"; it is "analyse the
 audible weather layer in ordinary Site257 uploads while controlling false
 positives on no-weather clips."
 
+Server B checklist:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/SERVER_B_RUNBOOK.md
+```
+
 Expected Server B runtime is ~30-90 minutes including data materialisation. The
 actual calibration/head fitting step should be only a few minutes; most time is
 expected to go into pulling/materialising Site257 clips, extracting PANNs/DSP
