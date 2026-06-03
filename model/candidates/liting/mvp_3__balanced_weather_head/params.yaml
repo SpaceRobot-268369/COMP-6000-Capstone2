@@ -1,0 +1,17 @@
+seed: 42
+training:
+  epochs: 500
+  lr: 0.01
+  weight_decay: 0.0001
+  hidden_dim: 24
+  dropout: 0.15
+  val_frac: 0.25
+  site_only: true
+features:
+  panns_backbone: Cnn14_mAP=0.431
+  panns_frozen: true
+  include_panns_scores: true
+  include_dsp_features: true
+outputs:
+  checkpoint: model/candidates/liting/mvp_3__balanced_weather_head/weather_head.pt
+  metrics: model/candidates/liting/mvp_3__balanced_weather_head/metrics.json
