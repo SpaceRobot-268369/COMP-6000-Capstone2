@@ -126,6 +126,7 @@ def main() -> int:
     wind_model_type = args.wind_model_type or args.model_type
     rain_lr = args.rain_lr if args.rain_lr > 0 else args.lr
     wind_lr = args.wind_lr if args.wind_lr > 0 else args.lr
+    torch.manual_seed(args.seed)
     rain_head, rain_history = train_component(
         Xn,
         rows,
@@ -141,6 +142,7 @@ def main() -> int:
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     )
+    torch.manual_seed(args.seed)
     wind_head, wind_history = train_component(
         Xn,
         rows,
