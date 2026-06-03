@@ -54,6 +54,8 @@ def main() -> int:
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--model-type", choices=("linear", "mlp"), default="mlp")
+    parser.add_argument("--balance-mode", choices=("weighted", "oversample"), default="weighted")
     parser.add_argument("--hidden-dim", type=int, default=24)
     parser.add_argument("--dropout", type=float, default=0.15)
     parser.add_argument("--val-frac", type=float, default=0.25)
@@ -126,6 +128,8 @@ def main() -> int:
         epochs=args.epochs,
         lr=args.lr,
         weight_decay=args.weight_decay,
+        model_type=args.model_type,
+        balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     )
@@ -139,6 +143,8 @@ def main() -> int:
         epochs=args.epochs,
         lr=args.lr,
         weight_decay=args.weight_decay,
+        model_type=args.model_type,
+        balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     )
@@ -146,7 +152,8 @@ def main() -> int:
 
     checkpoint = {
         "attempt": "liting__mvp_3__balanced_weather_head",
-        "head_architecture": "mlp_v1",
+        "head_architecture": args.model_type,
+        "balance_mode": args.balance_mode,
         "hidden_dim": args.hidden_dim,
         "dropout": args.dropout,
         "feature_names": list(FEATURE_NAMES),
@@ -169,6 +176,8 @@ def main() -> int:
             "attempt": "liting__mvp_3__balanced_weather_head",
             "baseline_attempt": "liting__mvp_2__calibrated_weather_head",
             "head_architecture": "mlp_v1",
+            "model_type": args.model_type,
+            "balance_mode": args.balance_mode,
             "hidden_dim": args.hidden_dim,
             "dropout": args.dropout,
             "asset_index": str(args.asset_index),
@@ -243,13 +252,15 @@ def train_component(
     epochs: int,
     lr: float,
     weight_decay: float,
+    model_type: str,
+    balance_mode: str,
     hidden_dim: int,
     dropout: float,
 ) -> tuple[nn.Module, list[dict]]:
     class_to_idx = {label: idx for idx, label in enumerate(classes)}
-    balanced_idx = balanced_indices(rows, train_idx, label_key, classes)
-    X_train = torch.from_numpy(X[balanced_idx]).float()
-    y_train = torch.tensor([class_to_idx[rows[i][label_key]] for i in balanced_idx], dtype=torch.long)
+    fit_idx = balanced_indices(rows, train_idx, label_key, classes) if balance_mode == "oversample" else train_idx
+    X_train = torch.from_numpy(X[fit_idx]).float()
+    y_train = torch.tensor([class_to_idx[rows[i][label_key]] for i in fit_idx], dtype=torch.long)
     X_train_raw = torch.from_numpy(X[train_idx]).float()
     y_train_raw = torch.tensor([class_to_idx[rows[i][label_key]] for i in train_idx], dtype=torch.long)
     X_val = torch.from_numpy(X[val_idx]).float()
@@ -257,7 +268,10 @@ def train_component(
 
     counts = torch.bincount(y_train_raw, minlength=len(classes)).float()
     weights = counts.sum() / (counts.clamp(min=1.0) * len(classes))
-    model = WeatherMLP(X_train.shape[1], hidden_dim, len(classes), dropout)
+    if model_type == "linear":
+        model = nn.Linear(X_train.shape[1], len(classes))
+    else:
+        model = WeatherMLP(X_train.shape[1], hidden_dim, len(classes), dropout)
     optimiser = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     loss_fn = nn.CrossEntropyLoss(weight=weights)
 
