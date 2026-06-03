@@ -11,6 +11,7 @@ assets, or decompose the mixture into separated stems.
 
 Given one uploaded audio clip, return a structured weather-layer analysis:
 
+- aggregator-facing continuous summaries for `rain`, `wind`, and `thunder`
 - overall weather label: `none`, `rain`, `wind`, `thunder`, `rain+wind`,
   `rain+thunder`, `wind+thunder`, or `rain+thunder+wind`
 - per-element presence for `rain`, `wind`, and `thunder`
@@ -20,6 +21,11 @@ Given one uploaded audio clip, return a structured weather-layer analysis:
 
 If no clear weather layer is detected, the result must be `overall_label: none`
 with every element marked absent.
+
+For the Layer E aggregator, the authoritative weather output is
+`observations.weather`: continuous 0-1 `summary` fields for wind/rain/thunder,
+plus optional timeline fields. The older top-level `weather` block remains for
+MVP gate calibration and debug compatibility.
 
 ## MVP Method
 
@@ -102,3 +108,25 @@ The smoke passes when:
 If model dependencies are unavailable, the command should still complete with
 `model_scores_unavailable`; that only validates the fallback path, not E-B
 accuracy.
+
+## Calibration Report
+
+Use `code/evaluate_weather_outputs.py` after a calibration or holdout run to
+compare analysis JSON files against expected labels:
+
+```bash
+./acoustic_ai/.venv/bin/python \
+  acoustic_ai/layers/layer_e/attempts/murphy__mvp_1__weather_direct_detection/code/evaluate_weather_outputs.py \
+  /path/to/manifest.csv \
+  --results-dir /path/to/result-jsons \
+  --out /path/to/summary.json
+```
+
+The manifest must contain one id column (`audio_id`, `id`, `clip_id`,
+`sample_id`, or `stem`) and one expected label column (`expected_label`,
+`expected`, `label`, or `human_label`). If the manifest includes `result_json`,
+`json_path`, or `output_json`, that path is used directly; otherwise the script
+looks for matching JSON files in `--results-dir`.
+
+This report is for gate calibration only. It does not run models and does not
+change any Layer B pool or runtime assets.

@@ -435,6 +435,95 @@ def _coverage_from_evidence(
     return coverage
 
 
+def _weather_label_from_intensity(intensity: float) -> str:
+    if intensity < 0.15:
+        return "none"
+    if intensity < 0.40:
+        return "light"
+    if intensity < 0.70:
+        return "moderate"
+    return "heavy"
+
+
+def _window_element_evidence(row: dict[str, Any], element: str) -> float:
+    model_scores = row.get("model_scores", {}).get("scores", {})
+    audioset_scores = row.get("audioset_scores", {}).get("scores", {})
+    guard_scores = row.get("guard_scores", {}).get("scores", {})
+    feature_scores = row.get("feature_scores", {})
+    return max(
+        float(model_scores.get(element, 0.0)),
+        float(audioset_scores.get(element, 0.0)),
+        float(guard_scores.get(element, 0.0)),
+        float(feature_scores.get(element, 0.0)),
+    )
+
+
+def _weather_variability(window_results: list[dict[str, Any]], element: str) -> float:
+    if len(window_results) <= 1:
+        return 0.0
+    values = np.asarray(
+        [_window_element_evidence(row, element) for row in window_results],
+        dtype=np.float32,
+    )
+    if float(np.max(values)) <= 0.0:
+        return 0.0
+    return float(min(1.0, np.std(values) / max(0.10, float(np.max(values)))))
+
+
+def weather_observations_from_decision(
+    weather: dict[str, Any],
+    window_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Convert the legacy gate result into the aggregator-facing E-B contract.
+
+    The gate still owns presence/absence. This adapter exposes the same decision
+    as continuous 0-1 summaries so the Layer E aggregator can consume E-B as an
+    authoritative observation head.
+    """
+    observations: dict[str, Any] = {}
+    elements = weather.get("elements", {})
+    confidences: list[float] = []
+
+    for element in ("wind", "rain"):
+        decision = elements.get(element, {})
+        confidence = float(decision.get("confidence", 0.0))
+        coverage = float(decision.get("coverage", 0.0))
+        present = bool(decision.get("present", False))
+        intensity = confidence if present else min(0.14, confidence * 0.35)
+        confidences.append(confidence)
+        observations[element] = {
+            "summary": {
+                "intensity": round(float(intensity), 6),
+                "variability": round(_weather_variability(window_results, element), 6),
+                "coverage": round(coverage if present else 0.0, 6),
+                "label": _weather_label_from_intensity(float(intensity)),
+                "confidence": round(confidence, 6),
+            }
+        }
+
+    thunder = elements.get("thunder", {})
+    thunder_confidence = float(thunder.get("confidence", 0.0))
+    thunder_present = bool(thunder.get("present", False))
+    thunder_intensity = thunder_confidence if thunder_present else min(0.14, thunder_confidence * 0.35)
+    confidences.append(thunder_confidence)
+    observations["thunder"] = {
+        "summary": {
+            "intensity": round(float(thunder_intensity), 6),
+            "variability": round(_weather_variability(window_results, "thunder"), 6),
+            "coverage": round(float(thunder.get("coverage", 0.0)) if thunder_present else 0.0, 6),
+            "label": _weather_label_from_intensity(float(thunder_intensity)),
+            "confidence": round(thunder_confidence, 6),
+        },
+        "events": [],
+        "mean_interval_s": None,
+    }
+
+    observations["confidence"] = round(float(np.mean(confidences)) if confidences else 0.0, 6)
+    observations["derived_label"] = weather.get("overall_label", "none")
+    observations["warnings"] = list(weather.get("warnings", []))
+    return observations
+
+
 def aggregate_weather_with_gates(
     window_results: list[dict[str, Any]],
     params: dict[str, Any],
@@ -553,6 +642,9 @@ def analyze(
     if audio.source_sample_rate != audio.sample_rate:
         top_level_warnings.append("unsupported_sample_rate_resampled")
         weather["warnings"] = sorted(set(top_level_warnings))
+    observations = {
+        "weather": weather_observations_from_decision(weather, window_results),
+    }
 
     return {
         "attempt_id": ATTEMPT_ID,
@@ -564,6 +656,7 @@ def analyze(
             "source_sample_rate": audio.source_sample_rate,
             "source_channels": audio.source_channels,
         },
+        "observations": observations,
         "weather": weather,
         "window_results": window_results,
         "debug": {

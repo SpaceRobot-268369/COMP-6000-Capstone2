@@ -14,6 +14,42 @@ independent of Layer B generation/retrieval schemas.
     "sample_rate": 22050,
     "channels": 1
   },
+  "observations": {
+    "weather": {
+      "wind": {
+        "summary": {
+          "intensity": 0.62,
+          "variability": 0.40,
+          "coverage": 0.95,
+          "label": "moderate",
+          "confidence": 0.83
+        }
+      },
+      "rain": {
+        "summary": {
+          "intensity": 0.10,
+          "variability": 0.70,
+          "coverage": 0.20,
+          "label": "light",
+          "confidence": 0.55
+        }
+      },
+      "thunder": {
+        "summary": {
+          "intensity": 0.00,
+          "variability": 0.00,
+          "coverage": 0.00,
+          "label": "none",
+          "confidence": 0.90
+        },
+        "events": [],
+        "mean_interval_s": null
+      },
+      "confidence": 0.80,
+      "derived_label": "rain+wind",
+      "warnings": []
+    }
+  },
   "weather": {
     "overall_label": "rain+wind",
     "none": false,
@@ -46,6 +82,11 @@ independent of Layer B generation/retrieval schemas.
 }
 ```
 
+`observations.weather` is the aggregator-facing contract. It follows the
+project-wide analysis spec: E-B reports continuous 0-1 summaries for wind,
+rain, and thunder. The legacy `weather` block is retained during MVP
+development for current tests, debug pages, and gate calibration scripts.
+
 ## Labels
 
 Allowed `overall_label` values:
@@ -70,7 +111,7 @@ The MVP tracks exactly three weather elements:
 - `wind`
 - `thunder`
 
-Each element must contain:
+The compatibility `weather.elements` block contains:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -85,6 +126,42 @@ Composite weather labels are derived from element-level presence. For example,
 if rain and wind are present but thunder is absent, the top-level label is
 `rain+wind`. E-B does not claim to source-separate mixed weather; confidence,
 coverage, and warnings communicate ambiguity.
+
+## Aggregator Weather Observations
+
+The compulsory E-B observation contract is:
+
+```json
+{
+  "observations": {
+    "weather": {
+      "wind": { "summary": { "intensity": 0.0, "variability": 0.0, "coverage": 0.0, "label": "none", "confidence": 0.0 } },
+      "rain": { "summary": { "intensity": 0.0, "variability": 0.0, "coverage": 0.0, "label": "none", "confidence": 0.0 } },
+      "thunder": {
+        "summary": { "intensity": 0.0, "variability": 0.0, "coverage": 0.0, "label": "none", "confidence": 0.0 },
+        "events": [],
+        "mean_interval_s": null
+      },
+      "confidence": 0.0,
+      "derived_label": "none",
+      "warnings": []
+    }
+  }
+}
+```
+
+Summary fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `intensity` | number | Continuous weather-element magnitude in `[0, 1]`. |
+| `variability` | number | Fluctuation over analysis windows: steady `0`, highly variable `1`. |
+| `coverage` | number | Fraction of the clip where the element is audibly present. |
+| `label` | string | Derived bucket from intensity: `none`, `light`, `moderate`, or `heavy`. |
+| `confidence` | number | Confidence in the element summary. |
+
+For MVP, E-B may be summary-only. Wind/rain `segments` and thunder `events` are
+optional advanced timeline fields; consumers must handle their absence.
 
 ## Warnings
 

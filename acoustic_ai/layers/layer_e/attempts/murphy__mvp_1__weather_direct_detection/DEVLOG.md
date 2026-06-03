@@ -823,3 +823,63 @@ Human follow-up listen:
 - User judgment: rain is extremely subtle and weak in both clips.
 - Decision: gate v1.1 conservative `wind` output is acceptable for MVP. Do not
   loosen the mixed-weather gate based on these two clips.
+
+### Step 21 — Human-audited regression spot-check for gate v1.1
+
+Created a small regression manifest from previously human-audited Layer B site
+weather clips:
+
+`calibration/gate_v1_1_regression_spotcheck.csv`
+
+Composition:
+
+- `rain`: 3
+- `wind`: 3
+- `rain+wind`: 4
+- `thunder`: 2
+
+All 12 WAV paths exist locally. This is not a broad benchmark; it is a small
+guardrail to catch obvious gate regressions using clips the user already
+reviewed.
+
+Server B run:
+
+```bash
+cd /tmp/e_b_gate_regression_001
+/home/ubuntu/murphy/COMP-6000-Capstone2/acoustic_ai/.venv/bin/python \
+  acoustic_ai/layers/layer_e/attempts/murphy__mvp_1__weather_direct_detection/code/run_weather_analysis.py \
+  <audio.wav> \
+  --model-backend clap \
+  --audioset-backend panns \
+  --guard-backend ast \
+  --out outputs/<audio_id>.json
+```
+
+Summary from `evaluate_weather_outputs.py`:
+
+| metric | result |
+| --- | --- |
+| exact label match | 7 / 12 |
+| rain | 3 / 3 |
+| wind | 2 / 3 |
+| rain+wind | 1 / 4 |
+| thunder | 1 / 2 |
+
+Mismatch diagnosis:
+
+- `rain+wind -> wind` cases have rain confidence around `0.27` and are
+  consistent with prior listening feedback that site rain under wind is often
+  extremely subtle.
+- `rain+wind -> rain` had strong CLAP/PANNs/AST rain support but weak wind
+  confirmation. This is a known limitation of the current wind gate.
+- `wind -> rain+wind` fired `possible_rain_under_wind`; this is a mild false
+  positive but remains explicitly warned.
+- `thunder -> wind` remains the expected thunder/wind-overload ambiguity.
+
+Decision:
+
+- Keep gate v1.1 frozen for now.
+- Do not loosen rain-under-wind or thunder gates based on this spot-check.
+- Treat this manifest as a regression set for future gate edits.
+- Next useful improvement is operational, not policy: run calibration in one
+  batch process so CLAP/PANNs/AST load once instead of reloading for each clip.
