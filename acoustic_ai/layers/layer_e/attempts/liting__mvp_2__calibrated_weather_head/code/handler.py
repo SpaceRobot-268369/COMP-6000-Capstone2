@@ -13,6 +13,72 @@ from layers.layer_e.attempts.liting__mvp_1__panns_weather_baseline.code.handler 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[6]
 DEFAULT_CHECKPOINT = PROJECT_ROOT / "model" / "candidates" / "liting" / "mvp_2__calibrated_weather_head" / "weather_head.pt"
+INTENSITY_VALUE = {
+    "none": 0.0,
+    "light": 0.25,
+    "moderate": 0.6,
+    "strong": 0.85,
+    "heavy": 0.85,
+}
+
+
+def _label_value(label: str | None) -> float:
+    return INTENSITY_VALUE.get(str(label or "none").lower(), 0.0)
+
+
+def _weather_summary(weather: dict) -> dict:
+    confidence = weather.get("component_confidence", {})
+    return {
+        "wind": {
+            "intensity": weather.get("wind_intensity", "none"),
+            "confidence": float(confidence.get("wind", weather.get("confidence", 0.0))),
+        },
+        "rain": {
+            "intensity": weather.get("rain_intensity", "none"),
+            "confidence": float(confidence.get("rain", weather.get("confidence", 0.0))),
+        },
+        "thunder": {
+            "intensity": "none",
+            "confidence": 0.9,
+        },
+    }
+
+
+def _weather_observations(weather: dict) -> dict:
+    summary = _weather_summary(weather)
+    wind_label = summary["wind"]["intensity"]
+    rain_label = summary["rain"]["intensity"]
+    return {
+        "weather": {
+            "wind": {
+                "summary": {
+                    "label": wind_label,
+                    "intensity": _label_value(wind_label),
+                    "variability": 0.0,
+                    "coverage": summary["wind"]["confidence"],
+                    "confidence": summary["wind"]["confidence"],
+                }
+            },
+            "rain": {
+                "summary": {
+                    "label": rain_label,
+                    "intensity": _label_value(rain_label),
+                    "variability": 0.0,
+                    "coverage": summary["rain"]["confidence"],
+                    "confidence": summary["rain"]["confidence"],
+                }
+            },
+            "thunder": {
+                "label": "none",
+                "intensity": 0.0,
+                "event_count": 0,
+                "events": [],
+                "mean_interval_s": None,
+                "confidence": 0.9,
+                "status": "suppressed_until_site257_thunder_evidence_is_validated",
+            },
+        }
+    }
 
 
 def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> dict:
@@ -37,7 +103,11 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
 def analyze(state: dict, audio_path: str | Path) -> dict:
     checkpoint = state.get("checkpoint")
     if not checkpoint:
-        return fallback_analyze(state["fallback"], audio_path)
+        report = fallback_analyze(state["fallback"], audio_path)
+        weather = report.get("weather", {})
+        if "observations" not in report:
+            report["observations"] = _weather_observations(weather)
+        return report
 
     features, evidence = extract_feature_vector(audio_path)
     prediction = predict_with_checkpoint(features, checkpoint)
@@ -60,20 +130,8 @@ def analyze(state: dict, audio_path: str | Path) -> dict:
         "head": "weather",
         "component": "E-B",
         "weather": weather,
-        "summary": {
-            "wind": {
-                "intensity": weather["wind_intensity"],
-                "confidence": weather["component_confidence"]["wind"],
-            },
-            "rain": {
-                "intensity": weather["rain_intensity"],
-                "confidence": weather["component_confidence"]["rain"],
-            },
-            "thunder": {
-                "intensity": "none",
-                "confidence": 0.0,
-            },
-        },
+        "summary": _weather_summary(weather),
+        "observations": _weather_observations(weather),
         "model": {
             "primary": weather["primary_model"],
             "method": weather["method"],
@@ -87,4 +145,3 @@ def analyze(state: dict, audio_path: str | Path) -> dict:
 
 def generate(state: dict, seed: int | None = None, **runtime_params) -> dict:
     raise NotImplementedError("Layer E weather analysis is upload-based; use analyze().")
-
