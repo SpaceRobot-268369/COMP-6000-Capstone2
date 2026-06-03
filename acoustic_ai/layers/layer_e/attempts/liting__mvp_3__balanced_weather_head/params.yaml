@@ -3,6 +3,8 @@ training:
   epochs: 500
   lr: 0.01
   weight_decay: 0.0001
+  model_type: mlp
+  balance_mode: weighted
   hidden_dim: 24
   dropout: 0.15
   val_frac: 0.25
