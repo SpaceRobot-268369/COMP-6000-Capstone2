@@ -21,17 +21,20 @@ independent of Layer B generation/retrieval schemas.
       "rain": {
         "present": true,
         "intensity": "medium",
-        "confidence": 0.78
+        "confidence": 0.78,
+        "coverage": 0.64
       },
       "wind": {
         "present": true,
         "intensity": "light",
-        "confidence": 0.62
+        "confidence": 0.62,
+        "coverage": 0.38
       },
       "thunder": {
         "present": false,
         "intensity": "none",
-        "confidence": 0.18
+        "confidence": 0.18,
+        "coverage": 0.0
       }
     },
     "warnings": [
@@ -74,8 +77,14 @@ Each element must contain:
 | `present` | boolean | Whether this element is clearly detected. |
 | `intensity` | string | One of `none`, `light`, `medium`, `heavy`. |
 | `confidence` | number | Calibrated confidence in `[0, 1]`. |
+| `coverage` | number | Fraction of analysis windows where the element passes its presence threshold. |
 
 If `present` is false, `intensity` must be `none`.
+
+Composite weather labels are derived from element-level presence. For example,
+if rain and wind are present but thunder is absent, the top-level label is
+`rain+wind`. E-B does not claim to source-separate mixed weather; confidence,
+coverage, and warnings communicate ambiguity.
 
 ## Warnings
 
@@ -88,6 +97,7 @@ Allowed MVP warning values:
 - `possible_bio_overlap`
 - `possible_human_or_machine_overlap`
 - `possible_wind_overload`
+- `possible_rain_under_wind`
 - `possible_clipping`
 - `weather_mixed_with_ambient`
 - `short_audio`

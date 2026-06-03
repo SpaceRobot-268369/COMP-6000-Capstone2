@@ -57,6 +57,16 @@ Initial MVP thresholds:
 
 If no element passes its threshold, return `overall_label: none`.
 
+Composite labels are derived from independent element decisions. Do not force a
+single winning weather class. For example:
+
+- rain present + wind present -> `rain+wind`
+- rain present + thunder present -> `rain+thunder`
+- rain present + wind present + thunder present -> `rain+thunder+wind`
+
+Mixed labels should include confidence and coverage for each element, because
+E-B is detecting elements in a mixture, not separating stems.
+
 ## Intensity Rules
 
 Intensity is calibrated from confidence, RMS, duration coverage, and feature
@@ -82,6 +92,8 @@ Add warnings when ambiguity is likely:
   weather score.
 - `possible_wind_overload`: thunder score is high but clipping, peak, or wind
   score is also high.
+- `possible_rain_under_wind`: wind is present and rain evidence is close to the
+  rain threshold but not strong enough to mark rain present.
 - `possible_clipping`: clipping ratio exceeds the MVP threshold.
 - `weather_mixed_with_ambient`: weather is present but not dominant.
 - `low_confidence`: one or more present elements are near threshold.
@@ -97,4 +109,3 @@ Use small targeted audits to tune thresholds:
 
 Audit output should compare human labels against model output, not promote
 assets into a runtime pool.
-

@@ -206,3 +206,437 @@ Interpretation:
   low-frequency bursts are hard to separate by a single off-the-shelf model.
 - Next model step should treat PANNs as one evidence channel, then test a third
   model or calibrated rules before making final E-B decisions.
+
+### Step 8 — ServerB AST AudioSet smoke
+
+Tested a third off-the-shelf AudioSet model on serverB:
+
+`MIT/ast-finetuned-audioset-10-10-0.4593`
+
+Runtime:
+
+- `transformers`
+- `torch`
+- GPU: `cuda:0`
+- input resampled to 16 kHz by the test script
+
+Smoke-tested the same three human-reviewed site weather clips used for PANNs.
+
+Result summary:
+
+| sample | human label | AST strongest relevant labels |
+| --- | --- | --- |
+| `001_site257_214657_001545_001575` | rain+wind medium | Wind `0.395`, Thunderstorm `0.270`, Wind noise `0.264`, Thunder `0.253`, Rain `0.067` |
+| `006_site257_214871_006725_006755` | wind heavy | Wind `0.462`, Wind noise `0.365`, Thunderstorm `0.128`, Rain `0.091`, Thunder `0.085` |
+| `012_site257_214872_001700_001730` | thunder maybe | Thunder `0.129`, Wind noise `0.124`, Wind `0.111`, Thunderstorm `0.103`, Rain `0.039` |
+
+Interpretation:
+
+- AST is more conservative than PANNs.
+- AST handles the `wind heavy` sample better: it ranks `Wind` / `Wind noise`
+  above `Thunder` / `Thunderstorm`.
+- AST may be useful as a guard against PANNs thunder overcalls.
+- AST rain scores are low on these mixed site clips, so it should not be the
+  only rain detector.
+- AST thunder scores are also low on the ambiguous thunder sample, so it should
+  not be the only thunder detector.
+- Best next direction: use AST as a calibration/confirmation channel in a
+  multi-evidence fusion policy, not as the sole classifier.
+
+### Step 9 — ServerB BEATs AudioSet smoke
+
+Tested Microsoft BEATs with an AudioSet-finetuned checkpoint on serverB.
+
+Runtime setup in the personal experiment venv only:
+
+- installed `torchaudio==2.11.0+cu128`
+- downloaded official BEATs source files to `~/beats_data/code`
+- downloaded checkpoints to `~/beats_data/checkpoints`
+- used AudioSet-finetuned checkpoint:
+  `BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt`
+
+Notes:
+
+- The first downloaded `BEATs_iter3_plus_AS2M.pt` checkpoint was encoder-only
+  and did not include a classifier head, so it was not useful for E-B label
+  smoke testing.
+- The fine-tuned checkpoint includes `label_dict` and a 527-class classifier.
+
+Smoke-tested the same three human-reviewed site weather clips.
+
+Result summary:
+
+| sample | human label | BEATs strongest relevant labels |
+| --- | --- | --- |
+| `001_site257_214657_001545_001575` | rain+wind medium | Rain `0.233`, Thunder `0.182`, Wind `0.176`, Wind noise `0.153`, Thunderstorm `0.145` |
+| `006_site257_214871_006725_006755` | wind heavy | Rustling leaves `0.243`, Wind `0.149`, Wind noise `0.138`, Rain `0.098`, Thunder `0.012`, Thunderstorm `0.015` |
+| `012_site257_214872_001700_001730` | thunder maybe | Wind `0.209`, Wind noise `0.174`, Thunder `0.058`, Rain `0.035`, Thunderstorm `0.033` |
+
+Interpretation:
+
+- BEATs is the most conservative of the tested AudioSet-style models so far.
+- BEATs does not strongly overcall thunder on the wind-heavy clip, which is an
+  improvement over PANNs.
+- BEATs correctly keeps bird/insect/speech scores very low on these samples.
+- BEATs absolute weather probabilities are low, so thresholds cannot be copied
+  from PANNs or AST.
+- BEATs may be useful as a robust evidence channel for reducing false thunder
+  positives and for confirming broad rain/wind texture, but it is not enough as
+  a sole classifier.
+
+### Step 10 — Composite element-level aggregation
+
+Updated the CLI fusion/aggregation path so E-B makes independent element-level
+decisions before deriving the top-level weather label.
+
+Changes:
+
+- `combine_scores` now accepts CLAP scores, AudioSet scores, and feature
+  support.
+- Fusion weights are normalised based on which channels are available.
+- `aggregate_weather` now computes per-element:
+  - `confidence`
+  - `coverage`
+  - `present`
+  - `intensity`
+- Composite labels are built from present elements instead of forcing a single
+  winning class.
+- Mixed outputs can now naturally become:
+  - `rain+wind`
+  - `rain+thunder`
+  - `wind+thunder`
+  - `rain+thunder+wind`
+- Added warning support for:
+  - `weather_mixed_with_ambient`
+  - `possible_rain_under_wind`
+  - `possible_wind_overload`
+
+Validation:
+
+- Local Python compile passed.
+- Local CLI smoke on a rain WAV with both model backends disabled completed and
+  emitted schema-shaped JSON with `confidence` and `coverage` for all elements.
+
+Interpretation:
+
+- This does not solve model accuracy yet.
+- It does establish the correct E-B decision shape for mixed weather: detect
+  rain/wind/thunder separately, then derive the composite label.
+
+### Step 11 — ServerB CLAP-only composite smoke
+
+Synced the current local attempt to the isolated serverB smoke workdir and ran
+the composite CLI on three human-reviewed Nov 2019 site clips.
+
+Inputs were audit MP3 previews converted to temporary 22.05 kHz mono WAV files
+under `/tmp/e_b_composite_smoke_wav/`.
+
+Outputs were written under:
+
+`dev-artifacts-self-testing/composite_smoke_clap_001/`
+
+Result summary:
+
+| sample | human label | E-B CLAP-only label | rain | wind | thunder |
+| --- | --- | --- | --- | --- | --- |
+| `rain_wind_001` | rain+wind medium | `none` | `0.478` | `0.537` | `0.514` |
+| `wind_heavy_006` | wind heavy | `none` | `0.479` | `0.542` | `0.489` |
+| `thunder_maybe_012` | thunder maybe | `none` | `0.389` | `0.504` | `0.524` |
+
+Interpretation:
+
+- Composite aggregation executes successfully on serverB.
+- CLAP-only evidence is close to thresholds but not enough to mark elements
+  present under current conservative settings.
+- This confirms that composite logic is structurally ready, but threshold tuning
+  should wait until AudioSet channels are integrated into the CLI.
+- Do not solve this by simply lowering all thresholds for CLAP-only; that would
+  likely increase false positives. The next implementation step should add
+  PANNs/AST/BEATs score channels or a small calibration harness.
+
+### Step 12 — ServerB CLAP + BEATs one-off fusion smoke
+
+Ran a one-off serverB experiment combining:
+
+- CLAP max window scores from `composite_smoke_clap_001`
+- BEATs full-clip AudioSet scores from the same three human-reviewed clips
+
+Tested two weighted-average settings:
+
+- current documented weights: CLAP `0.65`, BEATs `0.25`, features `0.10`
+- exploratory weights: CLAP `0.55`, BEATs `0.35`, features `0.10`
+
+Result summary:
+
+| sample | human label | CLAP max rain/wind/thunder | BEATs rain/wind/thunder | current weighted output |
+| --- | --- | --- | --- | --- |
+| `rain_wind_001` | rain+wind medium | `0.552 / 0.590 / 0.569` | `0.232 / 0.177 / 0.182` | `none` |
+| `wind_heavy_006` | wind heavy | `0.553 / 0.595 / 0.535` | `0.096 / 0.149 / 0.015` | `none` |
+| `thunder_maybe_012` | thunder maybe | `0.449 / 0.547 / 0.573` | `0.036 / 0.210 / 0.058` | `none` |
+
+Interpretation:
+
+- Naive weighted averaging with BEATs is not useful because BEATs absolute
+  scores are much lower than CLAP scores.
+- BEATs is still useful, but not as a simple probability averaged with CLAP.
+- Better next fusion design: use CLAP as the sensitive detector and BEATs/AST as
+  a relative gate or guard, especially to suppress false thunder positives.
+- Example: do not accept thunder unless CLAP thunder is high and BEATs/AST does
+  not strongly prefer wind/noise over thunder.
+
+### Step 13 — Rule-based multi-model gate smoke
+
+Ran a second one-off fusion experiment using all four evidence channels:
+
+- CLAP
+- PANNs
+- AST
+- BEATs
+
+Important design change:
+
+- Do not average raw model probabilities directly.
+- Use model rankings and relative support as gates.
+- Treat PANNs thunder as sensitive but noisy.
+- Treat AST/BEATs as conservative guards against false thunder.
+- Treat BEATs rain support as a stronger confirmation for rain than PANNs rain
+  alone, because PANNs rain is broad on storm/wind textures.
+
+Rule v2 results:
+
+| sample | human label | rule v2 output | notes |
+| --- | --- | --- | --- |
+| `rain_wind_001` | rain+wind medium | `rain+wind` | correct composite, low confidence, possible wind overload |
+| `wind_heavy_006` | wind heavy | `wind` | fixed the previous false rain positive |
+| `thunder_maybe_012` | thunder maybe | `wind+thunder` | plausible but low confidence; flagged wind overload |
+
+Rule v2 confidence values:
+
+| sample | rain | wind | thunder |
+| --- | ---: | ---: | ---: |
+| `rain_wind_001` | `0.475` | `0.477` | `0.517` |
+| `wind_heavy_006` | `0.446` | `0.488` | `0.412` |
+| `thunder_maybe_012` | `0.372` | `0.402` | `0.483` |
+
+Interpretation:
+
+- The element-level composite approach is viable.
+- Raw model scores are not calibrated probabilities; confidence must be
+  calibrated after rule decisions, likely by mapping evidence patterns to
+  confidence bands instead of reporting raw weighted averages.
+- Rule v2 is a better MVP direction than naive weighted averaging.
+- Next implementation step: encode rule-style gate fusion in the CLI behind a
+  transparent calibration policy, then run a tiny 15-25 clip calibration set.
+
+### Step 14 — Gate fusion module scaffold
+
+Added:
+
+`code/gate_fusion.py`
+
+Purpose:
+
+- preserve the rule v2 fusion behavior in reusable code
+- keep composite weather decisions element-level
+- map raw model scores into honest MVP confidence bands
+- avoid treating raw CLAP/PANNs/AST/BEATs scores as calibrated probabilities
+
+Current function:
+
+`decide_weather_from_evidence(evidence, coverage=None)`
+
+Expected optional evidence channels:
+
+- `clap`
+- `panns`
+- `ast`
+- `beats`
+- `features`
+
+Smoke input used the recorded score triplets from Step 13.
+
+Smoke output:
+
+| sample | human label | gate module output |
+| --- | --- | --- |
+| `rain_wind_001` | rain+wind medium | `rain+wind` |
+| `wind_heavy_006` | wind heavy | `wind` |
+| `thunder_maybe_012` | thunder maybe | `wind+thunder` |
+
+Notes:
+
+- Confidence is now banded after the rule decision rather than reported as raw
+  weighted model score.
+- Example: `rain_wind_001` outputs rain confidence `0.606` and wind confidence
+  `0.606`, even though raw evidence confidence is around `0.47`.
+- This is intentionally more readable for users while still exposing raw scores
+  in debug output.
+
+Validation:
+
+- Local smoke of the module passed.
+- Python compile passed.
+
+Remaining work:
+
+- Wire real PANNs/AST/BEATs channels into the CLI.
+- Use this fusion module for final `weather` output once model channels are
+  available.
+- Run a tiny 15-25 clip calibration set before API/frontend work.
+
+### Step 15 — Real PANNs scorer wired into CLI
+
+Implemented the real PANNs CNN14 AudioSet scorer in:
+
+`code/audioset_scores.py`
+
+Behavior:
+
+- loads `panns_inference.AudioTagging`
+- uses 32 kHz mono audio
+- maps AudioSet labels to E-B groups:
+  - rain: `Rain`, `Raindrop`, `Rain on surface`
+  - wind: `Wind`, `Wind noise (microphone)`
+  - thunder: `Thunder`, `Thunderstorm`
+  - bio contamination: `Bird`, `Bird vocalization, bird call, bird song`,
+    `Insect`
+  - human/machine contamination: `Speech`, `Vehicle`, `Engine`, `Machinery`
+- stores raw weather labels and top labels in `audioset_scores.raw`
+- degrades safely when `panns_inference` is unavailable
+
+Validation:
+
+- Local compile passed.
+- Local fallback smoke passed without PANNs installed.
+- ServerB CLAP+PANNs CLI smoke ran on the three human-reviewed WAV-converted
+  clips.
+
+ServerB CLAP+PANNs CLI smoke summary:
+
+| sample | human label | CLI output | rain | wind | thunder |
+| --- | --- | --- | ---: | ---: | ---: |
+| `rain_wind_001` | rain+wind medium | `none` | `0.405` | `0.433` | `0.535` |
+| `wind_heavy_006` | wind heavy | `none` | `0.457` | `0.433` | `0.504` |
+| `thunder_maybe_012` | thunder maybe | `none` | `0.368` | `0.398` | `0.551` |
+
+Interpretation:
+
+- PANNs is now technically available to the CLI.
+- The current CLI still uses weighted aggregation, so output remains too
+  conservative and not useful as final E-B judgment.
+- PANNs scores differ between full-clip one-off tests and 5 s window CLI tests;
+  calibration must account for windowing.
+- Next step should route CLAP/PANNs evidence into `gate_fusion.py` instead of
+  relying on weighted-average aggregation.
+
+### Step 16 — CLI routed through gated fusion, AST guard added
+
+Implemented the final `weather` decision path through `code/gate_fusion.py`
+instead of the old weighted-average threshold.
+
+Changes:
+
+- `run_weather_analysis.py` now aggregates per-window evidence peaks and calls
+  `decide_weather_from_evidence(...)`.
+- Output debug now exposes evidence channels:
+  - `clap`
+  - `panns`
+  - `ast`
+  - `features`
+- Added optional `--guard-backend ast`.
+- `audioset_scores.py` now includes a Hugging Face AST AudioSet scorer:
+  `MIT/ast-finetuned-audioset-10-10-0.4593`.
+- Rain confirmation now uses:
+  - BEATs when available,
+  - otherwise PANNs or AST as conservative support.
+
+Validation:
+
+- Local Python compile passed.
+- Local `none` smoke passed.
+- ServerB CLAP+PANNs+AST smoke passed on three human-reviewed samples.
+
+ServerB CLAP+PANNs+AST gate summary:
+
+| sample | human label | CLI output | key interpretation |
+| --- | --- | --- | --- |
+| `rain_wind_001` | rain+wind medium | `rain+wind` | AST top rain confirms rain while CLAP top wind keeps wind present. |
+| `wind_heavy_006` | wind heavy | `wind` | AST top wind prevents PANNs thunder false positive from becoming thunder. |
+| `thunder_maybe_012` | thunder maybe | `thunder` | CLAP/PANNs/AST all top thunder, so gate promotes thunder. |
+
+Current judgment rule:
+
+- CLAP is the sensitive candidate detector.
+- PANNs is useful but noisy, especially for thunder on wind-like textures.
+- AST is now the main conservative guard for `wind` vs `thunder`, and also
+  helps confirm rain when BEATs is not wired into CLI.
+- `possible_wind_overload` remains as a warning when thunder-like evidence is
+  present but may be wind overload.
+
+Remaining work:
+
+- Run a slightly larger calibration set before exposing this as an API feature.
+- Decide whether BEATs should be wired into CLI or kept as a research-only
+  cross-check.
+- Tune confidence/intensity mapping once calibration data is larger than three
+  examples.
+
+### Step 17 — 12-sample calibration smoke
+
+Ran a small human-reviewed calibration set on ServerB with:
+
+```bash
+--model-backend clap --audioset-backend panns --guard-backend ast
+```
+
+Temporary input/output location:
+
+- local: `/tmp/e_b_calibration_001`
+- ServerB: `/tmp/e_b_calibration_001`
+
+Calibration mix:
+
+- `rain`: 2
+- `rain+wind`: 4
+- `wind`: 3
+- `thunder`: 2
+- `none`: 1
+
+Summary:
+
+| metric | result |
+| --- | --- |
+| exact label match | 8 / 12 |
+| expected elements contained in output | 8 / 12 |
+
+Per-sample summary:
+
+| sample | expected | output | note |
+| --- | --- | --- | --- |
+| `rain_heavy_site` | rain | rain | correct |
+| `rain_light_site` | rain | rain | correct |
+| `rain_wind_storm_001` | rain+wind | wind | missed rain |
+| `rain_wind_storm_006` | rain+wind | wind | missed rain |
+| `rain_wind_storm_015` | rain+wind | wind | missed rain |
+| `rain_wind_nov_001` | rain+wind | rain+wind | correct |
+| `wind_nov_006` | wind | wind | correct |
+| `wind_nov_009` | wind | wind | correct |
+| `wind_storm_022` | wind | wind | correct |
+| `thunder_nov_012` | thunder | thunder | correct |
+| `thunder_nov_017` | thunder | wind | uncertain thunder missed |
+| `none_quiet_091` | none | none | correct |
+
+Interpretation:
+
+- Pure rain and wind are usable for MVP-level analysis.
+- `rain+wind` recall is still too conservative: three mixed clips become
+  `wind` only.
+- Thunder remains deliberately conservative. One maybe-thunder clip became
+  wind, which is acceptable if we prefer avoiding false thunder, but should be
+  documented.
+- The next useful change is not another model test. It is a small gate-tuning
+  pass for rain-under-wind:
+  - allow weak rain when CLAP rain is close to CLAP wind and PANNs/AST has any
+    rain support,
+  - keep the confidence low and add `possible_rain_under_wind`,
+  - do not change pure wind behavior.
