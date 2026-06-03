@@ -9,6 +9,18 @@ E-B analyses the raw uploaded audio mixture directly. It does not perform source
 separation. E-A ambient context and E-C event detection remain separate Layer E
 heads and are still placeholders in the current `/analysis` response.
 
+The target feature is broader than the current curated weather pool:
+
+```text
+Given any Site257 audio upload, estimate the audible weather layer:
+wind intensity, rain intensity, thunder status, confidence, and limitations.
+```
+
+The current weather-positive pool is useful for calibration and validation
+seeding, but it is not the full feature scope. The MVP must also handle ordinary
+Site257 clips with birds, insects, ambience, mixed weather, and no audible
+weather.
+
 ## Method
 
 The MVP detector uses a staged weather evidence stack:
@@ -17,17 +29,17 @@ The MVP detector uses a staged weather evidence stack:
    package and torch runtime are available. This provides direct weather labels
    such as wind, rain, raindrop, and thunderstorm.
 2. **Site257 calibrated spectral detector** as the stable fallback. This reuses
-   `liting__smoke_1__e_b_weather_analysis`, calibrated on Murphy's Server A
-   CLAP-first promoted Layer B weather assets. Client-facing calibration should
-   use Site257-derived assets only; sound-library rows in shared indexes are
+   `liting__smoke_1__e_b_weather_analysis`, calibrated on an initial Site257
+   CLAP-promoted weather pool. Client-facing calibration should use
+   Site257-derived assets only; sound-library rows in shared indexes are
    excluded from E-B MVP claims.
 3. **Explainable DSP features** are always included for reporting and sanity
    checking.
 
 After the first PANNs-enabled run, PANNs is used as a **presence detector** and
-the site257 spectral detector remains responsible for intensity. This is because
+the Site257 spectral detector remains responsible for intensity. This is because
 raw PANNs scores separate rain/wind presence well, but do not map cleanly to
-`light`/`moderate`/`strong` intensity buckets without site calibration.
+`light`/`moderate`/`strong` intensity buckets without site-wide calibration.
 
 Current method string when PANNs is unavailable:
 
@@ -51,18 +63,26 @@ Current calibrated presence thresholds:
 
 ## Data
 
-This attempt does not own new training data yet. It reads the smoke baseline's
-site257 promoted weather references:
+This attempt currently has a runnable baseline built from the smoke baseline's
+Site257 promoted weather references:
 
 ```text
 acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/layer_d_ready_manifest.csv
 ```
 
-Those references come from Murphy's Server A Layer B site-weather policy.
-Murphy's newer site-only direction should be treated as the source of truth for
-future E-B calibration: use `analysis_use=site_ready_pool` or
-`site_backup_pool`, and ignore rows where `source_type=sound_library` for
-client-facing analysis metrics.
+Those references are enough to run the current 63-clip weather-positive
+baseline, but they are not the final E-B-owned training/evaluation dataset. The
+next Server B run should materialise and audit a Site257-only E-B candidate
+pool, including:
+
+- weather-positive clips,
+- mixed weather + ecology clips,
+- no-weather / ambient clips,
+- random site-wide holdout clips that represent normal user uploads.
+
+It should then write an E-B-owned manifest with train/validation/holdout split.
+Team site-only weather indexes can be used as policy references, but the final
+E-B claim should be based on this attempt's own audited Site257 manifest.
 
 This attempt also includes a small local no-weather negative proxy manifest:
 
@@ -75,9 +95,26 @@ current E-B detector reports as no rain and no wind. They are useful for a first
 false-positive check, but they are proxies rather than final ambient holdout
 clips.
 
-## Murphy Layer B Alignment
+The attempt also records a current Site257-only weather policy snapshot:
 
-This attempt is aligned with Murphy's current Layer B weather policy:
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/data/site257_weather_policy_snapshot.csv
+```
+
+This snapshot is a planning/reference copy of the current shared site-only
+weather index. It is kept only to avoid contradicting the team weather taxonomy;
+the final MVP claim should come from an E-B-owned audited Site257 manifest.
+
+It contains only rows where `source_type=site` and
+`analysis_use in {site_ready_pool, site_backup_pool}`. The current snapshot has
+113 Site257 rows: 105 ready, 8 backup, and zero sound-library rows. By weather
+policy role it contains 93 wind-primary, 6 rain-primary, 12 mixed rain+wind, and
+2 thunder-primary rows. Thunder remains disabled as a confident E-B MVP output
+because two site rows are not enough for a stable client-facing class.
+
+## Site257 E-B Data Policy
+
+This attempt follows a Site257-only E-B data policy:
 
 - CLAP/audio evidence is the primary weather candidate signal.
 - Environmental metadata is used as a prior/filter/tie-breaker, not as a direct
@@ -89,18 +126,25 @@ This attempt is aligned with Murphy's current Layer B weather policy:
   thunder remains disabled until a Site257-derived thunder example is found and
   audited. Sound-library thunder is not acceptable for the client-facing E-B
   claim.
+- E-B should build its own audited Site257 weather manifest before claiming a
+  final MVP metric. Team weather indexes are references, not the final E-B
+  training set.
+- The feature scope is all Site257 uploads, not only curated weather-pool clips.
+  A valid `none` result on no-weather audio is as important as detecting obvious
+  rain or wind.
 
 The MVP test therefore evaluates asset policy classes separately:
 
 | Policy class | Meaning | Test expectation |
 |---|---|---|
-| `rain_primary` | Murphy accepted the clip as a rain weather asset | Compare expected rain/wind intensities directly. |
-| `wind_primary` | Murphy accepted the clip as a wind weather asset | Compare expected rain/wind intensities directly. |
-| `boundary_mixed_rain_wind` | Murphy accepted the clip as rain+wind overlap | Do not judge it as pure rain or pure wind; count it as policy-aligned if the detector identifies audible weather presence. |
+| `rain_primary` | Clip is labelled/audited as rain weather evidence | Compare expected rain/wind intensities directly. |
+| `wind_primary` | Clip is labelled/audited as wind weather evidence | Compare expected rain/wind intensities directly. |
+| `boundary_mixed_rain_wind` | Clip is labelled/audited as rain+wind overlap | Do not judge it as pure rain or pure wind; count it as policy-aligned if the detector identifies audible weather presence. |
 | `no_weather_negative` | Local proxy clip with no rain/wind detected | Strictly require both rain and wind to be `none`. |
 
-This avoids incorrectly failing the detector for clips that Layer B intentionally
-keeps as mixed/boundary assets.
+This avoids incorrectly failing the detector for clips that are intentionally
+kept as mixed/boundary assets. It also prevents over-claiming accuracy from a
+weather-positive-only pool.
 
 Site-only policy for the next refresh:
 
@@ -110,11 +154,25 @@ exclude: source_type=sound_library
 thunder: status=insufficient_site_data unless Site257 thunder is audited
 ```
 
-## Training
+Current executable tests still use the 63 materialised smoke weather WAVs first.
+The 113-row site-only snapshot is the next calibration/evaluation source, but it
+needs referenced WAV files to be materialised through DVC/Server A or copied
+into this attempt before it can expand the 63-clip runnable set. The final MVP
+evaluation should also include a site-wide no-weather/random holdout.
 
-No training is required for this MVP baseline. PANNs is a pre-trained AudioSet
-tagger. Future work may fine-tune a small weather head after more labelled
-wind/rain assets are accumulated.
+## Training / Server Run
+
+Formal MVP evidence should be generated on Server B. This `mvp_1` attempt does
+not fine-tune the full PANNs model; it trains/calibrates thresholds or a very
+small head over frozen PANNs/DSP features, then writes an evaluation report.
+The training target is not "recognise the weather pool"; it is "analyse the
+audible weather layer in ordinary Site257 uploads while controlling false
+positives on no-weather clips."
+
+Expected Server B runtime is ~30-90 minutes including data materialisation. The
+actual calibration/head fitting step should be only a few minutes; most time is
+expected to go into pulling/materialising Site257 clips, extracting PANNs/DSP
+features, and writing the report.
 
 ## Validation
 
@@ -190,6 +248,9 @@ Site257 DVC clip set.
 - The no-weather negatives are local proxy clips from materialised Site257
   event/reference data. They should be replaced or expanded with ambient
   no-weather clips once the Site257 DVC clip set is available locally.
+- The current 63-clip test is weather-positive focused. It should not be used
+  alone as the final MVP accuracy claim because the real feature must analyse
+  arbitrary Site257 uploads.
 - The fallback is still a calibration baseline, not a trained classifier.
 - Rain coverage in the current site257 promoted asset pool is much smaller
   than wind coverage.
@@ -200,8 +261,11 @@ Site257 DVC clip set.
 
 1. Replace proxy no-weather negatives with ambient no-weather clips from the
    Site257 DVC clip set.
-2. Compare PANNs-only, spectral-only, and fused predictions in a report.
-3. Add a small labelled holdout once more Layer B weather assets accumulate.
-4. Decide whether a small fine-tuned weather head is needed after calibration.
-5. Keep thunder disabled as a confident MVP output until Murphy/Layer B has a
-   validated Site257-derived thunder asset policy.
+2. Materialise WAVs for the 113-row Site257-only policy snapshot and use them
+   to build an E-B-owned calibration/evaluation manifest.
+3. Add random Site257 holdout clips so the report estimates behaviour on normal
+   user uploads, not only weather-positive examples.
+4. Compare PANNs-only, spectral-only, and fused predictions in a report.
+5. Train/calibrate a small weather head if threshold calibration is not enough.
+6. Keep thunder disabled as a confident MVP output until E-B has validated
+   Site257-derived thunder examples.
