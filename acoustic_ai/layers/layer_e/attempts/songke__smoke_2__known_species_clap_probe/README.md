@@ -1,13 +1,36 @@
-# songke__smoke_2__known_species_clap_probe
+# E-C Known Species Event Detector
 
-E-C known-species detector using frozen CLAP embeddings plus a small
-classifier head. The current shared candidate checkpoint is
-`model/candidates/songke/mvp_1__layer_e_species_event_detector/`.
+## Status
 
-## Goal
+- Layer/head: Layer E, E-C events analysis
+- Attempt id: `songke__smoke_2__known_species_clap_probe`
+- Registry status: `candidate`
+- Shared checkpoint: `model/candidates/songke/mvp_1__layer_e_species_event_detector/`
+- Model artifact: DVC-tracked `best_probe.pt`
+- Current label set: 13 known Australian species
 
-Use a frozen pretrained audio encoder as the E-C known-species event detector
-baseline. Current label set:
+This attempt does not generate audio. It detects known species events in an
+uploaded recording and returns time ranges, confidence values, species match
+scores, ecological metadata, and an aggregator-ready `analysis_report`.
+
+## What It Does
+
+Pipeline:
+
+```text
+uploaded audio -> 5 s sliding windows -> frozen LAION-CLAP audio encoder
+               -> 512-d embeddings -> MLP probe -> merged species events
+```
+
+The detector returns:
+
+- `events`: detected species time ranges.
+- `species_matches`: per-event average match scores for all known species.
+- `phenology`: common name, scientific name, diel signal, season signal, habitat signal, and source URL.
+- `analysis_report`: observations and inferred context for future Analysis Mode aggregation.
+- `diagnostics.detected_windows`: supporting window-level evidence.
+
+## Known Species
 
 - `ninox_boobook`
 - `laughing_kookaburra`
@@ -23,155 +46,198 @@ baseline. Current label set:
 - `crested_bellbird`
 - `rainbow_bee_eater`
 
-## Method
+## Model Artifact
 
-```
-5 s WAV -> frozen LAION-CLAP audio encoder -> 512-d embedding -> MLP probe
-```
+The shared candidate model lives here:
 
-Detected events are enriched with a conservative species phenology lookup:
-
-```
-data/species_phenology.csv
-```
-
-This table adds common name, scientific name, diel signal, seasonal signal,
-habitat signal, inference confidence values, and a source URL per known
-species. It is metadata for report synthesis, not model training data.
-
-The registry-facing handler also emits an `analysis_report` object for the
-future Analysis Mode aggregator:
-
-```
-{
-  "schema_version": "analysis_report.v0",
-  "scope": "layer_e_events_only",
-  "observations": [...],
-  "inferred_context": [...],
-  "disagreements": []
-}
-```
-
-This keeps direct observations separate from ecological inferences derived from
-the phenology table.
-
-Generated training intermediates stay under `local_data/` and are gitignored:
-
-```
-local_data/ec_species/embeddings/clap_4class/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_4class/
-local_data/ec_species/embeddings/clap_5class/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_5class/
-local_data/ec_species/embeddings/clap_4class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_4class_no_magpie/
-local_data/ec_species/embeddings/clap_5class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_5class_no_magpie/
-local_data/ec_species/embeddings/clap_6class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_6class_no_magpie/
-local_data/ec_species/embeddings/clap_7class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_7class_no_magpie/
-local_data/ec_species/embeddings/clap_8class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_8class_no_magpie/
-local_data/ec_species/embeddings/clap_9class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_9class_no_magpie/
-local_data/ec_species/embeddings/clap_10class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_10class_no_magpie/
-local_data/ec_species/embeddings/clap_11class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_11class_no_magpie/
-local_data/ec_species/embeddings/clap_12class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_12class_no_magpie/
-local_data/ec_species/embeddings/clap_13class_no_magpie/
-local_data/ec_species/models/songke__smoke_2__known_species_clap_probe_13class_no_magpie/
-```
-
-The current shared checkpoint artifact is:
-
-```
+```text
 model/candidates/songke/mvp_1__layer_e_species_event_detector/
 ```
 
-It contains the DVC-tracked `best_probe.pt` plus git-tracked metadata
-(`README.md`, `params.yaml`, and `metrics.json`).
+Files:
 
-## Reproduce
+- `best_probe.pt.dvc`: git-tracked DVC pointer for the checkpoint binary.
+- `best_probe.pt`: DVC-managed binary, not committed to git.
+- `README.md`: checkpoint card.
+- `params.yaml`: frozen training/inference parameters.
+- `metrics.json`: evaluation metrics.
 
-From the repo root:
-
-```powershell
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\embed_clips.py
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\train_probe.py
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\eval_probe.py
-```
-
-Single 5 s clip prediction:
+Restore the checkpoint after checking out a branch that contains the `.dvc`
+pointer:
 
 ```powershell
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\predict.py local_data\ec_species\clips\ninox_boobook_positive\ninox_boobook__XC936351__s000000_e005000__clip001.wav
+dvc pull model/candidates/songke/mvp_1__layer_e_species_event_detector/best_probe.pt.dvc
 ```
 
-Sliding-window prediction over a longer recording:
+If `dvc` is not on PATH on Windows, locate `dvc.exe` in the user Python scripts
+directory and run the same command through the full path.
+
+## How To Run In The Dev UI
+
+Start the local services from separate PowerShell windows.
+
+Postgres:
 
 ```powershell
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\detect.py "C:\path\to\recording.mp3" --output local_data\ec_species\detections\recording_detect.json
+cd D:\COMP-6000-Capstone2
+docker compose -f services/dev/docker-compose.yml up -d postgres
 ```
 
-Use `--summary-only` to print only counts and merged events while still writing
-the full window-level JSON to `--output`.
-
-Registry-facing handler smoke test:
+AI server:
 
 ```powershell
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\handler.py "C:\path\to\recording.mp3"
+cd D:\COMP-6000-Capstone2
+acoustic_ai\.venv\Scripts\python.exe -m uvicorn acoustic_ai.server.server:app --host 127.0.0.1 --port 8000
 ```
 
-The attempt is registered as the Layer E `events` head:
+Backend:
+
+```powershell
+cd D:\COMP-6000-Capstone2\backend
+$env:DATABASE_URL="postgresql://capstone_user:BKlBXA_pz3uSnjWUb3-hRCh2Wk4fxf0taauc1RxxDD8@localhost:5432/capstone_dev"
+$env:PORT="4000"
+$env:SESSION_SECRET="oXRnjaEmiSs2jcn-im6ndS5-_IhJqXG2rmlcpINQ6B4"
+$env:FRONTEND_URL="http://localhost:5173,http://127.0.0.1:5173"
+$env:AI_SERVER_URL="http://127.0.0.1:8000"
+$env:AI_REQUEST_TIMEOUT_MS="180000"
+npm run dev
+```
+
+Frontend:
+
+```powershell
+cd D:\COMP-6000-Capstone2\frontend
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+Then upload an audio file, find `E-C - Events`, select `Known species events -
+CLAP probe`, and click `Run E-C`.
+
+Expected UI sections:
+
+- Detected species timeline
+- Species match
+- Ecological signal
+- Report-ready summary
+- Supporting window segments
+- Raw report
+
+## API And Output Format
+
+This attempt is registered as:
 
 ```text
 layer_e / songke__smoke_2__known_species_clap_probe
 ```
 
-`predict.py` prints JSON with:
+The frontend calls:
 
-- `top_label`: highest-scoring trained species.
-- `confidence`: softmax score for `top_label`.
-- `detected`: whether `confidence >= threshold`.
-- `scores`: per-label probabilities.
+```text
+POST /api/layers/layer_e/attempts/songke__smoke_2__known_species_clap_probe/analyze
+```
 
-`detect.py` prints the same prediction fields for each sliding window, plus
-`start_s`, `end_s`, `window_index`, `num_windows`, `detected_windows`, and
-merged `events`. Defaults are `window_s=5.0`, `hop_s=1.0`, `threshold=0.55`,
-`merge_gap_s=1.0`, and `min_event_windows=7`. For very short audio, the
-effective minimum is capped to the number of available windows.
+Core event shape:
 
-Each event contains:
+```json
+{
+  "label": "australian_raven",
+  "onset_s": 0.0,
+  "offset_s": 29.792,
+  "confidence_mean": 0.95066,
+  "confidence_max": 0.990115,
+  "window_count": 26,
+  "species_matches": [
+    { "label": "australian_raven", "score": 0.95066 }
+  ],
+  "phenology": {
+    "common_name": "Australian Raven",
+    "scientific_name": "Corvus coronoides",
+    "diel_signal": "day",
+    "diel_confidence": 0.55,
+    "season_signal": "weak",
+    "season_confidence": 0.2,
+    "habitat_signal": "open woodland/farmland/urban"
+  }
+}
+```
 
-- `label`: detected species.
-- `onset_s` / `offset_s`: merged event time range.
-- `confidence_mean` / `confidence_max`: confidence summary across merged windows.
-- `window_count`: number of detected windows that support the event.
-- `species_matches`: event-level mean score for every trained species, sorted high to low.
+Aggregator-ready report shape:
 
-## Results
+```json
+{
+  "analysis_report": {
+    "schema_version": "analysis_report.v0",
+    "scope": "layer_e_events_only",
+    "observations": [
+      {
+        "type": "species_event",
+        "source_head": "events",
+        "species_label": "australian_raven",
+        "common_name": "Australian Raven",
+        "time_range_s": [0.0, 29.792],
+        "confidence": 0.95066
+      }
+    ],
+    "inferred_context": [
+      {
+        "type": "diel_signal",
+        "source_head": "events",
+        "value": "day",
+        "confidence": 0.522863
+      },
+      {
+        "type": "habitat_signal",
+        "source_head": "events",
+        "value": "open woodland/farmland/urban",
+        "confidence": 0.95066
+      }
+    ],
+    "disagreements": []
+  }
+}
+```
 
-Local CLAP probe runs:
+`observations` are direct model outputs. `inferred_context` is derived from the
+species phenology table. `disagreements` is empty for this E-C-only adapter and
+is reserved for future E-A/E-B/E-C fusion.
+
+## Phenology Metadata
+
+Phenology metadata lives in:
+
+```text
+data/species_phenology.csv
+```
+
+Each row provides:
+
+- model label
+- common name
+- scientific name
+- diel signal and confidence
+- season signal and confidence
+- habitat signal
+- short inference note
+- source URL
+
+This CSV is report metadata, not model training data. It exists so the final
+Analysis Mode report can separate observations from ecological inferences.
+
+## Metrics
+
+Current shared checkpoint:
 
 | Model | Test accuracy | Test macro-F1 |
 |---|---:|---:|
-| smoke-2 CLAP probe, 3 classes | 0.765 | 0.775 |
-| smoke-2 CLAP probe, 4 classes | 0.798 | 0.803 |
-| smoke-2 CLAP probe, 5 classes | 0.730 | 0.737 |
-| smoke-2 CLAP probe, no-magpie 4 classes | 0.806 | 0.826 |
-| smoke-2 CLAP probe, no-magpie 5 classes | 0.870 | 0.881 |
-| smoke-2 CLAP probe, no-magpie 6 classes | 0.872 | 0.873 |
-| smoke-2 CLAP probe, no-magpie 7 classes | 0.838 | 0.843 |
-| smoke-2 CLAP probe, no-magpie 8 classes | 0.848 | 0.847 |
-| smoke-2 CLAP probe, no-magpie 9 classes | 0.814 | 0.812 |
-| smoke-2 CLAP probe, no-magpie 10 classes | 0.799 | 0.787 |
-| smoke-2 CLAP probe, no-magpie 11 classes | 0.834 | 0.826 |
-| smoke-2 CLAP probe, no-magpie 12 classes | 0.847 | 0.841 |
-| smoke-2 CLAP probe, no-magpie 13 classes | 0.817 | 0.811 |
+| CLAP probe, no-magpie 13 classes | 0.817 | 0.811 |
 
-Current no-magpie 13-class per-class test recall:
+Per-class test recall:
 
 | Label | Recall |
 |---|---:|
@@ -189,7 +255,7 @@ Current no-magpie 13-class per-class test recall:
 | `crested_bellbird` | 1.000 |
 | `rainbow_bee_eater` | 0.545 |
 
-Current no-magpie 13-class main confusions (`rows=true`, selected non-zero errors):
+Selected test-split confusions:
 
 | True label | Most common wrong predictions |
 |---|---|
@@ -201,43 +267,13 @@ Current no-magpie 13-class main confusions (`rows=true`, selected non-zero error
 | `crested_bellbird` | No test split errors |
 | `rainbow_bee_eater` | `rhipidura_leucophrys` 8, `peaceful_dove` 4, `ninox_boobook` 1, `psophodes_cristatus` 1, `galah` 1 |
 
-The pretrained CLAP embedding is the current E-C event detector baseline. The
-no-magpie thirteen-class model is the active local model for frontend/API testing.
+## Smoke Checks
 
-## Single-clip smoke check
+Calibrated dense-window checks use:
 
-Single-clip prediction is useful for checking the classifier API, but it is
-not the final E-C user workflow. The user workflow runs overlapping windows
-over a longer audio file and merges repeated high-confidence windows into
-onset/offset events.
-
-## Sliding-window smoke check
-
-Command run locally on a 444.518 s raw boobook MP3 with a sparse smoke-test hop:
-
-```powershell
-acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\detect.py "C:\Users\SONGKE HE\Desktop\Ninox boobook\XC1085051 - 布克鹰鸮 - Ninox boobook.mp3" --hop-s 30 --merge-gap-s 30 --threshold 0.6 --output local_data\ec_species\detections\boobook_smoke_events.json
+```text
+threshold=0.55, window_s=5.0, hop_s=1.0, merge_gap_s=1.0, min_event_windows=7
 ```
-
-Result:
-
-- `num_windows`: 16
-- `num_detected_windows`: 16
-- `num_events`: 1
-- all windows predicted `ninox_boobook`
-- confidence range: 0.769 to 0.865
-- merged event: `ninox_boobook`, `onset_s=0.0`, `offset_s=444.518`,
-  `confidence_mean=0.832051`
-
-Default dense-window checks (`window_s=5`, `hop_s=1`, `threshold=0.6`,
-`merge_gap_s=1`) on raw species recordings:
-
-| Source | Duration | Windows | Detected windows | Events | Notes |
-|---|---:|---:|---:|---:|---|
-| `XC936351` boobook | 24.102 s | 21 | 14 | 1 | `ninox_boobook`, 0.0-24.102 s, mean 0.678 |
-| `XC1104895` kookaburra | 28.920 s | 25 | 20 | 1 | `laughing_kookaburra`, 3.0-28.920 s, mean 0.709 |
-
-Calibrated dense-window checks (`threshold=0.55`, `min_event_windows=7`):
 
 | Source | Windows | Detected windows | Events | Notes |
 |---|---:|---:|---:|---|
@@ -255,23 +291,55 @@ Calibrated dense-window checks (`threshold=0.55`, `min_event_windows=7`):
 | `XC1133174` crested bellbird | 32 | 26 | 1 | `crested_bellbird`, 9.0-35.888 s, mean 0.919 |
 | `XC1066693` rainbow bee-eater | 23 | 23 | 1 | `rainbow_bee_eater`, 0.0-26.640 s, mean 0.945 |
 
-This calibrated rule improves recall while requiring at least seven supporting
-windows per event. That removes isolated or very short weak events from the
-final report without hiding the full window-level diagnostics.
+Frontend validation on an Australian Raven clip produced:
 
-Registry dispatch smoke check on `XC936351` boobook:
+- 1 detected event
+- 26 / 26 windows hit
+- event: `australian_raven`, 0.0-29.792 s, mean 0.951
+- report-ready summary: 1 observation, 2 inferences, 0 disagreements
 
-- `attempt.head`: `events`
-- `report.head`: `events`
-- `num_windows`: 21
-- `num_detected_windows`: 17
-- `num_events`: 1
-- event: `ninox_boobook`, 0.0-24.102 s, mean confidence 0.659
+## Reproduce Training
 
-## Status
+Training intermediates stay under `local_data/` and are gitignored:
 
-No-magpie thirteen-class embedding cache, probe training, evaluation, single-clip prediction,
-and long-audio event detection are working locally. `handler.py` and the
-`registry.yaml` entry are in place for the E-C events analysis head. Restart the
-AI server before frontend/API testing so it loads the updated no-magpie 13-class
-checkpoint and registry params.
+```text
+local_data/ec_species/clips/
+local_data/ec_species/manifests/
+local_data/ec_species/embeddings/
+local_data/ec_species/models/
+```
+
+From the repo root:
+
+```powershell
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\embed_clips.py
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\train_probe.py
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\eval_probe.py
+```
+
+Single-clip classifier check:
+
+```powershell
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\predict.py local_data\ec_species\clips\ninox_boobook_positive\ninox_boobook__XC936351__s000000_e005000__clip001.wav
+```
+
+Long-audio event check:
+
+```powershell
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\detect.py "C:\path\to\recording.mp3" --output local_data\ec_species\detections\recording_detect.json
+```
+
+Registry-facing handler check:
+
+```powershell
+acoustic_ai\.venv\Scripts\python.exe acoustic_ai\layers\layer_e\attempts\songke__smoke_2__known_species_clap_probe\code\handler.py "C:\path\to\recording.mp3"
+```
+
+## Limitations
+
+- This is a known-species detector. It only knows the 13 labels listed above.
+- There is no explicit unknown/background rejection model yet.
+- If an uploaded recording contains an unseen species, the model may assign it to the nearest known label.
+- Confidence values are model scores, not ecological certainty.
+- Seasonal inference is deliberately conservative; weak season signals are not promoted into `analysis_report.inferred_context`.
+- E-C does not fuse with E-A or E-B yet. Cross-head disagreements are reserved for the future Analysis Mode aggregator.
