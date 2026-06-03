@@ -94,9 +94,9 @@ Backend:
 
 ```powershell
 cd D:\COMP-6000-Capstone2\backend
-$env:DATABASE_URL="postgresql://capstone_user:BKlBXA_pz3uSnjWUb3-hRCh2Wk4fxf0taauc1RxxDD8@localhost:5432/capstone_dev"
+$env:DATABASE_URL="postgresql://capstone_user:<password>@localhost:5432/capstone_dev"
 $env:PORT="4000"
-$env:SESSION_SECRET="oXRnjaEmiSs2jcn-im6ndS5-_IhJqXG2rmlcpINQ6B4"
+$env:SESSION_SECRET="<set-a-local-dev-secret>"
 $env:FRONTEND_URL="http://localhost:5173,http://127.0.0.1:5173"
 $env:AI_SERVER_URL="http://127.0.0.1:8000"
 $env:AI_REQUEST_TIMEOUT_MS="180000"
