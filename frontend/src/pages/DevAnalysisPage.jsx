@@ -434,7 +434,34 @@ function EventsResult({ report }) {
           ))}
         </div>
       )}
+      <AnalysisReportSummary report={report?.analysis_report} />
       <DetectionTimeline windows={report?.diagnostics?.detected_windows} />
+    </div>
+  );
+}
+
+function AnalysisReportSummary({ report }) {
+  if (!report) return null;
+  const observations = Array.isArray(report.observations) ? report.observations : [];
+  const inferred = Array.isArray(report.inferred_context) ? report.inferred_context : [];
+  const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
+  return (
+    <div className="analysis-report-summary">
+      <div className="analysis-report-head">
+        <p>Report-ready summary</p>
+        <span>
+          {observations.length} observations · {inferred.length} inferences · {disagreements.length} disagreements
+        </span>
+      </div>
+      {inferred.length > 0 && (
+        <div className="analysis-report-chips">
+          {inferred.slice(0, 6).map((item, idx) => (
+            <span key={`${item.type}-${idx}`}>
+              {formatSignal(item.type)}: {formatSignal(item.value)} · {fmtPct(item.confidence)}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -44,6 +44,7 @@ class KnownSpeciesEventDetector:
             min_event_windows=self.min_event_windows,
             backbone=self.backbone,
         )
+        events = result["events"]
         return {
             "head": "events",
             "detector": "known_species_clap_probe",
@@ -58,7 +59,8 @@ class KnownSpeciesEventDetector:
             "num_windows": result["num_windows"],
             "num_detected_windows": result["num_detected_windows"],
             "num_events": result["num_events"],
-            "events": result["events"],
+            "events": events,
+            "analysis_report": build_analysis_report(events),
             "diagnostics": {
                 "detected_windows": result["detected_windows"],
             },
@@ -97,6 +99,105 @@ def generate(state: KnownSpeciesEventDetector, seed: int | None = None, **_ignor
 
 def analyze(state: KnownSpeciesEventDetector, audio_path: str | Path) -> dict:
     return state.analyze(audio_path)
+
+
+def build_analysis_report(events: list[dict]) -> dict:
+    observations = []
+    inferred_context = []
+    disagreements = []
+
+    for index, event in enumerate(events):
+        event_id = f"ec_event_{index + 1:03d}"
+        label = str(event.get("label", "unknown"))
+        phenology = event.get("phenology") if isinstance(event.get("phenology"), dict) else {}
+        common_name = phenology.get("common_name") or label
+        confidence = safe_float(event.get("confidence_mean"))
+        onset_s = safe_float(event.get("onset_s"))
+        offset_s = safe_float(event.get("offset_s"))
+
+        observations.append({
+            "id": event_id,
+            "type": "species_event",
+            "source_head": "events",
+            "species_label": label,
+            "common_name": common_name,
+            "scientific_name": phenology.get("scientific_name"),
+            "time_range_s": [onset_s, offset_s],
+            "confidence": confidence,
+            "confidence_max": safe_float(event.get("confidence_max")),
+            "window_count": event.get("window_count"),
+            "evidence": f"{common_name} detected from {format_time(onset_s)}s to {format_time(offset_s)}s.",
+        })
+
+        diel_signal = phenology.get("diel_signal")
+        diel_confidence = safe_float(phenology.get("diel_confidence"))
+        if diel_signal and diel_signal != "unknown":
+            inferred_context.append({
+                "type": "diel_signal",
+                "source_head": "events",
+                "value": diel_signal,
+                "confidence": combine_confidence(confidence, diel_confidence),
+                "evidence_observation_id": event_id,
+                "evidence": (
+                    f"{common_name} has a {diel_signal} activity signal and was detected "
+                    f"from {format_time(onset_s)}s to {format_time(offset_s)}s."
+                ),
+            })
+
+        season_signal = phenology.get("season_signal")
+        season_confidence = safe_float(phenology.get("season_confidence"))
+        if season_signal and season_signal != "weak" and season_signal != "unknown":
+            inferred_context.append({
+                "type": "season_signal",
+                "source_head": "events",
+                "value": season_signal,
+                "confidence": combine_confidence(confidence, season_confidence),
+                "evidence_observation_id": event_id,
+                "evidence": (
+                    f"{common_name} provides a {season_signal} seasonal cue, but this is "
+                    "treated as probabilistic species-context evidence."
+                ),
+            })
+
+        habitat_signal = phenology.get("habitat_signal")
+        if habitat_signal:
+            inferred_context.append({
+                "type": "habitat_signal",
+                "source_head": "events",
+                "value": habitat_signal,
+                "confidence": confidence,
+                "evidence_observation_id": event_id,
+                "evidence": f"{common_name} is associated with {habitat_signal}.",
+            })
+
+    return {
+        "schema_version": "analysis_report.v0",
+        "scope": "layer_e_events_only",
+        "observations": observations,
+        "inferred_context": inferred_context,
+        "disagreements": disagreements,
+    }
+
+
+def safe_float(value: Any) -> float | None:
+    try:
+        return round(float(value), 6)
+    except (TypeError, ValueError):
+        return None
+
+
+def combine_confidence(event_confidence: float | None, context_confidence: float | None) -> float | None:
+    if event_confidence is None and context_confidence is None:
+        return None
+    if event_confidence is None:
+        return context_confidence
+    if context_confidence is None:
+        return event_confidence
+    return round(event_confidence * context_confidence, 6)
+
+
+def format_time(value: float | None) -> str:
+    return "unknown" if value is None else f"{value:.2f}"
 
 
 def main() -> int:

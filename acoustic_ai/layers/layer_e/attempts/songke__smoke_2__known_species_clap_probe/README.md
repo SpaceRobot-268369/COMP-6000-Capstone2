@@ -39,6 +39,22 @@ This table adds common name, scientific name, diel signal, seasonal signal,
 habitat signal, inference confidence values, and a source URL per known
 species. It is metadata for report synthesis, not model training data.
 
+The registry-facing handler also emits an `analysis_report` object for the
+future Analysis Mode aggregator:
+
+```
+{
+  "schema_version": "analysis_report.v0",
+  "scope": "layer_e_events_only",
+  "observations": [...],
+  "inferred_context": [...],
+  "disagreements": []
+}
+```
+
+This keeps direct observations separate from ecological inferences derived from
+the phenology table.
+
 Generated training intermediates stay under `local_data/` and are gitignored:
 
 ```

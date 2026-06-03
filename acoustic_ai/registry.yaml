@@ -292,6 +292,7 @@ layers:
           - Uses frozen LAION-CLAP audio embeddings plus a local MLP probe trained from xeno-canto clips.
           - Local no-magpie 13-class CLAP probe test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
           - Enriches each detected species event with a conservative phenology block for report synthesis.
+          - Emits an analysis_report block with observations, inferred_context, and disagreements for aggregator integration.
           - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
 
       lucas__smoke_1__detectors:
