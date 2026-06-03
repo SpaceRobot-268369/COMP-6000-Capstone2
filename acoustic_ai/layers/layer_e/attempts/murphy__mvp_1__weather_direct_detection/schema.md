@@ -98,6 +98,7 @@ Allowed MVP warning values:
 - `possible_human_or_machine_overlap`
 - `possible_wind_overload`
 - `possible_rain_under_wind`
+- `rain_confirmed_without_beats_guard`
 - `possible_clipping`
 - `weather_mixed_with_ambient`
 - `short_audio`
@@ -138,6 +139,18 @@ per-window evidence:
   "audioset_scores": {
     "available": false,
     "backend": "audioset_unavailable",
+    "scores": {
+      "rain": 0.0,
+      "wind": 0.0,
+      "thunder": 0.0,
+      "bio_contamination": 0.0,
+      "human_machine_contamination": 0.0
+    },
+    "raw": {}
+  },
+  "guard_scores": {
+    "available": false,
+    "backend": "ast",
     "scores": {
       "rain": 0.0,
       "wind": 0.0,

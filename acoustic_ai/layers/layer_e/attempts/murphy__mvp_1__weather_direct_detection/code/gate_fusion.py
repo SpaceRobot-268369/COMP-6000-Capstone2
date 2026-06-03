@@ -92,7 +92,16 @@ def decide_weather_from_evidence(
 
     # Rain: CLAP should see rain-like sound, and BEATs should not contradict it.
     # PANNs rain is useful but broad on storm/wind textures, so it is not enough
-    # by itself.
+    # by itself. Mixed site clips often hide rain under wind, so a weaker
+    # rain-under-wind path is allowed when CLAP rain is close to CLAP wind and
+    # an independent AudioSet channel offers at least some rain support.
+    clap_rain = _score(clap, "rain")
+    clap_wind = _score(clap, "wind")
+    clap_thunder = _score(clap, "thunder")
+    panns_rain = _score(panns, "rain")
+    panns_wind = _score(panns, "wind")
+    ast_rain = _score(ast, "rain")
+    ast_wind = _score(ast, "wind")
     beats_rain_support = (
         top_weather(beats) == "rain"
         or _score(beats, "rain") >= _score(beats, "wind") + 0.03
@@ -105,12 +114,22 @@ def decide_weather_from_evidence(
         )
     )
     ast_rain_support = top_weather(ast) == "rain" and _score(ast, "rain") >= 0.45
-    rain_candidate = _score(clap, "rain") >= 0.52
+    panns_any_rain_support = panns_rain >= 0.25 and panns_rain >= 0.55 * panns_wind
+    ast_any_rain_support = ast_rain >= 0.05 and ast_rain >= 0.20 * ast_wind
+    rain_candidate = clap_rain >= 0.52
+    rain_under_wind_candidate = (
+        clap_wind >= 0.45
+        and clap_rain >= 0.49
+        and clap_rain >= clap_wind - 0.04
+        and clap_rain >= clap_thunder - 0.15
+        and top_weather(clap) in {"rain", "wind"}
+        and (panns_any_rain_support or ast_any_rain_support)
+    )
     raw_confidence["rain"] = (
-        0.56 * _score(clap, "rain")
-        + 0.16 * _score(panns, "rain")
+        0.56 * clap_rain
+        + 0.16 * panns_rain
         + 0.18 * _score(beats, "rain")
-        + 0.10 * _score(ast, "rain")
+        + 0.10 * ast_rain
         + 0.05 * _score(features, "rain")
     )
     if rain_candidate and (
@@ -120,6 +139,10 @@ def decide_weather_from_evidence(
         confidence_level["rain"] = "moderate"
         if not beats_available:
             warnings.add("rain_confirmed_without_beats_guard")
+    elif rain_under_wind_candidate:
+        present.append("rain")
+        confidence_level["rain"] = "weak"
+        warnings.add("possible_rain_under_wind")
     elif rain_candidate and _score(panns, "rain") >= 0.35:
         warnings.add("possible_rain_under_wind")
         confidence_level["rain"] = "weak"

@@ -7,7 +7,8 @@ separate sources before detection.
 
 1. Pre-trained model evidence is primary:
    - CLAP audio-text similarity for open weather prompts.
-   - PANNs or YAMNet AudioSet weather tags as an independent cross-check.
+   - PANNs CNN14 AudioSet weather tags as broad independent evidence.
+   - AST AudioSet tags as a conservative guard for ambiguous weather mixtures.
 2. Acoustic features are secondary:
    - used to explain, calibrate, or lower confidence
    - never enough on their own to declare a weather element present
@@ -25,35 +26,47 @@ Initial CLAP prompt groups:
 | none | `quiet dry woodland ambience`, `quiet outdoor ambience`, `no weather sound` |
 | contamination | `birdsong`, `insects`, `cicadas`, `human voice`, `machinery`, `microphone handling noise` |
 
-PANNs/YAMNet AudioSet tags should map to the same three elements where
-available: rain, wind, thunder, thunderstorm.
+PANNs and AST AudioSet tags should map to the same three elements where
+available: rain, wind, thunder, thunderstorm. BEATs is not part of the MVP main
+path; if revisited later, it should be treated as an optional guard rather than
+a raw averaged score.
 
 ## Fusion Rules
 
-The first MVP should use transparent rules before trying a trained head.
+The MVP uses transparent gate rules before trying a trained head. Model scores
+are evidence channels, not calibrated probabilities to average blindly:
 
-Suggested element confidence:
+- CLAP proposes candidate weather elements.
+- PANNs provides broad AudioSet weather support.
+- AST guards against ambiguous or over-eager CLAP/PANNs decisions.
+- Acoustic features explain risk such as clipping, overload, or weak coverage.
 
-```text
-confidence(element) =
-  0.65 * clap_score(element)
-  + 0.25 * audioset_score(element)
-  + 0.10 * feature_support(element)
-  - contamination_penalty
-```
-
-If PANNs/YAMNet is not available in the first smoke implementation, redistribute
-the AudioSet weight to CLAP and mark `debug.audioset_available = false`.
+Do not force a single winning weather class. Decide each element independently
+and derive the composite label from the present elements.
 
 ## Presence Thresholds
 
-Initial MVP thresholds:
+Gate v1.1 MVP thresholds:
 
 | Element | Present if | Notes |
 |---|---|---|
-| rain | confidence >= 0.55 | Require margin over `none` and contamination. |
-| wind | confidence >= 0.55 | Lower confidence if clipping/overload is high. |
-| thunder | confidence >= 0.60 | Require transient or low-frequency support. |
+| rain | strict CLAP rain path, or weak rain-under-wind path | Weak path requires close rain evidence under wind plus PANNs or AST rain support. |
+| wind | CLAP wind is strong enough and not dominated by `none`/contamination | Lower confidence if clipping/overload is high. |
+| thunder | CLAP thunder plus supporting evidence and no obvious wind-overload conflict | Never declare thunder from PANNs/AST alone. |
+
+Current weak rain-under-wind gate:
+
+```text
+clap_wind >= 0.45
+clap_rain >= 0.49
+clap_rain >= clap_wind - 0.04
+clap_rain >= clap_thunder - 0.15
+top_clap_weather in {rain, wind}
+PANNs or AST has rain support
+```
+
+When this weak path fires, mark rain present with low confidence and add
+`possible_rain_under_wind`.
 
 If no element passes its threshold, return `overall_label: none`.
 
@@ -94,6 +107,8 @@ Add warnings when ambiguity is likely:
   score is also high.
 - `possible_rain_under_wind`: wind is present and rain evidence is close to the
   rain threshold but not strong enough to mark rain present.
+- `rain_confirmed_without_beats_guard`: rain was confirmed by the active MVP
+  evidence channels while BEATs was not used as a guard.
 - `possible_clipping`: clipping ratio exceeds the MVP threshold.
 - `weather_mixed_with_ambient`: weather is present but not dominant.
 - `low_confidence`: one or more present elements are near threshold.
@@ -109,3 +124,10 @@ Use small targeted audits to tune thresholds:
 
 Audit output should compare human labels against model output, not promote
 assets into a runtime pool.
+
+Current frozen gate reference:
+
+- Server B 12-sample calibration after gate v1.1: `10/12` exact.
+- Holdout sanity check: `6/8` exact.
+- The two holdout rain+wind misses were human-reviewed as wind with extremely
+  subtle rain, so the conservative `wind` output is acceptable for MVP.

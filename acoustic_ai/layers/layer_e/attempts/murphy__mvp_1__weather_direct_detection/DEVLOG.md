@@ -640,3 +640,186 @@ Interpretation:
     rain support,
   - keep the confidence low and add `possible_rain_under_wind`,
   - do not change pure wind behavior.
+
+### Step 18 — Rain-under-wind gate tuning
+
+Implemented a small rule change in:
+
+`code/gate_fusion.py`
+
+Change:
+
+- Keep the existing strict rain path for clearer rain.
+- Add a weaker `rain_under_wind_candidate` path when:
+  - CLAP rain is not dominant but is close to CLAP wind,
+  - CLAP wind is clearly present,
+  - PANNs or AST has at least some rain support.
+- Promote that rain element with `weak` confidence only.
+- Always attach `possible_rain_under_wind` so downstream consumers know the
+  mixed label is cautious.
+
+Local rule-only checks:
+
+| case | expected | output | notes |
+| --- | --- | --- | --- |
+| synthetic mixed rain-under-wind | `rain+wind` | `rain+wind` | rain confidence stays low (`0.42`) and warning is present |
+| synthetic pure wind | `wind` | `wind` | no false rain added |
+
+Validation:
+
+- `PYTHONPYCACHEPREFIX=/tmp/e_b_pycache python3 -m py_compile ...` passed for
+  `gate_fusion.py` and `run_weather_analysis.py`.
+- This is a local rule check only. The next step should rerun the 12-sample
+  ServerB calibration set with `CLAP + PANNs + AST` and compare exact match plus
+  `rain+wind` recall before API/frontend work.
+
+### Step 19 — 12-sample ServerB calibration after gate tuning
+
+Synced the updated `gate_fusion.py` to the personal ServerB smoke workdir:
+
+`~/murphy/analysis-layer-E-B-smoke`
+
+Reran the same 12-sample calibration set:
+
+```bash
+--model-backend clap --audioset-backend panns --guard-backend ast
+```
+
+Temporary output location:
+
+`/tmp/e_b_calibration_001/results_step18`
+
+First pass result after a too-wide rain-under-wind rule:
+
+| metric | result |
+| --- | --- |
+| exact label match | 8 / 12 |
+| rain+wind | 4 / 4 |
+| wind | 0 / 3 |
+
+Interpretation: rain+wind recall improved, but pure wind was over-promoted to
+`rain+wind`. The weak gate was too permissive.
+
+Adjusted the weak rain-under-wind path to require:
+
+- `CLAP wind >= 0.45`
+- `CLAP rain >= 0.49`
+- `CLAP rain >= CLAP wind - 0.04`
+- `CLAP rain >= CLAP thunder - 0.15`
+- PANNs or AST weak rain support
+
+Second pass result:
+
+| metric | result |
+| --- | --- |
+| exact label match | 10 / 12 |
+| rain | 2 / 2 |
+| rain+wind | 3 / 4 |
+| wind | 3 / 3 |
+| thunder | 1 / 2 |
+| none | 1 / 1 |
+
+Per-sample summary:
+
+| sample | expected | output | note |
+| --- | --- | --- | --- |
+| `rain_heavy_site` | rain | rain | correct |
+| `rain_light_site` | rain | rain | correct |
+| `rain_wind_storm_001` | rain+wind | rain+wind | correct; weak rain-under-wind |
+| `rain_wind_storm_006` | rain+wind | wind | missed rain; gate prefers wind precision |
+| `rain_wind_storm_015` | rain+wind | rain+wind | correct; weak rain-under-wind |
+| `rain_wind_nov_001` | rain+wind | rain+wind | correct |
+| `wind_nov_006` | wind | wind | fixed previous false rain |
+| `wind_nov_009` | wind | wind | fixed previous false rain |
+| `wind_storm_022` | wind | wind | fixed previous false rain |
+| `thunder_nov_012` | thunder | thunder | correct |
+| `thunder_nov_017` | thunder | wind | still conservative; possible thunder missed |
+| `none_quiet_091` | none | none | correct |
+
+Current interpretation:
+
+- This is a better MVP tradeoff than the previous gate: wind precision is
+  preserved while rain+wind recall improves from 1/4 to 3/4.
+- The remaining `rain_wind_storm_006` miss has weak independent rain support,
+  so keeping it as wind is acceptable for an honest MVP.
+- The remaining thunder miss is consistent with the project policy to avoid
+  false thunder when wind overload is plausible.
+
+### Step 20 — Gate v1.1 frozen; holdout sanity check started
+
+Froze the current rules as **gate v1.1** for the next sanity check.
+
+Gate v1.1 tradeoff:
+
+- preserve pure wind precision,
+- allow cautious low-confidence `rain+wind` when rain is close under wind,
+- keep `possible_rain_under_wind` on weak mixed-weather promotions,
+- keep thunder conservative when wind overload is plausible.
+
+Prepared an 8-sample holdout set outside the repo:
+
+`/tmp/e_b_holdout_001`
+
+Composition:
+
+- `rain`: 2 site-derived clips
+- `rain+wind`: 2 site-derived clips
+- `wind`: 2 site-derived clips
+- `thunder`: 1 pure thunder sanity clip
+- `none`: 1 quiet site ambience control
+
+Copied the holdout set to ServerB and ran:
+
+```bash
+--model-backend clap --audioset-backend panns --guard-backend ast
+```
+
+ServerB output directory:
+
+`/tmp/e_b_holdout_001/results_gate_v1_1`
+
+Status:
+
+- The 8 jobs completed on ServerB.
+- Result summarisation completed after the session resumed.
+
+Holdout result:
+
+| metric | result |
+| --- | --- |
+| exact label match | 6 / 8 |
+| rain | 2 / 2 |
+| rain+wind | 0 / 2 |
+| wind | 2 / 2 |
+| thunder | 1 / 1 |
+| none | 1 / 1 |
+
+Per-sample summary:
+
+| sample | expected | output | note |
+| --- | --- | --- | --- |
+| `rain_holdout_001` | rain | rain | correct |
+| `rain_holdout_002` | rain | rain | correct |
+| `rain_wind_holdout_001` | rain+wind | wind | missed rain; rain confidence `0.268` |
+| `rain_wind_holdout_002` | rain+wind | wind | missed rain; rain confidence `0.274` |
+| `wind_holdout_001` | wind | wind | correct |
+| `wind_holdout_002` | wind | wind | correct |
+| `thunder_holdout_001` | thunder | thunder | correct; resampled library sanity clip |
+| `none_holdout_001` | none | none | correct |
+
+Interpretation:
+
+- Gate v1.1 is precise and stable for pure rain, wind, thunder sanity, and none.
+- It remains conservative for some `rain+wind` site clips.
+- Do not loosen the gate blindly: the previous wide rain-under-wind rule damaged
+  wind precision. The next useful step is to inspect whether these two holdout
+  mixed clips are truly rain+wind to human ears, then decide whether E-B should
+  report them as `wind` with a warning or adjust a narrow mixed-weather rule.
+
+Human follow-up listen:
+
+- The two missed holdout `rain+wind` clips were replayed in
+  `debug/e_b_holdout_rain_wind_listen_001/listen.html`.
+- User judgment: rain is extremely subtle and weak in both clips.
+- Decision: gate v1.1 conservative `wind` output is acceptable for MVP. Do not
+  loosen the mixed-weather gate based on these two clips.

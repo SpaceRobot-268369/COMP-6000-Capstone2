@@ -29,15 +29,37 @@ Direct detection on the mixture:
 2. Split long audio into short overlapping windows.
 3. Score each window with pre-trained analysis models:
    - CLAP audio-text similarity for open-vocabulary weather prompts.
-   - PANNs or YAMNet AudioSet tags for weather cross-checks.
+   - PANNs CNN14 AudioSet tags for broad weather cross-checks.
+   - AST AudioSet tags as a conservative guard for ambiguous cases.
 4. Compute lightweight acoustic features as sanity checks:
    RMS, peak, clipping, spectral centroid, spectral flatness, spectral entropy,
    low-frequency energy, and high-frequency energy.
 5. Fuse model scores and feature checks into per-window decisions.
 6. Aggregate windows into a clip-level result.
 
-CLAP and AudioSet models are the primary detectors. Acoustic features explain
+CLAP is the sensitive weather detector. PANNs and AST are independent evidence
+channels used to confirm, guard, or lower confidence. Acoustic features explain
 and calibrate the result; they are not standalone classifiers.
+
+## Current Gate v1.1
+
+Gate v1.1 is the frozen MVP fusion rule after Server B calibration and a small
+holdout listen check:
+
+- `CLAP + PANNs + AST` is the MVP model stack.
+- BEATs was tested as a research direction but is not part of the MVP main path.
+- Pure `rain`, `wind`, `thunder`, and `none` cases are handled conservatively.
+- `rain+wind` is allowed only when rain evidence is close under wind and PANNs
+  or AST provides some rain support.
+- Weak mixed-weather rain promotions keep low rain confidence and add
+  `possible_rain_under_wind`.
+- Thunder remains conservative because wind overload can sound thunder-like.
+
+Calibration summary:
+
+- 12-sample Server B calibration: `10/12` exact after gate v1.1.
+- 8-sample holdout: `6/8` exact; the two misses were user-reviewed as wind with
+  extremely subtle rain, so the conservative `wind` output is acceptable.
 
 ## Non-Goals
 
@@ -65,6 +87,9 @@ Run from the repo root on serverB or an environment with the AI dependencies:
 ./acoustic_ai/.venv/bin/python \
   acoustic_ai/layers/layer_e/attempts/murphy__mvp_1__weather_direct_detection/code/run_weather_analysis.py \
   /path/to/input.wav \
+  --model-backend clap \
+  --audioset-backend panns \
+  --guard-backend ast \
   --out acoustic_ai/layers/layer_e/attempts/murphy__mvp_1__weather_direct_detection/dev-artifacts-self-testing/weather_smoke.json
 ```
 
