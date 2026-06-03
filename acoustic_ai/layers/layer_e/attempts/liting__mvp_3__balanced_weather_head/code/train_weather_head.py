@@ -112,6 +112,7 @@ def main() -> int:
             f"panns={rows[-1]['panns_available']}"
         )
     feature_seconds = time.perf_counter() - feature_start
+    component_rng_state = torch.random.get_rng_state()
 
     X = np.vstack(vectors).astype(np.float32)
     train_idx, val_idx = make_split(rows, args.val_frac, args.seed)
@@ -130,6 +131,7 @@ def main() -> int:
     wind_lr = args.wind_lr if args.wind_lr > 0 else args.lr
     rain_weight_decay = args.rain_weight_decay if args.rain_weight_decay >= 0 else args.weight_decay
     wind_weight_decay = args.wind_weight_decay if args.wind_weight_decay >= 0 else args.weight_decay
+    torch.random.set_rng_state(component_rng_state)
     rain_head, rain_history = train_component(
         Xn,
         rows,
@@ -145,7 +147,7 @@ def main() -> int:
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     )
-    torch.manual_seed(args.seed)
+    torch.random.set_rng_state(component_rng_state)
     wind_head, wind_history = train_component(
         Xn,
         rows,
