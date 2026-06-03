@@ -274,6 +274,27 @@ layers:
           - Parked baseline trained on the original 1,982-segment pool.
           - Probe did not beat the k-NN season baseline on v0 data.
 
+      songke__smoke_2__known_species_clap_probe:
+        label: "Known species events - CLAP probe"
+        author: songke
+        stage: smoke_2
+        head: events
+        status: candidate
+        checkpoint: model/candidates/songke/mvp_1__layer_e_species_event_detector
+        params:
+          threshold: 0.55
+          window_s: 5.0
+          hop_s: 1.0
+          merge_gap_s: 1.0
+          min_event_windows: 7
+        notes:
+          - E-C known-species detector for ninox_boobook, laughing_kookaburra, rhipidura_leucophrys, psophodes_cristatus, cincloramphus_mathewsi, podargus_strigoides, red_capped_robin, anas_superciliosa, australian_raven, peaceful_dove, galah, crested_bellbird, and rainbow_bee_eater.
+          - Uses frozen LAION-CLAP audio embeddings plus a local MLP probe trained from xeno-canto clips.
+          - Local no-magpie 13-class CLAP probe test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Enriches each detected species event with a conservative phenology block for report synthesis.
+          - Emits an analysis_report block with observations, inferred_context, and disagreements for aggregator integration.
+          - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
+
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas
