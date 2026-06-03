@@ -289,6 +289,9 @@ def evaluate(X: np.ndarray, rows: list[dict], val_idx: list[int], checkpoint: di
     eval_rows = []
     rain_correct = 0
     wind_correct = 0
+    rain_confusion = empty_confusion(RAIN_CLASSES)
+    wind_confusion = empty_confusion(WIND_CLASSES)
+    policy_breakdown: dict[str, dict[str, int]] = {}
     for idx in val_idx:
         pred = predict_with_checkpoint(X[idx], checkpoint)
         row = rows[idx]
@@ -296,6 +299,16 @@ def evaluate(X: np.ndarray, rows: list[dict], val_idx: list[int], checkpoint: di
         wind_ok = pred["wind_intensity"] == row["wind_label"]
         rain_correct += int(rain_ok)
         wind_correct += int(wind_ok)
+        rain_confusion[row["rain_label"]][pred["rain_intensity"]] += 1
+        wind_confusion[row["wind_label"]][pred["wind_intensity"]] += 1
+        policy_stats = policy_breakdown.setdefault(
+            row["policy_class"],
+            {"count": 0, "rain_pass": 0, "wind_pass": 0, "joint_pass": 0},
+        )
+        policy_stats["count"] += 1
+        policy_stats["rain_pass"] += int(rain_ok)
+        policy_stats["wind_pass"] += int(wind_ok)
+        policy_stats["joint_pass"] += int(rain_ok and wind_ok)
         eval_rows.append(
             {
                 "asset_id": row["asset_id"],
@@ -311,14 +324,79 @@ def evaluate(X: np.ndarray, rows: list[dict], val_idx: list[int], checkpoint: di
             }
         )
     count = max(len(val_idx), 1)
+    rain_accuracy = rain_correct / count
+    wind_accuracy = wind_correct / count
+    joint_accuracy = sum(1 for row in eval_rows if row["rain_status"] == "pass" and row["wind_status"] == "pass") / count
+    gate = classify_gate(rain_accuracy, wind_accuracy, joint_accuracy, policy_breakdown)
     return eval_rows, {
-        "rain_val_accuracy": rain_correct / count,
-        "wind_val_accuracy": wind_correct / count,
-        "joint_val_accuracy": sum(
-            1 for row in eval_rows if row["rain_status"] == "pass" and row["wind_status"] == "pass"
-        )
-        / count,
+        "rain_val_accuracy": rain_accuracy,
+        "wind_val_accuracy": wind_accuracy,
+        "joint_val_accuracy": joint_accuracy,
+        "gate": gate,
+        "confusion_matrix": {
+            "rain": rain_confusion,
+            "wind": wind_confusion,
+        },
+        "policy_breakdown": add_policy_rates(policy_breakdown),
+        "demo_summary": {
+            "model": "Frozen PANNs CNN14 + DSP features + two small calibrated linear heads",
+            "training_mode": "Server B training over Site257 weather-labelled clips",
+            "output_contract": {
+                "wind_intensity": list(WIND_CLASSES),
+                "rain_intensity": list(RAIN_CLASSES),
+                "thunder_intensity": "none until Site257 thunder evidence is validated",
+                "confidence": "per-component probability from the calibrated head",
+            },
+            "duration_note": "Feature extraction reads the available audio clip; current Server B run used materialised Site257 weather clips and reports feature/training/total time separately.",
+        },
         "validation_rows": eval_rows,
+    }
+
+
+def empty_confusion(classes: tuple[str, ...]) -> dict[str, dict[str, int]]:
+    return {expected: {predicted: 0 for predicted in classes} for expected in classes}
+
+
+def add_policy_rates(policy_breakdown: dict[str, dict[str, int]]) -> dict[str, dict]:
+    rated = {}
+    for policy, stats in policy_breakdown.items():
+        count = max(stats["count"], 1)
+        rated[policy] = {
+            **stats,
+            "rain_accuracy": round(stats["rain_pass"] / count, 3),
+            "wind_accuracy": round(stats["wind_pass"] / count, 3),
+            "joint_accuracy": round(stats["joint_pass"] / count, 3),
+        }
+    return rated
+
+
+def classify_gate(
+    rain_accuracy: float,
+    wind_accuracy: float,
+    joint_accuracy: float,
+    policy_breakdown: dict[str, dict[str, int]],
+) -> dict[str, object]:
+    single_component = {
+        key: value for key, value in add_policy_rates(policy_breakdown).items() if key in {"rain_primary", "wind_primary", "no_weather"}
+    }
+    single_joint = [
+        value["joint_accuracy"]
+        for value in single_component.values()
+        if isinstance(value.get("joint_accuracy"), float) and value.get("count", 0) > 0
+    ]
+    single_component_mean = sum(single_joint) / len(single_joint) if single_joint else 0.0
+    passed = rain_accuracy >= 0.70 and wind_accuracy >= 0.70 and single_component_mean >= 0.65
+    return {
+        "status": "pass" if passed else "needs_iteration",
+        "rain_accuracy_min": 0.70,
+        "wind_accuracy_min": 0.70,
+        "single_component_joint_accuracy_min": 0.65,
+        "single_component_joint_accuracy": round(single_component_mean, 3),
+        "interpretation": (
+            "MVP2 is usable for demo and further calibration."
+            if passed
+            else "MVP2 should be treated as an iteration checkpoint, not a final detector."
+        ),
     }
 
 
@@ -339,4 +417,3 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
