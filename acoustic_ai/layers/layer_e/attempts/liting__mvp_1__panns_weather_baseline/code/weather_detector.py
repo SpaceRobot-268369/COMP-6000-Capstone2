@@ -166,12 +166,27 @@ def _get_panns_runtime() -> dict[str, object]:
                 f"expected {checkpoint_path}"
             )
         tagger_cls = getattr(panns_mod, "AudioTagging")
-        tagger = tagger_cls(checkpoint_path=str(checkpoint_path), device="cpu")
+        tagger = tagger_cls(checkpoint_path=str(checkpoint_path), device=_select_panns_device())
     finally:
         _restore_home(old_home)
 
     _PANNS_CACHE = {"labels": labels, "tagger": tagger}
     return _PANNS_CACHE
+
+
+def _select_panns_device() -> str:
+    """Select the fastest available PANNs device without requiring torch locally."""
+    requested = os.environ.get("PANNS_DEVICE")
+    if requested:
+        return requested
+
+    try:
+        torch = importlib.import_module("torch")
+        if bool(torch.cuda.is_available()):
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 
 def _fuse_panns_with_spectral(spectral: dict, panns: PannsEvidence) -> dict:
