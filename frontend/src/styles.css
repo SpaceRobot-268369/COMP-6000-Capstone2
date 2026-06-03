@@ -1993,11 +1993,277 @@ textarea {
   letter-spacing: 0.04em;
   opacity: 0.85;
 }
+
+.event-result-list {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+  min-width: 0;
+}
+
+.event-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.event-timeline-head p,
+.event-timeline-head span {
+  margin: 0;
+  color: rgba(216, 238, 246, 0.64);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-timeline-head span {
+  color: rgba(216, 238, 246, 0.46);
+  text-align: right;
+}
+
+.event-result-item {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(150, 220, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.event-result-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.event-result-main strong,
+.event-result-main span {
+  overflow-wrap: anywhere;
+}
+
+.event-result-main strong {
+  color: #eef7f9;
+  font-size: 14px;
+}
+
+.event-result-main span {
+  color: #a7eef8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-result-stats {
+  color: rgba(216, 238, 246, 0.72);
+  font-size: 12px;
+}
+
+.event-result-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.event-result-item .gen-info-block {
+  gap: 6px;
+}
+
+.species-match-list {
+  display: grid;
+  gap: 7px;
+  padding-top: 2px;
+}
+
+.species-match-list p {
+  margin: 0;
+  color: rgba(216, 238, 246, 0.64);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.species-match-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(90px, 1.4fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.species-match-row span {
+  min-width: 0;
+  color: rgba(238, 247, 249, 0.88);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.species-match-row code {
+  min-width: 42px;
+  text-align: right;
+  font-size: 12px;
+}
+
+.species-match-track {
+  position: relative;
+  height: 6px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.species-match-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b7f7e0, #92eff4);
+}
+
+.detection-timeline {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 4px;
+}
+
+.detection-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.detection-timeline-head p,
+.detection-timeline-head span {
+  margin: 0;
+  color: rgba(216, 238, 246, 0.64);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detection-timeline-head span {
+  color: rgba(216, 238, 246, 0.46);
+  text-align: right;
+}
+
+.detection-window-list {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  min-width: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.detection-window-row {
+  display: grid;
+  grid-template-columns: 92px minmax(110px, 1fr) minmax(80px, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.detection-window-row code,
+.detection-window-row strong,
+.detection-window-row span,
+.detection-window-row em {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.detection-window-row span {
+  color: rgba(238, 247, 249, 0.86);
+  overflow-wrap: anywhere;
+}
+
+.detection-window-row strong {
+  color: #dff9ff;
+  text-align: right;
+}
+
+.detection-window-row em {
+  grid-column: 2 / -1;
+  color: rgba(216, 238, 246, 0.5);
+  font-style: normal;
+}
+
+.detection-window-score {
+  position: relative;
+  height: 6px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.detection-window-score i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #92eff4, #7de7ef);
+}
+
+@media (max-width: 640px) {
+  .event-result-main {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .species-match-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .species-match-track {
+    grid-column: 1 / -1;
+  }
+
+  .detection-window-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .detection-window-row span,
+  .detection-window-score,
+  .detection-window-row em {
+    grid-column: 1 / -1;
+  }
+}
+
 [data-theme="light"] .dev-score-track { background: rgba(0, 0, 0, 0.1); }
 [data-theme="light"] .dev-score-track i {
   background: linear-gradient(90deg, #0088bb, #00a8d8);
 }
 [data-theme="light"] .dev-score-tick { background: rgba(255, 255, 255, 0.55); }
+[data-theme="light"] .event-timeline-head p { color: rgba(0,30,50,0.58); }
+[data-theme="light"] .event-timeline-head span { color: rgba(0,30,50,0.42); }
+[data-theme="light"] .event-result-main span { color: #005070; }
+[data-theme="light"] .species-match-list p { color: rgba(0,30,50,0.58); }
+[data-theme="light"] .species-match-row span { color: rgba(0,25,45,0.82); }
+[data-theme="light"] .species-match-track { background: rgba(0,0,0,0.1); }
+[data-theme="light"] .species-match-track i {
+  background: linear-gradient(90deg, #0088bb, #00a8d8);
+}
+[data-theme="light"] .detection-timeline-head p { color: rgba(0,30,50,0.58); }
+[data-theme="light"] .detection-timeline-head span { color: rgba(0,30,50,0.42); }
+[data-theme="light"] .detection-window-row { background: rgba(0,0,0,0.035); }
+[data-theme="light"] .detection-window-row span { color: rgba(0,25,45,0.82); }
+[data-theme="light"] .detection-window-row strong { color: #005070; }
+[data-theme="light"] .detection-window-row em { color: rgba(0,30,50,0.46); }
+[data-theme="light"] .detection-window-score { background: rgba(0,0,0,0.1); }
+[data-theme="light"] .detection-window-score i {
+  background: linear-gradient(90deg, #0088bb, #00a8d8);
+}
 
 /* Prompt-used panel (Layer A dev page) */
 .prompt-display {
