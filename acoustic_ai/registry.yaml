@@ -718,7 +718,7 @@ layers:
           - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
 
       liting__mvp_3__balanced_weather_head:
-        label: "Weather detector — balanced Site257 MLP head"
+        label: "Weather detector — hybrid Site257 head"
         author: liting
         stage: mvp_3
         head: weather
@@ -727,8 +727,9 @@ layers:
         params:
           panns_device: auto
         notes:
-          - E-B MVP3 balanced MLP weather head trained on the same 101 materialised Site257 clips as MVP2.
+          - E-B MVP3 hybrid weather head trained on the same 101 materialised Site257 clips as MVP2.
           - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
+          - Rain uses a weighted MLP head; wind keeps the more stable weighted linear head.
           - Goal is to improve MVP2 joint rain+wind accuracy while keeping Server B training under five minutes.
           - Thunder remains suppressed until Site257 thunder evidence is validated.
           - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.

@@ -1,12 +1,16 @@
 seed: 42
 training:
   epochs: 500
-  lr: 0.01
+  lr: 0.003
+  rain_lr: 0.003
+  wind_lr: 0.05
   weight_decay: 0.0001
   model_type: mlp
+  rain_model_type: mlp
+  wind_model_type: linear
   balance_mode: weighted
-  hidden_dim: 24
-  dropout: 0.15
+  hidden_dim: 8
+  dropout: 0.0
   val_frac: 0.25
   max_cases: 0
   site_only: true

@@ -55,6 +55,10 @@ def main() -> int:
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--model-type", choices=("linear", "mlp"), default="mlp")
+    parser.add_argument("--rain-model-type", choices=("linear", "mlp"), default="")
+    parser.add_argument("--wind-model-type", choices=("linear", "mlp"), default="")
+    parser.add_argument("--rain-lr", type=float, default=0.0)
+    parser.add_argument("--wind-lr", type=float, default=0.0)
     parser.add_argument("--balance-mode", choices=("weighted", "oversample"), default="weighted")
     parser.add_argument("--hidden-dim", type=int, default=24)
     parser.add_argument("--dropout", type=float, default=0.15)
@@ -118,6 +122,10 @@ def main() -> int:
     Xn = (X - mu) / sigma
 
     train_start = time.perf_counter()
+    rain_model_type = args.rain_model_type or args.model_type
+    wind_model_type = args.wind_model_type or args.model_type
+    rain_lr = args.rain_lr if args.rain_lr > 0 else args.lr
+    wind_lr = args.wind_lr if args.wind_lr > 0 else args.lr
     rain_head, rain_history = train_component(
         Xn,
         rows,
@@ -126,9 +134,9 @@ def main() -> int:
         "rain_label",
         RAIN_CLASSES,
         epochs=args.epochs,
-        lr=args.lr,
+        lr=rain_lr,
         weight_decay=args.weight_decay,
-        model_type=args.model_type,
+        model_type=rain_model_type,
         balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
@@ -141,9 +149,9 @@ def main() -> int:
         "wind_label",
         WIND_CLASSES,
         epochs=args.epochs,
-        lr=args.lr,
+        lr=wind_lr,
         weight_decay=args.weight_decay,
-        model_type=args.model_type,
+        model_type=wind_model_type,
         balance_mode=args.balance_mode,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
@@ -153,6 +161,8 @@ def main() -> int:
     checkpoint = {
         "attempt": "liting__mvp_3__balanced_weather_head",
         "head_architecture": args.model_type,
+        "rain_head_architecture": rain_model_type,
+        "wind_head_architecture": wind_model_type,
         "balance_mode": args.balance_mode,
         "hidden_dim": args.hidden_dim,
         "dropout": args.dropout,
@@ -177,6 +187,10 @@ def main() -> int:
             "baseline_attempt": "liting__mvp_2__calibrated_weather_head",
             "head_architecture": "mlp_v1",
             "model_type": args.model_type,
+            "rain_model_type": rain_model_type,
+            "wind_model_type": wind_model_type,
+            "rain_lr": rain_lr,
+            "wind_lr": wind_lr,
             "balance_mode": args.balance_mode,
             "hidden_dim": args.hidden_dim,
             "dropout": args.dropout,
