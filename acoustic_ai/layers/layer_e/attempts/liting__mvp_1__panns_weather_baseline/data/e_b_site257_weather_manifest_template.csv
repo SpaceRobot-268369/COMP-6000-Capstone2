@@ -1,0 +1,1 @@
+clip_id,audio_path,source_site_id,source_recording_id,start_s,end_s,duration_s,split,label_source,audit_status,weather_role,rain_intensity,wind_intensity,thunder_status,mixed_weather,expected_weather_present,notes

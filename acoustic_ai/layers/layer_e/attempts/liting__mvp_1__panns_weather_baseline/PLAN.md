@@ -127,6 +127,7 @@ label.
 | Team Site257 weather policy reference | Team site-only weather index | Reference only. Current shared index shows 153 rows: 113 site rows and 40 sound-library rows. E-B consumes only `source_type=site` with `analysis_use=site_ready_pool` or `site_backup_pool`. |
 | Liting E-B site-only policy snapshot | `acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/data/site257_weather_policy_snapshot.csv` | Local E-B planning snapshot of the 113 Site257 rows: 105 ready + 8 backup, excluding all sound-library rows. Not all referenced WAV files are materialised locally yet. |
 | E-B-owned training manifest | `data/e_b_site257_weather_training_manifest.csv` | Planned next output. This should be built by materialising/auditing Site257 clips for E-B, with train/validation/holdout split and no sound-library rows. |
+| E-B manifest template | `data/e_b_site257_weather_manifest_template.csv` | Header-only CSV template for the Server B manifest build. |
 | PANNs checkpoint | `/private/tmp/panns_home/panns_data/Cnn14_mAP=0.431.pth` | Local machine cache; not committed to git. |
 
 ### 4.1 Role of the audited weather pool
@@ -301,6 +302,12 @@ For mvp_1, the formal Server B run is required for team review.
 The job is calibration/evaluation training over frozen features, not full
 PANNs fine-tuning.
 Expected total: ~30-90 minutes including data materialisation.
+```
+
+Operational checklist:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/SERVER_B_RUNBOOK.md
 ```
 
 ### 6.3 Future `mvp_2`: small calibration-head training
