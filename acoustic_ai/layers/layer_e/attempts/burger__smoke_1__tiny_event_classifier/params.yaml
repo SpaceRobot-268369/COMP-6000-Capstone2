@@ -1,0 +1,16 @@
+sample_rate: 22050
+n_mels: 64
+fmin_hz: 300
+fmax_hz: 10000
+test_size: 0.25
+random_seed: 42
+classifier:
+  type: logistic_regression
+  max_iter: 2000
+  class_weight: balanced
+smoke_pass:
+  min_macro_f1: 0.85
+  min_accuracy: 0.85
+training_manifests:
+  - resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_split_v1/final_pass_library_v1/layer_c_retrieval_final_pass_event_index.csv
+  - resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_split_v1/boobook_audit_v1/refined_call_units_v1/boobook_pass24_refined_call_units_index.csv

@@ -1,0 +1,18 @@
+{
+  "model": "bandpass one-vs-rest StandardScaler + LogisticRegression",
+  "training_mode": "fit_all_clean_snippets",
+  "sample_rate": 22050,
+  "n_examples": 86,
+  "n_feature_rows": 258,
+  "augmentation": "none",
+  "classes": [
+    "horsfields_bronze_cuckoo",
+    "southern_boobook",
+    "splendid_fairywren"
+  ],
+  "ovr_rows_per_class": {
+    "horsfields_bronze_cuckoo": 86,
+    "southern_boobook": 86,
+    "splendid_fairywren": 86
+  }
+}

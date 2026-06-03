@@ -1,0 +1,34 @@
+{
+  "evaluation": "complex_counterpart_audio",
+  "n_complex_examples": 36,
+  "whole_clip_accuracy": 0.916667,
+  "target_detection_recall": 0.916667,
+  "mean_non_target_detections": 0.194444,
+  "complex_smoke_pass": true,
+  "complex_smoke_thresholds": {
+    "min_target_detection_recall": 0.9,
+    "max_mean_non_target_detections": 0.25
+  },
+  "window_s": 2.5,
+  "hop_s": 0.5,
+  "min_confidence": 0.55,
+  "energy_gate_percentile": 65.0,
+  "bandpass_candidates": true,
+  "per_class": {
+    "horsfields_bronze_cuckoo": {
+      "n": 12,
+      "whole_accuracy": 0.916667,
+      "target_detection_recall": 0.916667
+    },
+    "southern_boobook": {
+      "n": 12,
+      "whole_accuracy": 1.0,
+      "target_detection_recall": 1.0
+    },
+    "splendid_fairywren": {
+      "n": 12,
+      "whole_accuracy": 0.833333,
+      "target_detection_recall": 0.833333
+    }
+  }
+}

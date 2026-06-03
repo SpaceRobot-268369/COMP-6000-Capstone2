@@ -1,0 +1,36 @@
+sample_rate: 22050
+n_mels: 64
+fmin_hz: 300
+fmax_hz: 10000
+test_size: 0.25
+random_seed: 42
+classifier:
+  type: logistic_regression
+  max_iter: 2000
+  class_weight: balanced
+training_examples: 86
+feature_rows: 258
+augmentation: none
+model_type: bandpass_one_vs_rest_logistic_regression
+classes:
+  - horsfields_bronze_cuckoo
+  - southern_boobook
+  - splendid_fairywren
+event_bands_hz:
+  southern_boobook: [450, 1200]
+  horsfields_bronze_cuckoo: [2100, 4100]
+  splendid_fairywren: [3500, 7600]
+complex_eval:
+  examples: 36
+  whole_clip_accuracy: 0.916667
+  target_detection_recall: 0.916667
+  mean_non_target_detections: 0.194444
+  complex_smoke_pass: true
+  thresholds:
+    min_target_detection_recall: 0.9
+    max_mean_non_target_detections: 0.25
+  window_s: 2.5
+  hop_s: 0.5
+  min_confidence: 0.55
+  energy_gate_percentile: 65
+  bandpass_candidates: true

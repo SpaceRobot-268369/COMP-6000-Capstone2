@@ -217,3 +217,24 @@ layers:
         params: {}
         notes:
           - Weather + event detectors. Ambient similarity uses the layer_a smoke_4 VAE encoder.
+
+      burger__smoke_1__tiny_event_classifier:
+        label: "Tiny E-C event classifier"
+        author: burger
+        stage: smoke_1
+        status: smoke_passed
+        checkpoint: model/candidates/burger/smoke_1__tiny_event_classifier
+        params:
+          sample_rate: 22050
+          n_mels: 64
+          fmin_hz: 300
+          fmax_hz: 10000
+          classes:
+            - horsfields_bronze_cuckoo
+            - southern_boobook
+            - splendid_fairywren
+        notes:
+          - Offline small-model smoke for E-C; not wired to frontend/backend.
+          - Log-mel/acoustic/band-energy features + bandpass one-vs-rest logistic regression.
+          - Trained on all 86 clean snippets across three species.
+          - Complex smoke passed: target recall 0.917, mean non-target detections 0.194/clip.
