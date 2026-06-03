@@ -45,3 +45,15 @@ debug/e_b_weather_mvp2/
 Binary checkpoints are DVC-tracked after the run. Metrics and README metadata
 are git-tracked.
 
+## Analysis Policy Output
+
+The registry handler returns both the older frontend-friendly `summary` block
+and the current analysis-policy `observations.weather` block:
+
+- `observations.weather.wind.summary`
+- `observations.weather.rain.summary`
+- `observations.weather.thunder`
+
+Wind and rain include a label, numeric intensity, confidence, coverage, and a
+placeholder variability value. Thunder is explicitly returned as suppressed
+until Site257 thunder evidence is validated.
