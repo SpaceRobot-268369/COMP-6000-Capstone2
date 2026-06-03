@@ -18,7 +18,9 @@ The MVP detector uses a staged weather evidence stack:
    such as wind, rain, raindrop, and thunderstorm.
 2. **Site257 calibrated spectral detector** as the stable fallback. This reuses
    `liting__smoke_1__e_b_weather_analysis`, calibrated on Murphy's Server A
-   CLAP-first promoted Layer B weather assets.
+   CLAP-first promoted Layer B weather assets. Client-facing calibration should
+   use Site257-derived assets only; sound-library rows in shared indexes are
+   excluded from E-B MVP claims.
 3. **Explainable DSP features** are always included for reporting and sanity
    checking.
 
@@ -57,6 +59,10 @@ acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/a
 ```
 
 Those references come from Murphy's Server A Layer B site-weather policy.
+Murphy's newer site-only direction should be treated as the source of truth for
+future E-B calibration: use `analysis_use=site_ready_pool` or
+`site_backup_pool`, and ignore rows where `source_type=sound_library` for
+client-facing analysis metrics.
 
 This attempt also includes a small local no-weather negative proxy manifest:
 
@@ -80,7 +86,9 @@ This attempt is aligned with Murphy's current Layer B weather policy:
 - Site257 rain assets are limited; mixed rain+wind examples are expected and
   should be treated as boundary cases.
 - Site257 thunder is not considered reliable enough for the default MVP pool;
-  thunder remains a future/library-fallback path.
+  thunder remains disabled until a Site257-derived thunder example is found and
+  audited. Sound-library thunder is not acceptable for the client-facing E-B
+  claim.
 
 The MVP test therefore evaluates asset policy classes separately:
 
@@ -93,6 +101,14 @@ The MVP test therefore evaluates asset policy classes separately:
 
 This avoids incorrectly failing the detector for clips that Layer B intentionally
 keeps as mixed/boundary assets.
+
+Site-only policy for the next refresh:
+
+```text
+include: source_type=site AND analysis_use in {site_ready_pool, site_backup_pool}
+exclude: source_type=sound_library
+thunder: status=insufficient_site_data unless Site257 thunder is audited
+```
 
 ## Training
 
@@ -188,4 +204,4 @@ Site257 DVC clip set.
 3. Add a small labelled holdout once more Layer B weather assets accumulate.
 4. Decide whether a small fine-tuned weather head is needed after calibration.
 5. Keep thunder disabled as a confident MVP output until Murphy/Layer B has a
-   validated thunder asset policy.
+   validated Site257-derived thunder asset policy.
