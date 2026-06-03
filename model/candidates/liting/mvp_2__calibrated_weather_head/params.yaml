@@ -1,0 +1,21 @@
+attempt: liting__mvp_2__calibrated_weather_head
+seed: 42
+model:
+  backbone: PANNs CNN14 AudioSet tagger
+  backbone_trainable: false
+  head: two linear classifiers
+  features:
+    - PANNs weather component scores
+    - matched PANNs AudioSet label scores
+    - E-B DSP weather features
+training:
+  epochs: 300
+  lr: 0.05
+  weight_decay: 0.0001
+  val_frac: 0.25
+  site_only: true
+  sound_library_assets: excluded
+runtime:
+  machine: Server B
+  panns_device: cuda
+  actual_training_seconds: 1.359
