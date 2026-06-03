@@ -1,0 +1,64 @@
+rank,species_common_name,species_scientific_name,local_annotation_audio_count,target_sample_count,selection_bucket,reuse_old_pass_allowed
+1,Splendid Fairywren,Malurus splendens,22458,100,gt_100,true
+2,Chestnut-rumped Thornbill,Acanthiza uropygialis,15862,100,gt_100,true
+3,Crested Bellbird,Oreoica gutturalis,12026,100,gt_100,true
+4,White-browed Woodswallow,Artamus superciliosus,10363,100,gt_100,true
+5,Red-capped Robin,Petroica goodenovii,8337,100,gt_100,true
+6,Superb Fairywren,Malurus cyaneus,3940,100,gt_100,true
+7,Horsfield's Bronze-cuckoo,Chrysococcyx basalis,3772,100,gt_100,true
+8,Australian Raven,Corvus coronoides,2736,100,gt_100,true
+9,Black Honeyeater,Sugomel nigrum,2647,100,gt_100,false
+10,Masked Woodswallow,Artamus personatus,2642,100,gt_100,false
+11,Spotted Nightjar,Eurostopodus argus,2605,100,gt_100,false
+12,Rufous Songlark,Cincloramphus mathewsi,2002,100,gt_100,false
+13,Budgerigar,Melopsittacus undulatus,1751,100,gt_100,false
+14,White-winged Triller,Lalage tricolor,1137,100,gt_100,false
+15,Black-faced Cuckooshrike,Coracina novaehollandiae,1042,100,gt_100,false
+16,Cockatiel,Nymphicus hollandicus,944,100,gt_100,false
+17,Willie Wagtail,Rhipidura leucophrys,901,100,gt_100,false
+18,Chestnut-breasted Quail-thrush,Cinclosoma castaneothorax,756,100,gt_100,false
+19,Mulga Parrot,Psephotus varius,688,100,gt_100,false
+20,Pallid Cuckoo,Cacomantis pallidus,662,100,gt_100,false
+21,Scarlet Myzomela,Myzomela sanguinolenta,660,100,gt_100,false
+22,Tawny Frogmouth,Podargus strigoides,568,100,gt_100,false
+23,Gray Butcherbird,Cracticus torquatus,533,100,gt_100,false
+24,Zebra Finch,Taeniopygia guttata,427,100,gt_100,false
+25,Barn Owl,Tyto alba,410,100,gt_100,false
+26,Common Bronzewing,Phaps chalcoptera,391,100,gt_100,false
+27,Whimbrel,Numenius phaeopus,322,100,gt_100,false
+28,Common Greenshank,Tringa nebularia,284,100,gt_100,false
+29,Common Sandpiper,Actitis hypoleucos,264,100,gt_100,false
+30,Pink Cockatoo,Lophochroa leadbeateri,226,100,gt_100,false
+31,Inland Thornbill,Acanthiza apicalis,187,100,gt_100,false
+32,Spiny-cheeked Honeyeater,Acanthagenys rufogularis,184,100,gt_100,false
+33,White-throated Nightjar,Eurostopodus mystacalis,158,100,gt_100,false
+34,Spotted Quail-thrush,Cinclosoma punctatum,142,100,gt_100,false
+35,Gray Shrikethrush,Colluricincla harmonica,131,100,gt_100,false
+36,Purple-backed Fairywren,Malurus assimilis,131,100,gt_100,false
+37,Eurasian Coot,Fulica atra,125,100,gt_100,false
+38,Weebill,Smicrornis brevirostris,102,100,gt_100,false
+39,Pied Honeyeater,Certhionyx variegatus,77,50,50_to_100,false
+40,Wood Sandpiper,Tringa glareola,76,50,50_to_100,false
+41,Yellow-rumped Thornbill,Acanthiza chrysorrhoa,73,50,50_to_100,false
+42,Australian Ringneck,Barnardius zonarius,66,50,50_to_100,false
+43,Crimson Chat,Epthianura tricolor,66,50,50_to_100,false
+44,White-winged Fairywren,Malurus leucopterus,62,50,50_to_100,false
+45,Black-eared Cuckoo,Chrysococcyx osculans,57,50,50_to_100,false
+46,Red-backed Fairywren,Malurus melanocephalus,48,10,lt_50,false
+47,White-breasted Woodswallow,Artamus leucorynchus,43,10,lt_50,false
+48,Singing Honeyeater,Gavicalis virescens,36,10,lt_50,false
+49,Brown Falcon,Falco berigora,35,10,lt_50,false
+50,Yellow-throated Miner,Manorina flavigula,27,10,lt_50,false
+51,Red-browed Firetail,Neochmia temporalis,23,10,lt_50,false
+52,Restless Flycatcher,Myiagra inquieta,22,10,lt_50,false
+53,Red-winged Parrot,Aprosmictus erythropterus,21,10,lt_50,false
+54,Chestnut-crowned Babbler,Pomatostomus ruficeps,18,10,lt_50,false
+55,Osprey,Pandion haliaetus,18,10,lt_50,false
+56,Red-browed Pardalote,Pardalotus rubricatus,17,10,lt_50,false
+57,Banded Lapwing,Vanellus tricolor,14,10,lt_50,false
+58,Spotted Dove,Streptopelia chinensis,12,10,lt_50,false
+59,Eastern Spinebill,Acanthorhynchus tenuirostris,11,10,lt_50,false
+60,Gilbert's Whistler,Pachycephala inornata,10,10,lt_50,false
+61,Gray Fantail,Rhipidura albiscapa,10,10,lt_50,false
+62,Pacific Swift,Apus pacificus,10,10,lt_50,false
+63,Southern Scrub-Robin,Drymodes brunneopygia,10,10,lt_50,false
