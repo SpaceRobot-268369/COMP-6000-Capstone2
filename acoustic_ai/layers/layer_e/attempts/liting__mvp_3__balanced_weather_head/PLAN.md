@@ -2,7 +2,7 @@
 
 ## Goal
 
-Train a balanced MLP head for E-B weather analysis so uploaded Site257
+Train a hybrid balanced head for E-B weather analysis so uploaded Site257
 audio can return:
 
 ```json
@@ -18,7 +18,7 @@ audio can return:
 
 - Frozen feature extractor: PANNs CNN14 AudioSet tagger.
 - Supporting features: spectral/DSP features from the E-B smoke detector.
-- Trainable model: two small MLP classifiers with class-balanced oversampling.
+- Trainable model: rain weighted MLP + wind weighted linear classifier.
 - No full PANNs fine-tuning.
 
 ## Dataset
@@ -36,7 +36,7 @@ single-component cases.
    - matched PANNs label scores.
    - DSP weather features.
 3. Make deterministic train/validation split.
-4. Train balanced rain and wind MLP heads.
+4. Train rain and wind heads with component-specific model settings.
 5. Write checkpoint and metrics.
 6. Evaluate validation cases and write report.
 

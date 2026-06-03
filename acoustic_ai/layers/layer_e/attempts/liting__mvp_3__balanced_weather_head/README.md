@@ -9,20 +9,20 @@ explainable DSP features. This is the follow-up to
 `liting__mvp_2__calibrated_weather_head`.
 
 This attempt does **not** fine-tune PANNs. PANNs remains a frozen AudioSet
-weather feature extractor. The trainable part is two class-balanced MLP heads
-for:
+weather feature extractor. The trainable part is a hybrid pair of small heads:
 
-- rain intensity: `none`, `light`, `moderate`, `heavy`
-- wind intensity: `none`, `light`, `moderate`, `strong`
+- rain intensity: weighted MLP, `none`, `light`, `moderate`, `heavy`
+- wind intensity: weighted linear head, `none`, `light`, `moderate`, `strong`
 
 Thunder remains suppressed unless Site257 thunder evidence becomes available.
 
 ## Why This Attempt Exists
 
 MVP-2 passed the E-B gate with rain accuracy 0.769, wind accuracy 0.731, and
-joint accuracy 0.615. MVP-3 tests whether a slightly stronger but still cheap
-head can improve joint rain+wind performance before spending time on full
-backbone fine-tuning.
+joint accuracy 0.615. MVP-3 tests a hybrid head after a quick Server B sweep:
+rain benefited from a small MLP, while wind remained more stable with the
+linear head. The goal is to improve joint rain+wind performance before spending
+time on full backbone fine-tuning.
 
 ## Server B Runtime Target
 

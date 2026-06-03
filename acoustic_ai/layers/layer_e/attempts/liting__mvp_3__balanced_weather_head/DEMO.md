@@ -24,9 +24,9 @@ strong enough to claim thunder detection.
 - Frozen base model: PANNs CNN14 AudioSet tagger.
 - Extra evidence: DSP weather features such as RMS, band energy ratios,
   spectral flatness, onset strength, and modulation.
-- Trainable part: two class-balanced MLP heads:
-  - one rain-intensity head
-  - one wind-intensity head
+- Trainable part: two small calibrated heads:
+  - rain-intensity head: weighted MLP
+  - wind-intensity head: weighted linear classifier
 
 The PANNs backbone is not fine-tuned. The Server B training step only fits the
 small MLP heads.
@@ -37,6 +37,8 @@ MVP3 is compared directly against the MVP2 deterministic split:
 
 - MVP2 baseline: rain 0.769, wind 0.731, joint 0.615.
 - MVP3 target: improve joint rain+wind accuracy without fine-tuning PANNs.
+- Quick sweep result: rain improved with MLP, wind stayed better with linear,
+  so the final MVP3 uses a hybrid head.
 - Server B result: see `metrics.json` after the run.
 
 Report paths:
