@@ -235,11 +235,18 @@ layers:
   layer_e:
     label: "Layer E — Analysis"
     default: lucas__mvp_2__clap_knn_probe_enlarged
+    # Analysis runs three independent detector heads on the raw mixture
+    # (pipeline_design.md § Analysis Mode): E-A ambient context, E-B weather,
+    # E-C events. Each attempt declares which head it serves via `head:`
+    # (ambient | weather | events). The Analysis dev page groups the per-head
+    # model picker by this field — an attempt with no `head` is not offered in
+    # any head. Heads with no real model (weather, events today) render empty.
     attempts:
       lucas__mvp_2__clap_knn_probe_enlarged:
         label: "Ambient context — CLAP k-NN + probe (enlarged pool)"
         author: lucas
         stage: mvp_2
+        head: ambient
         status: candidate
         checkpoint: model/candidates/lucas/mvp_2__clap_knn_probe_enlarged
         params:
@@ -249,12 +256,14 @@ layers:
         notes:
           - Candidate E-A ambient analysis model trained on ambient_pool_v2.
           - MLP season probe improves over k-NN season (0.553 vs 0.512) but misses the 0.60 bar.
-          - Diel/hour/month heads pass the candidate bars; upload analysis endpoint is still separate wiring.
+          - Diel/hour/month heads pass the candidate bars.
+          - Serves the E-A head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze (handler.analyze).
 
       lucas__mvp_1__clap_knn_probe:
         label: "Ambient context — CLAP k-NN + probe (v0 pool)"
         author: lucas
         stage: mvp_1
+        head: ambient
         status: parked_negative
         checkpoint: model/candidates/lucas/mvp_1__clap_knn_probe
         params:
@@ -269,8 +278,13 @@ layers:
         label: "Weather + event detectors"
         author: lucas
         stage: smoke_1
+        # No `head:` — weather_detector.py / event_detector.py are TODO stubs
+        # (checkpoint: null), so this attempt is intentionally NOT offered in
+        # the E-B/E-C pickers. Give it `head: weather` / `head: events` and
+        # split into per-head attempts once real detectors land.
         status: partial
         checkpoint: null
         params: {}
         notes:
-          - Weather + event detectors. Ambient similarity uses the layer_a smoke_4 VAE encoder.
+          - Placeholder for the E-B weather + E-C event detector heads; both are unimplemented stubs.
+          - Not surfaced in the Analysis dev page until a real detector model exists (see head note above).

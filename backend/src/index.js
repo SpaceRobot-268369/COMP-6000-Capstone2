@@ -558,6 +558,32 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
   }
 });
 
+// Per-attempt upload analysis (Layer E). Unlike /generate (JSON seed), this
+// forwards a multipart audio upload. `express.json()` ignores non-JSON bodies,
+// so the raw multipart stream is still intact on `req` and we pipe it straight
+// to the AI worker (boundary + content-type preserved) without buffering.
+app.post("/api/layers/:layer/attempts/:attempt/analyze", requireAuth, async (req, res) => {
+  const { layer, attempt } = req.params;
+  const operation = `analyze ${layer}/${attempt}`;
+  try {
+    const r = await fetchAi(
+      `/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/analyze`,
+      {
+        method: "POST",
+        headers: { "content-type": req.headers["content-type"] || "application/octet-stream" },
+        body: req,
+        duplex: "half",
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
 app.get("/", (_req, res) => {
   res.json({ service: "backend", status: "running" });
 });

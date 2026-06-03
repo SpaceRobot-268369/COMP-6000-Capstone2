@@ -94,28 +94,34 @@ const _PLACEHOLDER_MSG =
 export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
 
 /**
- * Run the Layer E analysis pipeline (E-A ambient, E-B weather, E-C events)
- * on an uploaded audio file. The backend is still being wired up — when the
- * endpoint isn't live yet the caller will get a clear error to surface in UI.
+ * Run one Layer E analysis head on an uploaded audio file. Analysis is
+ * per-attempt and upload-based (not seed-based): a specific attempt owns a
+ * single detector head (ambient / weather / events), so the dev page calls
+ * this once per head with that head's selected attempt.
  *
- * Expected response shape (mirrors pipeline_design.md § Analysis Mode):
+ * Response shape (server.py POST /layers/{layer}/attempts/{id}/analyze):
  *   {
- *     ambient: { estimated_conditions:{...}, similar_clips:[...], confidence:0..1 },
- *     weather: { wind_intensity:"none|light|moderate|strong",
- *                rain_intensity:"none|light|moderate|heavy", confidence:0..1 },
- *     events:  { detections:[{label, confidence, onset_s, offset_s}], confidence:0..1 },
- *     limitations?: string[],
- *     metadata?: object
+ *     ok: true,
+ *     report:  { ...head-specific fields, confidence:0..1 },   // handler output
+ *     attempt: { layer, id, label, stage, head, status, ... }  // spec snapshot
  *   }
+ *
+ * For the E-A ambient head the report carries:
+ *   { estimated_conditions:{season, diel_bin, hour, month},
+ *     similar_clips:[{segment_id, similarity}], confidence,
+ *     season_confidence, head_agreement, ood_flag, k, tau }
  */
-export async function analyseUpload(file) {
+export async function analyseUpload(layerId, attemptId, file) {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE}/api/analysis`, {
-    method:      "POST",
-    credentials: "include",
-    body:        form,
-  });
+  const res = await fetch(
+    `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/analyze`,
+    {
+      method:      "POST",
+      credentials: "include",
+      body:        form,
+    },
+  );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || err.detail || `Analysis failed (${res.status})`);

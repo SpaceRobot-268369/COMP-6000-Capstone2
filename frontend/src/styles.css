@@ -1957,6 +1957,48 @@ textarea {
   min-width: 0;
 }
 
+/* Neighbour-similarity score gauge (Analysis dev page) — a static metric,
+   not a progress bar, so it never fills to 100% by design. */
+.dev-score-gauge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.dev-score-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.dev-score-track i {
+  position: absolute;
+  inset: 0 auto 0 0;          /* right:auto — width controls the fill cleanly */
+  min-width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #92eff4, #7de7ef);
+}
+.dev-score-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.28);
+}
+.dev-score-readout {
+  flex: 0 0 auto;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+[data-theme="light"] .dev-score-track { background: rgba(0, 0, 0, 0.1); }
+[data-theme="light"] .dev-score-track i {
+  background: linear-gradient(90deg, #0088bb, #00a8d8);
+}
+[data-theme="light"] .dev-score-tick { background: rgba(255, 255, 255, 0.55); }
+
 /* Prompt-used panel (Layer A dev page) */
 .prompt-display {
   min-width: 0;
@@ -3576,8 +3618,9 @@ textarea {
   text-transform: uppercase;
 }
 
-.status-live   { color: #88f5d4; }
-.status-coming { color: rgba(255, 255, 255, 0.38); }
+.status-live    { color: #88f5d4; }
+.status-partial { color: #ffce6e; }
+.status-coming  { color: rgba(255, 255, 255, 0.38); }
 
 .intro-wf-title {
   margin: 0;
@@ -3658,9 +3701,9 @@ textarea {
 /* Pipeline */
 .intro-pipeline {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
-  gap: 0;
+  gap: 18px 28px;
   padding: 28px 32px;
 }
 
@@ -3699,6 +3742,12 @@ textarea {
   font-size: 0.76rem;
   color: rgba(255, 255, 255, 0.44);
   white-space: nowrap;
+}
+
+.intro-pipe-body .intro-wf-status {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.66rem;
 }
 
 .intro-pipe-arrow {
