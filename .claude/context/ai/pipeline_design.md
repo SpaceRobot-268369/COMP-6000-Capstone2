@@ -234,16 +234,51 @@ labels, embeddings, and confidences.
                                               │
                                               ▼
                                       Layer E aggregator
+                                   (deterministic fusion of
+                                    latent context — see below)
                                               │
                                               ▼
                                        Report JSON
-                                  (per-head label + confidence)
+                              (observations + inferred_context
+                                     + disagreements)
+                                              │
+                                              ▼
+                                     LLM-OSS narration
+                              (renders, does not decide — two
+                               registers: analytical / immersive)
 ```
 
 **Tradeoff to flag:** direct detection cannot produce a *playable* decomposed
 stem — the user gets **labels + context**, not three isolated waveforms. If
 the analysis UX later requires playback of "the ambient layer we extracted,"
 the decision above must be revisited.
+
+---
+
+### Design principle: observations vs. inferences
+
+Every analysis output is one of two kinds, and conflating them is the root of
+the "which head decides the season?" confusion:
+
+- **Observation** — something a head *directly detects*: wind/rain/thunder, a
+  species call at 0:12, the acoustic character of the bed. The owning head is
+  **authoritative** — no fusion, no second-guessing.
+- **Inference (latent context)** — season, diel, plausible env ranges. *No
+  head observes these directly.* They are latent variables **owned by nobody**
+  and produced only by the aggregator's fusion step, where the *event* head
+  usually carries the strongest evidence (species phenology) and the ambient
+  head is a weak prior.
+
+So a head's output below is split into what it **observes** (authoritative)
+and what it **contributes as evidence** toward latent context. The fusion
+rules, trust hierarchy, report-writing registers, and per-head pass standards
+live in the companion doc:
+[analysis_synthesis_policy.md](analysis_synthesis_policy.md).
+
+> **Future step:** the per-head time spans (E-B segments, E-C onsets) naturally
+> merge onto **one shared time axis** the aggregator assembles — driving both
+> immersive narration and a future waveform-overlay UI. Land per-head spans
+> first; the unified timeline comes next.
 
 ---
 
@@ -299,14 +334,26 @@ plausible env ranges from the neighbours.
 
 **Approach:** embed the clip with a pre-trained audio encoder, k-NN against
 the cleaned `ambient_index.csv` segment pool (the same pool Layer A
-retrieval uses in generation), average top-k env metadata for the estimate.
+retrieval uses in generation), and read the neighbours' env metadata.
 
-**Output:**
+- **Authoritative observation:** the clip's acoustic character + its nearest
+  training clips (`similar_clips`).
+- **Evidence toward latent context:** a **weak** season/diel prior. Because
+  the bed at this site is not seasonally discriminative (spring ≈ autumn),
+  E-A emits a *distribution* (neighbour votes), not a point label, plus a
+  dispersion-based confidence. The aggregator treats this as a low-weight
+  prior / tiebreaker — see [analysis_synthesis_policy.md](analysis_synthesis_policy.md) Rule 1.
+
+**Output:** (distribution + dispersion confidence, **not** a point estimate)
 ```json
 {
-  "estimated_conditions": {"diel_bin": "...", "season": "...", "hour": ..., "month": ...},
-  "similar_clips": [{"segment_id": "...", "similarity": 0.0}],
-  "confidence": 0.0
+  "similar_clips": [{"segment_id": "seg_00417", "similarity": 0.71}],
+  "context_evidence": {
+    "season": {"spring": 0.30, "autumn": 0.30, "summer": 0.25, "winter": 0.15},
+    "diel":   {"dawn": 0.40, "morning": 0.35, "night": 0.15, "afternoon": 0.10}
+  },
+  "confidence": 0.35,
+  "note": "high neighbour dispersion — weak seasonal prior"
 }
 ```
 
@@ -328,18 +375,68 @@ spectral centroid) — cheap to compute, useful for explainability.
 
 ### E-B — Weather detector
 
-**Purpose:** detect audible wind and rain intensity directly in the mixture.
-Wind and rain have stable spectral signatures (broadband low-freq for wind,
-dense high-freq texture + impulses for rain) — no separation needed.
+**Purpose:** detect audible wind, rain, and thunder directly in the mixture.
+These have stable spectral signatures (broadband low-freq for wind, dense
+high-freq texture for rain, low-freq impulses for thunder) — no separation
+needed. **Authoritative observation; makes no season/diel claim** (rain falls
+in any season).
 
-**Output:**
+**Output — continuous magnitudes, two-tier.** Intensities are floats
+`0.00–1.0`, anchored to the curated weather-asset library's range (0 =
+silence floor, 1 = loudest labelled asset of that type), so a value is
+reproducible and calibratable. Each channel carries:
+
+- `intensity` — overall energy of the channel.
+- `variability` — fluctuation over time (steady 0 ↔ gusty/showery 1).
+- `coverage` — fraction of the clip the channel is audibly present.
+- `label` — **derived** bucket (`none/light/moderate/strong|heavy`) computed
+  from `intensity` via fixed thresholds. The float is primary; the bucket is a
+  human-readable + generation-Layer-B view of the same number (single source
+  of truth).
+
+Wind/rain are continuous textures (reported as **spans**); thunder is discrete
+(reported as **point events** — its `events` array *is* its timeline, so it
+needs no `segments`).
+
+**Tiered contract:** `summary` is **compulsory** — every E-B output has it,
+and the report headline + generation Layer B depend only on it. `segments` /
+`events` are **optional (advanced)**: present when the detector supports
+timeline output (MVP E-B may ship summary-only), and consumers **must degrade
+gracefully when absent**. When emitted, `segments` is a full array (quantized
+~3–5 s, adjacent same-label spans merged, collapsing to a single whole-clip
+span when uniform) — presence is driven by detector capability, not by whether
+the clip happened to be steady.
+
 ```json
 {
-  "wind_intensity": "none | light | moderate | strong",
-  "rain_intensity": "none | light | moderate | heavy",
-  "confidence": 0.0
+  "wind": {
+    "summary":  { "intensity": 0.62, "variability": 0.40, "coverage": 0.95, "label": "moderate", "confidence": 0.83 },
+    "segments": [
+      { "t_start": 0.0,  "t_end": 8.0,  "intensity": 0.45, "label": "light" },
+      { "t_start": 8.0,  "t_end": 14.0, "intensity": 0.78, "label": "moderate" },
+      { "t_start": 14.0, "t_end": 30.0, "intensity": 0.55, "label": "moderate" }
+    ]
+  },
+  "rain": {
+    "summary":  { "intensity": 0.10, "variability": 0.70, "coverage": 0.20, "label": "light", "confidence": 0.55 },
+    "segments": [ { "t_start": 6.0, "t_end": 11.0, "intensity": 0.30, "label": "light" } ]
+  },
+  "thunder": {
+    "intensity": 0.00,
+    "event_count": 0,
+    "events": [],
+    "mean_interval_s": null,
+    "confidence": 0.90
+  },
+  "confidence": 0.80
 }
 ```
+
+`summary.variability` is the spread of segment intensities; `summary.coverage`
+is the fraction of time above the silence floor — so the two tiers are
+internally consistent (segments are the source, summary the rollup). For
+thunder, `events` holds `{ "onset_s", "strength" }` and `mean_interval_s` is
+the average gap between claps (`null` if fewer than 2 events).
 
 **Pre-trained model options:**
 
@@ -365,10 +462,30 @@ accumulate.
 with onsets/offsets. Pre-trained bioacoustic detectors were *built* for
 mixed-source audio — that's their entire reason for existing.
 
-**Output:**
+- **Authoritative observation:** species present + onsets/offsets.
+- **Evidence toward latent context:** the **strongest** season/diel signal.
+  Each detected species maps (via the phenology table) to an activity niche —
+  a nocturnal owl pins diel to night; a cicada chorus pins warm-season
+  daytime; a migratory species pins a narrow season. The aggregator weights
+  this by `confidence × niche_specificity` (see
+  [analysis_synthesis_policy.md](analysis_synthesis_policy.md)).
+
+**Output:** each detection carries a `phenology` block joined from the species
+phenology table (§ *Required artifact* below).
 ```json
 [
-  {"label": "str", "confidence": 0.0, "onset_s": 0.0, "offset_s": 0.0}
+  {
+    "label": "Southern Boobook",
+    "confidence": 0.91,
+    "onset_s": 12.4,
+    "offset_s": 13.1,
+    "phenology": {
+      "diel_window": "night",
+      "season_window": "year-round",
+      "niche_specificity": { "diel": 0.95, "season": 0.10 },
+      "source": "site257_phenology_table"
+    }
+  }
 ]
 ```
 
@@ -395,23 +512,52 @@ CLAP zero-shot as the open-vocabulary fallback.
 ```
    Step 1 ─ CLAP embedding service   (load once, shared by E-A + zero-shot fallbacks)
    Step 2 ─ BirdNET subprocess       (E-C primary)
-   Step 3 ─ PANNs wind/rain head     (E-B primary)
-   Step 4 ─ Aggregator               (Report JSON)
+   Step 3 ─ PANNs wind/rain head     (E-B primary; summary-only first, segments later)
+   Step 4 ─ Species phenology table  (prereq for season/diel fusion — see below)
+   Step 5 ─ Aggregator               (deterministic fusion → Report JSON)
+   Step 6 ─ LLM-OSS narration        (renders report; analytical / immersive)
 ```
 
 No new training required to reach an end-to-end smoke. Fine-tuned heads
-(weather classifier, Perch-based event head) come later, once labels
-accumulate.
+(weather classifier, Perch-based event head), E-B `segments`, and the unified
+cross-head timeline come later. Fusion + report-writing policy:
+[analysis_synthesis_policy.md](analysis_synthesis_policy.md).
+
+---
+
+### Required artifact: species phenology table
+
+E-C's season/diel evidence is only quantifiable with a lookup table mapping
+each species to its activity niche — **it does not exist yet** and is a
+prerequisite for aggregator fusion:
+
+```
+species_id → { season_window, diel_window,
+               niche_specificity: { season, diel },   # narrow niche → high
+               source }                                # site-257 manual | A2O | Xeno-canto
+```
+
+Ideally site-257-specific and manually validated (e.g. confirm "cicada →
+summer afternoon" against the real recordings before hard-coding it); a
+general source is the fallback. A year-round generalist gets wide windows and
+~0 specificity, contributing ~no season/diel evidence — correct behaviour.
+Full spec: [analysis_synthesis_policy.md § 7](analysis_synthesis_policy.md).
 
 ---
 
 ### Analysis Report Fields
 
+The aggregator separates **authoritative observations** from **fused latent
+inference** and records head **disagreements**. Full schema + the trust
+hierarchy that fills `inferred_context`:
+[analysis_synthesis_policy.md § 3–4](analysis_synthesis_policy.md).
+
 | Field | Source |
 |---|---|
-| `estimated_conditions` | E-A — top-k NN average |
-| `similar_clips` | E-A — top-k segment IDs and similarity scores |
-| `wind_intensity`, `rain_intensity` | E-B |
-| `detected_events` | E-C |
-| `confidence` | Per-head confidence scores |
+| `observations.weather` | E-B — wind/rain/thunder `summary` (+ optional `segments`/`events`) |
+| `observations.events` | E-C — detected species + onsets |
+| `observations.ambient` | E-A — `similar_clips` |
+| `inferred_context.diel`, `inferred_context.season` | Aggregator — fused posterior + distribution + primary evidence |
+| `disagreements` | Aggregator — heads that conflicted + resolution |
+| `confidence` | Aggregator — calibrated overall confidence |
 | `limitations` | Notes on model limitations and dataset coverage |
