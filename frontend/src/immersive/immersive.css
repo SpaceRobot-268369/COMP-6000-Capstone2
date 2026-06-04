@@ -50,7 +50,7 @@
    smaller and on a wider measure than the short title-card on /immersive, so a
    full paragraph reads as a few calm lines instead of filling the frame. */
 .immersive-page.narration .immersive-title-words {
-  max-width: 22em;
+  max-width: 34em;
   font-size: clamp(19px, 2.05vw, 30px);
   line-height: 1.34;
   letter-spacing: 0.014em;

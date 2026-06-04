@@ -4157,6 +4157,7 @@ textarea {
 
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 [data-theme="light"] body {
+  color-scheme: light;
   background:
     radial-gradient(circle at bottom left, rgba(0, 160, 210, 0.07), transparent 30%),
     radial-gradient(circle at top right,   rgba(0, 200, 160, 0.05), transparent 24%),
