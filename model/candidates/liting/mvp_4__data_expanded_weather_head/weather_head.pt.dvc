@@ -1,0 +1,5 @@
+outs:
+- md5: fa27f079e6f029ae631ed6a0759f285a
+  size: 6155
+  hash: md5
+  path: weather_head.pt
