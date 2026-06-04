@@ -679,30 +679,69 @@ function AmbientResult({ report }) {
 function WeatherResult({ report }) {
   const weather = report?.observations?.weather || {};
   const legacyWeather = report?.weather || {};
+  const summary = report?.summary || {};
   const derivedLabel = weather.derived_label || legacyWeather.overall_label || "—";
   const warnings = weather.warnings || legacyWeather.warnings || [];
+  const model = report?.model || {};
+  const hasSummarySignals = ["wind", "rain", "thunder"].some((element) => {
+    return summary?.[element] || legacyWeather?.[`${element}_intensity`];
+  });
+
   return (
     <div className="dev-controls-meta">
-      <div className="gen-info-block">
-        <p>Derived label</p>
-        <code>{derivedLabel}</code>
+      {hasSummarySignals ? (
+        <>
+          <WeatherSignalCard label="Wind" signal={summary.wind} fallback={legacyWeather.wind_intensity} />
+          <WeatherSignalCard label="Rain" signal={summary.rain} fallback={legacyWeather.rain_intensity} />
+          <WeatherSignalCard label="Thunder" signal={summary.thunder} fallback={legacyWeather.thunder_intensity} />
+          <ConfidenceBar value={legacyWeather.confidence} label="Overall weather confidence" />
+        </>
+      ) : (
+        <>
+          <div className="gen-info-block">
+            <p>Derived label</p>
+            <code>{derivedLabel}</code>
+          </div>
+          <div className="gen-info-block">
+            <p>Confidence</p>
+            <code>{fmtNum(weather.confidence)}</code>
+          </div>
+          {["rain", "wind", "thunder"].map((element) => (
+            <WeatherElementBlock
+              key={element}
+              element={element}
+              summary={weather?.[element]?.summary}
+            />
+          ))}
+        </>
+      )}
+      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+        <p>Model</p>
+        <code>{model.primary || legacyWeather.primary_model || "—"}</code>
       </div>
-      <div className="gen-info-block">
-        <p>Confidence</p>
-        <code>{fmtNum(weather.confidence)}</code>
+      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+        <p>Method</p>
+        <code>{model.method || legacyWeather.method || "—"}</code>
       </div>
-      {["rain", "wind", "thunder"].map((element) => (
-        <WeatherElementBlock
-          key={element}
-          element={element}
-          summary={weather?.[element]?.summary}
-        />
-      ))}
+      {weather.thunder?.status && (
+        <div className="dev-placeholder dev-placeholder-json" style={{ gridColumn: "1 / -1" }}>
+          <p className="dev-placeholder-caption">
+            Thunder: {formatSignal(weather.thunder.status)}
+          </p>
+        </div>
+      )}
       {warnings.length > 0 && (
         <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
           <p>Warnings</p>
           <code>{warnings.join(" · ")}</code>
         </div>
+      )}
+      {Array.isArray(report?.limitations) && report.limitations.length > 0 && (
+        <ul className="dev-sim-list" style={{ gridColumn: "1 / -1", margin: "8px 0 0", paddingLeft: 16 }}>
+          {report.limitations.slice(0, 4).map((item, idx) => (
+            <li key={idx} style={{ fontSize: 12, opacity: 0.8 }}>{item}</li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -722,53 +761,6 @@ function WeatherElementBlock({ element, summary }) {
         {confidence == null ? "" : ` · conf ${confidence.toFixed(3)}`}
         {coverage == null ? "" : ` · cov ${coverage.toFixed(2)}`}
       </code>
-    </div>
-  );
-}
-
-// ─── Shared bits ──────────────────────────────────────────────────────────────
-
-function WeatherResult({ report }) {
-  const summary = report?.summary || {};
-  const weather = report?.weather || {};
-  const wind = summary.wind || {};
-  const rain = summary.rain || {};
-  const thunder = summary.thunder || {};
-  const model = report?.model || {};
-  const observations = report?.observations?.weather || {};
-
-  return (
-    <div className="dev-controls-meta">
-      <WeatherSignalCard label="Wind" signal={wind} fallback={weather.wind_intensity} />
-      <WeatherSignalCard label="Rain" signal={rain} fallback={weather.rain_intensity} />
-      <WeatherSignalCard label="Thunder" signal={thunder} fallback={weather.thunder_intensity} />
-
-      <ConfidenceBar value={weather.confidence} label="Overall weather confidence" />
-
-      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
-        <p>Model</p>
-        <code>{model.primary || weather.primary_model || "—"}</code>
-      </div>
-      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
-        <p>Method</p>
-        <code>{model.method || weather.method || "—"}</code>
-      </div>
-
-      {observations.thunder?.status && (
-        <div className="dev-placeholder dev-placeholder-json" style={{ gridColumn: "1 / -1" }}>
-          <p className="dev-placeholder-caption">
-            Thunder: {formatSignal(observations.thunder.status)}
-          </p>
-        </div>
-      )}
-
-      {Array.isArray(report?.limitations) && report.limitations.length > 0 && (
-        <ul className="dev-sim-list" style={{ gridColumn: "1 / -1", margin: "8px 0 0", paddingLeft: 16 }}>
-          {report.limitations.slice(0, 4).map((item, idx) => (
-            <li key={idx} style={{ fontSize: 12, opacity: 0.8 }}>{item}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
