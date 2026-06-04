@@ -270,11 +270,11 @@ layers:
 
   layer_d:
     label: "Layer D — Mixer"
-    default: lucas__smoke_1__layered_mix
+    default: songke__smoke_1__layered_mix
     attempts:
-      lucas__smoke_1__layered_mix:
+      songke__smoke_1__layered_mix:
         label: "Layered mix (smoke)"
-        author: lucas
+        author: songke
         stage: smoke_1
         status: smoke_test
         checkpoint: null

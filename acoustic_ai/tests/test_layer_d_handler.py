@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 import soundfile as sf
 
-from acoustic_ai.layers.layer_d.attempts.lucas__smoke_1__layered_mix.code import handler
+from acoustic_ai.layers.layer_d.attempts.songke__smoke_1__layered_mix.code import handler
 
 
 class LayerDHandlerTest(unittest.TestCase):
