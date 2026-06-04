@@ -5,12 +5,20 @@ import { SEASONS, TIMES, SEASON_LABEL, TIME_LABEL } from "../immersive/scenes.js
    `initUI`. Drives the engine through its control `api`. Mounted only when the
    SHOW_DEV_PANEL flag in ImmersivePage is on; flip that off to ship the scene
    without controls. */
-export default function ImmersiveControls({ api }) {
-  const [season, setSeason] = useState("autumn");
-  const [time, setTime] = useState("dawn");
-  const [rain, setRain] = useState(false);
-  const [rainAmount, setRainAmount] = useState(0.6);
-  const [playing, setPlaying] = useState(false);
+export default function ImmersiveControls({
+  api,
+  season,
+  setSeason,
+  time,
+  setTime,
+  rain,
+  setRain,
+  rainAmount,
+  setRainAmount,
+  setAudioSrc,
+  setAudioLabel,
+  playing,
+}) {
   const [fileName, setFileName] = useState("no file — controls mock playback");
   const [collapsed, setCollapsed] = useState(false);
 
@@ -32,12 +40,16 @@ export default function ImmersiveControls({ api }) {
     api.setRainAmount(v);
   }
   function togglePlay() {
-    setPlaying(api.togglePlay());
+    api.togglePlay();
   }
   function loadFile(event) {
     const file = event.target.files[0];
-    const name = api.loadFile(file);
-    if (name) setFileName(name);
+    if (file) {
+      api.loadFile(file);
+      setAudioSrc(URL.createObjectURL(file));
+      setAudioLabel(file.name);
+      setFileName(file.name);
+    }
   }
 
   return (

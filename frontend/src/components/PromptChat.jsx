@@ -39,7 +39,7 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
   }
 
   return (
-    <div className={`demo-chat${generating ? " generating" : ""}`}>
+    <div className={`demo-chat theme-generation${generating ? " generating" : ""}`}>
       <div className="demo-chat-inner">
         <header className="demo-chat-head">
           <p className="demo-eyebrow">SPECULATIVE SOUNDSCAPE</p>
@@ -70,8 +70,8 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
                 <button
                   key={s}
                   type="button"
-                  className="demo-preset-chip"
-                  onClick={() => onSubmit(s)}
+                  className={`demo-preset-chip${value === s ? " selected" : ""}`}
+                  onClick={() => { setValue(s); inputRef.current?.focus(); }}
                 >
                   {s}
                 </button>

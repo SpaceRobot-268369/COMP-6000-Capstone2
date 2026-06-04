@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ImmersivePage from "./pages/ImmersivePage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
+import PipelinePage from "./pages/PipelinePage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
 import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
 import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
@@ -49,6 +50,21 @@ export default function App() {
   const [devDropdownOpen, setDevDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    document.body.classList.remove("theme-analysis", "theme-generation");
+    if (path === "/analysis" || path === "/dev/analysis") {
+      document.body.classList.add("theme-analysis");
+    } else if (path === "/generation" || path === "/dev/layers") {
+      document.body.classList.add("theme-generation");
+    }
+    return () => {
+      document.body.classList.remove("theme-analysis", "theme-generation");
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     const storedAccountName = window.localStorage.getItem(accountStorageKey);
@@ -175,6 +191,10 @@ export default function App() {
                 <span className="nav-icon">✦</span>
                 <span>Introduction</span>
               </NavLink>
+              <NavLink to="/how-it-works" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">⌥</span>
+                <span>How it works</span>
+              </NavLink>
               <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 <span className="nav-icon">◫</span>
                 <span>Analysis</span>
@@ -283,6 +303,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/about" replace />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/how-it-works" element={<PipelinePage />} />
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
           {/* Transformation is out of scope for the demo — redirect any stale links. */}

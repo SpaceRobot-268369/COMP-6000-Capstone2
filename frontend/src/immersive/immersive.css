@@ -73,16 +73,54 @@
 .immersive-page .phead {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+  transition: border-bottom-color 0.35s ease;
+}
+.immersive-page .immersive-panel.collapsed .phead {
+  border-bottom-color: transparent;
 }
 .immersive-page .phead h2 {
   font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
   color: #b7b2a7; margin: 0;
+  transition: opacity 0.25s ease, max-width 0.25s ease;
+  opacity: 1;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.immersive-page .immersive-panel.collapsed .phead h2 {
+  opacity: 0;
+  max-width: 0;
 }
 .immersive-page .panel-toggle {
+  position: absolute;
+  right: 14px;
+  top: 12px;
   width: 22px; height: 22px; border: 0; background: transparent; cursor: pointer;
   color: #8a857b; font-size: 15px; line-height: 1;
+  transition: color 0.2s ease, transform 0.2s ease, right 0.35s cubic-bezier(.3,.8,.3,1);
 }
-.immersive-page .pbody { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.immersive-page .immersive-panel.collapsed .panel-toggle {
+  right: calc(100% - 36px);
+}
+.immersive-page .panel-toggle:hover {
+  color: #e9e2d4;
+  transform: scale(1.15);
+}
+.immersive-page .pbody {
+  padding: 14px; display: flex; flex-direction: column; gap: 14px;
+  max-height: 500px;
+  opacity: 1;
+  transition: max-height 0.35s ease, opacity 0.35s ease, padding 0.35s ease;
+  overflow: hidden;
+}
+.immersive-page .immersive-panel.collapsed .pbody {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+}
 .immersive-page .grp { display: flex; flex-direction: column; gap: 7px; }
 .immersive-page .lbl { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #837e74; }
 .immersive-page .segrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -109,3 +147,55 @@
 .immersive-page .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .immersive-page .file-name { font-size: 11px; color: #837e74; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .immersive-page .hint { font-size: 10.5px; line-height: 1.45; color: #6f6a61; letter-spacing: 0.02em; }
+
+/* ---- Compact Immersive Player Bar (aligned with bottom buttons) ---- */
+.immersive-page .player-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: calc(100% - 320px);
+  max-width: 500px;
+  padding: 8px 16px;
+  gap: 12px;
+  z-index: 12;
+}
+
+.immersive-page .player-bar .play-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  font-size: 0.95rem;
+  border-radius: 999px;
+}
+
+.immersive-page .player-bar .player-copy strong {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.immersive-page .player-bar .player-copy p {
+  font-size: 0.68rem;
+  margin-top: 2px;
+}
+
+.immersive-page .player-bar .player-levels {
+  height: 22px;
+  gap: 4px;
+}
+
+.immersive-page .player-bar .player-levels span {
+  width: 3px;
+}
+
+@media (max-width: 768px) {
+  .immersive-page .player-bar {
+    bottom: 74px;
+    width: calc(100% - 36px);
+    max-width: 500px;
+  }
+}

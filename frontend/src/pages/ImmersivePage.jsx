@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
+import AudioPlayer from "../components/AudioPlayer.jsx";
 import "../immersive/immersive.css";
 
 /* The eco-acoustic immersive experience screen — a procedural Three.js woodland
@@ -30,8 +31,15 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const titleWordsRef = useRef(null);
   const titleScrimRef = useRef(null);
   const audioRef = useRef(null);
+
   const [api, setApi] = useState(null);
   const [playing, setPlaying] = useState(false);
+  const [season, setSeason] = useState(() => activeInitial?.season || "autumn");
+  const [time, setTime] = useState(() => activeInitial?.time || "dawn");
+  const [rain, setRain] = useState(() => activeInitial?.rain || false);
+  const [rainAmount, setRainAmount] = useState(() => activeInitial?.rainAmount || 0.6);
+  const [audioSrc, setAudioSrc] = useState(() => activeInitial?.audioUrl || "");
+  const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
 
   useEffect(() => {
     const instance = createImmersive({
@@ -64,6 +72,48 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep internal play state synchronized with the actual audio element events
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+
+    function handlePlay() {
+      setPlaying(true);
+    }
+    function handlePause() {
+      setPlaying(false);
+    }
+
+    a.addEventListener("play", handlePlay);
+    a.addEventListener("pause", handlePause);
+    return () => {
+      a.removeEventListener("play", handlePlay);
+      a.removeEventListener("pause", handlePause);
+    };
+  }, []);
+
+  // Sync data-theme on document root with actual time of day
+  useEffect(() => {
+    const isLightMode = time === "morning" || time === "afternoon";
+    const computedTheme = isLightMode ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", computedTheme);
+  }, [time]);
+
+  // Save the user's previous theme state on mount, restore it on unmount
+  useEffect(() => {
+    const savedThemeSetting = localStorage.getItem("sl-theme") || "auto";
+
+    return () => {
+      const root = document.documentElement;
+      if (savedThemeSetting !== "auto") {
+        root.setAttribute("data-theme", savedThemeSetting);
+      } else {
+        const mq = window.matchMedia("(prefers-color-scheme: light)");
+        root.setAttribute("data-theme", mq.matches ? "light" : "dark");
+      }
+    };
+  }, []);
+
   function handleReset() {
     const performReset = () => {
       navigate(location.state?.backPath || "/generation");
@@ -76,24 +126,41 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     }
   }
 
-  function handleTogglePlay() {
-    if (api) {
-      setPlaying(api.togglePlay());
+  function handleDownload() {
+    if (audioSrc) {
+      const link = document.createElement("a");
+      link.href = audioSrc;
+      let filename = "soundscape.wav";
+      if (audioSrc.startsWith("blob:")) {
+        filename = `${season}_${time}_soundscape.wav`;
+      } else {
+        filename = audioSrc.split("/").pop() || "soundscape.wav";
+      }
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
-  const activeOverlay = overlay || (isFromDemo ? (
+  const activeOverlay = overlay || (
     <>
-      <button type="button" className="demo-reset" onClick={handleReset}>
-        ↺ New scene
-      </button>
-      {activeInitial?.audioUrl && (
-        <button type="button" className="demo-audio-toggle" onClick={handleTogglePlay}>
-          {playing ? "⏸ Pause Audio" : "▶ Play Audio"}
+      {isFromDemo && (
+        <button
+          type="button"
+          className={`demo-reset ${audioSrc ? "has-audio" : ""}`}
+          onClick={handleReset}
+        >
+          ↺ New scene
+        </button>
+      )}
+      {audioSrc && (
+        <button type="button" className="demo-audio-download" onClick={handleDownload}>
+          ⬇ Download Audio
         </button>
       )}
     </>
-  ) : null);
+  );
 
   return (
     <div className="immersive-page">
@@ -104,10 +171,33 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       </div>
       <canvas className="immersive-bolt" ref={boltRef} />
 
-      {activeShowDevPanel && api && <ImmersiveControls api={api} />}
+      {activeShowDevPanel && api && (
+        <ImmersiveControls
+          api={api}
+          season={season}
+          setSeason={setSeason}
+          time={time}
+          setTime={setTime}
+          rain={rain}
+          setRain={setRain}
+          rainAmount={rainAmount}
+          setRainAmount={setRainAmount}
+          setAudioSrc={setAudioSrc}
+          setAudioLabel={setAudioLabel}
+          playing={playing}
+        />
+      )}
       {activeOverlay}
 
       <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin="anonymous" />
+
+      {audioSrc && (
+        <AudioPlayer
+          src={audioSrc}
+          label={audioLabel}
+          audioRef={audioRef}
+        />
+      )}
     </div>
   );
 }
