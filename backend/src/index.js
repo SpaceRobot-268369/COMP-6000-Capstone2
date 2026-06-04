@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import cors from "cors";
 import express from "express";
@@ -203,13 +204,30 @@ const AI_CONNECTION_MODE = process.env.AI_CONNECTION_MODE || "direct";
 const AI_TUNNEL_LOCAL_PORT = process.env.AI_TUNNEL_LOCAL_PORT || "8000";
 const AI_TUNNEL_REMOTE_HOST = process.env.AI_TUNNEL_REMOTE_HOST || "127.0.0.1";
 const AI_TUNNEL_REMOTE_PORT = process.env.AI_TUNNEL_REMOTE_PORT || "8000";
-const aiRequestTimeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS || 15000);
+const AI_RECONNECT_MODE = process.env.AI_RECONNECT_MODE || "disabled";
+const AI_RECONNECT_DOCKER_SOCKET = process.env.AI_RECONNECT_DOCKER_SOCKET || "/var/run/docker.sock";
+const AI_RECONNECT_CONTAINER = process.env.AI_RECONNECT_CONTAINER || "";
+const aiReconnectTimeoutMs = Number(process.env.AI_RECONNECT_TIMEOUT_MS || 45000);
+const AI_RECONNECT_TIMEOUT_MS = Number.isFinite(aiReconnectTimeoutMs) && aiReconnectTimeoutMs > 0
+  ? aiReconnectTimeoutMs
+  : 45000;
+const aiReconnectHealthTimeoutMs = Number(process.env.AI_RECONNECT_HEALTH_TIMEOUT_MS || 30000);
+const AI_RECONNECT_HEALTH_TIMEOUT_MS = Number.isFinite(aiReconnectHealthTimeoutMs) && aiReconnectHealthTimeoutMs > 0
+  ? aiReconnectHealthTimeoutMs
+  : 30000;
+const aiReconnectPollMs = Number(process.env.AI_RECONNECT_POLL_MS || 1500);
+const AI_RECONNECT_POLL_MS = Number.isFinite(aiReconnectPollMs) && aiReconnectPollMs > 0
+  ? aiReconnectPollMs
+  : 1500;
+const DEFAULT_AI_REQUEST_TIMEOUT_MS = 15000;
+const aiRequestTimeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS || DEFAULT_AI_REQUEST_TIMEOUT_MS);
 const AI_REQUEST_TIMEOUT_MS = Number.isFinite(aiRequestTimeoutMs) && aiRequestTimeoutMs > 0
   ? aiRequestTimeoutMs
-  : 15000;
+  : DEFAULT_AI_REQUEST_TIMEOUT_MS;
+let aiReconnectInFlight = false;
 
 class AiProxyError extends Error {
-  constructor({ message, stage, status = 502, detail, hints = [], cause }) {
+  constructor({ message, stage, status = 502, detail, hints = [], cause, statusKey, reachability, diagnostics }) {
     super(message);
     this.name = "AiProxyError";
     this.stage = stage;
@@ -217,6 +235,9 @@ class AiProxyError extends Error {
     this.detail = detail;
     this.hints = hints;
     this.cause = cause;
+    this.statusKey = statusKey;
+    this.reachability = reachability;
+    this.diagnostics = diagnostics;
   }
 }
 
@@ -265,7 +286,7 @@ function aiConnectionHints(port) {
   ];
 }
 
-function aiFetchError(err, targetUrl, operation) {
+function aiFetchError(err, targetUrl, operation, timeoutMs = AI_REQUEST_TIMEOUT_MS) {
   const cause = err.cause || err;
   const code = cause.code || cause.name || err.code || err.name;
   const port = targetUrl.port || (targetUrl.protocol === "https:" ? "443" : "80");
@@ -279,7 +300,7 @@ function aiFetchError(err, targetUrl, operation) {
         : `${AI_SERVER_LABEL} connection timed out: ${AI_SERVER_LABEL} may be stopped, the AI service may be stopped, or port ${port}/firewall may be unreachable.`,
       stage: AI_CONNECTION_MODE === "ssh_tunnel" ? "ai-tunnel-timeout" : "ai-connect-timeout",
       status: 504,
-      detail: `${operation} timed out after ${AI_REQUEST_TIMEOUT_MS}ms while connecting to ${targetUrl.origin}.`,
+      detail: `${operation} timed out after ${timeoutMs}ms while waiting for ${targetUrl.origin}.`,
       hints: commonHints,
       cause: err,
     });
@@ -359,10 +380,14 @@ function aiFetchError(err, targetUrl, operation) {
   });
 }
 
-async function fetchAi(path, options = {}, operation = "AI request") {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchAi(path, options = {}, operation = "AI request", timeoutMs = AI_REQUEST_TIMEOUT_MS) {
   const targetUrl = aiServerEndpoint(path);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(targetUrl, {
@@ -370,7 +395,7 @@ async function fetchAi(path, options = {}, operation = "AI request") {
       signal: controller.signal,
     });
   } catch (err) {
-    throw aiFetchError(err, targetUrl, operation);
+    throw aiFetchError(err, targetUrl, operation, timeoutMs);
   } finally {
     clearTimeout(timeout);
   }
@@ -397,16 +422,322 @@ function sendAiProxyError(res, err, operation) {
     ok: false,
     message: err.message || `${AI_SERVER_LABEL} request failed.`,
     stage: err.stage || "ai-proxy",
+    statusKey: err.statusKey,
+    reachability: err.reachability,
     aiServer: {
       label: AI_SERVER_LABEL,
       url: AI_SERVER,
     },
     detail: err.detail || String(err.message || err),
     hints: err.hints || [],
+    diagnostics: err.diagnostics,
   };
 
   console.error(`[AI proxy] ${operation} failed`, payload, err.cause || err);
   res.status(status).json(payload);
+}
+
+function dockerApiRequest({ method, path: requestPath, timeoutMs = AI_RECONNECT_TIMEOUT_MS }) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({
+      socketPath: AI_RECONNECT_DOCKER_SOCKET,
+      method,
+      path: requestPath,
+      timeout: timeoutMs,
+    }, (response) => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        body += chunk;
+      });
+      response.on("end", () => {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          resolve({ statusCode: response.statusCode, body });
+          return;
+        }
+
+        reject(new AiProxyError({
+          message: `Docker could not restart the ${AI_SERVER_LABEL} tunnel container.`,
+          stage: "ai-reconnect-docker",
+          status: 502,
+          detail: `Docker API ${method} ${requestPath} returned HTTP ${response.statusCode}: ${body || response.statusMessage}`,
+          hints: [
+            `Confirm AI_RECONNECT_CONTAINER points to the ai-tunnel container (${AI_RECONNECT_CONTAINER || "not configured"}).`,
+            `Confirm the backend can access ${AI_RECONNECT_DOCKER_SOCKET}.`,
+          ],
+        }));
+      });
+    });
+
+    req.on("timeout", () => {
+      req.destroy(new AiProxyError({
+        message: `Docker restart timed out while trying to recover the ${AI_SERVER_LABEL} tunnel.`,
+        stage: "ai-reconnect-timeout",
+        status: 504,
+        detail: `Docker API request exceeded ${timeoutMs}ms.`,
+        hints: ["Check Docker daemon health and ai-tunnel container logs."],
+      }));
+    });
+
+    req.on("error", (err) => {
+      if (err instanceof AiProxyError) {
+        reject(err);
+        return;
+      }
+
+      reject(new AiProxyError({
+        message: `Backend could not talk to Docker while trying to reconnect ${AI_SERVER_LABEL}.`,
+        stage: "ai-reconnect-docker-socket",
+        status: 502,
+        detail: `${AI_RECONNECT_DOCKER_SOCKET}: ${err.message}`,
+        hints: [
+          "Mount the Docker socket into the backend container if automatic tunnel restart is desired.",
+          "Or set AI_RECONNECT_MODE=disabled to make reconnect attempts report as unsupported.",
+        ],
+        cause: err,
+      }));
+    });
+
+    req.end();
+  });
+}
+
+function aiReachability(overrides = {}) {
+  return {
+    backend: true,
+    tunnelContainer: false,
+    ssh: false,
+    serverB: false,
+    aiService: false,
+    ...overrides,
+  };
+}
+
+function cleanDockerLogs(value) {
+  return String(value || "")
+    .replace(/[^\t\n\r\x20-\x7e]/g, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(-6000);
+}
+
+async function fetchAiTunnelLogs(container) {
+  const response = await dockerApiRequest({
+    method: "GET",
+    path: `/containers/${encodeURIComponent(container)}/logs?stdout=1&stderr=1&tail=120`,
+    timeoutMs: 10000,
+  });
+  return cleanDockerLogs(response.body);
+}
+
+function parseTunnelErrorLog(logs) {
+  const match = String(logs || "").match(/ERROR \[([^\]]+)\]\s*([^\n\r]*)/);
+  if (!match) return null;
+  return {
+    code: match[1],
+    message: match[2]?.trim() || "",
+  };
+}
+
+function aiServiceDegradedError({ code, message, logs, action, cause }) {
+  return new AiProxyError({
+    message: message || `${AI_SERVER_LABEL} is reachable, but the AI service is not healthy.`,
+    stage: code || "ai-service-unhealthy",
+    status: 424,
+    statusKey: "degraded",
+    detail: logs || cause?.detail || cause?.message || "serverB SSH succeeded, but AI service health did not recover.",
+    hints: [
+      "Check the FastAPI/uvicorn process on serverB.",
+      "Set AI_SERVICE_START_COMMAND to a safe fixed restart command if automatic AI service startup is desired.",
+    ],
+    reachability: aiReachability({
+      tunnelContainer: true,
+      ssh: true,
+      serverB: true,
+      aiService: false,
+    }),
+    diagnostics: {
+      action,
+      tunnelLogs: logs,
+    },
+    cause,
+  });
+}
+
+function aiChannelOfflineError({ code, message, logs, action, cause }) {
+  const stage = code || cause?.stage || "ai-channel-unavailable";
+  const isTunnelContainerKnown = Boolean(action);
+
+  return new AiProxyError({
+    message: message || cause?.message || `${AI_SERVER_LABEL} channel is unavailable.`,
+    stage,
+    status: cause?.status || 502,
+    statusKey: "offline",
+    detail: logs || cause?.detail || cause?.message || "The backend could not establish a usable serverB channel.",
+    hints: cause?.hints || aiConnectionHints(AI_TUNNEL_LOCAL_PORT),
+    reachability: aiReachability({
+      tunnelContainer: isTunnelContainerKnown,
+      ssh: false,
+      serverB: false,
+      aiService: false,
+    }),
+    diagnostics: {
+      action,
+      tunnelLogs: logs,
+    },
+    cause,
+  });
+}
+
+function classifyAiTunnelFailure({ logs, action, cause }) {
+  const parsed = parseTunnelErrorLog(logs);
+  if (parsed?.code?.startsWith("ai-service")) {
+    return aiServiceDegradedError({
+      code: parsed.code,
+      message: parsed.message,
+      logs,
+      action,
+      cause,
+    });
+  }
+
+  return aiChannelOfflineError({
+    code: parsed?.code,
+    message: parsed?.message,
+    logs,
+    action,
+    cause,
+  });
+}
+
+async function restartAiTunnelContainer() {
+  const container = AI_RECONNECT_CONTAINER.trim().replace(/^\/+/, "");
+  if (!container) {
+    throw new AiProxyError({
+      message: "AI reconnect is configured for Docker, but AI_RECONNECT_CONTAINER is empty.",
+      stage: "ai-reconnect-config",
+      status: 500,
+      detail: "Set AI_RECONNECT_CONTAINER to the ai-tunnel container name.",
+    });
+  }
+
+  await dockerApiRequest({
+    method: "POST",
+    path: `/containers/${encodeURIComponent(container)}/restart?t=5`,
+  });
+
+  return {
+    mode: AI_RECONNECT_MODE,
+    container,
+    dockerSocket: AI_RECONNECT_DOCKER_SOCKET,
+  };
+}
+
+async function waitForAiHealthAfterReconnect() {
+  const startedAt = Date.now();
+  let lastError = null;
+
+  while (Date.now() - startedAt < AI_RECONNECT_HEALTH_TIMEOUT_MS) {
+    try {
+      const response = await fetchAi("/health", {}, "AI reconnect health check", 10000);
+      const body = await readAiJson(response, "AI reconnect health check");
+      if (response.ok && body?.ok !== false) {
+        return {
+          ok: true,
+          elapsedMs: Date.now() - startedAt,
+          upstream: body,
+        };
+      }
+
+      lastError = new AiProxyError({
+        message: body?.message || `${AI_SERVER_LABEL} health returned HTTP ${response.status} after reconnect.`,
+        stage: "ai-reconnect-health-upstream",
+        status: response.status,
+        detail: formatUpstreamDetail(body) || JSON.stringify(body),
+      });
+    } catch (err) {
+      lastError = err;
+    }
+
+    await sleep(AI_RECONNECT_POLL_MS);
+  }
+
+  throw new AiProxyError({
+    message: `${AI_SERVER_LABEL} reconnect attempt finished, but the AI health check did not recover in time.`,
+    stage: "ai-reconnect-health-timeout",
+    status: 504,
+    detail: lastError?.detail || lastError?.message || `No healthy /health response within ${AI_RECONNECT_HEALTH_TIMEOUT_MS}ms.`,
+    hints: [
+      "Check ai-tunnel logs.",
+      `Confirm the AI service is listening on serverB at ${AI_TUNNEL_REMOTE_HOST}:${AI_TUNNEL_REMOTE_PORT}.`,
+    ],
+    cause: lastError,
+  });
+}
+
+async function reconnectAiLink() {
+  if (aiReconnectInFlight) {
+    throw new AiProxyError({
+      message: "A serverB reconnect attempt is already running.",
+      stage: "ai-reconnect-in-flight",
+      status: 409,
+      detail: "Wait for the current reconnect attempt to finish.",
+    });
+  }
+
+  if (AI_RECONNECT_MODE === "disabled") {
+    throw new AiProxyError({
+      message: "Automatic serverB reconnect is not configured on this backend.",
+      stage: "ai-reconnect-disabled",
+      status: 501,
+      detail: "Set AI_RECONNECT_MODE=docker-container and configure AI_RECONNECT_CONTAINER to enable it.",
+      hints: ["The frontend will still keep polling and will turn green once serverB is restored externally."],
+    });
+  }
+
+  if (AI_RECONNECT_MODE !== "docker-container") {
+    throw new AiProxyError({
+      message: `Unsupported AI reconnect mode: ${AI_RECONNECT_MODE}.`,
+      stage: "ai-reconnect-config",
+      status: 500,
+      detail: "Supported mode: docker-container.",
+    });
+  }
+
+  aiReconnectInFlight = true;
+  try {
+    const action = await restartAiTunnelContainer();
+    try {
+      const health = await waitForAiHealthAfterReconnect();
+      return {
+        action,
+        health,
+        reachability: aiReachability({
+          tunnelContainer: true,
+          ssh: true,
+          serverB: true,
+          aiService: true,
+        }),
+      };
+    } catch (err) {
+      const tunnelLogs = await fetchAiTunnelLogs(action.container).catch(() => "");
+      throw classifyAiTunnelFailure({
+        logs: tunnelLogs,
+        action,
+        cause: err,
+      });
+    }
+  } finally {
+    aiReconnectInFlight = false;
+  }
+}
+
+function formatUpstreamDetail(body) {
+  if (typeof body?.detail === "string") return body.detail;
+  if (body?.detail !== undefined) return JSON.stringify(body.detail);
+  return "";
 }
 
 function sendAiUpstreamError(res, response, body, operation) {
@@ -414,6 +745,13 @@ function sendAiUpstreamError(res, response, body, operation) {
     ok: false,
     message: body?.message || `${AI_SERVER_LABEL} AI service returned HTTP ${response.status} while ${operation}.`,
     stage: "ai-upstream-response",
+    statusKey: "degraded",
+    reachability: aiReachability({
+      tunnelContainer: true,
+      ssh: true,
+      serverB: true,
+      aiService: false,
+    }),
     aiServer: {
       label: AI_SERVER_LABEL,
       url: AI_SERVER,
@@ -435,6 +773,27 @@ app.get("/api/ai/health", async (_req, res) => {
     const body = await readAiJson(r, operation);
     if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
     res.json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+app.post("/api/ai/reconnect", async (_req, res) => {
+  const operation = "AI reconnect";
+  try {
+    const reconnect = await reconnectAiLink();
+    res.json({
+      ok: true,
+      message: `${AI_SERVER_LABEL} AI link reconnected.`,
+      stage: "ai-reconnect-ok",
+      statusKey: "online",
+      reachability: reconnect.reachability,
+      aiServer: {
+        label: AI_SERVER_LABEL,
+        url: AI_SERVER,
+      },
+      reconnect,
+    });
   } catch (err) {
     sendAiProxyError(res, err, operation);
   }

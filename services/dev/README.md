@@ -44,6 +44,18 @@ The tunnel container checks for missing pem files, invalid pem format, SSH
 authentication failures, DNS failures, basic network failures, and serverB
 AI `/health` failures before opening the tunnel.
 
+If SSH to serverB works but the AI service `/health` is unavailable, the tunnel
+can run a fixed remote startup command before it fails:
+
+```bash
+AI_SERVICE_START_COMMAND='sudo systemctl restart eco-acoustic-ai.service'
+```
+
+Leave `AI_SERVICE_START_COMMAND` empty to diagnose this case without starting
+anything remotely. The frontend will show it as degraded/yellow after the
+backend reconnect attempt confirms serverB is reachable but AI service health
+did not recover.
+
 For manual diagnosis without Compose, run:
 
 ```bash
