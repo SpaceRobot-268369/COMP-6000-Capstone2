@@ -1,0 +1,28 @@
+training:
+  base_model: cvssp/audioldm2
+  target_adapter: heavy
+  manifest: acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/data/wind_manifest_heavy.csv
+  num_epochs: 6
+  batch_size: 4
+  learning_rate: 1.0e-5
+  lr_scheduler: constant
+  lr_warmup_steps: 100
+  mixed_precision: fp16
+  max_duration_s: 10.0
+  input_sample_rate: 16000
+  seed: 42
+
+inference_profiles:
+  medium:
+    adapter: medium
+    guidance_scale: 3.0
+    output_target_rms: 0.06
+  heavy:
+    adapter: heavy
+    guidance_scale: 3.2
+    output_target_rms: 0.075
+  light:
+    derived_from: medium
+    guidance_scale: 2.0
+    output_target_rms: 0.03
+    lowpass_hz: 3500.0

@@ -500,6 +500,7 @@ const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
 const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
+const ALLOWED_WIND_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
@@ -530,12 +531,18 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
     const intensity = typeof req.body?.intensity === "string"
       ? req.body.intensity.toLowerCase()
       : null;
+    const windIntensity = typeof req.body?.wind_intensity === "string"
+      ? req.body.wind_intensity.toLowerCase()
+      : null;
     const requestedDuration = Number(req.body?.duration_s);
     if (ALLOWED_WEATHER_TYPES.has(weatherType)) {
       payload.weather_type = weatherType;
     }
     if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
       payload.intensity = intensity;
+    }
+    if (ALLOWED_WIND_INTENSITIES.has(windIntensity)) {
+      payload.wind_intensity = windIntensity;
     }
     if (Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30) {
       payload.duration_s = requestedDuration;

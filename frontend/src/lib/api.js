@@ -135,7 +135,7 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
+  { seed, retrieval_seed, season, diel, weather_type, intensity, wind_intensity, duration_s } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -146,6 +146,7 @@ export async function generateAttempt(
   }
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
+  if (wind_intensity) payload.wind_intensity = wind_intensity;
   if (duration_s) payload.duration_s = duration_s;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,

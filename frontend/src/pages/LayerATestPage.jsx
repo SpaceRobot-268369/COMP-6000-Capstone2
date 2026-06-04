@@ -44,6 +44,7 @@ export default function LayerATestPage({
   const [diel,     setDiel]     = useState("");        // bank attempts only
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
+  const [windIntensity, setWindIntensity] = useState("medium");
   const [weatherDuration, setWeatherDuration] = useState(10);
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
@@ -110,6 +111,7 @@ export default function LayerATestPage({
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherControls = layerId === "layer_b";
+  const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
@@ -230,6 +232,7 @@ export default function LayerATestPage({
       if (usesWeatherControls) {
         runParams.weather_type = weatherType;
         runParams.intensity = weatherIntensity;
+        if (isWindIntensityBank) runParams.wind_intensity = windIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
       }
       const data = await generateAttempt(layerId, attemptId, runParams);
@@ -260,7 +263,7 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}${isWindIntensityBank ? `_wind_${windIntensity}` : ""}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -405,6 +408,16 @@ export default function LayerATestPage({
                       onChange={setWeatherDuration}
                     />
                   </div>
+                  {isWindIntensityBank && (
+                    <div className="dev-controls-section-grid one-col" style={{ marginTop: 8 }}>
+                      <LabeledSelect
+                        label="Wind intensity (generate bank)"
+                        value={windIntensity}
+                        onChange={setWindIntensity}
+                        options={WEATHER_INTENSITY_OPTIONS}
+                      />
+                    </div>
+                  )}
                 </section>
               )}
 
