@@ -198,13 +198,14 @@ layers:
         uses_seed: true
         checkpoint: model/candidates/murphy/mvp_1__wind_intensity_bank
         description: |
-          Layer B wind generate-route intensity bank. Routes runtime `intensity`
-          to per-intensity profiles: medium/heavy use learned LoRA adapters,
-          while light is currently derived from medium with gentler guidance/RMS
-          and a light low-pass profile due to limited clean light-wind data.
+          Layer B wind generate-route intensity bank (v3 profiles). medium/heavy
+          use learned LoRA adapters; light is derived from medium (light_c hybrid:
+          moderate denoise, hp=100, no lowpass, anti-strong-wind negative prompt).
+          Heavy matches frozen v2 eval; medium uses stronger denoise than v2.
         params:
           base_model: cvssp/audioldm2
           default_intensity: medium
+          intensity_profile_version: v3
           num_inference_steps: 200
           audio_length_in_s: 8.0
           denoise_enabled: true
@@ -216,34 +217,42 @@ layers:
           negative_prompt: >-
             hiss, static noise, background hum, tape noise, insects, low quality, distortion
           intensity_profiles:
+            heavy:
+              adapter: heavy
+              prompt: >-
+                loud roaring blustery wind through dry eucalyptus woodland, intense strong gusts,
+                Bowra, Australia
+              guidance_scale: 3.4
+              output_target_rms: 0.09
+              highpass_hz: 80.0
+              denoise_strength: 0.15
+              denoise_floor_ratio: 0.40
             medium:
               adapter: medium
               prompt: >-
                 steady wind through dry eucalyptus woodland, gentle natural breeze,
                 Bowra, Australia
               guidance_scale: 3.0
-              output_target_rms: 0.06
+              output_target_rms: 0.048
               highpass_hz: 80.0
-            heavy:
-              adapter: heavy
-              prompt: >-
-                strong gusty wind through dry eucalyptus woodland, powerful blustery gusts,
-                Bowra, Australia
-              guidance_scale: 3.2
-              output_target_rms: 0.075
-              highpass_hz: 80.0
+              denoise_strength: 0.19
+              denoise_floor_ratio: 0.38
             light:
               derived_from: medium
               prompt: >-
                 gentle light breeze through dry eucalyptus woodland, soft faint airflow,
                 Bowra, Australia
-              guidance_scale: 2.0
-              output_target_rms: 0.03
-              highpass_hz: 80.0
-              lowpass_hz: 3500.0
+              guidance_scale: 2.3
+              output_target_rms: 0.041
+              highpass_hz: 100.0
+              denoise_strength: 0.20
+              denoise_floor_ratio: 0.34
+              negative_prompt: >-
+                hiss, static noise, background hum, tape noise, insects, low quality, distortion,
+                strong wind, loud gust, blustery, roaring wind
         notes:
-          - Intensity-routed wind generation bank for Layer B.
-          - medium/heavy are true adapters; light is currently parametric-derived.
+          - Intensity-routed wind generation bank for Layer B (v3 closure).
+          - medium/heavy are true adapters; light is parametric-derived (light_c).
           - Runtime expects weather_type=wind and intensity in {light,medium,heavy}.
 
       murphy__mvp_1__weather_stem_selector:

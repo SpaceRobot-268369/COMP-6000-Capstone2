@@ -400,6 +400,9 @@ def generate(
             "attempt": "murphy__mvp_1__wind_intensity_bank",
         },
     }
+    version = state.params.get("intensity_profile_version")
+    if version:
+        metadata["intensity_profile_version"] = str(version)
     return {
         "wav_bytes": _wav_bytes(audio, sr),
         "mel_db": mel_db,

@@ -19,6 +19,7 @@ training:
     target_modules: [to_q, to_k, to_v, to_out.0]
 
 inference_defaults:
+  intensity_profile_version: v3
   guidance_scale: 3.0
   num_inference_steps: 200
   audio_length_in_s: 8.0
@@ -34,28 +35,36 @@ inference_defaults:
     hiss, static noise, background hum, tape noise, insects, low quality, distortion
 
 intensity_profiles:
+  heavy:
+    adapter: heavy
+    prompt: >-
+      loud roaring blustery wind through dry eucalyptus woodland, intense strong gusts,
+      Bowra, Australia
+    guidance_scale: 3.4
+    output_target_rms: 0.09
+    highpass_hz: 80.0
+    denoise_strength: 0.15
+    denoise_floor_ratio: 0.40
   medium:
     adapter: medium
     prompt: >-
       steady wind through dry eucalyptus woodland, gentle natural breeze,
       Bowra, Australia
     guidance_scale: 3.0
-    output_target_rms: 0.06
+    output_target_rms: 0.048
     highpass_hz: 80.0
-  heavy:
-    adapter: heavy
-    prompt: >-
-      strong gusty wind through dry eucalyptus woodland, powerful blustery gusts,
-      Bowra, Australia
-    guidance_scale: 3.2
-    output_target_rms: 0.075
-    highpass_hz: 80.0
+    denoise_strength: 0.19
+    denoise_floor_ratio: 0.38
   light:
     derived_from: medium
     prompt: >-
       gentle light breeze through dry eucalyptus woodland, soft faint airflow,
       Bowra, Australia
-    guidance_scale: 2.0
-    output_target_rms: 0.03
-    highpass_hz: 80.0
-    lowpass_hz: 3500.0
+    guidance_scale: 2.3
+    output_target_rms: 0.041
+    highpass_hz: 100.0
+    denoise_strength: 0.20
+    denoise_floor_ratio: 0.34
+    negative_prompt: >-
+      hiss, static noise, background hum, tape noise, insects, low quality, distortion,
+      strong wind, loud gust, blustery, roaring wind

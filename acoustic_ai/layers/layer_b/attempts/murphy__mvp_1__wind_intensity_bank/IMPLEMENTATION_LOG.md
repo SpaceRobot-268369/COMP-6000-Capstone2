@@ -26,10 +26,15 @@ Date: 2026-06-04
    - `model/candidates/murphy/mvp_1__wind_intensity_bank/`
    - copied `adapter_config.json` into `adapters/medium/`
 
-## Pending (next execution step)
+## v3 closure (2026-06-04)
 
-- Copy medium `adapter_model.safetensors` into
-  `model/candidates/murphy/mvp_1__wind_intensity_bank/adapters/medium/`
-  and DVC-track it in the new bank layout.
-- Run heavy manifest build + heavy LoRA training on Server B.
-- Sync heavy adapter back and run 20-40 seed audit for heavy profile.
+- Human v2 A/B: heavy frozen; medium denoise bump; light_c hybrid (not light_a/b).
+- Docs: `INTENSITY_V3_CLOSURE_PLAN.md`
+- Runtime: `params.yaml` + `acoustic_ai/registry.yaml` updated to v3 profiles.
+- Eval: `dev-artifacts-self-testing/run_intensity_v3_eval.py` → `showcase_intensity_eval_v3/`
+
+## Pending
+
+- Server B v3 batch + local scp + listen page.
+- Human sign-off on v3 before formal `showcase/` promotion.
+- DVC-track medium/heavy `adapter_model.safetensors` in bank layout.
