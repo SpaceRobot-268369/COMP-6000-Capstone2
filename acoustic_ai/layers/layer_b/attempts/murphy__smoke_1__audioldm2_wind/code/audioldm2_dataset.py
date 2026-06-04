@@ -9,6 +9,8 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+import numpy as np
+import soundfile as sf
 import torch
 import torchaudio
 from torch.utils.data import Dataset
@@ -68,7 +70,8 @@ class AudioLDM2Dataset(Dataset):
         item = self.items[idx]
         
         # 1. Load and process audio
-        waveform, sr = torchaudio.load(item['audio_path'])
+        waveform_np, sr = sf.read(str(item['audio_path']), dtype="float32", always_2d=True)
+        waveform = torch.from_numpy(np.ascontiguousarray(waveform_np.T))
         
         # Convert to mono if stereo
         if waveform.shape[0] > 1:
