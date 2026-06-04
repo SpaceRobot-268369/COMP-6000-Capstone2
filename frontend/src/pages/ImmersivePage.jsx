@@ -31,6 +31,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const titleScrimRef = useRef(null);
   const audioRef = useRef(null);
   const [api, setApi] = useState(null);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const instance = createImmersive({
@@ -42,6 +43,19 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       initial: activeInitial,
     });
     setApi(instance);
+
+    // If there is an audioUrl, attempt autoplay once Three.js and WebAudio are bootstrapped
+    if (activeInitial?.audioUrl && audioRef.current) {
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setPlaying(true))
+          .catch((e) => {
+            console.log("Autoplay blocked by browser policy, awaiting interaction:", e);
+          });
+      }
+    }
+
     return () => {
       setApi(null);
       instance.dispose();
@@ -52,7 +66,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   function handleReset() {
     const performReset = () => {
-      navigate("/generation");
+      navigate(location.state?.backPath || "/generation");
     };
 
     if (document.startViewTransition) {
@@ -62,14 +76,27 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     }
   }
 
+  function handleTogglePlay() {
+    if (api) {
+      setPlaying(api.togglePlay());
+    }
+  }
+
   const activeOverlay = overlay || (isFromDemo ? (
-    <button type="button" className="demo-reset" onClick={handleReset}>
-      ↺ New scene
-    </button>
+    <>
+      <button type="button" className="demo-reset" onClick={handleReset}>
+        ↺ New scene
+      </button>
+      {activeInitial?.audioUrl && (
+        <button type="button" className="demo-audio-toggle" onClick={handleTogglePlay}>
+          {playing ? "⏸ Pause Audio" : "▶ Play Audio"}
+        </button>
+      )}
+    </>
   ) : null);
 
   return (
-    <div className={`immersive-page${activeInitial?.narration ? " narration" : ""}`}>
+    <div className="immersive-page">
       <div className="immersive-scene" ref={sceneRef} />
       <div className="immersive-scrim" ref={titleScrimRef} />
       <div className="immersive-title">
@@ -80,7 +107,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       {activeShowDevPanel && api && <ImmersiveControls api={api} />}
       {activeOverlay}
 
-      <audio ref={audioRef} loop crossOrigin="anonymous" />
+      <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin="anonymous" />
     </div>
   );
 }

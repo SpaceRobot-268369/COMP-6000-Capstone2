@@ -142,7 +142,7 @@ export default function DevAnalysisPage() {
   }
 
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-analysis">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS — ANALYSIS</p>

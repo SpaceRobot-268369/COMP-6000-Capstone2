@@ -40,20 +40,15 @@
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   pointer-events: none; padding: 8vw;
 }
+/* Single title typography for both entry points (dev /immersive and the demo
+   flow): the long second-person paragraph is set smaller and on a wider measure
+   so a full paragraph reads as a few calm lines instead of filling the frame.
+   The short title-card on /immersive uses the same scale to stay identical. */
 .immersive-page .immersive-title-words {
-  max-width: 16em; text-align: center; text-wrap: balance;
+  max-width: 34em; text-align: center; text-wrap: balance;
   font-family: 'Cormorant Garamond', serif; font-weight: 300;
-  font-size: clamp(28px, 4.4vw, 70px); line-height: 1.18; letter-spacing: 0.012em;
+  font-size: clamp(19px, 2.05vw, 30px); line-height: 1.34; letter-spacing: 0.014em;
   color: #f4efe4; text-shadow: 0 2px 26px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.6);
-}
-/* Narration variant (demo flow): the long second-person paragraph is set
-   smaller and on a wider measure than the short title-card on /immersive, so a
-   full paragraph reads as a few calm lines instead of filling the frame. */
-.immersive-page.narration .immersive-title-words {
-  max-width: 34em;
-  font-size: clamp(19px, 2.05vw, 30px);
-  line-height: 1.34;
-  letter-spacing: 0.014em;
 }
 
 .immersive-page .word {
