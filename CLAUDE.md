@@ -112,7 +112,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ├── commands/                              # Custom slash-command definitions
 ├── skills/                                # Reusable agent skills
 │   ├── commit_changes.md
-│   └── dvc_push.md
+│   ├── dvc_push.md
+│   └── pre_pr_checklist.md
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
@@ -179,6 +180,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
 | DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
+| Pre-PR checklist skill | [.claude/skills/pre_pr_checklist.md](.claude/skills/pre_pr_checklist.md) |
 
 ---
 
