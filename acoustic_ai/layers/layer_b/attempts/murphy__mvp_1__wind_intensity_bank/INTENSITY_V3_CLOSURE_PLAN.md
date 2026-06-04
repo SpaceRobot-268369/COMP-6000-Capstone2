@@ -1,7 +1,7 @@
 # Layer B Wind Intensity v3 Closure Plan
 
-Date: 2026-06-04  
-Attempt: `murphy__mvp_1__wind_intensity_bank`  
+Date: 2026-06-04
+Attempt: `murphy__mvp_1__wind_intensity_bank`
 Status: **approved** — execute eval batch, then human audition before production lock.
 
 ## v2 listening summary (input to v3)

@@ -1,10 +1,10 @@
 # Layer B — Generate Wind（最终封板版）
 
-日期：2026-06-04  
-作者：murphy  
-状态：**SEALED** — 生产候选运行时配置，人工试听已签收  
+日期：2026-06-04
+作者：murphy
+状态：**SEALED** — 生产候选运行时配置，人工试听已签收
 
-本文档是 Layer B **风场生成（generate · wind）** 的单页留存：从 smoke 迭代到强度分档 bank 的完整结论、参数、产物路径与复现方式。  
+本文档是 Layer B **风场生成（generate · wind）** 的单页留存：从 smoke 迭代到强度分档 bank 的完整结论、参数、产物路径与复现方式。
 运行时权威来源：`params.yaml` + `acoustic_ai/registry.yaml`（`intensity_profile_version: sealed`）。
 
 ---
@@ -120,8 +120,8 @@ model/candidates/murphy/mvp_1__wind_intensity_bank/
         └── adapter_model.safetensors
 ```
 
-- **medium** 权重：自 `smoke_2__audioldm2_wind` 迁入 bank 布局  
-- **heavy** 权重：`wind_manifest_heavy.csv` 训练（见 `TRAINING_COMMAND_SERVER_B.md`）  
+- **medium** 权重：自 `smoke_2__audioldm2_wind` 迁入 bank 布局
+- **heavy** 权重：`wind_manifest_heavy.csv` 训练（见 `TRAINING_COMMAND_SERVER_B.md`）
 - **light**：无独立 LoRA；`derived_from: medium`
 
 训练超参见 attempt `params.yaml` 的 `training:` 段（heavy 侧 manifest）。
@@ -232,9 +232,9 @@ out = registry.generate(
 
 可选后续（**不在封板范围**）：
 
-- 收集 light 数据 → 真 `light` adapter  
-- 将 sealed 三档 + 精选 seed 写入正式 `showcase/`  
-- Layer D 混音端到端验收  
+- 收集 light 数据 → 真 `light` adapter
+- 将 sealed 三档 + 精选 seed 写入正式 `showcase/`
+- Layer D 混音端到端验收
 
 ---
 

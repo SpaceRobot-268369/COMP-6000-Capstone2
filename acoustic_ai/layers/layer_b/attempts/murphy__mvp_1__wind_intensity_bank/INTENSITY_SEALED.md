@@ -1,7 +1,7 @@
 # Layer B Wind Intensity — Sealed Profiles
 
-Date: 2026-06-04  
-Attempt: `murphy__mvp_1__wind_intensity_bank`  
+Date: 2026-06-04
+Attempt: `murphy__mvp_1__wind_intensity_bank`
 Status: **sealed** (human sign-off after v3 eval audition)
 
 ## Decision

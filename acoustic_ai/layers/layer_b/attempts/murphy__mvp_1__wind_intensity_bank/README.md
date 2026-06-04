@@ -26,7 +26,7 @@ generation contract server-locked and seed-deterministic.
 
 ## Status
 
-**Sealed (2026-06-04):** light = v2 light_a · medium = v3 · heavy = v2 frozen.  
+**Sealed (2026-06-04):** light = v2 light_a · medium = v3 · heavy = v2 frozen.
 See `INTENSITY_SEALED.md` and **`GENERATE_WIND_FINAL.md`**（generate-wind 完整封板留存）。
 
 ## Notes
