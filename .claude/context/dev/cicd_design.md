@@ -367,9 +367,9 @@ Rollback strategy:
 
 ## Server B Production Model Sync
 
-This is the current Server B automation scope. It keeps Server B's main checkout
-and production model artifacts current without changing the running service
-process.
+This is the current Server B automation scope. It keeps Server B's main checkout,
+production model artifacts, and committed attempt sample artifacts current
+without changing the running service process.
 
 Suggested workflow file:
 
@@ -408,8 +408,9 @@ Current behavior:
 - run `git fetch`, `git checkout main`, and `git pull --ff-only origin main`;
 - call Server B's local DVC executable, including `~/.local/bin/dvc`, because
   non-interactive SSH sessions may not include that directory in `PATH`;
-- pull only `model/production/**/*.dvc` targets;
-- verify the corresponding production model files are materialised;
+- pull `model/production/**/*.dvc` targets plus committed attempt sample
+  targets under `acoustic_ai/layers/**/{expected,showcase}/**/*.dvc`;
+- verify the corresponding production model/sample files are materialised;
 - report which process, if any, is listening on `127.0.0.1:8000`;
 - never start, stop, or restart uvicorn.
 
@@ -420,7 +421,8 @@ a later hardening step can safely add an opt-in restart.
 
 DVC policy:
 
-- Pull only production model pointers under `model/production/`.
+- Pull production model pointers under `model/production/` and attempt sample
+  pointers under `acoustic_ai/layers/**/{expected,showcase}/`.
 - Do not run broad `dvc pull` from CI unless explicitly requested.
 - Keep DVC/S3 credentials on Server B under the local `capstone2` AWS profile;
   do not store S3 credentials in GitHub Actions secrets for this workflow.
