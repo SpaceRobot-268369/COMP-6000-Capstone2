@@ -36,8 +36,8 @@ POSTGRES_DB=...
 POSTGRES_PORT=5432
 BACKEND_PORT=4000
 FRONTEND_PORT=5173
-FRONTEND_URL=https://...
-VITE_API_URL=https://...
+FRONTEND_URL=https://spacerobot-268369.adelaideuni.cloud,http://16.176.232.101
+VITE_API_URL=
 SESSION_SECRET=...
 APP_SECRET=...
 AI_SERVER_LABEL=shinypokemon
@@ -48,6 +48,13 @@ SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.
+
+`FRONTEND_URL` must list the **exact** public origin(s) the browser sends as
+its `Origin` header — lowercase scheme + host, no trailing slash, and no port
+when nginx serves on the default `:443`/`:80`. The backend treats it as a CORS
+allow-list; a case/scheme/port mismatch makes every credentialed `POST`
+(login, register, generate) fail CORS. Leave `VITE_API_URL` empty so the
+frontend calls `/api` same-origin through nginx.
 
 ## TLS / HTTPS
 
