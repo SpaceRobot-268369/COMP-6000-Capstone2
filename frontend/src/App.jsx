@@ -4,7 +4,6 @@ import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ImmersivePage from "./pages/ImmersivePage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
-import DemoPage from "./pages/DemoPage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
 import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
 import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
@@ -184,14 +183,6 @@ export default function App() {
                 <span className="nav-icon">✦</span>
                 <span>Generation</span>
               </NavLink>
-              <NavLink to="/demo" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
-                <span className="nav-icon">❖</span>
-                <span>Demo</span>
-              </NavLink>
-              <NavLink to="/immersive" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
-                <span className="nav-icon">❂</span>
-                <span>Immersive</span>
-              </NavLink>
             </div>
 
             <div className="navbar-controls">
@@ -218,6 +209,10 @@ export default function App() {
                   <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
                     <span className="nav-icon">◉</span>
                     <span>Dev — Analysis</span>
+                  </NavLink>
+                  <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                    <span className="nav-icon">❂</span>
+                    <span>Immersive</span>
                   </NavLink>
                   <div className="dropdown-divider"></div>
                   <div className="navbar-dropdown-status">
@@ -290,7 +285,6 @@ export default function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
-          <Route path="/demo" element={<DemoPage />} />
           {/* Transformation is out of scope for the demo — redirect any stale links. */}
           <Route path="/transformation" element={<Navigate to="/about" replace />} />
           <Route path="/immersive" element={<ImmersivePage />} />

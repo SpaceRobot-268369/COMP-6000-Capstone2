@@ -52,7 +52,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   function handleReset() {
     const performReset = () => {
-      navigate("/demo");
+      navigate("/generation");
     };
 
     if (document.startViewTransition) {
