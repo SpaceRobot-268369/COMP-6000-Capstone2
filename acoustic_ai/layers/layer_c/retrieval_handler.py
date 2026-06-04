@@ -10,7 +10,6 @@ procedural bed so the displayed mel-spectrogram is presentation-complete.
 from __future__ import annotations
 
 import io
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,22 +17,10 @@ import librosa
 import numpy as np
 import soundfile as sf
 
+from .retriever import EventRetriever
+from .scheduler import EventScheduler, SR
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SUPPORT_CODE_DIR = (
-    REPO_ROOT
-    / "acoustic_ai"
-    / "layers"
-    / "layer_c"
-    / "attempts"
-    / "lucas__smoke_1__audiogen_boobook"
-    / "code"
-)
-if str(SUPPORT_CODE_DIR) not in sys.path:
-    sys.path.insert(0, str(SUPPORT_CODE_DIR))
-
-from retriever import EventRetriever  # noqa: E402
-from scheduler import EventScheduler, SR  # noqa: E402
 
 
 DEFAULT_INDEX = (

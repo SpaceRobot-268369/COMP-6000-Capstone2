@@ -1,0 +1,6 @@
+outs:
+- md5: 764081954a21643dd2e01497b25b89f0.dir
+  size: 7346582
+  nfiles: 76
+  hash: md5
+  path: osprey

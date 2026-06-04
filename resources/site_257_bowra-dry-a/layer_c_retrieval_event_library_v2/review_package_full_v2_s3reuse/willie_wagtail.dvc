@@ -1,0 +1,6 @@
+outs:
+- md5: 10e584f035f6d33aa7aa1169d7aba2ce.dir
+  size: 74034087
+  nfiles: 702
+  hash: md5
+  path: willie_wagtail

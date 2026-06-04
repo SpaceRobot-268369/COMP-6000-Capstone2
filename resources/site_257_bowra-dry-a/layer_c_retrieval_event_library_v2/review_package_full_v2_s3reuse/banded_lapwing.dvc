@@ -1,0 +1,6 @@
+outs:
+- md5: fe7931422f17e24c5a1585237b552333.dir
+  size: 8849225
+  nfiles: 72
+  hash: md5
+  path: banded_lapwing

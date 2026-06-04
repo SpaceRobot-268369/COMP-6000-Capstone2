@@ -1,0 +1,6 @@
+outs:
+- md5: 13dd8bfb37708eba2a5d0fbfdd5169c4.dir
+  size: 8718581
+  nfiles: 70
+  hash: md5
+  path: gray_fantail

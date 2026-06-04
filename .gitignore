@@ -81,6 +81,7 @@ resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/*
 !resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/layer_c_retrieval_v2_event_index.csv
 !resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/
 resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/*
+!resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/*.dvc
 !resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/review_package_summary_v2.csv
 !resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/full_s3_excluded_event_ids_v2_round3.csv
 script/resources/

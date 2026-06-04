@@ -1,0 +1,6 @@
+outs:
+- md5: 5d9578111456568cfb4e9068a42c6e31.dir
+  size: 8525891
+  nfiles: 63
+  hash: md5
+  path: pacific_swift
