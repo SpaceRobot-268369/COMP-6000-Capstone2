@@ -150,3 +150,83 @@
 @media (prefers-reduced-motion: reduce) {
   .demo-bubble, .demo-dots i { animation: none; }
 }
+
+/* ---- light mode overrides ---- */
+[data-theme="light"] .demo-chat {
+  color: #3c352a;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 18%, rgba(214, 218, 203, 0.45), transparent 60%),
+    radial-gradient(ellipse 90% 80% at 50% 120%, rgba(230, 222, 208, 0.5), transparent 55%),
+    #f7f5ef;
+}
+
+[data-theme="light"] .demo-eyebrow {
+  color: #766f5f;
+}
+
+[data-theme="light"] .demo-chat-head h1 {
+  color: #2c271d;
+}
+
+[data-theme="light"] .demo-sub {
+  color: #6e6756;
+}
+
+[data-theme="light"] .demo-bubble.user {
+  color: #1c2810;
+  background: linear-gradient(180deg, #e0ebd2, #c7d8b5);
+  border: 1px solid rgba(199, 216, 181, 0.6);
+  box-shadow: 0 4px 14px rgba(28, 40, 16, 0.04);
+}
+
+[data-theme="light"] .demo-bubble.assistant {
+  color: #3c352a;
+  background: rgba(0, 0, 0, 0.035);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .demo-dots i {
+  background: #8b9d77;
+}
+
+[data-theme="light"] .demo-chip {
+  color: #4c4538;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .demo-chip:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #1c1913;
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="light"] .demo-composer {
+  background: rgba(253, 252, 249, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 18px 50px rgba(44, 40, 32, 0.06);
+}
+
+[data-theme="light"] .demo-composer textarea {
+  color: #2c271d;
+}
+
+[data-theme="light"] .demo-composer textarea::placeholder {
+  color: #9c9688;
+}
+
+[data-theme="light"] .demo-send {
+  color: #1c2810;
+  background: linear-gradient(180deg, #e3ecd6, #cbd8b7);
+}
+
+[data-theme="light"] .demo-reset {
+  color: #3c352a;
+  background: rgba(253, 252, 249, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .demo-reset:hover {
+  background: rgba(240, 237, 230, 0.8);
+  border-color: rgba(0, 0, 0, 0.28);
+}
