@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import io
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -151,14 +152,39 @@ async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) 
         raise HTTPException(status_code=400, detail="empty upload")
 
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    analysis_path = tmp_path
+    converted_path = None
     try:
         with os.fdopen(tmp_fd, "wb") as fh:
             fh.write(data)
-        result = registry.analyze(layer_id, attempt_id, tmp_path)
+        if suffix.lower() != ".wav":
+            converted_fd, converted_path = tempfile.mkstemp(suffix=".wav")
+            os.close(converted_fd)
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    tmp_path,
+                    "-ar",
+                    "22050",
+                    "-ac",
+                    "1",
+                    converted_path,
+                ],
+                check=True,
+            )
+            analysis_path = converted_path
+        result = registry.analyze(layer_id, attempt_id, analysis_path)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except NotImplementedError as exc:
         raise HTTPException(status_code=501, detail=str(exc))
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(status_code=400, detail=f"audio conversion failed: {exc}")
     except (ValueError, FileNotFoundError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
@@ -168,6 +194,11 @@ async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) 
             os.unlink(tmp_path)
         except OSError:
             pass
+        if converted_path:
+            try:
+                os.unlink(converted_path)
+            except OSError:
+                pass
 
     return {"ok": True, **result}
 

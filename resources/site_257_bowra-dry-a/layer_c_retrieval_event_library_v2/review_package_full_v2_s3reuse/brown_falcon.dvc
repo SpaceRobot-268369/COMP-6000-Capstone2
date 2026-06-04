@@ -1,0 +1,6 @@
+outs:
+- md5: ca9af80a48739b78982290e9726f3423.dir
+  size: 8319290
+  nfiles: 70
+  hash: md5
+  path: brown_falcon

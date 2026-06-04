@@ -219,7 +219,7 @@ const aiReconnectPollMs = Number(process.env.AI_RECONNECT_POLL_MS || 1500);
 const AI_RECONNECT_POLL_MS = Number.isFinite(aiReconnectPollMs) && aiReconnectPollMs > 0
   ? aiReconnectPollMs
   : 1500;
-const DEFAULT_AI_REQUEST_TIMEOUT_MS = 15000;
+const DEFAULT_AI_REQUEST_TIMEOUT_MS = 300000;
 const aiRequestTimeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS || DEFAULT_AI_REQUEST_TIMEOUT_MS);
 const AI_REQUEST_TIMEOUT_MS = Number.isFinite(aiRequestTimeoutMs) && aiRequestTimeoutMs > 0
   ? aiRequestTimeoutMs
@@ -293,12 +293,12 @@ function aiFetchError(err, targetUrl, operation, timeoutMs = AI_REQUEST_TIMEOUT_
   const commonHints = aiConnectionHints(port);
 
   if (err.name === "AbortError" || code === "ABORT_ERR") {
-    const tunnelMessage = `${AI_SERVER_LABEL} SSH tunnel timed out: ai-tunnel may not be running, may be unhealthy, or the serverB AI service is not responding.`;
+    const tunnelMessage = `${AI_SERVER_LABEL} AI request timed out: ai-tunnel may be unhealthy, or the serverB AI service may still be loading a model or running inference.`;
     return new AiProxyError({
       message: AI_CONNECTION_MODE === "ssh_tunnel"
         ? tunnelMessage
-        : `${AI_SERVER_LABEL} connection timed out: ${AI_SERVER_LABEL} may be stopped, the AI service may be stopped, or port ${port}/firewall may be unreachable.`,
-      stage: AI_CONNECTION_MODE === "ssh_tunnel" ? "ai-tunnel-timeout" : "ai-connect-timeout",
+        : `${AI_SERVER_LABEL} request timed out: ${AI_SERVER_LABEL} may be stopped, the AI service may be stopped, or inference may still be running.`,
+      stage: AI_CONNECTION_MODE === "ssh_tunnel" ? "ai-tunnel-timeout" : "ai-request-timeout",
       status: 504,
       detail: `${operation} timed out after ${timeoutMs}ms while waiting for ${targetUrl.origin}.`,
       hints: commonHints,
@@ -741,9 +741,10 @@ function formatUpstreamDetail(body) {
 }
 
 function sendAiUpstreamError(res, response, body, operation) {
+  const upstreamDetail = formatUpstreamDetail(body);
   const payload = {
     ok: false,
-    message: body?.message || `${AI_SERVER_LABEL} AI service returned HTTP ${response.status} while ${operation}.`,
+    message: body?.message || upstreamDetail || `${AI_SERVER_LABEL} AI service returned HTTP ${response.status} while ${operation}.`,
     stage: "ai-upstream-response",
     statusKey: "degraded",
     reachability: aiReachability({
@@ -756,6 +757,7 @@ function sendAiUpstreamError(res, response, body, operation) {
       label: AI_SERVER_LABEL,
       url: AI_SERVER,
     },
+    detail: upstreamDetail || body?.message || `${AI_SERVER_LABEL} returned HTTP ${response.status}.`,
     upstreamStatus: response.status,
     upstream: body,
   };

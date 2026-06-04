@@ -1,0 +1,54 @@
+{
+  "seed": 42,
+  "retrieval_seed": 42,
+  "prompt": "10-second Layer B weather stem retrieval, target wind / medium, selected site wind_primary asset site_mvp002_site257_215122_005589_005604, components wind, asset intensity medium, retrieval_seed 42, start 0.210s",
+  "prompt_locked": false,
+  "audio": {
+    "duration_s": 10.0,
+    "sample_rate": 22050,
+    "channels": 1,
+    "rms": 0.05000000074505806,
+    "peak": 0.36783328652381897,
+    "gain": 3.013290132082317
+  },
+  "layer_b": {
+    "requested": {
+      "weather_type": "wind",
+      "intensity": "medium",
+      "duration_s": 10.0
+    },
+    "selected": {
+      "asset_id": "site_mvp002_site257_215122_005589_005604",
+      "clip_path": "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_215122_005589_005604.wav",
+      "source_type": "site",
+      "primary_weather": "wind",
+      "layer_d_role": "wind_primary",
+      "layer_d_use": "primary",
+      "human_audit_status": "site_ready",
+      "components": {
+        "rain": false,
+        "wind": true,
+        "thunder": false
+      },
+      "intensity": {
+        "rain": "none",
+        "wind": "medium",
+        "thunder": "none"
+      },
+      "segment_start_s": 0.21,
+      "segment_end_s": 10.21,
+      "asset_duration_s": 15.0,
+      "looped_to_duration": false
+    },
+    "fallback": {
+      "used": false,
+      "reason": "",
+      "candidate_count": 57
+    }
+  },
+  "tier": "expected",
+  "sample_label": "Wind / medium - site example",
+  "expected_weather_type": "wind",
+  "expected_intensity": "medium",
+  "expected_notes": "Canonical site-only expected sample for Layer B frontend preview."
+}

@@ -1,0 +1,6 @@
+outs:
+- md5: 95e6ffabb1de326b0a514cf8d15f3aae.dir
+  size: 85444965
+  nfiles: 706
+  hash: md5
+  path: gray_butcherbird

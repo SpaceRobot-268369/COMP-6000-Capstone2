@@ -1,0 +1,6 @@
+outs:
+- md5: b3ae698fdcb5bd12bc439d8fb05bcfbf.dir
+  size: 87674316
+  nfiles: 708
+  hash: md5
+  path: mulga_parrot

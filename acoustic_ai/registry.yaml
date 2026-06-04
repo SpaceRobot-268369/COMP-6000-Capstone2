@@ -164,18 +164,18 @@ layers:
     default: murphy__mvp_1__weather_stem_selector
     attempts:
       murphy__mvp_1__weather_stem_selector:
-        label: "Weather stem selector — MVP"
+        label: "Weather stem selector — site-only MVP"
         author: murphy
         stage: mvp_1
         status: mvp_candidate
         uses_seed: true
         checkpoint: null
         description: |
-          Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-first retrieval pool from site_257 Bowra dry woodland is combined with curated sound-library fallback assets; the server filters by weather label and intensity, then uses retrieval_seed to choose a deterministic asset and start offset.
+          Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-only retrieval pool from site_257 Bowra dry woodland is filtered by weather label and intensity, then retrieval_seed chooses a deterministic site asset and start offset.
 
-          Pool contents: 101 site-derived 15-second WAV stems promoted from CLAP/env/manual weather screening (6 rain, 7 rain+wind, 88 wind), plus 40 curated library rain/wind/thunder/storm fallback assets. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
 
-          Supported weather types: rain, wind, thunder, storm. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Supported site weather types in this branch: rain, wind, and rain+wind, with thunder available only as a cautious backup pool. Site storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
           asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
@@ -217,6 +217,54 @@ layers:
           sample_rate: 16000
         notes:
           - Per-species LoRA; 16 kHz native.
+
+      burger__mvp_2__retrieval_v2_library:
+        label: "Layer C retrieval v2 audited library"
+        author: burger
+        stage: mvp_2
+        status: demo_ready
+        uses_seed: true
+        uses_cells: true
+        checkpoint: null
+        description: |
+          Layer C retrieval v2 baseline backed by the rebuilt 63-species
+          audited library. It selects real Pass-reviewed snippets from the v2
+          event index and schedules them into a 60-second ecological timeline.
+        params:
+          method: retrieval
+          species_common_name: "Splendid Fairywren"
+          event_type: layer_c_retrieval_v2_library
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/layer_c_retrieval_v2_event_index.csv
+          duration_s: 60.0
+          count: 12
+          default_cell: summer_morning
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+          cells:
+            spring_dawn: {}
+            spring_morning: {}
+            spring_afternoon: {}
+            spring_night: {}
+            summer_dawn: {}
+            summer_morning: {}
+            summer_afternoon: {}
+            summer_night: {}
+            autumn_dawn: {}
+            autumn_morning: {}
+            autumn_afternoon: {}
+            autumn_night: {}
+            winter_dawn: {}
+            winter_morning: {}
+            winter_afternoon: {}
+            winter_night: {}
+        notes:
+          - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
+          - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
+          - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
 
   layer_d:
     label: "Layer D — Mixer"
@@ -294,6 +342,23 @@ layers:
           - Enriches each detected species event with a conservative phenology block for report synthesis.
           - Emits an analysis_report block with observations, inferred_context, and disagreements for aggregator integration.
           - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
+
+      murphy__mvp_1__weather_direct_detection:
+        label: "Weather analysis — CLAP + PANNs + AST gate v1.1"
+        author: murphy
+        stage: mvp_1
+        head: weather
+        status: mvp
+        checkpoint: null
+        params:
+          model_backend: clap
+          audioset_backend: panns
+          guard_backend: ast
+        notes:
+          - Frozen E-B weather analysis MVP v1 for uploaded-audio weather detection.
+          - Reports continuous rain / wind / thunder summaries through observations.weather.
+          - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
 
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"

@@ -1,0 +1,6 @@
+outs:
+- md5: f11e66d6c20aed0e0638c7feea2001e3.dir
+  size: 85022788
+  nfiles: 700
+  hash: md5
+  path: budgerigar

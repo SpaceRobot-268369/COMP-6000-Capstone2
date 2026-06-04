@@ -1,0 +1,6 @@
+outs:
+- md5: 3b5b868a6f10b6e28c5a69f817507594.dir
+  size: 73153814
+  nfiles: 712
+  hash: md5
+  path: whimbrel
