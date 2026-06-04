@@ -26,12 +26,16 @@ function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function sidebarLinkClass({ isActive }) {
-  return `nav-item${isActive ? " active" : ""}`;
+function navbarLinkClass({ isActive }) {
+  return `navbar-link${isActive ? " active" : ""}`;
 }
 
-function sidebarActionClass({ isActive }) {
-  return `sidebar-action${isActive ? " active" : ""}`;
+function navbarDropdownItemClass({ isActive }) {
+  return `navbar-dropdown-item${isActive ? " active" : ""}`;
+}
+
+function navbarActionClass({ isActive }) {
+  return `navbar-action${isActive ? " active" : ""}`;
 }
 
 export default function App() {
@@ -42,6 +46,10 @@ export default function App() {
   const serverBCheckInFlightRef = useRef(false);
   const serverBPollStartedRef = useRef(false);
   const isLoggedIn = Boolean(accountName);
+
+  const [devDropdownOpen, setDevDropdownOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const storedAccountName = window.localStorage.getItem(accountStorageKey);
@@ -138,78 +146,143 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div>
-          <div className="brand-block">
-            <p className="brand-title">SONIC LAB</p>
-            <p className="brand-subtitle">PRECISION AUDIO AI</p>
-          </div>
+      <header className="navbar-container">
+        <div className="navbar-body">
+          {/* Brand Logo and Title */}
+          <NavLink to="/about" className="navbar-brand" onClick={() => setMobileMenuOpen(false)}>
+            <span className="brand-logo">✦</span>
+            <div className="brand-text">
+              <span className="brand-title">SONIC LAB</span>
+              <span className="brand-subtitle">PRECISION AUDIO AI</span>
+            </div>
+          </NavLink>
 
-          <nav className="sidebar-nav">
-            <NavLink to="/about" className={sidebarLinkClass}>
-              <span className="nav-icon">✦</span>
-              <span>Introduction</span>
-            </NavLink>
-            <NavLink to="/analysis" className={sidebarLinkClass}>
-              <span className="nav-icon">◫</span>
-              <span>Analysis</span>
-            </NavLink>
-            <NavLink to="/generation" className={sidebarLinkClass}>
-              <span className="nav-icon">✦</span>
-              <span>Generation</span>
-            </NavLink>
-            <NavLink to="/demo" className={sidebarLinkClass}>
-              <span className="nav-icon">❖</span>
-              <span>Demo</span>
-            </NavLink>
-            <NavLink to="/immersive" className={sidebarLinkClass}>
-              <span className="nav-icon">❂</span>
-              <span>Immersive</span>
-            </NavLink>
-            <NavLink to="/dev/layers" className={sidebarLinkClass}>
-              <span className="nav-icon">⌬</span>
-              <span>Dev — Generation</span>
-            </NavLink>
-            <NavLink to="/dev/analysis" className={sidebarLinkClass}>
-              <span className="nav-icon">◉</span>
-              <span>Dev — Analysis</span>
-            </NavLink>
+          {/* Mobile Menu Burger Toggle */}
+          <button 
+            type="button" 
+            className={`navbar-mobile-toggle ${mobileMenuOpen ? "active" : ""}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <span className="burger-line"></span>
+            <span className="burger-line"></span>
+            <span className="burger-line"></span>
+          </button>
+
+          {/* Navigation Links and Menus */}
+          <nav className={`navbar-menu ${mobileMenuOpen ? "active" : ""}`}>
+            <div className="navbar-links">
+              <NavLink to="/about" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">✦</span>
+                <span>Introduction</span>
+              </NavLink>
+              <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">◫</span>
+                <span>Analysis</span>
+              </NavLink>
+              <NavLink to="/generation" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">✦</span>
+                <span>Generation</span>
+              </NavLink>
+              <NavLink to="/demo" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">❖</span>
+                <span>Demo</span>
+              </NavLink>
+              <NavLink to="/immersive" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <span className="nav-icon">❂</span>
+                <span>Immersive</span>
+              </NavLink>
+            </div>
+
+            <div className="navbar-controls">
+              {/* Dev Tools Dropdown */}
+              <div 
+                className={`navbar-dropdown-wrapper ${devDropdownOpen ? "open" : ""}`}
+                onMouseEnter={() => setDevDropdownOpen(true)}
+                onMouseLeave={() => setDevDropdownOpen(false)}
+              >
+                <button 
+                  type="button" 
+                  className="navbar-dropdown-trigger"
+                  onClick={() => setDevDropdownOpen(!devDropdownOpen)}
+                >
+                  <span className="nav-icon">⌬</span>
+                  <span>Developer</span>
+                  <span className="dropdown-arrow">▼</span>
+                </button>
+                <div className="navbar-dropdown-menu">
+                  <NavLink to="/dev/layers" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                    <span className="nav-icon">⌬</span>
+                    <span>Dev — Generation</span>
+                  </NavLink>
+                  <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                    <span className="nav-icon">◉</span>
+                    <span>Dev — Analysis</span>
+                  </NavLink>
+                  <div className="dropdown-divider"></div>
+                  <div className="navbar-dropdown-status">
+                    <ServerStatus status={serverBStatus} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
+              {/* User Dropdown */}
+              <div 
+                className={`navbar-dropdown-wrapper ${userDropdownOpen ? "open" : ""}`}
+                onMouseEnter={() => setUserDropdownOpen(true)}
+                onMouseLeave={() => setUserDropdownOpen(false)}
+              >
+                <button 
+                  type="button" 
+                  className="navbar-dropdown-trigger"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                >
+                  <span className="nav-icon">👤</span>
+                  <span>{isLoggedIn ? accountName : "Account"}</span>
+                  <span className="dropdown-arrow">▼</span>
+                </button>
+                <div className="navbar-dropdown-menu user-dropdown">
+                  <div className="navbar-dropdown-header">
+                    {isLoggedIn ? "Account Logged In" : "Not Logged In"}
+                  </div>
+                  {isLoggedIn ? (
+                    <div className="navbar-user-simple">
+                      <strong className="navbar-user-name">{accountName}</strong>
+                      <button 
+                        type="button" 
+                        className="navbar-logout-button" 
+                        onClick={() => { handleLogout(); setUserDropdownOpen(false); setMobileMenuOpen(false); }}
+                      >
+                        Log out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="navbar-user-actions">
+                      <NavLink 
+                        to="/login" 
+                        className={navbarActionClass} 
+                        onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
+                      >
+                        Login
+                      </NavLink>
+                      <NavLink 
+                        to="/register" 
+                        className={navbarActionClass} 
+                        onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
+                      >
+                        Register
+                      </NavLink>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </nav>
         </div>
-
-        <ThemeToggle />
-
-        <ServerStatus status={serverBStatus} />
-
-        <section className="sidebar-user panel" aria-label="Account status">
-          <div className="sidebar-user-head">
-            <p className="sidebar-user-label">
-              {isLoggedIn ? "Account logged in" : "Not logged in"}
-            </p>
-          </div>
-
-          {isLoggedIn ? (
-            <div className="sidebar-user-simple">
-              <strong className="sidebar-user-name">{accountName}</strong>
-              <button type="button" className="sidebar-logout-button" onClick={handleLogout}>
-                Log out
-              </button>
-            </div>
-          ) : (
-            <>
-              <p className="sidebar-user-empty">No account signed in</p>
-              <div className="sidebar-user-actions">
-                <NavLink to="/login" className={sidebarActionClass}>
-                  Login
-                </NavLink>
-                <NavLink to="/register" className={sidebarActionClass}>
-                  Register
-                </NavLink>
-              </div>
-            </>
-          )}
-        </section>
-      </aside>
+      </header>
 
       <main className="main-panel">
         <Routes>

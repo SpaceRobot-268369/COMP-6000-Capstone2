@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
 const PRESET_PROMPTS = [
-  "Rainy autumn dawn, distant thunder",
-  "Still winter night, moonlit",
-  "Hot summer afternoon, cicadas",
-  "Spring morning, birdsong",
+  "Windy spring afternoon, distant birdsong",
+  "Still summer night, crickets and a boobook owl",
+  "Cold winter dawn, light drizzle",
+  "Summer dawn, kookaburra chorus",
+  "Gusty autumn morning, rain on the wind",
+  "Frosty winter afternoon, gusting wind",
+  "Heavy autumn downpour at night, thunder",
+  "Warm spring dusk, insects and a breeze",
 ];
 
 /* The demo entry interface: a calm, chatbot-style prompt screen (phase
