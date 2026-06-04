@@ -1,5 +1,6 @@
 services:
   ai-tunnel:
+    container_name: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-dev}
     build:
       context: ./ai-tunnel
       dockerfile: Dockerfile
@@ -12,6 +13,9 @@ services:
       AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
       AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
       AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
+      AI_SERVICE_START_COMMAND: ${AI_SERVICE_START_COMMAND:-}
+      AI_SERVICE_START_TIMEOUT_SEC: ${AI_SERVICE_START_TIMEOUT_SEC:-60}
+      AI_SERVICE_START_POLL_SEC: ${AI_SERVICE_START_POLL_SEC:-3}
     secrets:
       - source: shinypokemon_pem
         target: shinypokemon.pem
@@ -57,10 +61,12 @@ services:
       AI_CONNECTION_MODE: ssh_tunnel
       AI_SERVER_URL: http://ai-tunnel:8000
       AI_SERVER_LABEL: ${AI_SERVER_LABEL:-shinypokemon}
-      AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-300000}
+      AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-540000}
       AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
       AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
       AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
+      AI_RECONNECT_MODE: docker-container
+      AI_RECONNECT_CONTAINER: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-dev}
       # Cached expected/showcase samples are served straight from the repo
       # checkout (no AI-worker round-trip). Mount point matches the volume below.
       AI_LAYERS_ROOT: /acoustic_ai/layers
@@ -77,6 +83,9 @@ services:
       # Read-only mount of the attempts tree so Express can serve cached
       # expected/showcase artefacts (PNG/JSON/WAV) without waking serverB.
       - ../../acoustic_ai:/acoustic_ai:ro
+      # Allows the backend reconnect endpoint to restart only the configured
+      # ai-tunnel container through Docker's API.
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app_net
 
