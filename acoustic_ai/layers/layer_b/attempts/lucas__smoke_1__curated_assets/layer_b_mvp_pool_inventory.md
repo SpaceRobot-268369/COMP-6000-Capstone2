@@ -8,22 +8,21 @@ The frontend-facing Layer B MVP reads this index:
 
 `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv`
 
-Current runtime index contents:
+Current site-only runtime index contents:
 
 | Source | Rows | Runtime status |
 | --- | ---: | --- |
-| sound_library | 40 | Active index |
-| site | 0 | Not merged into runtime index yet |
+| site | 113 | Active runtime pool |
+| sound_library | 40 | Marked unavailable; excluded from runtime |
 
 Runtime-usable and locally materialized rows after path cleanup:
 
 | Primary weather | Count |
 | --- | ---: |
-| wind | 5 |
-| rain | 10 |
-| rain+wind | 1 |
-| storm | 10 |
-| thunder | 3 |
+| wind | 88 |
+| rain | 6 |
+| rain+wind | 12 |
+| thunder | 2 |
 
 The old seed rows previously pointed at `acoustic_ai/data/weather/...`. They
 now point at the current attempt-local data root:
@@ -52,7 +51,7 @@ remains the DVC/S3 cache above.
 
 ## Site-Derived Pool
 
-Site-derived candidates are not yet part of the runtime index.
+Site-derived candidates are now the only runtime pool for the site-only branch.
 
 Important manifests:
 
@@ -67,8 +66,9 @@ Best observed site-ready counts:
 | Pool label | Count |
 | --- | ---: |
 | rain | 6 |
-| rain+wind | 7 |
-| wind | 88 |
+| rain+wind | 12 |
+| wind | 93 |
+| thunder | 2 |
 
 The Server A ready WAVs were found at:
 
@@ -79,16 +79,40 @@ They are now staged locally under:
 `acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_mvp_002/`
 
 Local staged counts: `rain_primary=6`, `rain_wind_mixed=7`, `wind_primary=88`.
-They should be merged into runtime only after the index rows are converted from
-the server `runs/...` paths to these local staged paths, or after the same assets
-are stored in a durable DVC/S3-backed location.
+The runtime index now points to these local staged paths. The WAV folders remain
+ignored local materialized assets; the CSV index records the active site-only
+runtime pool.
+
+Additional Nov 2019 storm-period scout assets were promoted from
+`debug/site_weather_nov2019_storm_scout_001/listen.html` after human review:
+`rain+wind=5`, `wind=5`, `thunder=2`. These WAVs are staged under
+`data/weather/site_nov2019_storm_scout_001/`. The two thunder rows are marked
+`backup` because the human notes still describe them as uncertain thunder-like
+events.
 
 ## MVP Runtime Policy
 
-For the current MVP:
+For the current site-only MVP branch:
 
-- `rain`, `wind`, `thunder`, and `storm` resolve to materialized library assets.
-- `wind` now resolves to pure wind assets instead of falling back to `rain+wind`.
-- Site assets are locally staged but not yet active in the runtime index.
+- `rain` resolves to 6 materialized site assets.
+- `wind` resolves to 93 materialized site assets.
+- `rain+wind` resolves to 12 materialized site mixed-weather assets.
+- `thunder` has 2 site-derived backup rows only; use cautiously because both
+  were marked as uncertain by human review.
+- Sound-library assets are retained in the index for provenance but marked
+  unavailable and excluded from runtime.
+- `storm` / `rain+thunder` / `rain+thunder+wind` are not yet active runtime
+  categories. The Nov 2019 scout improved mixed-weather coverage, but did not
+  produce clean enough site-derived storm clips to promote as primary storm.
 - Handler fallback is acceptable for intensity mismatch, but not for silently
   replacing a requested weather type with a mixed asset when pure assets exist.
+
+Current frontend-facing weather controls:
+
+| Weather type | Active? | Source | Notes |
+| --- | --- | --- | --- |
+| `rain` | yes | site only | Pure rain rows where available; intensity fallback may select nearby rain intensity. |
+| `wind` | yes | site only | Strongest current pool; includes light/medium/heavy wind rows. |
+| `rain+wind` | yes | site only | Mixed weather stem, not pure rain and not pure wind. |
+| `thunder` | backup only | site only | Two uncertain thunder-like rows from Nov 2019 scout; not enough for a reliable primary pool. |
+| `storm` / `rain+thunder` / `rain+thunder+wind` | no | site only target, no active rows | Future category if reliable site storm clips are promoted. |
