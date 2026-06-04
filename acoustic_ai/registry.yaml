@@ -734,6 +734,22 @@ layers:
           - Thunder remains suppressed until Site257 thunder evidence is validated.
           - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
 
+      liting__mvp_4__data_expanded_weather_head:
+        label: "Weather detector — data-expanded Site257 head"
+        author: liting
+        stage: mvp_4
+        head: weather
+        status: training_candidate
+        checkpoint: model/candidates/liting/mvp_4__data_expanded_weather_head
+        params:
+          panns_device: auto
+        notes:
+          - E-B MVP4 keeps validation on audited Site257 weather assets while adding pseudo-labelled Site257 audio to training only.
+          - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
+          - Goal is to recover the wind gate missed by MVP3 without giving up the higher joint rain+wind result.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
+
       songke__smoke_3__analysis_aggregator:
         label: "Analysis Aggregator - deterministic fusion v1"
         author: songke
