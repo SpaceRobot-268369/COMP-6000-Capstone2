@@ -148,7 +148,9 @@ def main():
         dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,
+        # Server B currently shows intermittent libsndfile failures in worker
+        # subprocesses; keep loading in the main process for training stability.
+        num_workers=0,
     )
 
     optimizer = torch.optim.AdamW(
