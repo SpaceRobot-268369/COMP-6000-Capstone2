@@ -323,11 +323,13 @@ def build_pseudo_labelled_rows(
         reverse=True,
     )
     for item in wind_ranked:
-        if len([entry for entry in selected if entry[0] == "pseudo_wind"]) >= per_bucket:
+        wind_count = len([entry for entry in selected if entry[0] == "pseudo_wind"])
+        if wind_count >= per_bucket:
             break
         if item["path"] in used or item["wind_score"] < 0.02:
             continue
-        selected.append(("pseudo_wind", "none", "moderate", item))
+        wind_label = pseudo_wind_label(wind_count, per_bucket)
+        selected.append(("pseudo_wind", "none", wind_label, item))
         used.add(item["path"])
 
     quiet_ranked = sorted(scored, key=lambda item: item["rain_score"] + item["wind_score"] + item["thunder_score"])
@@ -381,6 +383,11 @@ def discover_extra_audio(roots: list[Path], existing_paths: set[str], limit: int
     discovered = sorted(set(discovered))
     rng.shuffle(discovered)
     return discovered[:limit] if limit > 0 else discovered
+
+
+def pseudo_wind_label(rank: int, per_bucket: int) -> str:
+    strong_count = max(1, per_bucket // 3)
+    return "strong" if rank < strong_count else "moderate"
 
 
 def classify_policy(asset) -> str:

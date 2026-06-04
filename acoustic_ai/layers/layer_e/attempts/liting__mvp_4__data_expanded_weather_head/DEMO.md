@@ -60,7 +60,8 @@ weather-related evidence such as rain, wind, and thunder scores. It also
 computes transparent DSP features from the waveform. A small weather head is
 then trained on audited Site257 weather clips plus pseudo-labelled Site257
 train-only clips so the output matches our project labels: rain intensity and
-wind intensity.
+wind intensity. The extra wind candidates are score-stratified so the model sees
+both moderate and strong pseudo-wind examples during training.
 
 ## Current Limitations
 
