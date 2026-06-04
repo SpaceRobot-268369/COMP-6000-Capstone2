@@ -64,6 +64,26 @@ where time is spent.
 - Joint validation accuracy should beat MVP3 if possible.
 - Report includes pseudo-label counts and selected extra roots.
 
+## Server B Result
+
+Latest conservative data-expanded run:
+
+- Audited validation rows: 26
+- Audited source rows: 101
+- Pseudo-labelled training-only rows: 30
+- Rain validation accuracy: 0.846
+- Wind validation accuracy: 0.615
+- Joint validation accuracy: 0.615
+- Actual head fitting time: 2.22 seconds
+- Total runtime including feature extraction/pseudo scan: 50.69 seconds
+- Gate status: `needs_iteration`
+
+Interpretation: pseudo-labelled data expansion helped keep rain above the gate
+but hurt the wind boundary compared with MVP2/MVP3. MVP4 is therefore recorded
+as an iteration checkpoint, not the integration candidate. The safest current
+candidate remains MVP2 unless the team accepts MVP3's higher rain/joint but
+lower wind trade-off.
+
 ## Outputs
 
 ```text

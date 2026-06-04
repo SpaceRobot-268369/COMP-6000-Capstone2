@@ -17,7 +17,7 @@ training:
   max_cases: 0
   site_only: true
   extra_scan_limit: 300
-  pseudo_per_bucket: 40
+  pseudo_per_bucket: 15
   extra_audio_roots:
     - /home/ubuntu/lucano/COMP-6000-Capstone2/resources/site_257_bowra-dry-a
     - /home/ubuntu/burger/COMP-6000-Capstone2/resources/site_257_bowra-dry-a

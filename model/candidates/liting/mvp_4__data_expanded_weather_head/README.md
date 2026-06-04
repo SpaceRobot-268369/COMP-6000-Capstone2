@@ -39,4 +39,19 @@ weather_head.pt
 metrics.json
 ```
 
-The checkpoint is DVC-tracked after Server B training. Metrics are git-tracked.
+Metrics are git-tracked. Because this run did not pass the E-B gate, the
+checkpoint is not promoted as the integration candidate.
+
+## Server B Result
+
+Latest run used 101 audited Site257 rows plus 30 pseudo-labelled train-only
+rows:
+
+- Rain validation accuracy: 0.846
+- Wind validation accuracy: 0.615
+- Joint validation accuracy: 0.615
+- Gate: `needs_iteration`
+
+This candidate is kept as an iteration checkpoint. It shows that naive
+pseudo-labelled data expansion can hurt the wind boundary, so the next attempt
+should use stricter pseudo-label selection or a manually audited expansion set.
