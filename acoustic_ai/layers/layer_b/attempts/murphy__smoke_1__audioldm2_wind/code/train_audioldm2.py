@@ -131,7 +131,9 @@ def main():
     pipeline.language_model.to(accelerator.device, dtype=weight_dtype)
 
     manifest_path = Path(args.manifest_path).resolve()
-    project_root = manifest_path.parent.parent.parent.parent
+    # Resolve repo root from this attempt path to avoid malformed relative joins
+    # when manifest audio_path values are repo-relative (acoustic_ai/...).
+    project_root = Path(__file__).resolve().parents[6]
 
     normalize_audio = args.normalize_audio and not args.no_normalize_audio
 
