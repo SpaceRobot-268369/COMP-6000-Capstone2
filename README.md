@@ -105,24 +105,102 @@ flowchart LR
 | **B — Weather** | Wind / rain | Curated assets + parameter mixing |
 | **C — Events** | Species calls | AudioGen (`facebook/audiogen-medium`, 16 kHz) + per-species LoRA |
 | **D — Mixer** | Compose A+B+C | Combine layers → WAV + explanation JSON |
-| **E — Analysis** | Inspect input | Ambient similarity + weather + event detectors, summarised by an open-source LLM |
+| **E — Analysis** | Inspect input | Detector heads + open-source LLM narrative |
+
+The five layers share one stack but run in two **directions**: **Generation**
+synthesises forward through A → B → C → D; **Analysis** runs the input
+*backwards* through E, which reuses the same detectors and embeddings that the
+generators are conditioned on.
+
+### How the layers interact
+
+The design's core idea is **strict separation of concerns** between layers, so the
+environmental parameters route to whichever layer actually owns that acoustic
+phenomenon — no double-counting:
+
+- **Layer A (ambient bed)** is driven by **time-of-day + seasonal position only**
+  (the `season × diel` cell), *not* weather. The bed is continuous site tone,
+  insects, and low-level texture. It **must not contain events** — bird calls,
+  vehicles, helicopters belong to Layer C; wind and rain belong to Layer B.
+  Mixing events into the bed double-counts them and breaks layer separation.
+- **Layer B (weather)** owns the **direct acoustic signals** of weather — wind and
+  rain — selected and intensity-mixed from curated assets. This is why
+  wind/rain are deliberately *excluded* from Layer A's retrieval key.
+- **Layer C (events)** is driven by **temperature and humidity**, because those
+  variables affect species/insect *behaviour* (when and how often they call)
+  rather than producing sound directly. Each species is a per-species AudioGen
+  LoRA; an event planner schedules calls over the timeline.
+- **Layer D (mixer)** combines A + B + C into one coherent file: it matches sample
+  rate (22,050 Hz), trims/loops layers to the requested duration, applies fades
+  and gain staging to avoid clicks and clipping, exports the final WAV + mel
+  spectrogram preview, and emits an **explanation JSON** (`ambient_source_clips`,
+  `weather_layers`, `event_layers`, `env_match_score`, `limitations`) so every
+  output is traceable back to its sources.
+- **Layer E (analysis)** runs three **detector heads in parallel** on the raw
+  input mixture — ambient context (k-NN against the learned latent index),
+  weather intensity, and species/event onsets — then aggregates them into one
+  report. It mirrors the generation conditioning, so analysis and generation
+  speak the same representational language.
+
+```mermaid
+flowchart LR
+    subgraph ENV[Environmental drivers]
+        TOD[time-of-day + season]
+        WX[wind + rain]
+        TH[temperature + humidity]
+    end
+    TOD --> A[A · Ambient bed]
+    WX --> B[B · Weather]
+    TH --> C[C · Events]
+    A --> D[D · Mixer]
+    B --> D
+    C --> D
+    D --> OUT[(WAV + explanation JSON)]
+```
 
 ### Generative model strategy
 
 Layers A and C use **frozen large base models + LoRA adapters** for the MVP,
 rather than training audio generators from scratch. This keeps the prototype
 tractable while remaining controllable per-context (e.g. Layer A ships a bank of
-16 `season × diel` adapters). Migration to in-house **distilled** models is a
-future option, gated on three conditions: (1) the LoRA path proving out across
-species/contexts, (2) a demonstrated latency/VRAM bottleneck, and (3) team
-capacity.
+16 `season × diel` adapters; Layer C trains one LoRA per species). Migration to
+in-house **distilled** models is a future option, gated on three conditions:
+(1) the LoRA path proving out across species/contexts, (2) a demonstrated
+latency/VRAM bottleneck, and (3) team capacity.
 
-### Analysis strategy
+### Analysis strategy (Layer E + open-source LLM)
 
-Layer E runs deterministic detectors (ambient similarity, weather classification,
-event detection) over an input recording, then passes their structured outputs to
-an **open-source LLM** which produces the human-readable analysis/explanation.
-The detectors provide grounded signal; the LLM provides synthesis and narrative.
+Layer E first runs its deterministic detector heads (ambient similarity, weather
+intensity, event onsets) over the input, producing grounded, structured signal.
+Those structured outputs are then handed to an **open-source LLM** (specific model
+*not yet decided*) which writes the human-readable analysis. The detectors supply
+the facts; the LLM supplies the synthesis and narrative.
+
+The LLM renders that narrative in **two styles of language** — two distinct
+registers of the same underlying analysis, so the result suits different readers.
+
+> [!NOTE]
+> The exact definition of the two language styles is owned by the team spec.
+> Confirm the intended pair (e.g. a grounded/technical register vs. a
+> speculative/lay register) and this section will be made precise.
+
+### Sample results
+
+Each attempt ships reference audio + spectrograms in three tiers, directly under
+its folder (`acoustic_ai/layers/<layer>/attempts/<id>/`):
+
+| Tier | What it is | Tracking |
+|------|------------|----------|
+| `expected/real_<clip_id>/` | **Real-audio** ground truth from the source recordings | PNG + JSON in git, WAV via DVC |
+| `showcase/seed_<N>_<label>/` | Author-curated **generated** samples (canonical seed `42`) | all three files DVC-tracked |
+| `dev-artifacts-self-testing/` | Ad-hoc dev scratch | folder via `.gitkeep`, contents gitignored |
+
+Each case is its own subdirectory with fixed filenames
+(`audio.wav`, `spectrogram.png`, `metadata.json`); the spectrogram PNGs carry a
+visible metadata overlay plus lossless `tEXt` chunks mirroring the JSON sidecar.
+Regenerate via `acoustic_ai/scripts/regenerate_samples.py`. Current promoted
+example: Layer A's per-cell bank exposes `expected/` real audio for all 16
+`season × diel` cells (e.g. `spring_night`, `autumn_dawn`).
 
 ---
 
@@ -157,63 +235,33 @@ Australia).
 
 ## System architecture
 
-Three deployable tiers. The web stack runs in Docker; the AI inference server
-runs **natively on serverB** (GPU) and is reached through an SSH tunnel exposed to
-the backend as a Compose sidecar.
+The web stack runs in Docker (control plane, **Server A**); the AI server runs
+natively on a separate GPU host (**Server B**) and is reached only through an SSH
+tunnel — Server B has no public ingress.
 
 ```mermaid
-flowchart TB
-    subgraph Local["Local / Docker Compose (services/dev/)"]
-        FE[Frontend<br/>React + Vite<br/>:5173]
-        BE[Backend<br/>Express + PostgreSQL<br/>:4000]
-        PG[(PostgreSQL<br/>:5432)]
-        TUN[ai-tunnel sidecar]
-        FE --> BE
-        BE --> PG
-        BE --> TUN
-    end
-
-    subgraph ServerB["serverB — shinypokemon (native, GPU)"]
-        AI[FastAPI AI server :8000<br/>registry-driven /layers]
-        REG[[registry.yaml]]
-        CKPT[(model/ checkpoints<br/>via DVC)]
-        REG --> AI
-        CKPT --> AI
-    end
-
-    TUN -. SSH tunnel .-> AI
+flowchart LR
+    FE[Frontend :5173] --> BE[Backend :4000]
+    BE --> PG[(PostgreSQL)]
+    BE -. SSH tunnel .-> AI[FastAPI AI server :8000<br/>registry-driven /layers]
+    REG[[registry.yaml]] --> AI
+    CKPT[(model/ via DVC)] --> AI
 ```
 
-### Two-server topology (on-demand GPU worker)
+- **Server A** (`spacerobot-268369`) — only public host (ports 22/80/443). Owns
+  frontend, backend, PostgreSQL, the job table, and worker orchestration; it is
+  the source of truth.
+- **Server B** (`shinypokemon`) — on-demand GPU worker, bound to `127.0.0.1`
+  only. Runs Layer A/C generation + training, then stops once idle. Booted
+  manually from the RONIN dashboard; after that the poll → claim → run → upload →
+  shutdown loop is automated, and **generation jobs preempt training** so
+  interactive requests never wait behind a training epoch.
 
-The deployment splits into a control plane and a disposable GPU worker:
-
-- **Server A — `spacerobot-268369`** (control plane + app server). The only
-  publicly reachable host, exposing ports 22 / 80 / 443. Owns the frontend,
-  backend API, PostgreSQL, the job table, auth, and worker orchestration.
-- **Server B — `shinypokemon`** (on-demand AI worker). **No public ingress** —
-  its worker API binds to `127.0.0.1` only. Owns Layer A/C generation and model
-  training, log capture, and artifact upload, and is stopped once idle and all
-  artifacts are durable. Server A reaches it exclusively through an SSH tunnel.
-
-Server A is the source of truth: if Server B crashes, the PostgreSQL job records
-still describe what happened and what needs retry. Both are RONIN-managed AWS
-instances; for the MVP, **booting `shinypokemon` is a manual action from the
-RONIN dashboard** (no programmatic start API yet), after which the
-poll → claim → run → upload → shutdown flow is automated. Generation jobs
-**preempt** training (training checkpoints every N steps, pauses, drains pending
-generation, then resumes), so interactive requests never wait behind a full
-training epoch.
-
-### Registry-driven AI server
-
-The FastAPI server reads `acoustic_ai/registry.yaml` on startup to:
-
-- serve `GET /layers` (the data behind the frontend dropdown), and
-- route `POST /layers/<layer>/attempts/<id>/generate` to the right handler.
-
-Each attempt exposes a `handler.py` with `load()` + `generate()`. Adding or
-exposing a model is a declarative edit to `registry.yaml` — no server code change.
+The AI server is **registry-driven**: it reads `acoustic_ai/registry.yaml` on
+startup to serve `GET /layers` and route
+`POST /layers/<layer>/attempts/<id>/generate` to each attempt's `handler.py`
+(`load()` + `generate()`). Exposing a model is a declarative edit — no server
+code change.
 
 ---
 
