@@ -50,6 +50,9 @@ where time is spent.
 - Expanded training candidates: extra Site257 audio files found under Server B
   resource roots.
 - Pseudo-label source: frozen PANNs weather scores plus DSP weather features.
+- Pseudo wind labels are stratified by PANNs wind score so the highest-scoring
+  train-only wind candidates support the `strong` class instead of collapsing
+  all extra wind data into `moderate`.
 - Pseudo-label split role: training only.
 - Sound-library assets: excluded.
 

@@ -31,6 +31,8 @@ Use Site257 audio only.
   resource roots.
 - Pseudo-labels: assigned from frozen PANNs weather evidence and DSP weather
   features.
+- Pseudo wind candidates are score-stratified into moderate/strong so data
+  expansion targets the wind boundary that MVP3 missed.
 - Validation: audited rows only, never pseudo-labelled rows.
 - Sound-library assets: excluded.
 
