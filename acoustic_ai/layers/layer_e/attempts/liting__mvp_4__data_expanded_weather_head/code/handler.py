@@ -7,8 +7,6 @@ from pathlib import Path
 import torch
 
 from .weather_head import extract_feature_vector, predict_with_checkpoint
-from layers.layer_e.attempts.liting__mvp_1__panns_weather_baseline.code.handler import analyze as fallback_analyze
-from layers.layer_e.attempts.liting__mvp_1__panns_weather_baseline.code.handler import load as fallback_load
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[6]
@@ -85,29 +83,29 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
     checkpoint_path = DEFAULT_CHECKPOINT
     if checkpoint_dir:
         candidate = Path(checkpoint_dir) / "weather_head.pt"
-        if candidate.exists():
-            checkpoint_path = candidate
+        checkpoint_path = candidate
 
-    checkpoint = None
-    if checkpoint_path.exists():
-        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "Missing checkpoint for liting__mvp_4__data_expanded_weather_head: "
+            f"{checkpoint_path}. Run `python3 -m dvc pull "
+            "model/candidates/liting/mvp_4__data_expanded_weather_head/weather_head.pt.dvc` "
+            "before exposing this attempt as runnable."
+        )
+
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
     return {
         "params": dict(params or {}),
         "checkpoint": checkpoint,
         "checkpoint_path": str(checkpoint_path),
-        "fallback": fallback_load(None, params or {}, extra),
     }
 
 
 def analyze(state: dict, audio_path: str | Path) -> dict:
     checkpoint = state.get("checkpoint")
     if not checkpoint:
-        report = fallback_analyze(state["fallback"], audio_path)
-        weather = report.get("weather", {})
-        if "observations" not in report:
-            report["observations"] = _weather_observations(weather)
-        return report
+        raise RuntimeError("MVP4 weather head checkpoint is not loaded; refusing to fall back to another model.")
 
     features, evidence = extract_feature_vector(audio_path)
     prediction = predict_with_checkpoint(features, checkpoint)
