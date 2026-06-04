@@ -295,6 +295,23 @@ layers:
           - Emits an analysis_report block with observations, inferred_context, and disagreements for aggregator integration.
           - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
 
+      murphy__mvp_1__weather_direct_detection:
+        label: "Weather analysis — CLAP + PANNs + AST gate v1.1"
+        author: murphy
+        stage: mvp_1
+        head: weather
+        status: mvp
+        checkpoint: null
+        params:
+          model_backend: clap
+          audioset_backend: panns
+          guard_backend: ast
+        notes:
+          - Frozen E-B weather analysis MVP v1 for uploaded-audio weather detection.
+          - Reports continuous rain / wind / thunder summaries through observations.weather.
+          - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas

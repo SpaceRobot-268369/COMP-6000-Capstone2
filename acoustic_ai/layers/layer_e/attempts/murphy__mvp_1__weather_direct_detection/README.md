@@ -7,6 +7,14 @@ confident the detector is.
 This is an analysis feature only. It does not generate audio, select Layer B
 assets, or decompose the mixture into separated stems.
 
+## MVP Status
+
+Frozen as **E-B weather analysis MVP v1**.
+
+This attempt is ready to use as the Layer E-B weather head for MVP integration.
+Future work should treat gate v1.1 as the baseline and make changes through
+explicit calibration runs, not ad-hoc threshold edits.
+
 ## Goal
 
 Given one uploaded audio clip, return a structured weather-layer analysis:

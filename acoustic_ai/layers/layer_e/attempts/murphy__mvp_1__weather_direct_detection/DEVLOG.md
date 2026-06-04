@@ -883,3 +883,27 @@ Decision:
 - Treat this manifest as a regression set for future gate edits.
 - Next useful improvement is operational, not policy: run calibration in one
   batch process so CLAP/PANNs/AST load once instead of reloading for each clip.
+
+### Step 22 — MVP v1 freeze
+
+Decision: freeze this attempt as **E-B weather analysis MVP v1**.
+
+Scope of the frozen MVP:
+
+- Analyze uploaded audio only; no generation, retrieval, source separation, or
+  Layer B pool selection.
+- Output continuous `rain`, `wind`, and `thunder` observations for the Layer E
+  aggregator through `observations.weather`.
+- Preserve the top-level `weather` block for MVP calibration/debug compatibility.
+- Use the `CLAP + PANNs + AST` model stack with gate v1.1.
+- Keep `rain+wind` and `thunder` conservative when evidence is ambiguous.
+
+Known limitations accepted for MVP:
+
+- Very subtle rain under wind may be reported as `wind`.
+- Wind overload can still resemble thunder, so thunder remains conservative.
+- Broader accuracy claims require more calibration data; current results are
+  enough to proceed with integration, not publication-grade evaluation.
+
+Future edits should start from this frozen baseline and must be checked against
+`calibration/gate_v1_1_regression_spotcheck.csv` before replacing gate v1.1.

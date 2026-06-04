@@ -334,9 +334,8 @@ function EmptyHead({ label, regError }) {
 
 function HeadResult({ headId, report }) {
   if (headId === "ambient") return <AmbientResult report={report} />;
+  if (headId === "weather") return <WeatherResult report={report} />;
   if (headId === "events") return <EventsResult report={report} />;
-  // Weather has no model yet, so fall back to the raw report when a future
-  // detector lands before a dedicated renderer does.
   return (
     <pre className="layer-a-json">{JSON.stringify(report, null, 2)}</pre>
   );
@@ -376,6 +375,56 @@ function AmbientResult({ report }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function WeatherResult({ report }) {
+  const weather = report?.observations?.weather || {};
+  const legacyWeather = report?.weather || {};
+  const derivedLabel = weather.derived_label || legacyWeather.overall_label || "—";
+  const warnings = weather.warnings || legacyWeather.warnings || [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Derived label</p>
+        <code>{derivedLabel}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Confidence</p>
+        <code>{fmtNum(weather.confidence)}</code>
+      </div>
+      {["rain", "wind", "thunder"].map((element) => (
+        <WeatherElementBlock
+          key={element}
+          element={element}
+          summary={weather?.[element]?.summary}
+        />
+      ))}
+      {warnings.length > 0 && (
+        <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+          <p>Warnings</p>
+          <code>{warnings.join(" · ")}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeatherElementBlock({ element, summary }) {
+  const label = summary?.label || "none";
+  const intensity = typeof summary?.intensity === "number" ? summary.intensity : null;
+  const confidence = typeof summary?.confidence === "number" ? summary.confidence : null;
+  const coverage = typeof summary?.coverage === "number" ? summary.coverage : null;
+  return (
+    <div className="gen-info-block">
+      <p>{element}</p>
+      <code>
+        {label}
+        {intensity == null ? "" : ` · ${intensity.toFixed(3)}`}
+        {confidence == null ? "" : ` · conf ${confidence.toFixed(3)}`}
+        {coverage == null ? "" : ` · cov ${coverage.toFixed(2)}`}
+      </code>
     </div>
   );
 }
