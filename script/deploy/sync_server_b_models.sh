@@ -103,8 +103,9 @@ pull_dvc_artifacts() {
   # (model/production), the served candidate checkpoints (model/candidates —
   # every Layer E head and the Layer A/C candidate banks live here, so omitting
   # them is how analysis breaks with "best_probe.pt: No such file"), and the
-  # expected/showcase sample tiers the dev UI serves. Datasets under resources/
-  # are deliberately NOT pulled — only model weights + samples.
+  # expected/showcase sample tiers the dev UI serves, and registry-declared
+  # served media-bank artifacts. Datasets under resources/ are deliberately NOT
+  # pulled — only runtime model weights, samples, and served retrieval media.
   mapfile -d '' dvc_pointers < <(
     {
       if [ -d model/production ]; then
@@ -120,15 +121,31 @@ pull_dvc_artifacts() {
           \( -path '*/expected/*' -o -path '*/showcase/*' \) \
           -print0
       fi
+
+      if [ -f acoustic_ai/registry.yaml ]; then
+        "$venv_python" - <<'PY'
+from pathlib import Path
+import sys
+
+import yaml
+
+registry = yaml.safe_load(Path("acoustic_ai/registry.yaml").read_text(encoding="utf-8")) or {}
+for layer in (registry.get("layers") or {}).values():
+    for attempt in (layer.get("attempts") or {}).values():
+        for pointer in attempt.get("deploy_dvc") or []:
+            if isinstance(pointer, str) and pointer:
+                sys.stdout.write(pointer + "\0")
+PY
+      fi
     } | sort -z
   )
 
   if [ "${#dvc_pointers[@]}" -eq 0 ]; then
-    log "No model or sample DVC pointers found; nothing to materialise"
+    log "No model, sample, or served media DVC pointers found; nothing to materialise"
     return 0
   fi
 
-  log "Pulling ${#dvc_pointers[@]} model/sample DVC pointer(s)"
+  log "Pulling ${#dvc_pointers[@]} model/sample/media DVC pointer(s)"
   "$dvc_bin" pull "${dvc_pointers[@]}"
 
   missing=()
@@ -141,10 +158,10 @@ pull_dvc_artifacts() {
 
   if [ "${#missing[@]}" -gt 0 ]; then
     printf '%s\n' "${missing[@]}" >&2
-    fail "Some model/sample artifacts are still missing after dvc pull"
+    fail "Some model/sample/media artifacts are still missing after dvc pull"
   fi
 
-  log "Model/sample artifacts are materialised"
+  log "Model/sample/media artifacts are materialised"
 }
 
 find_listener_pid() {
