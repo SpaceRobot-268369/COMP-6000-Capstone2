@@ -25,6 +25,9 @@ import { analyseAudio, analyseUpload, fetchLayerRegistry } from "../lib/api.js";
  */
 
 const LAYER_ID = "layer_e";
+const PREFERRED_ATTEMPTS = {
+  weather: "liting__mvp_2__calibrated_weather_head",
+};
 
 const HEADS = [
   {
@@ -87,6 +90,7 @@ export default function DevAnalysisPage() {
           for (const h of HEADS) {
             const forHead = attempts.filter((a) => a.head === h.id);
             const chosen =
+              forHead.find((a) => a.id === PREFERRED_ATTEMPTS[h.id])?.id ||
               forHead.find((a) => a.id === def)?.id || forHead[0]?.id || "";
             next[h.id] = { ...prev[h.id], attemptId: chosen };
           }
@@ -723,6 +727,65 @@ function WeatherElementBlock({ element, summary }) {
 }
 
 // ─── Shared bits ──────────────────────────────────────────────────────────────
+
+function WeatherResult({ report }) {
+  const summary = report?.summary || {};
+  const weather = report?.weather || {};
+  const wind = summary.wind || {};
+  const rain = summary.rain || {};
+  const thunder = summary.thunder || {};
+  const model = report?.model || {};
+  const observations = report?.observations?.weather || {};
+
+  return (
+    <div className="dev-controls-meta">
+      <WeatherSignalCard label="Wind" signal={wind} fallback={weather.wind_intensity} />
+      <WeatherSignalCard label="Rain" signal={rain} fallback={weather.rain_intensity} />
+      <WeatherSignalCard label="Thunder" signal={thunder} fallback={weather.thunder_intensity} />
+
+      <ConfidenceBar value={weather.confidence} label="Overall weather confidence" />
+
+      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+        <p>Model</p>
+        <code>{model.primary || weather.primary_model || "—"}</code>
+      </div>
+      <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+        <p>Method</p>
+        <code>{model.method || weather.method || "—"}</code>
+      </div>
+
+      {observations.thunder?.status && (
+        <div className="dev-placeholder dev-placeholder-json" style={{ gridColumn: "1 / -1" }}>
+          <p className="dev-placeholder-caption">
+            Thunder: {formatSignal(observations.thunder.status)}
+          </p>
+        </div>
+      )}
+
+      {Array.isArray(report?.limitations) && report.limitations.length > 0 && (
+        <ul className="dev-sim-list" style={{ gridColumn: "1 / -1", margin: "8px 0 0", paddingLeft: 16 }}>
+          {report.limitations.slice(0, 4).map((item, idx) => (
+            <li key={idx} style={{ fontSize: 12, opacity: 0.8 }}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function WeatherSignalCard({ label, signal, fallback }) {
+  const intensity = signal?.intensity || fallback || "none";
+  const confidence = signal?.confidence;
+  return (
+    <div className="gen-info-block">
+      <p>{label}</p>
+      <code>{formatSignal(intensity)}</code>
+      <span style={{ fontSize: 12, opacity: 0.65 }}>
+        conf. {fmtPct(confidence)}
+      </span>
+    </div>
+  );
+}
 
 function EventsResult({ report }) {
   const events = Array.isArray(report?.events) ? report.events : [];
