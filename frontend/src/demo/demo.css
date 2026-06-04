@@ -153,15 +153,16 @@
 
 /* ---- light mode overrides ---- */
 [data-theme="light"] .main-panel:has(.demo-chat) {
-  background: #f7f5ef !important;
+  background-color: #f7f5ef !important;
+  background-image: none !important;
 }
 
 [data-theme="light"] .demo-chat {
   color: #3c352a;
-  background:
+  background-image:
     radial-gradient(ellipse 80% 70% at 50% 18%, rgba(214, 218, 203, 0.45), transparent 60%),
-    radial-gradient(ellipse 90% 80% at 50% 120%, rgba(230, 222, 208, 0.5), transparent 55%),
-    #f7f5ef !important;
+    radial-gradient(ellipse 90% 80% at 50% 120%, rgba(230, 222, 208, 0.5), transparent 55%) !important;
+  background-color: #f7f5ef !important;
 }
 
 [data-theme="light"] .demo-eyebrow {
