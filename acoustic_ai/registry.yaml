@@ -322,6 +322,26 @@ layers:
           - Parked baseline trained on the original 1,982-segment pool.
           - Probe did not beat the k-NN season baseline on v0 data.
 
+      songke__prod_1__e_c_species_event_detector:
+        label: "Known species event detector - PRODUCTION"
+        author: songke
+        stage: prod_1
+        head: events
+        status: production
+        checkpoint: model/production/layer_e_c_species_event_detector
+        params:
+          threshold: 0.55
+          window_s: 5.0
+          hop_s: 1.0
+          merge_gap_s: 1.0
+          min_event_windows: 7
+        notes:
+          - Production E-C detector promoted from songke__smoke_2__known_species_clap_probe for the online Analysis Mode demo.
+          - Supports 13 known Australian species using frozen LAION-CLAP embeddings plus an MLP probe.
+          - Test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Returns event confidence, species matches, phenology metadata, and an aggregator-ready analysis_report.
+          - The production checkpoint is automatically materialised by the Server B model sync workflow.
+
       songke__smoke_2__known_species_clap_probe:
         label: "Known species events - CLAP probe"
         author: songke
