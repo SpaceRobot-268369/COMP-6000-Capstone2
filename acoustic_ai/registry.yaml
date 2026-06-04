@@ -751,6 +751,22 @@ layers:
           - Thunder remains suppressed until Site257 thunder evidence is validated.
           - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
 
+      liting__mvp_5__clap_weather_probe:
+        label: "Weather detector — CLAP weather probe"
+        author: liting
+        stage: mvp_5
+        head: weather
+        status: training_candidate
+        checkpoint: model/candidates/liting/mvp_5__clap_weather_probe
+        params:
+          backbone: laion/clap-htsat-unfused
+        notes:
+          - E-B MVP5 tests frozen LAION-CLAP audio embeddings plus DSP features as the weather representation.
+          - Uses the same audited Site257 validation anchor as MVP2-MVP4 and no pseudo-labelled expansion.
+          - Goal is to see whether CLAP improves the wind boundary before moving to manual data expansion.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
+
       songke__smoke_3__analysis_aggregator:
         label: "Analysis Aggregator - deterministic fusion v1"
         author: songke
