@@ -3,7 +3,6 @@ import PromptChat from "../components/PromptChat.jsx";
 import ImmersivePage from "./ImmersivePage.jsx";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
-import "../demo/demo.css";
 
 // Staged "thinking" lines shown while the scene resolves, in order.
 const GEN_STAGES = [
