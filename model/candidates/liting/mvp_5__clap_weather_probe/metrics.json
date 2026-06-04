@@ -1,0 +1,850 @@
+{
+  "rain_val_accuracy": 0.8076923076923077,
+  "wind_val_accuracy": 0.6923076923076923,
+  "joint_val_accuracy": 0.6153846153846154,
+  "gate": {
+    "status": "needs_iteration",
+    "rain_accuracy_min": 0.7,
+    "wind_accuracy_min": 0.7,
+    "single_component_joint_accuracy_min": 0.65,
+    "single_component_joint_accuracy": 0.818,
+    "interpretation": "MVP5 should be treated as an iteration checkpoint, not a final detector."
+  },
+  "confusion_matrix": {
+    "rain": {
+      "none": {
+        "none": 19,
+        "light": 0,
+        "moderate": 3,
+        "heavy": 0
+      },
+      "light": {
+        "none": 0,
+        "light": 0,
+        "moderate": 0,
+        "heavy": 0
+      },
+      "moderate": {
+        "none": 2,
+        "light": 0,
+        "moderate": 2,
+        "heavy": 0
+      },
+      "heavy": {
+        "none": 0,
+        "light": 0,
+        "moderate": 0,
+        "heavy": 0
+      }
+    },
+    "wind": {
+      "none": {
+        "none": 2,
+        "light": 0,
+        "moderate": 0,
+        "strong": 0
+      },
+      "light": {
+        "none": 0,
+        "light": 1,
+        "moderate": 0,
+        "strong": 0
+      },
+      "moderate": {
+        "none": 0,
+        "light": 1,
+        "moderate": 13,
+        "strong": 2
+      },
+      "strong": {
+        "none": 1,
+        "light": 1,
+        "moderate": 3,
+        "strong": 2
+      }
+    }
+  },
+  "policy_breakdown": {
+    "rain_primary": {
+      "count": 2,
+      "rain_pass": 2,
+      "wind_pass": 2,
+      "joint_pass": 2,
+      "rain_accuracy": 1.0,
+      "wind_accuracy": 1.0,
+      "joint_accuracy": 1.0
+    },
+    "mixed_rain_wind": {
+      "count": 2,
+      "rain_pass": 0,
+      "wind_pass": 1,
+      "joint_pass": 0,
+      "rain_accuracy": 0.0,
+      "wind_accuracy": 0.5,
+      "joint_accuracy": 0.0
+    },
+    "wind_primary": {
+      "count": 22,
+      "rain_pass": 19,
+      "wind_pass": 15,
+      "joint_pass": 14,
+      "rain_accuracy": 0.864,
+      "wind_accuracy": 0.682,
+      "joint_accuracy": 0.636
+    }
+  },
+  "demo_summary": {
+    "model": "Frozen LAION-CLAP audio embedding + DSP features + rain/wind probe heads",
+    "training_mode": "Server B training over audited Site257 weather labels only",
+    "output_contract": {
+      "wind_intensity": [
+        "none",
+        "light",
+        "moderate",
+        "strong"
+      ],
+      "rain_intensity": [
+        "none",
+        "light",
+        "moderate",
+        "heavy"
+      ],
+      "thunder_intensity": "none until Site257 thunder evidence is validated",
+      "confidence": "per-component probability from the calibrated head"
+    },
+    "duration_note": "Feature extraction reads the available audio clip; current Server B run used materialised Site257 weather clips and reports feature/training/total time separately."
+  },
+  "validation_rows": [
+    {
+      "asset_id": "site_mvp002_site257_1313196_000778_000793",
+      "policy_class": "rain_primary",
+      "expected_rain": "moderate",
+      "predicted_rain": "moderate",
+      "rain_confidence": 0.858,
+      "rain_status": "pass",
+      "expected_wind": "none",
+      "predicted_wind": "none",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1313196_001630_001645",
+      "policy_class": "rain_primary",
+      "expected_rain": "moderate",
+      "predicted_rain": "moderate",
+      "rain_confidence": 0.838,
+      "rain_status": "pass",
+      "expected_wind": "none",
+      "predicted_wind": "none",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_214659_006775_006790",
+      "policy_class": "mixed_rain_wind",
+      "expected_rain": "moderate",
+      "predicted_rain": "none",
+      "rain_confidence": 0.966,
+      "rain_status": "fail",
+      "expected_wind": "moderate",
+      "predicted_wind": "strong",
+      "wind_confidence": 1.0,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_214659_001523_001538",
+      "policy_class": "mixed_rain_wind",
+      "expected_rain": "moderate",
+      "predicted_rain": "none",
+      "rain_confidence": 0.879,
+      "rain_status": "fail",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.999,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_215474_002465_002480",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "moderate",
+      "rain_confidence": 0.778,
+      "rain_status": "fail",
+      "expected_wind": "strong",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1313184_002222_002237",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.83,
+      "rain_status": "pass",
+      "expected_wind": "strong",
+      "predicted_wind": "strong",
+      "wind_confidence": 0.996,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_4881_005831_005846",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.982,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.997,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_214503_003510_003525",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.993,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "strong",
+      "wind_confidence": 0.852,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5421_003302_003317",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.997,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.989,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5493_000879_000894",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.966,
+      "rain_status": "pass",
+      "expected_wind": "strong",
+      "predicted_wind": "strong",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_215191_006457_006472",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.956,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.64,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5493_002653_002668",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.998,
+      "rain_status": "pass",
+      "expected_wind": "strong",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1679611_004279_004294",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.916,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "light",
+      "wind_confidence": 0.822,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5413_002074_002089",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.998,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_216466_002726_002741",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.941,
+      "rain_status": "pass",
+      "expected_wind": "strong",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1313184_006451_006466",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.996,
+      "rain_status": "pass",
+      "expected_wind": "strong",
+      "predicted_wind": "light",
+      "wind_confidence": 0.994,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_214503_005443_005458",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.994,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.936,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_215192_001929_001944",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.994,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 0.871,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_445759_000655_000670",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "moderate",
+      "rain_confidence": 0.854,
+      "rain_status": "fail",
+      "expected_wind": "strong",
+      "predicted_wind": "none",
+      "wind_confidence": 0.998,
+      "wind_status": "fail"
+    },
+    {
+      "asset_id": "site_mvp002_site257_215191_005671_005686",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.979,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5421_003037_003052",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.995,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1535362_003737_003752",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.993,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1399612_001738_001753",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "moderate",
+      "rain_confidence": 0.421,
+      "rain_status": "fail",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_5495_003676_003691",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.999,
+      "rain_status": "pass",
+      "expected_wind": "light",
+      "predicted_wind": "light",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_1401228_000906_000921",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.917,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    },
+    {
+      "asset_id": "site_mvp002_site257_445532_000402_000417",
+      "policy_class": "wind_primary",
+      "expected_rain": "none",
+      "predicted_rain": "none",
+      "rain_confidence": 0.891,
+      "rain_status": "pass",
+      "expected_wind": "moderate",
+      "predicted_wind": "moderate",
+      "wind_confidence": 1.0,
+      "wind_status": "pass"
+    }
+  ],
+  "attempt": "liting__mvp_5__clap_weather_probe",
+  "baseline_attempts": [
+    "liting__mvp_2__calibrated_weather_head",
+    "liting__mvp_3__balanced_weather_head",
+    "liting__mvp_4__data_expanded_weather_head"
+  ],
+  "head_architecture": "clap_probe",
+  "model_type": "mlp",
+  "rain_model_type": "mlp",
+  "wind_model_type": "linear",
+  "rain_lr": 0.003,
+  "wind_lr": 0.05,
+  "rain_weight_decay": 0.0003,
+  "wind_weight_decay": 0.0001,
+  "balance_mode": "weighted",
+  "hidden_dim": 8,
+  "dropout": 0.0,
+  "asset_index": "/home/ubuntu/liting/COMP-6000-Capstone2/acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv",
+  "case_count": 101,
+  "audited_case_count": 101,
+  "pseudo_case_count": 0,
+  "train_count": 75,
+  "val_count": 26,
+  "extra_audio_roots": [],
+  "extra_scan_limit": 300,
+  "pseudo_per_bucket": 40,
+  "timings": {
+    "feature_seconds": 31.36,
+    "training_seconds": 1.43,
+    "total_seconds": 32.809
+  },
+  "rain_history": [
+    {
+      "epoch": 25,
+      "loss": 0.098994,
+      "train_accuracy": 0.987,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 50,
+      "loss": 0.013993,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 75,
+      "loss": 0.006238,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 100,
+      "loss": 0.003964,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 125,
+      "loss": 0.00286,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 150,
+      "loss": 0.002199,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 175,
+      "loss": 0.001764,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 200,
+      "loss": 0.001461,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 225,
+      "loss": 0.00124,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 250,
+      "loss": 0.001075,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 275,
+      "loss": 0.000948,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 300,
+      "loss": 0.000847,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 325,
+      "loss": 0.000767,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 350,
+      "loss": 0.000702,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 375,
+      "loss": 0.000648,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 400,
+      "loss": 0.000604,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 425,
+      "loss": 0.000567,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 450,
+      "loss": 0.000535,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 475,
+      "loss": 0.000508,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 500,
+      "loss": 0.000485,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.808
+    },
+    {
+      "epoch": 525,
+      "loss": 0.000465,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 550,
+      "loss": 0.000447,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 575,
+      "loss": 0.000432,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 600,
+      "loss": 0.000419,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 625,
+      "loss": 0.000407,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 650,
+      "loss": 0.000396,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 675,
+      "loss": 0.000387,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 700,
+      "loss": 0.000379,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 725,
+      "loss": 0.000371,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 750,
+      "loss": 0.000364,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 775,
+      "loss": 0.000358,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    },
+    {
+      "epoch": 800,
+      "loss": 0.000352,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.769
+    }
+  ],
+  "wind_history": [
+    {
+      "epoch": 25,
+      "loss": 0.175846,
+      "train_accuracy": 0.96,
+      "val_accuracy": 0.615
+    },
+    {
+      "epoch": 50,
+      "loss": 0.007215,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 75,
+      "loss": 0.002326,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 100,
+      "loss": 0.00157,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 125,
+      "loss": 0.001322,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 150,
+      "loss": 0.00118,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 175,
+      "loss": 0.001079,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 200,
+      "loss": 0.001003,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 225,
+      "loss": 0.000945,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 250,
+      "loss": 0.000901,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 275,
+      "loss": 0.000866,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 300,
+      "loss": 0.00084,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 325,
+      "loss": 0.000821,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 350,
+      "loss": 0.000806,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 375,
+      "loss": 0.000794,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 400,
+      "loss": 0.000786,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 425,
+      "loss": 0.00078,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.692
+    },
+    {
+      "epoch": 450,
+      "loss": 0.000775,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 475,
+      "loss": 0.000773,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 500,
+      "loss": 0.000772,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 525,
+      "loss": 0.000772,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 550,
+      "loss": 0.000772,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 575,
+      "loss": 0.000773,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 600,
+      "loss": 0.000775,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 625,
+      "loss": 0.000776,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 650,
+      "loss": 0.000778,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 675,
+      "loss": 0.00078,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 700,
+      "loss": 0.000781,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 725,
+      "loss": 0.000783,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 750,
+      "loss": 0.000785,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 775,
+      "loss": 0.000787,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    },
+    {
+      "epoch": 800,
+      "loss": 0.000788,
+      "train_accuracy": 1.0,
+      "val_accuracy": 0.654
+    }
+  ]
+}

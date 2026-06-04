@@ -57,6 +57,22 @@ does not, the next useful path is manually audited data expansion.
   - MVP3: rain 0.885, wind 0.692, joint 0.654
   - MVP4: rain 0.846, wind 0.615, joint 0.615
 
+## Server B Result
+
+Best audited-only CLAP run:
+
+- Rain validation accuracy: 0.808
+- Wind validation accuracy: 0.692
+- Joint validation accuracy: 0.615
+- Actual head fitting time: 1.43 seconds
+- Total runtime including CLAP feature extraction: 32.81 seconds
+- Gate status: `needs_iteration`
+
+Interpretation: CLAP is a viable representation and recovers from MVP4's noisy
+pseudo-label failure, but it still does not beat MVP2 as the safest candidate.
+The next attempt should not be another tiny-head sweep; it should expand the
+audited Site257 weather labels or train on a more balanced manual set.
+
 ## Outputs
 
 ```text
