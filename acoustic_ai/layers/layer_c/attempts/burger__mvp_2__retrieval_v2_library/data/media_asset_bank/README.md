@@ -62,7 +62,7 @@ python3 script/dataset/build_layer_c_retrieval_v2_review_package.py \
   --per-species-limit 3 \
   --require-s3-origin-for-downloaded \
   --exclude-event-ids \
-  resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_pilot_v2/pilot_s3_excluded_event_ids_v2.csv
+  acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_pilot_v2/pilot_s3_excluded_event_ids_v2.csv
 ```
 
 Current pilot:
@@ -101,7 +101,7 @@ python3 script/dataset/build_layer_c_retrieval_v2_review_package.py \
   --per-species-limit 3 \
   --require-s3-origin-for-downloaded \
   --exclude-event-ids \
-  resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_pilot_v2/pilot_s3_excluded_event_ids_v2.csv
+  acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_pilot_v2/pilot_s3_excluded_event_ids_v2.csv
 ```
 
 ## Full Review Package
@@ -146,12 +146,12 @@ matplotlib mel rendering:
 
 ```bash
 python3 script/dataset/build_layer_c_retrieval_v2_review_package.py \
-  --selected-csv resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/selected_samples_v2_s3_ready_round3.csv \
-  --output-dir resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse \
+  --selected-csv acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/selected_samples_v2_s3_ready_round3.csv \
+  --output-dir acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse \
   --per-species-limit 0 \
   --require-s3-origin-for-downloaded \
   --skip-local-reuse-index \
-  --exclude-event-ids resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/review_package_full_v2_s3reuse/full_s3_excluded_event_ids_v2_round3.csv
+  --exclude-event-ids acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/full_s3_excluded_event_ids_v2_round3.csv
 ```
 
 ## Required Per-Species Layout

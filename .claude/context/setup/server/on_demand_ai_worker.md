@@ -234,7 +234,7 @@ Rules:
   |---|---|
   | `git pull` the main checkout (code) | ✅ yes |
   | `pip install -r acoustic_ai/requirements.txt` (deps) | ✅ yes |
-  | `dvc pull` **production** models + served **candidate** models + sample tiers | ✅ yes |
+  | `dvc pull` **production** models + served **candidate** models + sample tiers + registry-declared media banks | ✅ yes |
   | **Restart uvicorn** (loads new code/models, re-runs pre-warm) | ✅ yes |
 
   The restart is **unconditional**: it stops and relaunches the service, so any
