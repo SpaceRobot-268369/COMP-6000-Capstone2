@@ -15,6 +15,7 @@ import {
   checkServerBStatus,
   createCheckingStatus,
   createStatusLogEntry,
+  reconnectServerB,
 } from "./lib/serverBStatus.js";
 
 const accountStorageKey = "sonic-lab-account-name";
@@ -65,17 +66,41 @@ export default function App() {
     const startedAt = performance.now();
     try {
       const result = await checkServerBStatus();
+      setServerBLogs((current) => [
+        createStatusLogEntry(result, source),
+        ...current,
+      ].slice(0, 80));
+
+      if (result.key !== "offline") {
+        const remainingMs = minServerBCheckingMs - (performance.now() - startedAt);
+        if (remainingMs > 0) {
+          await wait(remainingMs);
+        }
+
+        setServerBStatus(result);
+        return result;
+      }
+
+      const reconnectSource = source === "manual" ? "manual-reconnect" : "auto-reconnect";
+      const reconnectingStatus = createCheckingStatus("reconnect");
+      setServerBStatus(reconnectingStatus);
+      setServerBLogs((current) => [
+        createStatusLogEntry(reconnectingStatus, reconnectSource),
+        ...current,
+      ].slice(0, 80));
+
+      const reconnectResult = await reconnectServerB();
       const remainingMs = minServerBCheckingMs - (performance.now() - startedAt);
       if (remainingMs > 0) {
         await wait(remainingMs);
       }
 
-      setServerBStatus(result);
+      setServerBStatus(reconnectResult);
       setServerBLogs((current) => [
-        createStatusLogEntry(result, source),
+        createStatusLogEntry(reconnectResult, reconnectSource),
         ...current,
       ].slice(0, 80));
-      return result;
+      return reconnectResult;
     } finally {
       serverBCheckInFlightRef.current = false;
       setServerBChecking(false);

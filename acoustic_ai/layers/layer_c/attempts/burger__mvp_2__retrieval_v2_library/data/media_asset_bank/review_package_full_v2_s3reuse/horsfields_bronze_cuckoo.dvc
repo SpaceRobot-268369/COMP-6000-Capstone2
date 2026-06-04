@@ -1,0 +1,6 @@
+outs:
+- md5: 3708ccca854cace2ba1de8f0091c3f26.dir
+  size: 85544398
+  nfiles: 700
+  hash: md5
+  path: horsfields_bronze_cuckoo

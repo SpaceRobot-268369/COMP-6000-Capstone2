@@ -1,0 +1,6 @@
+outs:
+- md5: 6d74d1e01785d45f8bc111e6cac2e474.dir
+  size: 74740903
+  nfiles: 704
+  hash: md5
+  path: barn_owl

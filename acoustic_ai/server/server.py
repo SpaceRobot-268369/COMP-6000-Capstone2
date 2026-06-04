@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import os
 import subprocess
 import sys
 import tempfile
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -35,8 +38,67 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server import registry  # noqa: E402
 
+log = logging.getLogger("soundscape.server")
 
-app = FastAPI(title="Soundscape Inference API", version="0.2.0")
+
+# ---------------------------------------------------------------------------
+# Model pre-warming
+# ---------------------------------------------------------------------------
+#
+# Handler state loads lazily on first use (registry._get_state). For heavy
+# generative layers (Layer A = AudioLDM2 + 16 LoRA adapters, Layer C =
+# AudioGen) that cold load runs *inside* the first request and can take
+# minutes — long enough to blow past the backend's AI_REQUEST_TIMEOUT_MS, so
+# the user sees "AI request timed out" instead of audio. Pre-warming on
+# startup moves the load off the request path: the first generate then pays
+# only inference. serverB is a disposable worker that reboots fresh, so this
+# runs on every boot.
+#
+# Controlled by the AI_PREWARM env var:
+#   unset / "1" / "all"   -> warm every layer's default attempt
+#   "0" / "false" / "none"-> disabled (pure lazy loading)
+#   "layer_a,layer_c"     -> warm only these layers' defaults
+#
+# Warming runs in a daemon thread so uvicorn binds the port immediately (the
+# SSH-tunnel health check stays green while models load). Concurrent requests
+# share the same cached state via registry's state lock.
+
+
+def _prewarm_selection() -> Optional[set[str]]:
+    """Parse AI_PREWARM into a layer-id filter. None => warm all defaults;
+    empty set => disabled."""
+    raw = os.environ.get("AI_PREWARM", "all").strip().lower()
+    if raw in {"0", "false", "none", "off"}:
+        return set()
+    if raw in {"1", "all", "true", "on", ""}:
+        return None
+    return {tok.strip() for tok in raw.split(",") if tok.strip()}
+
+
+def _run_prewarm(selection: Optional[set[str]]) -> None:
+    log.info("[prewarm] starting (selection=%s)", "all" if selection is None else selection)
+    for row in registry.prewarm_defaults(layers=selection):
+        if row["ok"]:
+            log.info("[prewarm] ready: %s/%s", row["layer"], row["attempt"])
+        else:
+            log.warning("[prewarm] skipped %s/%s: %s",
+                        row["layer"], row["attempt"], row["error"])
+    log.info("[prewarm] done")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    selection = _prewarm_selection()
+    if selection == set():
+        log.info("[prewarm] disabled via AI_PREWARM")
+    else:
+        threading.Thread(
+            target=_run_prewarm, args=(selection,), name="prewarm", daemon=True,
+        ).start()
+    yield
+
+
+app = FastAPI(title="Soundscape Inference API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],

@@ -1,0 +1,6 @@
+outs:
+- md5: d89f9c1b676e61d093e9128179e14d0d.dir
+  size: 37729955
+  nfiles: 352
+  hash: md5
+  path: crimson_chat

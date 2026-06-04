@@ -1,0 +1,64 @@
+species_common_name,species_slug,target_sample_count,candidate_count,selected_count,prior_pass_candidate_count,prior_pass_selected_count,unique_recordings_selected,recording_cap_applied,shortfall_after_local_scan,needs_s3_backfill
+Australian Raven,australian_raven,100,2712,100,0,0,58,10,0,false
+Australian Ringneck,australian_ringneck,50,61,50,0,0,33,10,0,false
+Banded Lapwing,banded_lapwing,10,13,10,0,0,5,10,0,false
+Barn Owl,barn_owl,100,406,100,0,0,60,10,0,false
+Black Honeyeater,black_honeyeater,100,2647,100,0,0,47,10,0,false
+Black-eared Cuckoo,black_eared_cuckoo,50,56,50,0,0,14,10,0,false
+Black-faced Cuckooshrike,black_faced_cuckooshrike,100,1041,100,0,0,44,10,0,false
+Brown Falcon,brown_falcon,10,35,10,0,0,6,10,0,false
+Budgerigar,budgerigar,100,1750,100,0,0,48,10,0,false
+Chestnut-breasted Quail-thrush,chestnut_breasted_quail_thrush,100,755,100,0,0,19,10,0,false
+Chestnut-crowned Babbler,chestnut_crowned_babbler,10,18,10,0,0,2,10,0,false
+Chestnut-rumped Thornbill,chestnut_rumped_thornbill,100,15860,100,35,35,84,10,0,false
+Cockatiel,cockatiel,100,944,100,0,0,66,10,0,false
+Common Bronzewing,common_bronzewing,100,376,100,0,0,33,10,0,false
+Common Greenshank,common_greenshank,100,277,100,0,0,66,10,0,false
+Common Sandpiper,common_sandpiper,100,260,100,0,0,44,10,0,false
+Crested Bellbird,crested_bellbird,100,12024,100,35,35,74,10,0,false
+Crimson Chat,crimson_chat,50,64,50,0,0,33,10,0,false
+Eastern Spinebill,eastern_spinebill,10,11,10,0,0,10,10,0,false
+Eurasian Coot,eurasian_coot,100,117,100,0,0,83,10,0,false
+Gilbert's Whistler,gilberts_whistler,10,10,10,0,0,8,10,0,false
+Gray Butcherbird,gray_butcherbird,100,511,100,0,0,49,10,0,false
+Gray Fantail,gray_fantail,10,10,10,0,0,7,10,0,false
+Gray Shrikethrush,gray_shrikethrush,100,129,100,0,0,42,10,0,false
+Horsfield's Bronze-cuckoo,horsfields_bronze_cuckoo,100,3772,100,30,30,58,10,0,false
+Inland Thornbill,inland_thornbill,100,186,100,0,0,59,10,0,false
+Masked Woodswallow,masked_woodswallow,100,2640,100,0,0,54,10,0,false
+Mulga Parrot,mulga_parrot,100,684,100,0,0,56,10,0,false
+Osprey,osprey,10,13,10,0,0,10,10,0,false
+Pacific Swift,pacific_swift,10,9,9,0,0,4,10,1,true
+Pallid Cuckoo,pallid_cuckoo,100,662,100,0,0,36,10,0,false
+Pied Honeyeater,pied_honeyeater,50,77,50,0,0,25,10,0,false
+Pink Cockatoo,pink_cockatoo,100,212,100,0,0,46,10,0,false
+Purple-backed Fairywren,purple_backed_fairywren,100,128,100,0,0,79,10,0,false
+Red-backed Fairywren,red_backed_fairywren,10,48,10,0,0,10,10,0,false
+Red-browed Firetail,red_browed_firetail,10,23,10,0,0,6,10,0,false
+Red-browed Pardalote,red_browed_pardalote,10,17,10,0,0,10,10,0,false
+Red-capped Robin,red_capped_robin,100,8336,100,35,35,47,10,0,false
+Red-winged Parrot,red_winged_parrot,10,21,10,0,0,7,10,0,false
+Restless Flycatcher,restless_flycatcher,10,22,10,0,0,2,10,0,false
+Rufous Songlark,rufous_songlark,100,2002,100,0,0,25,10,0,false
+Scarlet Myzomela,scarlet_myzomela,100,658,100,0,0,74,10,0,false
+Singing Honeyeater,singing_honeyeater,10,35,10,0,0,6,10,0,false
+Southern Scrub-Robin,southern_scrub_robin,10,10,10,0,0,7,10,0,false
+Spiny-cheeked Honeyeater,spiny_cheeked_honeyeater,100,184,100,0,0,45,10,0,false
+Splendid Fairywren,splendid_fairywren,100,22457,100,32,32,87,10,0,false
+Spotted Dove,spotted_dove,10,12,10,0,0,6,10,0,false
+Spotted Nightjar,spotted_nightjar,100,2595,100,0,0,46,10,0,false
+Spotted Quail-thrush,spotted_quail_thrush,100,139,100,0,0,30,10,0,false
+Superb Fairywren,superb_fairywren,100,3939,100,35,35,61,10,0,false
+Tawny Frogmouth,tawny_frogmouth,100,568,100,0,0,29,10,0,false
+Weebill,weebill,100,101,100,0,0,42,10,0,false
+Whimbrel,whimbrel,100,316,100,0,0,57,10,0,false
+White-breasted Woodswallow,white_breasted_woodswallow,10,43,10,0,0,6,10,0,false
+White-browed Woodswallow,white_browed_woodswallow,100,10363,100,35,35,64,10,0,false
+White-throated Nightjar,white_throated_nightjar,100,154,100,0,0,30,10,0,false
+White-winged Fairywren,white_winged_fairywren,50,53,50,0,0,24,10,0,false
+White-winged Triller,white_winged_triller,100,1137,100,0,0,28,10,0,false
+Willie Wagtail,willie_wagtail,100,911,100,0,0,32,10,0,false
+Wood Sandpiper,wood_sandpiper,50,73,50,0,0,47,10,0,false
+Yellow-rumped Thornbill,yellow_rumped_thornbill,50,72,50,0,0,23,10,0,false
+Yellow-throated Miner,yellow_throated_miner,10,27,10,0,0,5,10,0,false
+Zebra Finch,zebra_finch,100,425,100,0,0,55,10,0,false

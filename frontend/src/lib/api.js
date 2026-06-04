@@ -14,6 +14,16 @@
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
+function apiErrorMessage(err, fallback) {
+  return (
+    err?.message ||
+    err?.detail ||
+    err?.upstream?.message ||
+    err?.upstream?.detail ||
+    fallback
+  );
+}
+
 // ─── Layer registry (drives the dropdown) ─────────────────────────────────────
 
 /**
@@ -29,7 +39,7 @@ export async function fetchLayerRegistry() {
   const res = await fetch(`${API_BASE}/api/layers`, { credentials: "include" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Failed to list layers (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Failed to list layers (${res.status})`));
   }
   return res.json();
 }
@@ -66,7 +76,7 @@ export async function fetchAttemptSamples(layerId, attemptId) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Failed to list samples (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Failed to list samples (${res.status})`));
   }
   return res.json();
 }
@@ -124,7 +134,7 @@ export async function analyseUpload(layerId, attemptId, file) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Analysis failed (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
   }
   return res.json();
 }
@@ -159,7 +169,7 @@ export async function generateAttempt(
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Generation failed (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Generation failed (${res.status})`));
   }
   return res.json();
 }

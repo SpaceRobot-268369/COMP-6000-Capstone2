@@ -307,6 +307,56 @@ layers:
         notes:
           - Per-species LoRA; 16 kHz native.
 
+      burger__mvp_2__retrieval_v2_library:
+        label: "Layer C retrieval v2 audited library"
+        author: burger
+        stage: mvp_2
+        status: demo_ready
+        uses_seed: true
+        uses_cells: true
+        checkpoint: null
+        description: |
+          Layer C retrieval v2 baseline backed by the rebuilt 63-species
+          audited library. It selects real Pass-reviewed snippets from the v2
+          event index and schedules them into a 60-second ecological timeline.
+        deploy_dvc:
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/splendid_fairywren.dvc
+        params:
+          method: retrieval
+          species_common_name: "Splendid Fairywren"
+          event_type: layer_c_retrieval_v2_library
+          retrieval_index: acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv
+          duration_s: 60.0
+          count: 12
+          default_cell: summer_morning
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+          cells:
+            spring_dawn: {}
+            spring_morning: {}
+            spring_afternoon: {}
+            spring_night: {}
+            summer_dawn: {}
+            summer_morning: {}
+            summer_afternoon: {}
+            summer_night: {}
+            autumn_dawn: {}
+            autumn_morning: {}
+            autumn_afternoon: {}
+            autumn_night: {}
+            winter_dawn: {}
+            winter_morning: {}
+            winter_afternoon: {}
+            winter_night: {}
+        notes:
+          - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
+          - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
+          - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
+
   layer_d:
     label: "Layer D — Mixer"
     default: lucas__smoke_1__layered_mix
@@ -338,6 +388,16 @@ layers:
         head: ambient
         status: candidate
         checkpoint: model/candidates/lucas/mvp_2__clap_knn_probe_enlarged
+        description: |
+          Estimates the ambient context of an uploaded clip — season and time of day (diel) plus an hour/month guess — and surfaces the nearest training clips. Under the hood: frozen `laion/clap-htsat-unfused` CLAP embeddings feed a k=5 nearest-neighbour vote (τ=0.1) and a 1-hidden-layer MLP season probe (hidden 256, seed 42).
+
+          Trained on `resources/site_257_bowra-dry-a/ambient_pool_v2` (the enlarged pool). Metrics: probe season acc **0.553** vs k-NN **0.512** (+0.041), diel **0.706**, hour MAE **1.97 h**, month MAE **1.80 mo**. The season probe beats the k-NN baseline but still misses the 0.60 candidate bar; diel/hour/month clear their bars.
+
+          Output (report JSON): `estimated_conditions` — season, diel bin, hour, month; `similar_clips` — top-k nearest training segments with similarity scores (the evidence behind the estimate); `confidence` — mean neighbour similarity; `season_confidence` — the probe's softmax for the predicted season; `ood_flag` — raised when the clip's k-NN cell vote disagrees with its anchors (likely outside the Bowra training distribution). The `k` (5) and `tau` (0.1) settings are echoed back for traceability.
+
+          Interaction: the three Analysis heads run independently on the raw mixture (no wired cross-head call yet), but by design this head feeds the event head (E-C). E-A's estimated season/diel/hour is the ecological prior for which species are plausible — Bowra species are strongly gated by time of day and season (nocturnal callers ~22:00–05:00, summer-only insects), the same context Layer C uses to select events. So ambient context turns E-C's open-class detections into context-aware ones: a dawn-chorus species flagged in a clip placed at night is a red flag, not a confident hit. E-A and E-C also share the frozen CLAP encoder, and `estimated_conditions` can later drive Generation (Layer A per-cell bank + Layer C species choice), closing the analysis→generation loop.
+
+          Status: candidate (E-A default). Serves the Ambient head via `POST /layers/layer_e/attempts/{id}/analyze`.
         params:
           k: 5
           tau: 0.1
@@ -355,6 +415,14 @@ layers:
         head: ambient
         status: parked_negative
         checkpoint: model/candidates/lucas/mvp_1__clap_knn_probe
+        description: |
+          The v0 baseline of the ambient-context head: same recipe as the enlarged candidate (frozen `laion/clap-htsat-unfused` CLAP → k-NN season vote + a small season probe), but trained on the original 1,982-segment single-site pool.
+
+          Documented **negative result**: the season probe does not beat the k-NN season baseline (0.522) on v0 data — linear val acc 0.445 (underfits), MLP val acc 0.491 (overfits, train 0.755). Kept as a reproducibility baseline for the enlarged-pool retry; serving falls back to the k-NN season vote.
+
+          Output: same report shape as the enlarged candidate — `estimated_conditions` (season, diel, hour, month), `similar_clips`, `confidence`, `season_confidence`, `ood_flag`. Interaction: same intended role — ambient context as the ecological prior for the E-C event head — but this v0 probe is parked, so it is not the served E-A path.
+
+          Status: parked (negative). Superseded by `lucas__mvp_2__clap_knn_probe_enlarged`.
         params:
           k: 5
           tau: 0.1

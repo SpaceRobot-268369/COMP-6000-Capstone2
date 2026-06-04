@@ -53,6 +53,10 @@ class UnavailableScorer:
         )
 
 
+class ModelBackendUnavailableError(RuntimeError):
+    """Raised when a required model backend cannot be initialized."""
+
+
 def group_prompt_sets(params: dict[str, Any]) -> dict[str, list[str]]:
     prompts = params.get("prompts", {})
     contamination = prompts.get("contamination", {})
@@ -92,6 +96,7 @@ class ClapScorer:
         self._delegate, unavailable_reason = _build_transformers_clap_delegate(
             self.prompt_sets
         )
+        self.unavailable_reason = unavailable_reason
         self._unavailable = UnavailableScorer(unavailable_reason)
 
     def score_window(self, samples: np.ndarray, sample_rate: int) -> ModelScoreResult:
@@ -151,9 +156,18 @@ def _build_transformers_clap_delegate(
         return None, f"CLAP backend unavailable: {exc}"
 
 
-def build_scorer(params: dict[str, Any], backend: str) -> WindowScorer:
+def _unavailable_scorer(reason: str, *, required: bool) -> WindowScorer:
+    if required:
+        raise ModelBackendUnavailableError(reason)
+    return UnavailableScorer(reason)
+
+
+def build_scorer(params: dict[str, Any], backend: str, *, required: bool = False) -> WindowScorer:
     if backend == "none":
         return UnavailableScorer("backend disabled")
     if backend == "clap":
-        return ClapScorer(params)
-    return UnavailableScorer(f"unknown backend: {backend}")
+        scorer = ClapScorer(params)
+        if required and scorer._delegate is None:
+            raise ModelBackendUnavailableError(scorer.unavailable_reason)
+        return scorer
+    return _unavailable_scorer(f"unknown backend: {backend}", required=required)

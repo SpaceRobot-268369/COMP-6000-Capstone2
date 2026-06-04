@@ -54,6 +54,10 @@ class UnavailableAudioSetScorer:
         )
 
 
+class AudioSetBackendUnavailableError(RuntimeError):
+    """Raised when a required AudioSet backend cannot be initialized."""
+
+
 class PannsScorer:
     """PANNs CNN14 AudioSet scorer."""
 
@@ -232,20 +236,26 @@ class AstScorer:
         )
 
 
-def build_audioset_scorer(backend: str) -> AudioSetScorer:
+def _unavailable_scorer(reason: str, *, required: bool) -> AudioSetScorer:
+    if required:
+        raise AudioSetBackendUnavailableError(reason)
+    return UnavailableAudioSetScorer(reason)
+
+
+def build_audioset_scorer(backend: str, *, required: bool = False) -> AudioSetScorer:
     if backend == "none":
         return UnavailableAudioSetScorer("backend disabled")
     if backend == "panns":
         try:
             return PannsScorer()
         except Exception as exc:
-            return UnavailableAudioSetScorer(f"PANNs backend unavailable: {exc}")
+            return _unavailable_scorer(f"PANNs backend unavailable: {exc}", required=required)
     if backend == "ast":
         try:
             return AstScorer()
         except Exception as exc:
-            return UnavailableAudioSetScorer(f"AST backend unavailable: {exc}")
-    return UnavailableAudioSetScorer(f"unknown backend: {backend}")
+            return _unavailable_scorer(f"AST backend unavailable: {exc}", required=required)
+    return _unavailable_scorer(f"unknown backend: {backend}", required=required)
 
 
 def _torch_device() -> str:
