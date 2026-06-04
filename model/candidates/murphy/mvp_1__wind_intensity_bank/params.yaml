@@ -1,5 +1,5 @@
-# Frozen snapshot aligned with attempt params.yaml (v3 closure).
-intensity_profile_version: v3
+# Frozen snapshot aligned with attempt params.yaml (sealed).
+intensity_profile_version: sealed
 
 inference_profiles:
   heavy:
@@ -16,8 +16,9 @@ inference_profiles:
     denoise_floor_ratio: 0.38
   light:
     derived_from: medium
-    guidance_scale: 2.3
-    output_target_rms: 0.041
-    highpass_hz: 100.0
-    denoise_strength: 0.20
-    denoise_floor_ratio: 0.34
+    guidance_scale: 2.5
+    output_target_rms: 0.045
+    highpass_hz: 80.0
+    lowpass_hz: 6000.0
+    denoise_strength: 0.22
+    denoise_floor_ratio: 0.30

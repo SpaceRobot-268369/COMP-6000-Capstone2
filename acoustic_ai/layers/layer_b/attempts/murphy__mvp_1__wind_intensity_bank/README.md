@@ -4,7 +4,7 @@ Layer B wind generate-route MVP attempt with explicit intensity control:
 
 - `medium`: learned adapter (reuses smoke_2 checkpoint)
 - `heavy`: learned adapter (newly trained on heavy wind subset)
-- `light`: derived profile routed through `medium` adapter (known caveat)
+- `light`: derived **light_a** profile (v2 eval winner; lowpass 6 kHz)
 
 ## Goal
 
@@ -24,8 +24,13 @@ generation contract server-locked and seed-deterministic.
   - `medium/` (copied from smoke_2)
   - `heavy/` (trained in this attempt)
 
+## Status
+
+**Sealed (2026-06-04):** light = v2 light_a · medium = v3 · heavy = v2 frozen.  
+See `INTENSITY_SEALED.md` and **`GENERATE_WIND_FINAL.md`**（generate-wind 完整封板留存）。
+
 ## Notes
 
-- `light` is currently parametric-derived due to severe site-data scarcity.
+- `light` is parametric-derived (medium adapter + light_a postprocess).
 - Upgrade path: collect enough clean light clips and replace with a true
   `light` adapter.

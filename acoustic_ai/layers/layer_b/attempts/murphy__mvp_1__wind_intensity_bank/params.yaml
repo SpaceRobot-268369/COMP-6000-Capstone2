@@ -19,7 +19,7 @@ training:
     target_modules: [to_q, to_k, to_v, to_out.0]
 
 inference_defaults:
-  intensity_profile_version: v3
+  intensity_profile_version: sealed
   guidance_scale: 3.0
   num_inference_steps: 200
   audio_length_in_s: 8.0
@@ -60,11 +60,9 @@ intensity_profiles:
     prompt: >-
       gentle light breeze through dry eucalyptus woodland, soft faint airflow,
       Bowra, Australia
-    guidance_scale: 2.3
-    output_target_rms: 0.041
-    highpass_hz: 100.0
-    denoise_strength: 0.20
-    denoise_floor_ratio: 0.34
-    negative_prompt: >-
-      hiss, static noise, background hum, tape noise, insects, low quality, distortion,
-      strong wind, loud gust, blustery, roaring wind
+    guidance_scale: 2.5
+    output_target_rms: 0.045
+    highpass_hz: 80.0
+    lowpass_hz: 6000.0
+    denoise_strength: 0.22
+    denoise_floor_ratio: 0.30

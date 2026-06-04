@@ -26,15 +26,15 @@ Date: 2026-06-04
    - `model/candidates/murphy/mvp_1__wind_intensity_bank/`
    - copied `adapter_config.json` into `adapters/medium/`
 
-## v3 closure (2026-06-04)
+## Sealed profiles (2026-06-04)
 
-- Human v2 A/B: heavy frozen; medium denoise bump; light_c hybrid (not light_a/b).
-- Docs: `INTENSITY_V3_CLOSURE_PLAN.md`
-- Runtime: `params.yaml` + `acoustic_ai/registry.yaml` updated to v3 profiles.
-- Eval: `dev-artifacts-self-testing/run_intensity_v3_eval.py` → `showcase_intensity_eval_v3/`
+- **light**: v2 **light_a** (user sign-off; reverted from light_c)
+- **medium**: v3 (denoise 0.19/0.38, rms 0.048)
+- **heavy**: v2 frozen (unchanged)
+- Docs: `INTENSITY_SEALED.md`; runtime: `params.yaml` + `registry.yaml` (`intensity_profile_version: sealed`)
+- Eval archives: `showcase_intensity_eval_v2/` (light_a ref), `showcase_intensity_eval_v3/` (medium/heavy ref)
 
 ## Pending
 
-- Server B v3 batch + local scp + listen page.
-- Human sign-off on v3 before formal `showcase/` promotion.
+- Optional: formal `showcase/` golden seeds with sealed params.
 - DVC-track medium/heavy `adapter_model.safetensors` in bank layout.

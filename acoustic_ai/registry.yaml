@@ -198,14 +198,13 @@ layers:
         uses_seed: true
         checkpoint: model/candidates/murphy/mvp_1__wind_intensity_bank
         description: |
-          Layer B wind generate-route intensity bank (v3 profiles). medium/heavy
-          use learned LoRA adapters; light is derived from medium (light_c hybrid:
-          moderate denoise, hp=100, no lowpass, anti-strong-wind negative prompt).
-          Heavy matches frozen v2 eval; medium uses stronger denoise than v2.
+          Layer B wind intensity bank (sealed). light = v2 light_a (lowpass 6k);
+          medium = v3 denoise bump; heavy = v2 frozen. medium/heavy use LoRA
+          adapters; light is derived from medium.
         params:
           base_model: cvssp/audioldm2
           default_intensity: medium
-          intensity_profile_version: v3
+          intensity_profile_version: sealed
           num_inference_steps: 200
           audio_length_in_s: 8.0
           denoise_enabled: true
@@ -242,17 +241,15 @@ layers:
               prompt: >-
                 gentle light breeze through dry eucalyptus woodland, soft faint airflow,
                 Bowra, Australia
-              guidance_scale: 2.3
-              output_target_rms: 0.041
-              highpass_hz: 100.0
-              denoise_strength: 0.20
-              denoise_floor_ratio: 0.34
-              negative_prompt: >-
-                hiss, static noise, background hum, tape noise, insects, low quality, distortion,
-                strong wind, loud gust, blustery, roaring wind
+              guidance_scale: 2.5
+              output_target_rms: 0.045
+              highpass_hz: 80.0
+              lowpass_hz: 6000.0
+              denoise_strength: 0.22
+              denoise_floor_ratio: 0.30
         notes:
-          - Intensity-routed wind generation bank for Layer B (v3 closure).
-          - medium/heavy are true adapters; light is parametric-derived (light_c).
+          - Sealed profiles (2026-06-04): light=light_a, medium=v3, heavy=v2.
+          - medium/heavy are true adapters; light is parametric-derived from medium.
           - Runtime expects weather_type=wind and intensity in {light,medium,heavy}.
 
       murphy__mvp_1__weather_stem_selector:
