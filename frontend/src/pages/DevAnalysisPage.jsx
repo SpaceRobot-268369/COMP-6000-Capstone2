@@ -334,8 +334,8 @@ function EmptyHead({ label, regError }) {
 
 function HeadResult({ headId, report }) {
   if (headId === "ambient") return <AmbientResult report={report} />;
-  // Weather / events have no model yet, so this is unreachable today; fall
-  // back to the raw report so a future detector still renders something.
+  if (headId === "weather") return <WeatherResult report={report} />;
+  if (headId === "events") return <EventsResult report={report} />;
   return (
     <pre className="layer-a-json">{JSON.stringify(report, null, 2)}</pre>
   );
@@ -379,7 +379,248 @@ function AmbientResult({ report }) {
   );
 }
 
+function WeatherResult({ report }) {
+  const weather = report?.observations?.weather || {};
+  const legacyWeather = report?.weather || {};
+  const derivedLabel = weather.derived_label || legacyWeather.overall_label || "—";
+  const warnings = weather.warnings || legacyWeather.warnings || [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Derived label</p>
+        <code>{derivedLabel}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Confidence</p>
+        <code>{fmtNum(weather.confidence)}</code>
+      </div>
+      {["rain", "wind", "thunder"].map((element) => (
+        <WeatherElementBlock
+          key={element}
+          element={element}
+          summary={weather?.[element]?.summary}
+        />
+      ))}
+      {warnings.length > 0 && (
+        <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+          <p>Warnings</p>
+          <code>{warnings.join(" · ")}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeatherElementBlock({ element, summary }) {
+  const label = summary?.label || "none";
+  const intensity = typeof summary?.intensity === "number" ? summary.intensity : null;
+  const confidence = typeof summary?.confidence === "number" ? summary.confidence : null;
+  const coverage = typeof summary?.coverage === "number" ? summary.coverage : null;
+  return (
+    <div className="gen-info-block">
+      <p>{element}</p>
+      <code>
+        {label}
+        {intensity == null ? "" : ` · ${intensity.toFixed(3)}`}
+        {confidence == null ? "" : ` · conf ${confidence.toFixed(3)}`}
+        {coverage == null ? "" : ` · cov ${coverage.toFixed(2)}`}
+      </code>
+    </div>
+  );
+}
+
 // ─── Shared bits ──────────────────────────────────────────────────────────────
+
+function EventsResult({ report }) {
+  const events = Array.isArray(report?.events) ? report.events : [];
+  const species = Array.isArray(report?.known_species) ? report.known_species : [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Detected events</p>
+        <code>{report?.num_events ?? events.length}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Windows hit</p>
+        <code>{report?.num_detected_windows ?? 0} / {report?.num_windows ?? 0}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Known species</p>
+        <code>{species.length}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Threshold</p>
+        <code>{fmtNum(report?.threshold)}</code>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="dev-placeholder dev-placeholder-json" style={{ gridColumn: "1 / -1" }}>
+          <p className="dev-placeholder-caption">
+            No species event passed the current threshold.
+          </p>
+        </div>
+      ) : (
+        <div className="event-result-list">
+          <div className="event-timeline-head">
+            <p>Detected species timeline</p>
+            <span>{events.length} time segments</span>
+          </div>
+          {events.map((event, idx) => (
+            <article className="event-result-item" key={`${event.label}-${event.onset_s}-${idx}`}>
+              <div className="event-result-main">
+                <span>{fmtNum(event.onset_s)}s - {fmtNum(event.offset_s)}s</span>
+                <strong>{formatSpeciesLabel(event.label)}</strong>
+              </div>
+              <div className="event-result-stats">
+                <span>Mean {fmtPct(event.confidence_mean)}</span>
+                <span>Max {fmtPct(event.confidence_max)}</span>
+                <span>{event.window_count ?? 0} windows</span>
+              </div>
+              <ConfidenceBar value={event.confidence_mean} label="Event confidence" />
+              <SpeciesMatchList matches={event.species_matches} />
+              <PhenologyBlock phenology={event.phenology} />
+            </article>
+          ))}
+        </div>
+      )}
+      <AnalysisReportSummary report={report?.analysis_report} />
+      <DetectionTimeline windows={report?.diagnostics?.detected_windows} />
+    </div>
+  );
+}
+
+function AnalysisReportSummary({ report }) {
+  if (!report) return null;
+  const observations = Array.isArray(report.observations) ? report.observations : [];
+  const inferred = Array.isArray(report.inferred_context) ? report.inferred_context : [];
+  const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
+  return (
+    <div className="analysis-report-summary">
+      <div className="analysis-report-head">
+        <p>Report-ready summary</p>
+        <span>
+          {observations.length} observations · {inferred.length} inferences · {disagreements.length} disagreements
+        </span>
+      </div>
+      {inferred.length > 0 && (
+        <div className="analysis-report-chips">
+          {inferred.slice(0, 6).map((item, idx) => (
+            <span key={`${item.type}-${idx}`}>
+              {formatSignal(item.type)}: {formatSignal(item.value)} · {fmtPct(item.confidence)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhenologyBlock({ phenology }) {
+  if (!phenology) return null;
+  return (
+    <div className="phenology-block">
+      <p>Ecological signal</p>
+      <div className="phenology-grid">
+        <span>Common name</span>
+        <strong>{phenology.common_name || "Unknown"}</strong>
+        <span>Scientific name</span>
+        <strong>{phenology.scientific_name || "Unknown"}</strong>
+        <span>Active time</span>
+        <strong>{formatSignal(phenology.diel_signal)} · {fmtPct(phenology.diel_confidence)}</strong>
+        <span>Season signal</span>
+        <strong>{formatSignal(phenology.season_signal)} · {fmtPct(phenology.season_confidence)}</strong>
+        <span>Habitat</span>
+        <strong>{formatSignal(phenology.habitat_signal)}</strong>
+      </div>
+      {phenology.inference_notes && <em>{phenology.inference_notes}</em>}
+    </div>
+  );
+}
+
+function SpeciesMatchList({ matches }) {
+  const rows = Array.isArray(matches) ? matches.slice(0, 5) : [];
+  if (rows.length === 0) return null;
+  return (
+    <div className="species-match-list">
+      <p>Species match</p>
+      {rows.map((row) => {
+        const score = typeof row.score === "number" ? Math.max(0, Math.min(1, row.score)) : 0;
+        return (
+          <div className="species-match-row" key={row.label}>
+            <span>{formatSpeciesLabel(row.label)}</span>
+            <div className="species-match-track" aria-hidden="true">
+              <i style={{ width: `${Math.max(3, Math.round(score * 100))}%` }} />
+            </div>
+            <code>{fmtPct(score)}</code>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DetectionTimeline({ windows }) {
+  const rawRows = Array.isArray(windows) ? windows : [];
+  const rows = mergeDetectionWindows(rawRows);
+  if (rows.length === 0) return null;
+  return (
+    <div className="detection-timeline">
+      <div className="detection-timeline-head">
+        <p>Supporting window segments</p>
+        <span>{rawRows.length} windows merged into {rows.length} segments</span>
+      </div>
+      <div className="detection-window-list">
+        {rows.map((row) => (
+          <div className="detection-window-row" key={`${row.label}-${row.start_s}-${row.end_s}`}>
+            <code>{fmtNum(row.start_s)}s - {fmtNum(row.end_s)}s</code>
+            <span>{formatSpeciesLabel(row.label)}</span>
+            <div className="detection-window-score">
+              <i style={{ width: `${Math.max(3, Math.round(clamp01(row.confidence_mean) * 100))}%` }} />
+            </div>
+            <strong>{fmtPct(row.confidence_mean)}</strong>
+            <em>Max {fmtPct(row.confidence_max)} · {row.window_count} windows</em>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function mergeDetectionWindows(windows) {
+  const sorted = windows
+    .filter((row) => row && typeof row.start_s === "number" && typeof row.end_s === "number")
+    .slice()
+    .sort((a, b) => (a.start_s - b.start_s) || String(a.top_label).localeCompare(String(b.top_label)));
+  const segments = [];
+  for (const row of sorted) {
+    const label = String(row.top_label || "unknown");
+    const confidence = typeof row.confidence === "number" ? row.confidence : 0;
+    const last = segments[segments.length - 1];
+    if (last && last.label === label && row.start_s <= last.end_s + 1.01) {
+      last.end_s = Math.max(last.end_s, row.end_s);
+      last.confidence_sum += confidence;
+      last.confidence_max = Math.max(last.confidence_max, confidence);
+      last.window_count += 1;
+    } else {
+      segments.push({
+        label,
+        start_s: row.start_s,
+        end_s: row.end_s,
+        confidence_sum: confidence,
+        confidence_max: confidence,
+        window_count: 1,
+      });
+    }
+  }
+  return segments.map((segment) => ({
+    label: segment.label,
+    start_s: segment.start_s,
+    end_s: segment.end_s,
+    confidence_mean: segment.confidence_sum / segment.window_count,
+    confidence_max: segment.confidence_max,
+    window_count: segment.window_count,
+  }));
+}
 
 function AttemptPicker({ headCode, attemptId, attempts, onChange }) {
   return (
@@ -459,6 +700,20 @@ function Placeholder({ kind, loading, children }) {
   );
 }
 
+function formatSpeciesLabel(value) {
+  if (!value) return "Unknown species";
+  return String(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatSignal(value) {
+  if (!value) return "Unknown";
+  return String(value).replaceAll("_", " ");
+}
+
 function fmtNum(v) {
   return typeof v === "number" ? v.toFixed(2) : "—";
 }
@@ -466,4 +721,8 @@ function fmtNum(v) {
 function fmtPct(v) {
   if (typeof v !== "number") return "—";
   return `${Math.round(v * 100)}%`;
+}
+
+function clamp01(value) {
+  return typeof value === "number" ? Math.max(0, Math.min(1, value)) : 0;
 }
