@@ -163,6 +163,33 @@ layers:
     label: "Layer B — Weather"
     default: murphy__mvp_1__weather_stem_selector
     attempts:
+      murphy__smoke_1__audioldm2_wind:
+        label: "Wind-only generate smoke (AudioLDM2 LoRA)"
+        author: murphy
+        stage: smoke_1
+        status: smoke_candidate
+        uses_seed: true
+        checkpoint: model/candidates/murphy/smoke_1__audioldm2_wind
+        description: |
+          Layer B generate-route smoke attempt for single-element wind synthesis.
+          Uses a locked prompt and seed-driven AudioLDM2 + LoRA inference to
+          produce a short wind stem. This attempt is generation-only and does
+          not use the retrieval pool at runtime.
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            steady wind through dry woodland trees, Bowra dry woodland, Australia,
+            no music, no machinery, no birds, no insects
+          guidance_scale: 2.0
+          num_inference_steps: 100
+          audio_length_in_s: 10.0
+          output_target_rms: 0.02
+          highpass_hz: 80.0
+        notes:
+          - Layer B generate-path smoke for wind only.
+          - Runtime accepts seed only; prompt and generation params are server-locked.
+          - Training data comes from a filtered wind-only manifest built from site pool.
+
       murphy__mvp_1__weather_stem_selector:
         label: "Weather stem selector — site-only MVP"
         author: murphy
