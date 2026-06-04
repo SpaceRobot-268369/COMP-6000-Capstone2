@@ -13,10 +13,15 @@ Layer A validated training recipe and tightening data filtering.
 
 ## Status
 
-Scaffolded from `murphy__smoke_1__audioldm2_wind` with smoke_2 parameter and
-manifest-filter strategy updates.
+Closed for smoke-stage MVP showcase selection.
+
+- Final locked inference profile: Variant A (`denoise_strength=0.15`, `denoise_floor_ratio=0.40`)
+- User-approved good seeds: `48, 50, 52, 55, 59, 72`
+- Final listening entry: `showcase/listen_generated.html`
+- Full 40-seed scan archive: `showcase_s3a4_final/`
 
 ## Expected outputs
 
 - Candidate checkpoint under `model/candidates/murphy/smoke_2__audioldm2_wind/`
-- 20-sample showcase batch for manual audit (seed 42-61)
+- Final curated MVP showcase set (6 user-approved seeds)
+- Archived 40-seed audit batch for traceability (seed 42-81)

@@ -1,0 +1,39 @@
+{
+  "generator": "audioldm2_lora_layer_b_wind",
+  "prompt_locked": true,
+  "prompt": "steady wind through dry eucalyptus woodland, gentle natural breeze, Bowra, Australia",
+  "base_model": "cvssp/audioldm2",
+  "seed": 51,
+  "num_inference_steps": 200,
+  "audio_length_in_s": 8.0,
+  "guidance_scale": 3.0,
+  "audio": {
+    "sample_rate": 16000,
+    "duration_s": 8.0,
+    "min": -0.013244309462606907,
+    "max": 0.012828313745558262,
+    "mean": 1.0493650961507228e-06,
+    "rms": 0.0029999995604157448,
+    "peak": 0.013244309462606907,
+    "clip_pct": 0.0
+  },
+  "postprocess": {
+    "highpass_hz": 60.0,
+    "output_target_rms": 0.003,
+    "before": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.24365234375,
+      "max": 0.2066650390625,
+      "mean": 0.00026115294895134866,
+      "rms": 0.05359106510877609,
+      "peak": 0.24365234375,
+      "clip_pct": 0.0
+    }
+  },
+  "layer_b": {
+    "weather_type": "wind",
+    "mode": "generate",
+    "attempt": "murphy__smoke_2__audioldm2_wind"
+  }
+}

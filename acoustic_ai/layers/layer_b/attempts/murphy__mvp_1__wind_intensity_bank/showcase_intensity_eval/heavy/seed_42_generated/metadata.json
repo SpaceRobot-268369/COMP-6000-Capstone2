@@ -1,0 +1,95 @@
+{
+  "generator": "audioldm2_lora_layer_b_wind_intensity_bank",
+  "prompt_locked": true,
+  "prompt": "strong gusty wind through dry eucalyptus woodland, powerful blustery gusts, Bowra, Australia",
+  "negative_prompt": "hiss, static noise, background hum, tape noise, insects, low quality, distortion",
+  "base_model": "cvssp/audioldm2",
+  "seed": 42,
+  "num_inference_steps": 200,
+  "audio_length_in_s": 8.0,
+  "guidance_scale": 3.2,
+  "weather_type": "wind",
+  "requested_intensity": null,
+  "requested_wind_intensity": "heavy",
+  "resolved_intensity": "heavy",
+  "adapter": "heavy",
+  "derived": false,
+  "audio": {
+    "sample_rate": 16000,
+    "duration_s": 8.0,
+    "min": -0.3408896327018738,
+    "max": 0.3396379053592682,
+    "mean": 2.085840378640569e-06,
+    "rms": 0.07499999552965164,
+    "peak": 0.3408896327018738,
+    "clip_pct": 0.0
+  },
+  "postprocess": {
+    "highpass_hz": 80.0,
+    "lowpass_hz": null,
+    "output_target_rms": 0.075,
+    "before": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.348876953125,
+      "max": 0.3896484375,
+      "mean": 0.00031259373645298183,
+      "rms": 0.09329745918512344,
+      "peak": 0.3896484375,
+      "clip_pct": 0.0
+    },
+    "after_highpass": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.23022955656051636,
+      "max": 0.24015381932258606,
+      "mean": -2.253078946523601e-06,
+      "rms": 0.05263500660657883,
+      "peak": 0.24015381932258606,
+      "clip_pct": 0.0
+    },
+    "after_lowpass": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.23022955656051636,
+      "max": 0.24015381932258606,
+      "mean": -2.253078946523601e-06,
+      "rms": 0.05263500660657883,
+      "peak": 0.24015381932258606,
+      "clip_pct": 0.0
+    },
+    "denoise": {
+      "enabled": true,
+      "strength": 0.15,
+      "noise_quantile": 0.2,
+      "floor_ratio": 0.4,
+      "hop_length": 512,
+      "after_denoise": {
+        "sample_rate": 16000,
+        "duration_s": 8.0,
+        "min": -0.2172013521194458,
+        "max": 0.2164038121700287,
+        "mean": -6.512664185720496e-07,
+        "rms": 0.04819945618510246,
+        "peak": 0.2172013521194458,
+        "clip_pct": 0.0
+      }
+    },
+    "fade_ms": 80.0,
+    "after_fade": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.2172013521194458,
+      "max": 0.2164038121700287,
+      "mean": 1.329013571194082e-06,
+      "rms": 0.047787025570869446,
+      "peak": 0.2172013521194458,
+      "clip_pct": 0.0
+    }
+  },
+  "layer_b": {
+    "weather_type": "wind",
+    "mode": "generate",
+    "attempt": "murphy__mvp_1__wind_intensity_bank"
+  }
+}

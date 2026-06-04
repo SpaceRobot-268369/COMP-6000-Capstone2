@@ -30,7 +30,7 @@ inference:
   output_target_rms: 0.06
   highpass_hz: 80.0
   denoise_enabled: true
-  denoise_strength: 0.12
+  denoise_strength: 0.15
   denoise_noise_quantile: 0.2
   denoise_floor_ratio: 0.40
   denoise_hop_length: 512

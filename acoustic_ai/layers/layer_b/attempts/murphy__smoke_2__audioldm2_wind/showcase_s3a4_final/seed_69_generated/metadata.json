@@ -1,0 +1,78 @@
+{
+  "generator": "audioldm2_lora_layer_b_wind",
+  "prompt_locked": true,
+  "prompt": "steady wind through dry eucalyptus woodland, gentle natural breeze, Bowra, Australia",
+  "negative_prompt": "hiss, static noise, background hum, tape noise, insects, low quality, distortion",
+  "base_model": "cvssp/audioldm2",
+  "seed": 69,
+  "num_inference_steps": 200,
+  "audio_length_in_s": 8.0,
+  "guidance_scale": 3.0,
+  "audio": {
+    "sample_rate": 16000,
+    "duration_s": 8.0,
+    "min": -0.2787979543209076,
+    "max": 0.3072657883167267,
+    "mean": -6.430325925066427e-07,
+    "rms": 0.05999999865889549,
+    "peak": 0.3072657883167267,
+    "clip_pct": 0.0
+  },
+  "postprocess": {
+    "highpass_hz": 80.0,
+    "output_target_rms": 0.06,
+    "before": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.341552734375,
+      "max": 0.392578125,
+      "mean": 0.0002828073629643768,
+      "rms": 0.07871811091899872,
+      "peak": 0.392578125,
+      "clip_pct": 0.0
+    },
+    "after_highpass": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.26951634883880615,
+      "max": 0.29709866642951965,
+      "mean": -1.3652812413056381e-05,
+      "rms": 0.06001961976289749,
+      "peak": 0.29709866642951965,
+      "clip_pct": 0.0
+    },
+    "denoise": {
+      "enabled": true,
+      "strength": 0.15,
+      "noise_quantile": 0.2,
+      "floor_ratio": 0.4,
+      "hop_length": 512,
+      "after_denoise": {
+        "sample_rate": 16000,
+        "duration_s": 8.0,
+        "min": -0.2556762993335724,
+        "max": 0.28178319334983826,
+        "mean": -1.2885402611573227e-05,
+        "rms": 0.05548494681715965,
+        "peak": 0.28178319334983826,
+        "clip_pct": 0.0
+      }
+    },
+    "fade_ms": 80.0,
+    "after_fade": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.2556762993335724,
+      "max": 0.28178319334983826,
+      "mean": -5.897134656152048e-07,
+      "rms": 0.05502399429678917,
+      "peak": 0.28178319334983826,
+      "clip_pct": 0.0
+    }
+  },
+  "layer_b": {
+    "weather_type": "wind",
+    "mode": "generate",
+    "attempt": "murphy__smoke_2__audioldm2_wind"
+  }
+}
