@@ -1,0 +1,9 @@
+# TEMP local-AI override — points the backend at a native FastAPI server
+# running on the host (0.0.0.0:8000) instead of the serverB ssh tunnel.
+# Use:  docker compose -f docker-compose.yml -f docker-compose.localai.yml up -d --no-deps backend
+# Revert: bring the stack up again WITHOUT this -f override file.
+services:
+  backend:
+    environment:
+      AI_CONNECTION_MODE: direct
+      AI_SERVER_URL: http://host.docker.internal:8000
