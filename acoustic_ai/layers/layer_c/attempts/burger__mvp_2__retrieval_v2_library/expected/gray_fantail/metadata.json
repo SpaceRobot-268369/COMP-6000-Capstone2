@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Gray Fantail",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.35271576046943665,
+    "rms": 0.008834444917738438,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "gray_fantail_v2_009_8021911",
+      "label": "Gray Fantail",
+      "event_type": "gray_fantail",
+      "audio_event_id": "8021911",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_fantail/samples/009_audioevent_8021911/crop_bandpass.wav",
+      "source_recording": "1400767",
+      "onset_s": 6.197,
+      "offset_s": 9.761,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.5435,
+      "retrieval_score": 0.7935,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.5435; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_fantail_v2_003_7956232",
+      "label": "Gray Fantail",
+      "event_type": "gray_fantail",
+      "audio_event_id": "7956232",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_fantail/samples/003_audioevent_7956232/crop_bandpass.wav",
+      "source_recording": "1672656",
+      "onset_s": 21.157,
+      "offset_s": 24.721,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9052,
+      "retrieval_score": 0.9552,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9052; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_fantail_v2_002_15578904",
+      "label": "Gray Fantail",
+      "event_type": "gray_fantail",
+      "audio_event_id": "15578904",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_fantail/samples/002_audioevent_15578904/crop_bandpass.wav",
+      "source_recording": "1676040",
+      "onset_s": 35.591,
+      "offset_s": 39.178,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9247,
+      "retrieval_score": 0.9747,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9247; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_fantail_v2_006_16502344",
+      "label": "Gray Fantail",
+      "event_type": "gray_fantail",
+      "audio_event_id": "16502344",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_fantail/samples/006_audioevent_16502344/crop_bandpass.wav",
+      "source_recording": "1680133",
+      "onset_s": 44.109,
+      "offset_s": 47.685,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.6061,
+      "retrieval_score": 0.6561,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6061; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "gray_fantail",
+    "species_common_name": "Gray Fantail",
+    "layer_c_only": true
+  }
+}

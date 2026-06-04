@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Black Honeyeater",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.2620086371898651,
+    "rms": 0.01032167486846447,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "black_honeyeater_v2_042_13123114",
+      "label": "Black Honeyeater",
+      "event_type": "black_honeyeater",
+      "audio_event_id": "13123114",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_honeyeater/samples/042_audioevent_13123114/crop_bandpass.wav",
+      "source_recording": "1539463",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9736,
+      "retrieval_score": 1.2236,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9736; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "black_honeyeater_v2_058_16353746",
+      "label": "Black Honeyeater",
+      "event_type": "black_honeyeater",
+      "audio_event_id": "16353746",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_honeyeater/samples/058_audioevent_16353746/crop_bandpass.wav",
+      "source_recording": "1539666",
+      "onset_s": 21.168,
+      "offset_s": 24.768,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9666,
+      "retrieval_score": 1.2166,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9666; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "black_honeyeater_v2_029_9381212",
+      "label": "Black Honeyeater",
+      "event_type": "black_honeyeater",
+      "audio_event_id": "9381212",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_honeyeater/samples/029_audioevent_9381212/crop_bandpass.wav",
+      "source_recording": "445617",
+      "onset_s": 35.637,
+      "offset_s": 39.213,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9794,
+      "retrieval_score": 1.2294,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9794; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "black_honeyeater_v2_099_13618240",
+      "label": "Black Honeyeater",
+      "event_type": "black_honeyeater",
+      "audio_event_id": "13618240",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_honeyeater/samples/099_audioevent_13618240/crop_bandpass.wav",
+      "source_recording": "1539409",
+      "onset_s": 44.143,
+      "offset_s": 47.731,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.9526,
+      "retrieval_score": 1.2026,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9526; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "black_honeyeater",
+    "species_common_name": "Black Honeyeater",
+    "layer_c_only": true
+  }
+}

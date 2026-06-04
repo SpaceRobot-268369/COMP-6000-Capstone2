@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Restless Flycatcher",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.3717983067035675,
+    "rms": 0.009094566106796265,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "restless_flycatcher_v2_008_4326999",
+      "label": "Restless Flycatcher",
+      "event_type": "restless_flycatcher",
+      "audio_event_id": "4326999",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/restless_flycatcher/samples/008_audioevent_4326999/crop_bandpass.wav",
+      "source_recording": "1401013",
+      "onset_s": 6.197,
+      "offset_s": 9.785,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.6451,
+      "retrieval_score": 0.6951,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.6451; diel fallback morning->dawn; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "restless_flycatcher_v2_006_12359730",
+      "label": "Restless Flycatcher",
+      "event_type": "restless_flycatcher",
+      "audio_event_id": "12359730",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/restless_flycatcher/samples/006_audioevent_12359730/crop_bandpass.wav",
+      "source_recording": "1535975",
+      "onset_s": 21.18,
+      "offset_s": 24.779,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.6698,
+      "retrieval_score": 0.7198,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6698; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "restless_flycatcher_v2_004_4326947",
+      "label": "Restless Flycatcher",
+      "event_type": "restless_flycatcher",
+      "audio_event_id": "4326947",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/restless_flycatcher/samples/004_audioevent_4326947/crop_bandpass.wav",
+      "source_recording": "1401013",
+      "onset_s": 35.649,
+      "offset_s": 39.242,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.7271,
+      "retrieval_score": 0.7771,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.7271; diel fallback morning->dawn; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "restless_flycatcher_v2_003_4326942",
+      "label": "Restless Flycatcher",
+      "event_type": "restless_flycatcher",
+      "audio_event_id": "4326942",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/restless_flycatcher/samples/003_audioevent_4326942/crop_bandpass.wav",
+      "source_recording": "1401013",
+      "onset_s": 44.172,
+      "offset_s": 47.737,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8048,
+      "retrieval_score": 0.8548,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8048; diel fallback morning->dawn; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "restless_flycatcher",
+    "species_common_name": "Restless Flycatcher",
+    "layer_c_only": true
+  }
+}

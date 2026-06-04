@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Yellow-throated Miner",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.16461704671382904,
+    "rms": 0.0099074961617589,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "yellow_throated_miner_v2_002_19244112",
+      "label": "Yellow-throated Miner",
+      "event_type": "yellow_throated_miner",
+      "audio_event_id": "19244112",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/yellow_throated_miner/samples/002_audioevent_19244112/crop_bandpass.wav",
+      "source_recording": "1672079",
+      "onset_s": 6.197,
+      "offset_s": 9.785,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9418,
+      "retrieval_score": 0.9918,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9418; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "yellow_throated_miner_v2_007_23798962",
+      "label": "Yellow-throated Miner",
+      "event_type": "yellow_throated_miner",
+      "audio_event_id": "23798962",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/yellow_throated_miner/samples/007_audioevent_23798962/crop_bandpass.wav",
+      "source_recording": "1677344",
+      "onset_s": 21.18,
+      "offset_s": 24.756,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.8746,
+      "retrieval_score": 1.1246,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8746; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "yellow_throated_miner_v2_006_21662736",
+      "label": "Yellow-throated Miner",
+      "event_type": "yellow_throated_miner",
+      "audio_event_id": "21662736",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/yellow_throated_miner/samples/006_audioevent_21662736/crop_bandpass.wav",
+      "source_recording": "216577",
+      "onset_s": 35.625,
+      "offset_s": 42.197,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.8759,
+      "retrieval_score": 1.1259,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.8759; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "yellow_throated_miner_v2_003_19244111",
+      "label": "Yellow-throated Miner",
+      "event_type": "yellow_throated_miner",
+      "audio_event_id": "19244111",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/yellow_throated_miner/samples/003_audioevent_19244111/crop_bandpass.wav",
+      "source_recording": "1672079",
+      "onset_s": 47.127,
+      "offset_s": 50.691,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.9328,
+      "retrieval_score": 0.9828,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9328; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "yellow_throated_miner",
+    "species_common_name": "Yellow-throated Miner",
+    "layer_c_only": true
+  }
+}

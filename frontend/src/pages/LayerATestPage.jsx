@@ -20,6 +20,7 @@ const WEATHER_INTENSITY_OPTIONS = [
 
 const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
 const ANALYSIS_LAYER_IDS   = ["layer_e"];
+const LAYER_C_RETRIEVAL_ATTEMPT = "burger__mvp_2__retrieval_v2_library";
 
 export default function LayerATestPage({
   mode = "generation",
@@ -45,6 +46,7 @@ export default function LayerATestPage({
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
   const [weatherDuration, setWeatherDuration] = useState(10);
+  const [species, setSpecies] = useState("");
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -110,6 +112,8 @@ export default function LayerATestPage({
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherControls = layerId === "layer_b";
+  const usesLayerCRetrievalControls =
+    layerId === "layer_c" && attemptId === LAYER_C_RETRIEVAL_ATTEMPT;
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
@@ -150,6 +154,33 @@ export default function LayerATestPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [season, usesCells]);
 
+  const speciesOptions = useMemo(() => {
+    if (!usesLayerCRetrievalControls || !samples?.expected?.length) return [];
+    const seen = new Map();
+    for (const sample of samples.expected) {
+      const commonName = sample.metadata?.expected_sample?.species_common_name
+        || sample.metadata?.species;
+      if (!commonName) continue;
+      seen.set(commonName, {
+        value: commonName,
+        label: commonName,
+        stem: sample.stem,
+      });
+    }
+    return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [samples, usesLayerCRetrievalControls]);
+
+  useEffect(() => {
+    if (!usesLayerCRetrievalControls) {
+      setSpecies("");
+      return;
+    }
+    if (!speciesOptions.length) return;
+    if (!speciesOptions.some((option) => option.value === species)) {
+      setSpecies(speciesOptions[0].value);
+    }
+  }, [speciesOptions, species, usesLayerCRetrievalControls]);
+
   // Flatten cached samples in display order (expected first, then showcase).
   // For bank attempts (uses_cells), filter to entries whose `cell` matches the
   // currently selected (season, diel) so the Expected panel mirrors the run.
@@ -163,6 +194,11 @@ export default function LayerATestPage({
     return tiers.flatMap((t) =>
       t.entries
         .filter((s) => {
+          if (usesLayerCRetrievalControls && species) {
+            const sampleSpecies = s.metadata?.expected_sample?.species_common_name
+              || s.metadata?.species;
+            return sampleSpecies === species;
+          }
           if (!activeCell) return true;
           // Cell-grouped entries match the active cell; cell-less entries
           // (e.g. legacy flat samples) are kept as-is.
@@ -174,7 +210,7 @@ export default function LayerATestPage({
           key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
         })),
     );
-  }, [samples, usesCells, season, diel]);
+  }, [samples, usesCells, season, diel, usesLayerCRetrievalControls, species]);
 
   // Auto-select the first expected sample when entries change.
   useEffect(() => {
@@ -232,6 +268,10 @@ export default function LayerATestPage({
         runParams.intensity = weatherIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
       }
+      if (usesLayerCRetrievalControls) {
+        runParams.species = species;
+        runParams.layer_c_only = true;
+      }
       const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
       setStatus("done");
@@ -260,7 +300,10 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
+  const speciesTag = usesLayerCRetrievalControls && species
+    ? `__${slugify(species)}`
+    : "";
+  const tag       = `${layerId}__${attemptId}${speciesTag}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -408,6 +451,28 @@ export default function LayerATestPage({
                 </section>
               )}
 
+              {usesLayerCRetrievalControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Species
+                    {species && (
+                      <span className="dev-controls-section-pill">
+                        Layer C only
+                      </span>
+                    )}
+                  </p>
+                  <div className="dev-controls-section-grid">
+                    <LabeledSelect
+                      label="Bird species"
+                      value={species}
+                      onChange={setSpecies}
+                      options={speciesOptions}
+                      disabled={!speciesOptions.length}
+                    />
+                  </div>
+                </section>
+              )}
+
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
@@ -509,7 +574,9 @@ export default function LayerATestPage({
           <div className="generation-card-head">
             <h2>Expected Results</h2>
             <p>
-              {samples?.canonical_seed != null
+              {usesLayerCRetrievalControls && species
+                ? `${species} · Layer C only expected sample`
+                : samples?.canonical_seed != null
                 ? `Cached samples · canonical seed ${samples.canonical_seed}`
                 : "Cached expected / showcase samples"}
             </p>
@@ -791,12 +858,13 @@ function LabeledNumber({ label, value, min, max, step = 1, hint, onChange, disab
   );
 }
 
-function LabeledSelect({ label, value, options, onChange }) {
+function LabeledSelect({ label, value, options, onChange, disabled = false }) {
   return (
     <label className="layer-a-field">
       <span>{label}</span>
       <select className="layer-a-input"
               value={value}
+              disabled={disabled}
               onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -804,6 +872,14 @@ function LabeledSelect({ label, value, options, onChange }) {
       </select>
     </label>
   );
+}
+
+function slugify(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function getProgressText(progress, status) {

@@ -123,6 +123,10 @@ class GenerateRequest(BaseModel):
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
     duration_s: Optional[float] = None
+    # Layer C retrieval controls. Other attempts ignore these.
+    species: Optional[str] = None
+    count: Optional[int] = None
+    layer_c_only: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +173,9 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
             weather_type=body.weather_type,
             intensity=body.intensity,
             duration_s=body.duration_s,
+            species=body.species,
+            count=body.count,
+            layer_c_only=body.layer_c_only,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

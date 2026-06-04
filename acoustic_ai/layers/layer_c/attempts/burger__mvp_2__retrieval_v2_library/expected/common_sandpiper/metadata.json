@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Common Sandpiper",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.2879617512226105,
+    "rms": 0.013232271187007427,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "common_sandpiper_v2_072_6514215",
+      "label": "Common Sandpiper",
+      "event_type": "common_sandpiper",
+      "audio_event_id": "6514215",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_sandpiper/samples/072_audioevent_6514215/crop_bandpass.wav",
+      "source_recording": "216369",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.6922,
+      "retrieval_score": 0.9422,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6922; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "common_sandpiper_v2_061_4329199",
+      "label": "Common Sandpiper",
+      "event_type": "common_sandpiper",
+      "audio_event_id": "4329199",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_sandpiper/samples/061_audioevent_4329199/crop_bandpass.wav",
+      "source_recording": "1671454",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.7092,
+      "retrieval_score": 0.9592,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.7092; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "common_sandpiper_v2_057_15184712",
+      "label": "Common Sandpiper",
+      "event_type": "common_sandpiper",
+      "audio_event_id": "15184712",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_sandpiper/samples/057_audioevent_15184712/crop_bandpass.wav",
+      "source_recording": "216430",
+      "onset_s": 35.614,
+      "offset_s": 42.197,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.7188,
+      "retrieval_score": 0.9688,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.7188; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "common_sandpiper_v2_098_7168155",
+      "label": "Common Sandpiper",
+      "event_type": "common_sandpiper",
+      "audio_event_id": "7168155",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_sandpiper/samples/098_audioevent_7168155/crop_bandpass.wav",
+      "source_recording": "1401822",
+      "onset_s": 47.127,
+      "offset_s": 50.715,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.6263,
+      "retrieval_score": 0.7763,
+      "diel_bin": "dawn",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.6263; diel fallback morning->expanded_with_dawn; season match summer; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "common_sandpiper",
+    "species_common_name": "Common Sandpiper",
+    "layer_c_only": true
+  }
+}

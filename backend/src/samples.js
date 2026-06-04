@@ -9,8 +9,8 @@
  * This mirrors the Python `registry.list_samples` scan in
  * acoustic_ai/server/registry.py. Three on-disk layouts are supported:
  *
- *   <tier>/<case>/{audio.wav, spectrogram.png, metadata.json}            ← canonical case-dir
- *   <tier>/<cell>/<case>/{audio.wav, spectrogram.png, metadata.json}     ← bank (uses_cells)
+ *   <tier>/<case>/{audio.wav, mel.png|spectrogram.png, metadata.json}            ← canonical case-dir
+ *   <tier>/<cell>/<case>/{audio.wav, mel.png|spectrogram.png, metadata.json}     ← bank (uses_cells)
  *   <tier>/<stem>.{wav,png,metadata.json}                                ← legacy flat
  *
  * PNG/JSON contents are inlined (small). `wav_url` mirrors the on-disk path so
@@ -47,6 +47,19 @@ function isCaseDir(dir) {
   );
 }
 
+function findPngArtifact(dir) {
+  for (const name of ["mel.png", "spectrogram.png"]) {
+    const full = path.join(dir, name);
+    if (fs.existsSync(full)) {
+      return { full, hasPointerOnly: false };
+    }
+    if (fs.existsSync(`${full}.dvc`)) {
+      return { full, hasPointerOnly: true };
+    }
+  }
+  return null;
+}
+
 function readCaseDir(layer, attempt, tier, caseDir, caseName, cell) {
   const relParts = [tier];
   if (cell) relParts.push(cell);
@@ -72,15 +85,15 @@ function readCaseDir(layer, attempt, tier, caseDir, caseName, cell) {
     entry.wav_url = `/layers/${layer}/attempts/${attempt}/samples/${relWav}`;
   }
 
-  const png = path.join(caseDir, "spectrogram.png");
-  if (fs.existsSync(png)) {
+  const png = findPngArtifact(caseDir);
+  if (png && !png.hasPointerOnly) {
     entry.has_png = true;
     try {
-      entry.png_b64 = fs.readFileSync(png).toString("base64");
+      entry.png_b64 = fs.readFileSync(png.full).toString("base64");
     } catch {
       /* leave null */
     }
-  } else if (fs.existsSync(path.join(caseDir, "spectrogram.png.dvc"))) {
+  } else if (png) {
     entry.has_png = true;
   }
 

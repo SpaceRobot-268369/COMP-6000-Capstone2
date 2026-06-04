@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Gray Shrikethrush",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.3807445466518402,
+    "rms": 0.009994453750550747,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "gray_shrikethrush_v2_027_4549199",
+      "label": "Gray Shrikethrush",
+      "event_type": "gray_shrikethrush",
+      "audio_event_id": "4549199",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_shrikethrush/samples/027_audioevent_4549199/crop_bandpass.wav",
+      "source_recording": "1535932",
+      "onset_s": 6.197,
+      "offset_s": 9.785,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.7537,
+      "retrieval_score": 1.0037,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.7537; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_shrikethrush_v2_030_24019193",
+      "label": "Gray Shrikethrush",
+      "event_type": "gray_shrikethrush",
+      "audio_event_id": "24019193",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_shrikethrush/samples/030_audioevent_24019193/crop_bandpass.wav",
+      "source_recording": "1535741",
+      "onset_s": 21.18,
+      "offset_s": 24.779,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.7427,
+      "retrieval_score": 0.9927,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.7427; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_shrikethrush_v2_017_8086251",
+      "label": "Gray Shrikethrush",
+      "event_type": "gray_shrikethrush",
+      "audio_event_id": "8086251",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_shrikethrush/samples/017_audioevent_8086251/crop_bandpass.wav",
+      "source_recording": "1535798",
+      "onset_s": 35.649,
+      "offset_s": 39.224,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.7985,
+      "retrieval_score": 1.0485,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.7985; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "gray_shrikethrush_v2_015_7780264",
+      "label": "Gray Shrikethrush",
+      "event_type": "gray_shrikethrush",
+      "audio_event_id": "7780264",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/gray_shrikethrush/samples/015_audioevent_7780264/crop_bandpass.wav",
+      "source_recording": "1539689",
+      "onset_s": 44.155,
+      "offset_s": 47.731,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8083,
+      "retrieval_score": 0.8583,
+      "diel_bin": "dawn",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8083; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "gray_shrikethrush",
+    "species_common_name": "Gray Shrikethrush",
+    "layer_c_only": true
+  }
+}

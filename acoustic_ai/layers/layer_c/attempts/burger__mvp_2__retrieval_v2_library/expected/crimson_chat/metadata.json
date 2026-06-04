@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Crimson Chat",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.14104808866977692,
+    "rms": 0.009884247556328773,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "crimson_chat_v2_004_3114625",
+      "label": "Crimson Chat",
+      "event_type": "crimson_chat",
+      "audio_event_id": "3114625",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crimson_chat/samples/004_audioevent_3114625/crop_bandpass.wav",
+      "source_recording": "216375",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.8633,
+      "retrieval_score": 0.9133,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.8633; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "crimson_chat_v2_042_20766831",
+      "label": "Crimson Chat",
+      "event_type": "crimson_chat",
+      "audio_event_id": "20766831",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crimson_chat/samples/042_audioevent_20766831/crop_bandpass.wav",
+      "source_recording": "1402116",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.5925,
+      "retrieval_score": 0.7425,
+      "diel_bin": "dawn",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.5925; diel fallback morning->expanded_with_dawn; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "crimson_chat_v2_016_8156447",
+      "label": "Crimson Chat",
+      "event_type": "crimson_chat",
+      "audio_event_id": "8156447",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crimson_chat/samples/016_audioevent_8156447/crop_bandpass.wav",
+      "source_recording": "216296",
+      "onset_s": 35.614,
+      "offset_s": 39.195,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.6878,
+      "retrieval_score": 0.7378,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6878; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "crimson_chat_v2_023_6598154",
+      "label": "Crimson Chat",
+      "event_type": "crimson_chat",
+      "audio_event_id": "6598154",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crimson_chat/samples/023_audioevent_6598154/crop_bandpass.wav",
+      "source_recording": "215817",
+      "onset_s": 44.126,
+      "offset_s": 47.702,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.6653,
+      "retrieval_score": 0.8153,
+      "diel_bin": "dawn",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.6653; diel fallback morning->expanded_with_dawn; season match summer; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "crimson_chat",
+    "species_common_name": "Crimson Chat",
+    "layer_c_only": true
+  }
+}

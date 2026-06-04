@@ -1,0 +1,148 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Horsfield's Bronze-cuckoo",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.16279682517051697,
+    "rms": 0.012114123441278934,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 5,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "horsfields_bronze_cuckoo_v2_059_21895035",
+      "label": "Horsfield's Bronze-cuckoo",
+      "event_type": "horsfields_bronze_cuckoo",
+      "audio_event_id": "21895035",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/horsfields_bronze_cuckoo/samples/059_audioevent_21895035/crop_bandpass.wav",
+      "source_recording": "1679743",
+      "onset_s": 7.197,
+      "offset_s": 13.757,
+      "gain_db": -3.905,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.1,
+      "confidence": 0.999,
+      "retrieval_score": 1.349,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9990; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "horsfields_bronze_cuckoo_v2_067_4981914",
+      "label": "Horsfield's Bronze-cuckoo",
+      "event_type": "horsfields_bronze_cuckoo",
+      "audio_event_id": "4981914",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/horsfields_bronze_cuckoo/samples/067_audioevent_4981914/crop_bandpass.wav",
+      "source_recording": "1402261",
+      "onset_s": 16.606,
+      "offset_s": 20.181,
+      "gain_db": -6.141,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.139,
+      "confidence": 0.9986,
+      "retrieval_score": 1.3486,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9986; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "horsfields_bronze_cuckoo_v2_051_21894973",
+      "label": "Horsfield's Bronze-cuckoo",
+      "event_type": "horsfields_bronze_cuckoo",
+      "audio_event_id": "21894973",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/horsfields_bronze_cuckoo/samples/051_audioevent_21894973/crop_bandpass.wav",
+      "source_recording": "1679743",
+      "onset_s": 30.999,
+      "offset_s": 37.57,
+      "gain_db": -5.023,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.082,
+      "confidence": 0.9993,
+      "retrieval_score": 1.3493,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9993; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "horsfields_bronze_cuckoo_v2_058_16865536",
+      "label": "Horsfield's Bronze-cuckoo",
+      "event_type": "horsfields_bronze_cuckoo",
+      "audio_event_id": "16865536",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/horsfields_bronze_cuckoo/samples/058_audioevent_16865536/crop_bandpass.wav",
+      "source_recording": "445628",
+      "onset_s": 40.617,
+      "offset_s": 44.193,
+      "gain_db": -4.731,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.082,
+      "confidence": 0.9991,
+      "retrieval_score": 1.2491,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9991; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "horsfields_bronze_cuckoo_v2_088_7261853",
+      "label": "Horsfield's Bronze-cuckoo",
+      "event_type": "horsfields_bronze_cuckoo",
+      "audio_event_id": "7261853",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/horsfields_bronze_cuckoo/samples/088_audioevent_7261853/crop_bandpass.wav",
+      "source_recording": "1539636",
+      "onset_s": 47.19,
+      "offset_s": 50.766,
+      "gain_db": -4.225,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.124,
+      "confidence": 0.9972,
+      "retrieval_score": 1.2472,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9972; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "horsfields_bronze_cuckoo",
+    "species_common_name": "Horsfield's Bronze-cuckoo",
+    "layer_c_only": true
+  }
+}

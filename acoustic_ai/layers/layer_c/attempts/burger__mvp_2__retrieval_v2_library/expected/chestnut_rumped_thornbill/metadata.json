@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Chestnut-rumped Thornbill",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.1840267777442932,
+    "rms": 0.008912383578717709,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "chestnut_rumped_thornbill_v2_050_4549407",
+      "label": "Chestnut-rumped Thornbill",
+      "event_type": "chestnut_rumped_thornbill",
+      "audio_event_id": "4549407",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_rumped_thornbill/samples/050_audioevent_4549407/crop_bandpass.wav",
+      "source_recording": "1535932",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9973,
+      "retrieval_score": 1.2473,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9973; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_rumped_thornbill_v2_058_24019171",
+      "label": "Chestnut-rumped Thornbill",
+      "event_type": "chestnut_rumped_thornbill",
+      "audio_event_id": "24019171",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_rumped_thornbill/samples/058_audioevent_24019171/crop_bandpass.wav",
+      "source_recording": "1535741",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9962,
+      "retrieval_score": 1.2462,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9962; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_rumped_thornbill_v2_100_11235072",
+      "label": "Chestnut-rumped Thornbill",
+      "event_type": "chestnut_rumped_thornbill",
+      "audio_event_id": "11235072",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_rumped_thornbill/samples/100_audioevent_11235072/crop_bandpass.wav",
+      "source_recording": "1676865",
+      "onset_s": 35.614,
+      "offset_s": 39.184,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.992,
+      "retrieval_score": 1.342,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9920; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_rumped_thornbill_v2_085_11829667",
+      "label": "Chestnut-rumped Thornbill",
+      "event_type": "chestnut_rumped_thornbill",
+      "audio_event_id": "11829667",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_rumped_thornbill/samples/085_audioevent_11829667/crop_bandpass.wav",
+      "source_recording": "1536776",
+      "onset_s": 44.114,
+      "offset_s": 47.714,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.9935,
+      "retrieval_score": 1.2435,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9935; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "chestnut_rumped_thornbill",
+    "species_common_name": "Chestnut-rumped Thornbill",
+    "layer_c_only": true
+  }
+}

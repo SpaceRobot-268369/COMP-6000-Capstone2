@@ -1,0 +1,513 @@
+{
+  "seed": 42,
+  "season": "summer",
+  "diel": "morning",
+  "count": 63,
+  "failed": [],
+  "samples": [
+    {
+      "slug": "australian_raven",
+      "species": "Australian Raven",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "australian_ringneck",
+      "species": "Australian Ringneck",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "banded_lapwing",
+      "species": "Banded Lapwing",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "barn_owl",
+      "species": "Barn Owl",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "black_eared_cuckoo",
+      "species": "Black-eared Cuckoo",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "black_faced_cuckooshrike",
+      "species": "Black-faced Cuckooshrike",
+      "selected_count": 6,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "black_honeyeater",
+      "species": "Black Honeyeater",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "brown_falcon",
+      "species": "Brown Falcon",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "budgerigar",
+      "species": "Budgerigar",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "chestnut_breasted_quail_thrush",
+      "species": "Chestnut-breasted Quail-thrush",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "chestnut_crowned_babbler",
+      "species": "Chestnut-crowned Babbler",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "chestnut_rumped_thornbill",
+      "species": "Chestnut-rumped Thornbill",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "cockatiel",
+      "species": "Cockatiel",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "common_bronzewing",
+      "species": "Common Bronzewing",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "common_greenshank",
+      "species": "Common Greenshank",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "common_sandpiper",
+      "species": "Common Sandpiper",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "crested_bellbird",
+      "species": "Crested Bellbird",
+      "selected_count": 3,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "crimson_chat",
+      "species": "Crimson Chat",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "eastern_spinebill",
+      "species": "Eastern Spinebill",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "eurasian_coot",
+      "species": "Eurasian Coot",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "gilberts_whistler",
+      "species": "Gilbert's Whistler",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "gray_butcherbird",
+      "species": "Gray Butcherbird",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "gray_fantail",
+      "species": "Gray Fantail",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "gray_shrikethrush",
+      "species": "Gray Shrikethrush",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "horsfields_bronze_cuckoo",
+      "species": "Horsfield's Bronze-cuckoo",
+      "selected_count": 5,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "inland_thornbill",
+      "species": "Inland Thornbill",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "masked_woodswallow",
+      "species": "Masked Woodswallow",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "mulga_parrot",
+      "species": "Mulga Parrot",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "osprey",
+      "species": "Osprey",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "pacific_swift",
+      "species": "Pacific Swift",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "pallid_cuckoo",
+      "species": "Pallid Cuckoo",
+      "selected_count": 6,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "pied_honeyeater",
+      "species": "Pied Honeyeater",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "pink_cockatoo",
+      "species": "Pink Cockatoo",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "purple_backed_fairywren",
+      "species": "Purple-backed Fairywren",
+      "selected_count": 8,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "red_backed_fairywren",
+      "species": "Red-backed Fairywren",
+      "selected_count": 8,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "red_browed_firetail",
+      "species": "Red-browed Firetail",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "red_browed_pardalote",
+      "species": "Red-browed Pardalote",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "red_capped_robin",
+      "species": "Red-capped Robin",
+      "selected_count": 3,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "red_winged_parrot",
+      "species": "Red-winged Parrot",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "restless_flycatcher",
+      "species": "Restless Flycatcher",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "rufous_songlark",
+      "species": "Rufous Songlark",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "scarlet_myzomela",
+      "species": "Scarlet Myzomela",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "singing_honeyeater",
+      "species": "Singing Honeyeater",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "southern_scrub_robin",
+      "species": "Southern Scrub-Robin",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "spiny_cheeked_honeyeater",
+      "species": "Spiny-cheeked Honeyeater",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "splendid_fairywren",
+      "species": "Splendid Fairywren",
+      "selected_count": 8,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "spotted_dove",
+      "species": "Spotted Dove",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "spotted_nightjar",
+      "species": "Spotted Nightjar",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "spotted_quail_thrush",
+      "species": "Spotted Quail-thrush",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "superb_fairywren",
+      "species": "Superb Fairywren",
+      "selected_count": 6,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "tawny_frogmouth",
+      "species": "Tawny Frogmouth",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "weebill",
+      "species": "Weebill",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "whimbrel",
+      "species": "Whimbrel",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "white_breasted_woodswallow",
+      "species": "White-breasted Woodswallow",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "white_browed_woodswallow",
+      "species": "White-browed Woodswallow",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "white_throated_nightjar",
+      "species": "White-throated Nightjar",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "white_winged_fairywren",
+      "species": "White-winged Fairywren",
+      "selected_count": 8,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "white_winged_triller",
+      "species": "White-winged Triller",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "willie_wagtail",
+      "species": "Willie Wagtail",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "wood_sandpiper",
+      "species": "Wood Sandpiper",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "yellow_rumped_thornbill",
+      "species": "Yellow-rumped Thornbill",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "yellow_throated_miner",
+      "species": "Yellow-throated Miner",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    },
+    {
+      "slug": "zebra_finch",
+      "species": "Zebra Finch",
+      "selected_count": 4,
+      "duration_s": 60.0,
+      "sample_rate": 22050,
+      "contains_ambient_bed": false
+    }
+  ]
+}

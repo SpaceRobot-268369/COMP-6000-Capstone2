@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Budgerigar",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.34925544261932373,
+    "rms": 0.009823006577789783,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "budgerigar_v2_035_15911538",
+      "label": "Budgerigar",
+      "event_type": "budgerigar",
+      "audio_event_id": "15911538",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/budgerigar/samples/035_audioevent_15911538/crop_bandpass.wav",
+      "source_recording": "1402309",
+      "onset_s": 6.197,
+      "offset_s": 9.785,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9896,
+      "retrieval_score": 1.3396,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9896; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "budgerigar_v2_049_11406585",
+      "label": "Budgerigar",
+      "event_type": "budgerigar",
+      "audio_event_id": "11406585",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/budgerigar/samples/049_audioevent_11406585/crop_bandpass.wav",
+      "source_recording": "215927",
+      "onset_s": 21.18,
+      "offset_s": 24.756,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9841,
+      "retrieval_score": 1.3341,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9841; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "budgerigar_v2_019_17020795",
+      "label": "Budgerigar",
+      "event_type": "budgerigar",
+      "audio_event_id": "17020795",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/budgerigar/samples/019_audioevent_17020795/crop_bandpass.wav",
+      "source_recording": "215938",
+      "onset_s": 35.625,
+      "offset_s": 39.19,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9933,
+      "retrieval_score": 1.3433,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9933; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "budgerigar_v2_077_18078343",
+      "label": "Budgerigar",
+      "event_type": "budgerigar",
+      "audio_event_id": "18078343",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/budgerigar/samples/077_audioevent_18078343/crop_bandpass.wav",
+      "source_recording": "1402129",
+      "onset_s": 44.12,
+      "offset_s": 47.696,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.971,
+      "retrieval_score": 1.321,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9710; exact diel match morning; season match summer; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "budgerigar",
+    "species_common_name": "Budgerigar",
+    "layer_c_only": true
+  }
+}

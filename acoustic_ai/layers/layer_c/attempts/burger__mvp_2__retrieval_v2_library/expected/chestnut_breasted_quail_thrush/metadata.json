@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Chestnut-breasted Quail-thrush",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.12020625174045563,
+    "rms": 0.009550160728394985,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "chestnut_breasted_quail_thrush_v2_048_7482935",
+      "label": "Chestnut-breasted Quail-thrush",
+      "event_type": "chestnut_breasted_quail_thrush",
+      "audio_event_id": "7482935",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_breasted_quail_thrush/samples/048_audioevent_7482935/crop_bandpass.wav",
+      "source_recording": "216527",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9851,
+      "retrieval_score": 1.2351,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9851; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_breasted_quail_thrush_v2_057_5251244",
+      "label": "Chestnut-breasted Quail-thrush",
+      "event_type": "chestnut_breasted_quail_thrush",
+      "audio_event_id": "5251244",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_breasted_quail_thrush/samples/057_audioevent_5251244/crop_bandpass.wav",
+      "source_recording": "4974",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9787,
+      "retrieval_score": 1.2287,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9787; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_breasted_quail_thrush_v2_033_7482911",
+      "label": "Chestnut-breasted Quail-thrush",
+      "event_type": "chestnut_breasted_quail_thrush",
+      "audio_event_id": "7482911",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_breasted_quail_thrush/samples/033_audioevent_7482911/crop_bandpass.wav",
+      "source_recording": "216527",
+      "onset_s": 35.614,
+      "offset_s": 39.19,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.993,
+      "retrieval_score": 1.243,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9930; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "chestnut_breasted_quail_thrush_v2_045_6598288",
+      "label": "Chestnut-breasted Quail-thrush",
+      "event_type": "chestnut_breasted_quail_thrush",
+      "audio_event_id": "6598288",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/chestnut_breasted_quail_thrush/samples/045_audioevent_6598288/crop_bandpass.wav",
+      "source_recording": "215817",
+      "onset_s": 44.12,
+      "offset_s": 47.696,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.9858,
+      "retrieval_score": 1.1358,
+      "diel_bin": "dawn",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9858; diel fallback morning->expanded_with_dawn; season match summer; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "chestnut_breasted_quail_thrush",
+    "species_common_name": "Chestnut-breasted Quail-thrush",
+    "layer_c_only": true
+  }
+}

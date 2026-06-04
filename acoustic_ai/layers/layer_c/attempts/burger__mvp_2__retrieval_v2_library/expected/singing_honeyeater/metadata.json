@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Singing Honeyeater",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.37349846959114075,
+    "rms": 0.013317259959876537,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "singing_honeyeater_v2_003_22785882",
+      "label": "Singing Honeyeater",
+      "event_type": "singing_honeyeater",
+      "audio_event_id": "22785882",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/singing_honeyeater/samples/003_audioevent_22785882/crop_bandpass.wav",
+      "source_recording": "1400940",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.8584,
+      "retrieval_score": 0.9084,
+      "diel_bin": "afternoon",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8584; diel fallback morning->expanded_with_any; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "singing_honeyeater_v2_005_22991102",
+      "label": "Singing Honeyeater",
+      "event_type": "singing_honeyeater",
+      "audio_event_id": "22991102",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/singing_honeyeater/samples/005_audioevent_22991102/crop_bandpass.wav",
+      "source_recording": "1539339",
+      "onset_s": 21.168,
+      "offset_s": 24.756,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.8079,
+      "retrieval_score": 1.0579,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8079; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "singing_honeyeater_v2_006_18264812",
+      "label": "Singing Honeyeater",
+      "event_type": "singing_honeyeater",
+      "audio_event_id": "18264812",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/singing_honeyeater/samples/006_audioevent_18264812/crop_bandpass.wav",
+      "source_recording": "1401581",
+      "onset_s": 35.625,
+      "offset_s": 39.213,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.8062,
+      "retrieval_score": 0.8562,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8062; diel fallback morning->expanded_with_any; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "singing_honeyeater_v2_004_22991101",
+      "label": "Singing Honeyeater",
+      "event_type": "singing_honeyeater",
+      "audio_event_id": "22991101",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/singing_honeyeater/samples/004_audioevent_22991101/crop_bandpass.wav",
+      "source_recording": "1539339",
+      "onset_s": 44.143,
+      "offset_s": 47.719,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8478,
+      "retrieval_score": 1.0978,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8478; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "singing_honeyeater",
+    "species_common_name": "Singing Honeyeater",
+    "layer_c_only": true
+  }
+}

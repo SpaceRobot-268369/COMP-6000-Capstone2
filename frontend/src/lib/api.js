@@ -145,7 +145,18 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
+  {
+    seed,
+    retrieval_seed,
+    season,
+    diel,
+    weather_type,
+    intensity,
+    duration_s,
+    species,
+    count,
+    layer_c_only,
+  } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -157,6 +168,9 @@ export async function generateAttempt(
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
   if (duration_s) payload.duration_s = duration_s;
+  if (species) payload.species = species;
+  if (count !== undefined) payload.count = count;
+  if (layer_c_only !== undefined) payload.layer_c_only = layer_c_only;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {

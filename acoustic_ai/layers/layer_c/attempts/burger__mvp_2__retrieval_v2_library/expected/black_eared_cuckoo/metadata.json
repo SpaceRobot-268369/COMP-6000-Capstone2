@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Black-eared Cuckoo",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.23413506150245667,
+    "rms": 0.012579468078911304,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "black_eared_cuckoo_v2_019_7780234",
+      "label": "Black-eared Cuckoo",
+      "event_type": "black_eared_cuckoo",
+      "audio_event_id": "7780234",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_eared_cuckoo/samples/019_audioevent_7780234/crop_bandpass.wav",
+      "source_recording": "1539689",
+      "onset_s": 7.197,
+      "offset_s": 10.773,
+      "gain_db": -3.905,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.1,
+      "confidence": 0.6035,
+      "retrieval_score": 0.6535,
+      "diel_bin": "dawn",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.6035; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "black_eared_cuckoo_v2_040_24019199",
+      "label": "Black-eared Cuckoo",
+      "event_type": "black_eared_cuckoo",
+      "audio_event_id": "24019199",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_eared_cuckoo/samples/040_audioevent_24019199/crop_bandpass.wav",
+      "source_recording": "1535741",
+      "onset_s": 13.622,
+      "offset_s": 23.212,
+      "gain_db": -6.141,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.139,
+      "confidence": 0.8286,
+      "retrieval_score": 1.0286,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8286; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "black_eared_cuckoo_v2_024_1269280",
+      "label": "Black-eared Cuckoo",
+      "event_type": "black_eared_cuckoo",
+      "audio_event_id": "1269280",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_eared_cuckoo/samples/024_audioevent_1269280/crop_bandpass.wav",
+      "source_recording": "1535708",
+      "onset_s": 34.029,
+      "offset_s": 37.605,
+      "gain_db": -5.023,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.082,
+      "confidence": 0.5395,
+      "retrieval_score": 0.7895,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.5395; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "black_eared_cuckoo_v2_039_24019197",
+      "label": "Black-eared Cuckoo",
+      "event_type": "black_eared_cuckoo",
+      "audio_event_id": "24019197",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/black_eared_cuckoo/samples/039_audioevent_24019197/crop_bandpass.wav",
+      "source_recording": "1535741",
+      "onset_s": 40.652,
+      "offset_s": 50.224,
+      "gain_db": -4.731,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.082,
+      "confidence": 0.8288,
+      "retrieval_score": 1.0288,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8288; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "black_eared_cuckoo",
+    "species_common_name": "Black-eared Cuckoo",
+    "layer_c_only": true
+  }
+}

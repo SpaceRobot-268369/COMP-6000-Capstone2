@@ -245,8 +245,8 @@ def _is_case_dir(d: Path) -> bool:
 def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
                    case: Path, *, cell: str | None) -> dict:
     """Build one sample entry from a case sub-directory (canonical layout
-    per conventions.md §2.6). Reads audio.wav / .wav.dvc, spectrogram.png /
-    .png.dvc and metadata.json / .json.dvc.
+    per conventions.md §2.6). Reads audio.wav / .wav.dvc, mel.png or
+    spectrogram.png / .png.dvc, and metadata.json / .json.dvc.
 
     `wav_url` mirrors the on-disk path so the frontend doesn't have to know
     the layout — it just resolves the returned URL.
@@ -275,14 +275,18 @@ def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
             f"/layers/{layer_id}/attempts/{attempt_id}/samples/{rel_wav}"
         )
 
-    png = case / "spectrogram.png"
+    png = case / "mel.png"
+    png_dvc = case / "mel.png.dvc"
+    if not png.is_file() and not png_dvc.is_file():
+        png = case / "spectrogram.png"
+        png_dvc = case / "spectrogram.png.dvc"
     if png.is_file():
         entry["has_png"] = True
         try:
             entry["png_b64"] = _b64.b64encode(png.read_bytes()).decode("ascii")
         except OSError:
             pass
-    elif (case / "spectrogram.png.dvc").is_file():
+    elif png_dvc.is_file():
         entry["has_png"] = True
 
     md = case / "metadata.json"

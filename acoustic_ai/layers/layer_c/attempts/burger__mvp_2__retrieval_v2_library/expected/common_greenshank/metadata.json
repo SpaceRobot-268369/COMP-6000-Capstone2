@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Common Greenshank",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.38080546259880066,
+    "rms": 0.01243620365858078,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "common_greenshank_v2_047_2162130",
+      "label": "Common Greenshank",
+      "event_type": "common_greenshank",
+      "audio_event_id": "2162130",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_greenshank/samples/047_audioevent_2162130/crop_bandpass.wav",
+      "source_recording": "1536026",
+      "onset_s": 6.197,
+      "offset_s": 9.761,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.8116,
+      "retrieval_score": 1.0616,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8116; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "common_greenshank_v2_001_9074589",
+      "label": "Common Greenshank",
+      "event_type": "common_greenshank",
+      "audio_event_id": "9074589",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_greenshank/samples/001_audioevent_9074589/crop_bandpass.wav",
+      "source_recording": "5518",
+      "onset_s": 21.157,
+      "offset_s": 24.733,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9886,
+      "retrieval_score": 1.0386,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9886; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "common_greenshank_v2_057_12989493",
+      "label": "Common Greenshank",
+      "event_type": "common_greenshank",
+      "audio_event_id": "12989493",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_greenshank/samples/057_audioevent_12989493/crop_bandpass.wav",
+      "source_recording": "215960",
+      "onset_s": 35.602,
+      "offset_s": 39.178,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.7956,
+      "retrieval_score": 1.1456,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.7956; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "common_greenshank_v2_042_763607",
+      "label": "Common Greenshank",
+      "event_type": "common_greenshank",
+      "audio_event_id": "763607",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/common_greenshank/samples/042_audioevent_763607/crop_bandpass.wav",
+      "source_recording": "1677114",
+      "onset_s": 44.109,
+      "offset_s": 47.685,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8248,
+      "retrieval_score": 0.8748,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8248; diel fallback morning->expanded_with_dawn; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "common_greenshank",
+    "species_common_name": "Common Greenshank",
+    "layer_c_only": true
+  }
+}

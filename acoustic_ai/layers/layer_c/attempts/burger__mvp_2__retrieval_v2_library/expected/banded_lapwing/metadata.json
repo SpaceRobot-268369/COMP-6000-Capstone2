@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Banded Lapwing",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.19966496527194977,
+    "rms": 0.011023333296179771,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "banded_lapwing_v2_007_21697299",
+      "label": "Banded Lapwing",
+      "event_type": "banded_lapwing",
+      "audio_event_id": "21697299",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/banded_lapwing/samples/007_audioevent_21697299/crop_bandpass.wav",
+      "source_recording": "1681639",
+      "onset_s": 6.197,
+      "offset_s": 12.768,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.6391,
+      "retrieval_score": 0.6891,
+      "diel_bin": "night",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6391; diel fallback morning->expanded_with_any; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "banded_lapwing_v2_004_22278691",
+      "label": "Banded Lapwing",
+      "event_type": "banded_lapwing",
+      "audio_event_id": "22278691",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/banded_lapwing/samples/004_audioevent_22278691/crop_bandpass.wav",
+      "source_recording": "1680365",
+      "onset_s": 24.164,
+      "offset_s": 27.74,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.7906,
+      "retrieval_score": 1.0406,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.7906; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "banded_lapwing_v2_003_5100238",
+      "label": "Banded Lapwing",
+      "event_type": "banded_lapwing",
+      "audio_event_id": "5100238",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/banded_lapwing/samples/003_audioevent_5100238/crop_bandpass.wav",
+      "source_recording": "1402026",
+      "onset_s": 38.609,
+      "offset_s": 42.185,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9108,
+      "retrieval_score": 1.0608,
+      "diel_bin": "night",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.9108; diel fallback morning->expanded_with_any; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "banded_lapwing_v2_008_11372921",
+      "label": "Banded Lapwing",
+      "event_type": "banded_lapwing",
+      "audio_event_id": "11372921",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/banded_lapwing/samples/008_audioevent_11372921/crop_bandpass.wav",
+      "source_recording": "5454",
+      "onset_s": 47.116,
+      "offset_s": 50.691,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.5947,
+      "retrieval_score": 0.6447,
+      "diel_bin": "night",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.5947; diel fallback morning->expanded_with_any; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "banded_lapwing",
+    "species_common_name": "Banded Lapwing",
+    "layer_c_only": true
+  }
+}

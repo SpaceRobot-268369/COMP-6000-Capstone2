@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Red-winged Parrot",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.3546106815338135,
+    "rms": 0.009139236062765121,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "red_winged_parrot_v2_003_7603965",
+      "label": "Red-winged Parrot",
+      "event_type": "red_winged_parrot",
+      "audio_event_id": "7603965",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/red_winged_parrot/samples/003_audioevent_7603965/crop_bandpass.wav",
+      "source_recording": "1670662",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.7943,
+      "retrieval_score": 0.8443,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.7943; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "red_winged_parrot_v2_010_16705731",
+      "label": "Red-winged Parrot",
+      "event_type": "red_winged_parrot",
+      "audio_event_id": "16705731",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/red_winged_parrot/samples/010_audioevent_16705731/crop_bandpass.wav",
+      "source_recording": "1535599",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.5943,
+      "retrieval_score": 0.6443,
+      "diel_bin": "dawn",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.5943; diel fallback morning->dawn; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "red_winged_parrot_v2_008_7603971",
+      "label": "Red-winged Parrot",
+      "event_type": "red_winged_parrot",
+      "audio_event_id": "7603971",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/red_winged_parrot/samples/008_audioevent_7603971/crop_bandpass.wav",
+      "source_recording": "1670662",
+      "onset_s": 35.614,
+      "offset_s": 39.195,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.6355,
+      "retrieval_score": 0.6855,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6355; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "red_winged_parrot_v2_002_19059581",
+      "label": "Red-winged Parrot",
+      "event_type": "red_winged_parrot",
+      "audio_event_id": "19059581",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/red_winged_parrot/samples/002_audioevent_19059581/crop_bandpass.wav",
+      "source_recording": "1678363",
+      "onset_s": 44.126,
+      "offset_s": 47.714,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8179,
+      "retrieval_score": 0.8679,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.8179; diel fallback morning->dawn; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "red_winged_parrot",
+    "species_common_name": "Red-winged Parrot",
+    "layer_c_only": true
+  }
+}

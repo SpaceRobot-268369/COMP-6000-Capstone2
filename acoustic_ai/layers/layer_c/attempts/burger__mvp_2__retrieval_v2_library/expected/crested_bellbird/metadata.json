@@ -1,0 +1,110 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Crested Bellbird",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.18347831070423126,
+    "rms": 0.010370418429374695,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 3,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "crested_bellbird_v2_058_16889022",
+      "label": "Crested Bellbird",
+      "event_type": "crested_bellbird",
+      "audio_event_id": "16889022",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crested_bellbird/samples/058_audioevent_16889022/crop_bandpass.wav",
+      "source_recording": "1668602",
+      "onset_s": 6.197,
+      "offset_s": 12.768,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9966,
+      "retrieval_score": 1.2466,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9966; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "crested_bellbird_v2_072_21728526",
+      "label": "Crested Bellbird",
+      "event_type": "crested_bellbird",
+      "audio_event_id": "21728526",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crested_bellbird/samples/072_audioevent_21728526/crop_bandpass.wav",
+      "source_recording": "1672898",
+      "onset_s": 24.164,
+      "offset_s": 27.74,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9957,
+      "retrieval_score": 1.2457,
+      "diel_bin": "morning",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9957; exact diel match morning; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "crested_bellbird_v2_045_12305067",
+      "label": "Crested Bellbird",
+      "event_type": "crested_bellbird",
+      "audio_event_id": "12305067",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/crested_bellbird/samples/045_audioevent_12305067/crop_bandpass.wav",
+      "source_recording": "1677374",
+      "onset_s": 38.609,
+      "offset_s": 42.185,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9985,
+      "retrieval_score": 1.2485,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9985; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "crested_bellbird",
+    "species_common_name": "Crested Bellbird",
+    "layer_c_only": true
+  }
+}

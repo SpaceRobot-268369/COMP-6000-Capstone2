@@ -1,0 +1,5 @@
+outs:
+- md5: f2dd4038987f6a6c410834f537eb69f1
+  size: 2646044
+  hash: md5
+  path: audio.wav

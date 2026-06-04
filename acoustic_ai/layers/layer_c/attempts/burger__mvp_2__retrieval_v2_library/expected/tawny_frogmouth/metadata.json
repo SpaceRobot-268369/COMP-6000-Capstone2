@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Tawny Frogmouth",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.11948445439338684,
+    "rms": 0.010376309975981712,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "tawny_frogmouth_v2_017_5902060",
+      "label": "Tawny Frogmouth",
+      "event_type": "tawny_frogmouth",
+      "audio_event_id": "5902060",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/tawny_frogmouth/samples/017_audioevent_5902060/crop_bandpass.wav",
+      "source_recording": "1403159",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.9752,
+      "retrieval_score": 1.0252,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9752; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "tawny_frogmouth_v2_081_16093018",
+      "label": "Tawny Frogmouth",
+      "event_type": "tawny_frogmouth",
+      "audio_event_id": "16093018",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/tawny_frogmouth/samples/081_audioevent_16093018/crop_bandpass.wav",
+      "source_recording": "1401816",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.7087,
+      "retrieval_score": 0.8587,
+      "diel_bin": "dawn",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.7087; diel fallback morning->dawn; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "tawny_frogmouth_v2_019_5902055",
+      "label": "Tawny Frogmouth",
+      "event_type": "tawny_frogmouth",
+      "audio_event_id": "5902055",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/tawny_frogmouth/samples/019_audioevent_5902055/crop_bandpass.wav",
+      "source_recording": "1403159",
+      "onset_s": 35.614,
+      "offset_s": 42.185,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9706,
+      "retrieval_score": 1.0206,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.9706; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "tawny_frogmouth_v2_084_6893081",
+      "label": "Tawny Frogmouth",
+      "event_type": "tawny_frogmouth",
+      "audio_event_id": "6893081",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/tawny_frogmouth/samples/084_audioevent_6893081/crop_bandpass.wav",
+      "source_recording": "1535968",
+      "onset_s": 47.116,
+      "offset_s": 50.691,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.6937,
+      "retrieval_score": 0.7437,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6937; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "tawny_frogmouth",
+    "species_common_name": "Tawny Frogmouth",
+    "layer_c_only": true
+  }
+}

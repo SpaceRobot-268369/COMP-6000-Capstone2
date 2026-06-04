@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "White-throated Nightjar",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.16103675961494446,
+    "rms": 0.011759016662836075,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "white_throated_nightjar_v2_051_1454177",
+      "label": "White-throated Nightjar",
+      "event_type": "white_throated_nightjar",
+      "audio_event_id": "1454177",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/white_throated_nightjar/samples/051_audioevent_1454177/crop_bandpass.wav",
+      "source_recording": "1535419",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.6683,
+      "retrieval_score": 0.7183,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6683; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "white_throated_nightjar_v2_049_8156344",
+      "label": "White-throated Nightjar",
+      "event_type": "white_throated_nightjar",
+      "audio_event_id": "8156344",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/white_throated_nightjar/samples/049_audioevent_8156344/crop_bandpass.wav",
+      "source_recording": "216296",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.6737,
+      "retrieval_score": 0.7237,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6737; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "white_throated_nightjar_v2_065_1454190",
+      "label": "White-throated Nightjar",
+      "event_type": "white_throated_nightjar",
+      "audio_event_id": "1454190",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/white_throated_nightjar/samples/065_audioevent_1454190/crop_bandpass.wav",
+      "source_recording": "1535419",
+      "onset_s": 35.614,
+      "offset_s": 39.178,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.6195,
+      "retrieval_score": 0.6695,
+      "diel_bin": "dawn",
+      "season": "autumn",
+      "selection_reason": "BirdNET score 0.6195; diel fallback morning->dawn; season fallback requested=summer source=autumn; verdict Pass"
+    },
+    {
+      "snippet_id": "white_throated_nightjar_v2_080_2518327",
+      "label": "White-throated Nightjar",
+      "event_type": "white_throated_nightjar",
+      "audio_event_id": "2518327",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/white_throated_nightjar/samples/080_audioevent_2518327/crop_bandpass.wav",
+      "source_recording": "445612",
+      "onset_s": 44.109,
+      "offset_s": 47.685,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.5861,
+      "retrieval_score": 0.6361,
+      "diel_bin": "dawn",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.5861; diel fallback morning->dawn; season fallback requested=summer source=spring; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "white_throated_nightjar",
+    "species_common_name": "White-throated Nightjar",
+    "layer_c_only": true
+  }
+}

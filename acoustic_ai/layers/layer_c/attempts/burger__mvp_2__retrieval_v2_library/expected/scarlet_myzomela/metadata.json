@@ -1,0 +1,129 @@
+{
+  "layer": "layer_c",
+  "method": "retrieval_baseline_layer_c_only",
+  "species": "Scarlet Myzomela",
+  "request": {
+    "seed": 42,
+    "season": "summer",
+    "diel": "morning",
+    "duration_s": 60.0,
+    "count_requested": 12
+  },
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.21360935270786285,
+    "rms": 0.009727496653795242,
+    "contains_ambient_bed": false
+  },
+  "retrieval": {
+    "index_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv",
+    "selected_count": 4,
+    "library_source": "audited real bird-call snippets only"
+  },
+  "mix": {
+    "ambient_kind": "none",
+    "ambient_gain_db": null,
+    "events_gain_db": -2.0,
+    "variation_enabled": false,
+    "limitations": [
+      "Layer C only: no Layer A, Layer B, Layer D, or procedural ambient bed is mixed in.",
+      "Layer C events are real audited retrieval snippets, not from-scratch generated calls."
+    ]
+  },
+  "events": [
+    {
+      "snippet_id": "scarlet_myzomela_v2_074_14371809",
+      "label": "Scarlet Myzomela",
+      "event_type": "scarlet_myzomela",
+      "audio_event_id": "14371809",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/scarlet_myzomela/samples/074_audioevent_14371809/crop_bandpass.wav",
+      "source_recording": "1402690",
+      "onset_s": 6.197,
+      "offset_s": 9.773,
+      "gain_db": -4.034,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.104,
+      "confidence": 0.8187,
+      "retrieval_score": 1.1687,
+      "diel_bin": "morning",
+      "season": "summer",
+      "selection_reason": "BirdNET score 0.8187; exact diel match morning; season match summer; verdict Pass"
+    },
+    {
+      "snippet_id": "scarlet_myzomela_v2_015_5450083",
+      "label": "Scarlet Myzomela",
+      "event_type": "scarlet_myzomela",
+      "audio_event_id": "5450083",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/scarlet_myzomela/samples/015_audioevent_5450083/crop_bandpass.wav",
+      "source_recording": "1539457",
+      "onset_s": 21.168,
+      "offset_s": 24.744,
+      "gain_db": -4.293,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.169,
+      "confidence": 0.9146,
+      "retrieval_score": 1.1646,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.9146; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    },
+    {
+      "snippet_id": "scarlet_myzomela_v2_005_2332150",
+      "label": "Scarlet Myzomela",
+      "event_type": "scarlet_myzomela",
+      "audio_event_id": "2332150",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/scarlet_myzomela/samples/005_audioevent_2332150/crop_bandpass.wav",
+      "source_recording": "1400560",
+      "onset_s": 35.614,
+      "offset_s": 39.19,
+      "gain_db": -6.873,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.089,
+      "confidence": 0.9461,
+      "retrieval_score": 1.1961,
+      "diel_bin": "morning",
+      "season": "spring",
+      "selection_reason": "BirdNET score 0.9461; exact diel match morning; season fallback requested=summer source=spring; verdict Pass"
+    },
+    {
+      "snippet_id": "scarlet_myzomela_v2_038_11829535",
+      "label": "Scarlet Myzomela",
+      "event_type": "scarlet_myzomela",
+      "audio_event_id": "11829535",
+      "snippet_path": "acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/scarlet_myzomela/samples/038_audioevent_11829535/crop_bandpass.wav",
+      "source_recording": "1536776",
+      "onset_s": 44.12,
+      "offset_s": 47.719,
+      "gain_db": -4.592,
+      "pitch_shift_semitones": 0.0,
+      "time_stretch_rate": 1.0,
+      "fade_s": 0.136,
+      "confidence": 0.8732,
+      "retrieval_score": 1.1232,
+      "diel_bin": "morning",
+      "season": "winter",
+      "selection_reason": "BirdNET score 0.8732; exact diel match morning; season fallback requested=summer source=winter; verdict Pass"
+    }
+  ],
+  "attempt": {
+    "layer": "layer_c",
+    "id": "burger__mvp_2__retrieval_v2_library",
+    "label": "Layer C retrieval v2 audited library",
+    "stage": "mvp_2",
+    "head": null,
+    "author": "burger",
+    "status": "demo_ready",
+    "checkpoint": null
+  },
+  "expected_sample": {
+    "role": "frontend_expected_result",
+    "canonical_seed": 42,
+    "case_slug": "scarlet_myzomela",
+    "species_common_name": "Scarlet Myzomela",
+    "layer_c_only": true
+  }
+}

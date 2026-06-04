@@ -1,0 +1,5 @@
+outs:
+- md5: ffa81f04a7479d32b0a4d5b04cd21586
+  size: 123186
+  hash: md5
+  path: mel.png
