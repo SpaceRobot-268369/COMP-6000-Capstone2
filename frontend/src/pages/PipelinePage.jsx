@@ -1,19 +1,24 @@
 import { useState } from "react";
 
-// Status → pill label + colour class (shares the intro-page status classes).
-const STATUS_META = {
-  live: { label: "● Live", cls: "status-live" },
-  partial: { label: "◑ Partial", cls: "status-partial" },
-  smoke: { label: "◑ Smoke test", cls: "status-partial" },
-  placeholder: { label: "○ Placeholder", cls: "status-coming" },
-};
-
-// ── Generation: forward / additive. env request → A+B+C in parallel → mixer → out.
+// ── Generation: forward / additive. env request → parser → A+B+C in parallel → mixer → out.
 const GENERATION = {
   source: {
     icon: "✦",
     label: "Environmental request",
-    sub: "seed · season × diel · weather params",
+    sub: "raw text prompt · seed",
+  },
+  pre: {
+    step: "LLM OSS",
+    label: "Prompt Parser",
+    role: "Pre-fills defaults, validates ecological coherence, then decodes the request into layer-specific parameters.",
+    model: "Open-source LLM · prompt parser policy",
+    status: "placeholder",
+    visual: "llm",
+  },
+  // What the parser does — shown beside the Prompt Parser node.
+  decoder: {
+    why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — a request our site can't voice, like dense city traffic in a remote dry woodland, is blocked and a sensible alternative is suggested rather than generated; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist.",
+    example: "“A misty autumn dawn, light rain, with a boobook owl calling in the distance.”",
   },
   parallelHeading: "Three independent layers compose in parallel",
   parallelNote:
@@ -22,25 +27,42 @@ const GENERATION = {
     {
       step: "A",
       label: "Ambient bed",
-      role: "Continuous site texture — insects, low-level tone. Carries no events.",
+      role: "Continuous site texture. Ingests decoded (season, diel) cell metadata.",
       model: "AudioLDM2 LoRA · per-cell bank (16 season×diel)",
       status: "live",
+      sample: {
+        input: '{ "seed": 42, "season": "autumn", "diel": "dawn" }',
+        output: "Continuous ambient bed — insects, low foliage rustle, distant site tone. No discrete events. WAV + mel spectrogram.",
+      },
     },
     {
       step: "B",
       label: "Weather",
-      role: "Wind / rain / thunder, mixed from curated assets by intensity.",
-      model: "Curated assets · parameter mixing",
+      role: "Wind / rain / thunder. Ingests decoded weather type, intensity, and duration parameters.",
+      model: "Curated assets · parameter retrieval/mixing",
       status: "placeholder",
+      sample: {
+        input: '{ "weather_type": "rain", "intensity": "medium", "duration_s": 10, "retrieval_seed": 42 }',
+        output: "Rain-only weather stem selected from the curated asset index, loudness-normalised. WAV.",
+      },
     },
     {
       step: "C",
       label: "Events",
-      role: "Species calls made plausible for the requested time & season.",
-      model: "AudioGen LoRA per species · 16 kHz",
+      role: "Species calls. Ingests checklist of plausible callers for requested time/season.",
+      model: "AudioGen LoRA / audited bank retrieval",
       status: "smoke",
+      sample: {
+        input: '{ "seed": 42 }  // boobook LoRA — one species, server owns the caption',
+        output: "Isolated species events — two-note boobook calls placed on a timeline. WAV (16 kHz, resampled at the mixer).",
+      },
     },
   ],
+  // Labels for the per-layer input/output port popovers.
+  portMeta: {
+    in: { title: "Sample prompt · input", field: "Decoded input", code: true },
+    out: { title: "Sample output", field: "Output", code: false },
+  },
   merge: {
     step: "D",
     label: "Mixer",
@@ -78,6 +100,10 @@ const ANALYSIS = {
       role: "k-NN against the learned latent index — 'what kind of bed is this?'",
       model: "CLAP embedding · similarity",
       status: "partial",
+      sample: {
+        input: "Mel spectrogram + waveform of the uploaded mixture (shared preprocess).",
+        output: "Nearest ambient cell + similarity — e.g. autumn · dawn bed (cosine 0.78).",
+      },
     },
     {
       step: "E-B",
@@ -85,6 +111,10 @@ const ANALYSIS = {
       role: "Wind / rain / thunder intensity directly from the spectrum.",
       model: "PANNs tagger · zero-shot",
       status: "placeholder",
+      sample: {
+        input: "Mel spectrogram of the uploaded mixture (shared preprocess).",
+        output: "Weather tags + intensity — e.g. light rain 0.62, no wind.",
+      },
     },
     {
       step: "E-C",
@@ -92,8 +122,16 @@ const ANALYSIS = {
       role: "Species present + onsets — the strongest season/diel signal.",
       model: "BirdNET + CLAP fallback",
       status: "placeholder",
+      sample: {
+        input: "Waveform of the uploaded mixture (shared preprocess).",
+        output: "Species + onsets — e.g. southern boobook ×3 at 22:14, 22:31, 23:02.",
+      },
     },
   ],
+  portMeta: {
+    in: { title: "Sample input", field: "Reads from", code: false },
+    out: { title: "Sample output", field: "Detector result", code: false },
+  },
   merge: {
     step: "Σ",
     label: "Aggregator",
@@ -116,11 +154,6 @@ const ANALYSIS = {
   },
 };
 
-function StatusPill({ status }) {
-  const meta = STATUS_META[status] ?? STATUS_META.placeholder;
-  return <span className={`intro-wf-status ${meta.cls}`}>{meta.label}</span>;
-}
-
 function FlowNode({ node, variant = "" }) {
   return (
     <div className={`flow-node ${variant}`}>
@@ -129,19 +162,60 @@ function FlowNode({ node, variant = "" }) {
         <strong>{node.label}</strong>
         <span>{node.sub}</span>
       </div>
+      {node.tag ? <span className="flow-node-tag">{node.tag}</span> : null}
     </div>
   );
 }
 
-function LayerCard({ layer, index = 0, variant = "" }) {
+// An input/output port: a circle that reveals its sample on hover, and
+// pins it open on click (so it stays after the pointer leaves).
+function SamplePort({ kind, glyph, title, fieldLabel, value, isCode }) {
+  const [pinned, setPinned] = useState(false);
+  return (
+    <span className={`flow-port flow-port-${kind}${pinned ? " is-pinned" : ""}`}>
+      <button
+        type="button"
+        className="flow-port-dot"
+        aria-expanded={pinned}
+        aria-label={`${pinned ? "Hide" : "Show"} ${title}`}
+        onClick={() => setPinned((p) => !p)}
+      >
+        <i>{glyph}</i>
+      </button>
+      <span className="flow-port-pop" role="tooltip">
+        <span className="flow-port-pop-title">{title}</span>
+        <span className="flow-port-pop-field">{fieldLabel}</span>
+        {isCode ? (
+          <code className="flow-port-pop-code">{value}</code>
+        ) : (
+          <span className="flow-port-pop-text">{value}</span>
+        )}
+      </span>
+    </span>
+  );
+}
+
+function LayerCard({ layer, index = 0, variant = "", ports = false, portMeta }) {
+  // Ports (and their hover/click samples) only exist where a layer declares a
+  // sample and the mode supplies port labels (the parallel layers of both modes).
+  const showPorts = ports && Boolean(layer.sample) && Boolean(portMeta);
   return (
     <article
-      className={`flow-layer-card panel ${variant}`}
+      className={`flow-layer-card panel ${showPorts ? "flow-has-ports" : ""} ${variant}`}
       style={{ "--i": index }}
     >
+      {showPorts ? (
+        <SamplePort
+          kind="in"
+          glyph="in"
+          title={portMeta.in.title}
+          fieldLabel={portMeta.in.field}
+          value={layer.sample.input}
+          isCode={portMeta.in.code}
+        />
+      ) : null}
       <div className="flow-layer-top">
         <span className="flow-layer-step">{layer.step}</span>
-        <StatusPill status={layer.status} />
       </div>
       <strong className="flow-layer-label">{layer.label}</strong>
       <div className="flow-layer-facts">
@@ -154,11 +228,27 @@ function LayerCard({ layer, index = 0, variant = "" }) {
           <p>{layer.model}</p>
         </div>
       </div>
+      {showPorts ? (
+        <SamplePort
+          kind="out"
+          glyph="out"
+          title={portMeta.out.title}
+          fieldLabel={portMeta.out.field}
+          value={layer.sample.output}
+          isCode={portMeta.out.code}
+        />
+      ) : null}
     </article>
   );
 }
 
 function FlowDiagram({ spec }) {
+  const preNode = spec.pre
+    ? spec.pre.visual === "llm"
+      ? <LayerCard layer={spec.pre} variant="flow-layer-card-llm flow-layer-card-prompt-parser" />
+      : <FlowNode node={spec.pre} variant="flow-node-pre" />
+    : null;
+
   return (
     <div className="flow-diagram">
       <FlowNode node={spec.source} variant="flow-node-source" />
@@ -166,7 +256,19 @@ function FlowDiagram({ spec }) {
 
       {spec.pre ? (
         <>
-          <FlowNode node={spec.pre} variant="flow-node-pre" />
+          {preNode}
+          {spec.decoder ? (
+            <div className="flow-decoder-why">
+              <p className="flow-decoder-why-lead">What the Prompt Parser does</p>
+              <p className="flow-decoder-why-text">{spec.decoder.why}</p>
+              {spec.decoder.example ? (
+                <p className="flow-decoder-why-eg">
+                  <span>Example prompt</span>
+                  {spec.decoder.example}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="flow-conn" aria-hidden="true" />
         </>
       ) : null}
@@ -185,7 +287,7 @@ function FlowDiagram({ spec }) {
 
       <div className="flow-layers">
         {spec.layers.map((l, i) => (
-          <LayerCard key={l.step} layer={l} index={i} />
+          <LayerCard key={l.step} layer={l} index={i} ports portMeta={spec.portMeta} />
         ))}
       </div>
 
