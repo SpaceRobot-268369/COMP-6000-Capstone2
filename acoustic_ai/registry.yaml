@@ -273,14 +273,23 @@ layers:
     default: lucas__smoke_1__layered_mix
     attempts:
       lucas__smoke_1__layered_mix:
-        label: "Layered mix (placeholder)"
+        label: "Layered mix (smoke)"
         author: lucas
         stage: smoke_1
-        status: placeholder
+        status: smoke_test
         checkpoint: null
-        params: {}
+        params:
+          default_duration_s: 30.0
+          weather_gain_db: -12.0
+          event_gain_db: -18.0
+          event_activity_envelope: true
+          event_boundary_fade_s: 1.0
+          event_bandpass_hz: [500.0, 8000.0]
+          peak_ceiling: 0.95
         notes:
           - Combines A+B+C outputs into final WAV + explanation JSON.
+          - Current preferred listening configuration is local mix attempt v5.
+          - Handler accepts upstream WAV bytes from a generation orchestrator.
 
   layer_e:
     label: "Layer E — Analysis"

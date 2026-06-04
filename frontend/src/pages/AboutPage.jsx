@@ -69,7 +69,7 @@ const layers = [
   { step: "A", label: "Ambient bed", detail: "AudioLDM2 LoRA · per-cell bank (16 season×diel)", status: "live" },
   { step: "B", label: "Weather", detail: "Curated wind/rain assets · parameter mixing", status: "placeholder" },
   { step: "C", label: "Events", detail: "AudioGen LoRA per species · 16 kHz native", status: "smoke" },
-  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "placeholder" },
+  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "smoke" },
   { step: "E", label: "Analysis", detail: "Ambient similarity + weather + event detectors", status: "partial" },
 ];
 

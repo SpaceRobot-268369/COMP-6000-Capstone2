@@ -865,7 +865,7 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
-const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
+const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind", "thunder", "storm"]);
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
@@ -910,6 +910,55 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
 
     const r = await fetchAi(
       `/layers/${encodeURIComponent(layer)}/attempts/${encodeURIComponent(attempt)}/generate`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+app.post("/api/generation", requireAuth, async (req, res) => {
+  const operation = "orchestrated generation";
+  try {
+    const requestedSeed = Number(req.body?.seed);
+    const requestedDuration = Number(req.body?.duration_s);
+    const season = typeof req.body?.season === "string" ? req.body.season.toLowerCase() : null;
+    const diel = typeof req.body?.diel === "string" ? req.body.diel.toLowerCase() : null;
+    const weatherType = typeof req.body?.weather_type === "string"
+      ? req.body.weather_type.toLowerCase()
+      : "wind";
+    const intensity = typeof req.body?.intensity === "string"
+      ? req.body.intensity.toLowerCase()
+      : "light";
+    const payload = {
+      seed: Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null,
+      duration_s: Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30
+        ? requestedDuration
+        : 30,
+      include_weather: req.body?.include_weather !== false,
+      include_events: req.body?.include_events !== false,
+    };
+    if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
+      payload.season = season;
+      payload.diel = diel;
+    }
+    if (ALLOWED_WEATHER_TYPES.has(weatherType)) {
+      payload.weather_type = weatherType;
+    }
+    if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
+      payload.intensity = intensity;
+    }
+
+    const r = await fetchAi(
+      "/generation/render",
       {
         method: "POST",
         headers: { "content-type": "application/json" },

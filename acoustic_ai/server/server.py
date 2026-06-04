@@ -125,6 +125,21 @@ class GenerateRequest(BaseModel):
     duration_s: Optional[float] = None
 
 
+class OrchestratedGenerationRequest(BaseModel):
+    seed: Optional[int] = None
+    duration_s: float = 30.0
+    season: Optional[str] = None
+    diel: Optional[str] = None
+    weather_type: str = "wind"
+    intensity: str = "light"
+    include_weather: bool = True
+    include_events: bool = True
+    layer_a_attempt: Optional[str] = None
+    layer_b_attempt: Optional[str] = None
+    layer_c_attempt: Optional[str] = None
+    layer_d_attempt: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -179,22 +194,24 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
-    wav_bytes = result.get("wav_bytes", b"")
-    mel_db = result.get("mel_db")
-    metadata = result.get("metadata", {})
-    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
-    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return _generation_response(layer_id, attempt_id, result)
 
-    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s)
 
-    return {
-        "ok":          True,
-        "audio_b64":   base64.b64encode(wav_bytes).decode("utf-8"),
-        "image_b64":   png_b64,
-        "metadata":    metadata,
-        "sample_rate": sample_rate,
-        "duration_s":  duration_s,
-    }
+@app.post("/generation/render")
+def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
+    """Generate A/B/C stems and render the final soundscape through Layer D."""
+    try:
+        result = registry.orchestrate_generation(**body.model_dump())
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
+    attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
+    return _generation_response("layer_d", attempt_id, result)
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
@@ -303,6 +320,22 @@ def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _generation_response(layer_id: str, attempt_id: str, result: dict) -> dict:
+    wav_bytes = result.get("wav_bytes", b"")
+    mel_db = result.get("mel_db")
+    metadata = result.get("metadata", {})
+    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
+    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return {
+        "ok": True,
+        "audio_b64": base64.b64encode(wav_bytes).decode("utf-8"),
+        "image_b64": _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s),
+        "metadata": metadata,
+        "sample_rate": sample_rate,
+        "duration_s": duration_s,
+    }
 
 
 def _mel_to_png_b64(layer_id: str, attempt_id: str,
