@@ -79,7 +79,7 @@ export default function ServerBStatusPage({
       <section className="panel server-b-log-panel">
         <div className="generation-card-head">
           <h2>Live Check Log</h2>
-          <p>Automatic checks and manual rechecks appear here in real time</p>
+          <p>Automatic checks, reconnect attempts, and manual rechecks appear here in real time</p>
         </div>
 
         <div className="server-b-log-list" aria-live="polite">

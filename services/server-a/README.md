@@ -44,6 +44,9 @@ AI_SERVER_LABEL=shinypokemon
 AI_SSH_USER=ubuntu
 AI_SSH_HOST=shinypokemon.adelaideuni.cloud
 AI_REQUEST_TIMEOUT_MS=300000
+AI_SERVICE_START_COMMAND=
+AI_TUNNEL_CONTAINER_NAME=eco-ai-tunnel-server-a
+AI_RECONNECT_MODE=docker-container
 SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 ```
 
@@ -56,6 +59,13 @@ value — a mismatch makes the backend reject generate requests with a 500.
 `AI_REQUEST_TIMEOUT_MS` must exceed the synchronous generation time (30-90s warm
 on serverB) or the backend returns 504 before the audio comes back. It must also
 stay under the nginx `/api/` `proxy_read_timeout` (200s).
+
+Automatic serverB reconnect is split into two layers. The backend restarts the
+configured `ai-tunnel` container through Docker when health checks go offline.
+Inside that container, SSH reachability to serverB is checked before the tunnel
+opens. If serverB is reachable but the remote AI service `/health` is down,
+`AI_SERVICE_START_COMMAND` is run when configured; leave it empty to report a
+degraded status without attempting to start anything remotely.
 
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.

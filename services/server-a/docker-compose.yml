@@ -1,5 +1,6 @@
 services:
   ai-tunnel:
+    container_name: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-server-a}
     image: ${AI_TUNNEL_IMAGE:-ghcr.io/spacerobot-268369/eco-ai-tunnel:${IMAGE_TAG:-main}}
     environment:
       AI_SERVER_LABEL: ${AI_SERVER_LABEL:-shinypokemon}
@@ -10,6 +11,9 @@ services:
       AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
       AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
       AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
+      AI_SERVICE_START_COMMAND: ${AI_SERVICE_START_COMMAND:-}
+      AI_SERVICE_START_TIMEOUT_SEC: ${AI_SERVICE_START_TIMEOUT_SEC:-60}
+      AI_SERVICE_START_POLL_SEC: ${AI_SERVICE_START_POLL_SEC:-3}
     secrets:
       - source: shinypokemon_pem
         target: shinypokemon.pem
@@ -57,6 +61,8 @@ services:
       AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
       AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
       AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
+      AI_RECONNECT_MODE: docker-container
+      AI_RECONNECT_CONTAINER: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-server-a}
     ports:
       - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
     depends_on:
@@ -64,6 +70,10 @@ services:
         condition: service_healthy
       ai-tunnel:
         condition: service_started
+    volumes:
+      # Allows the backend reconnect endpoint to restart only the configured
+      # ai-tunnel container through Docker's API.
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app_net
 
