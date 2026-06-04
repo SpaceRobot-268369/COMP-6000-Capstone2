@@ -142,7 +142,7 @@ export default function DevAnalysisPage() {
   }
 
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-analysis">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS — ANALYSIS</p>
@@ -150,8 +150,8 @@ export default function DevAnalysisPage() {
         </div>
       </header>
 
-      {/* ── Row 1: uploader (holds the clip only — no global run) ─────────── */}
-      <div className="dev-controls-row">
+      {/* ── Row 1: uploader + uploaded-clip spectrogram ───────────────────── */}
+      <div className="dev-controls-row analysis-upload-stack">
         <FileUploader
           file={file}
           audioUrl={audioUrl}
@@ -160,29 +160,13 @@ export default function DevAnalysisPage() {
           onFile={acceptFile}
           onDrop={onDrop}
         />
+
+        <SpectrogramPanel file={file} />
       </div>
 
-      {/* ── Row 2: spectrogram + per-head analysis ──────────────────────── */}
-      <div className="dev-results-row">
-        <main className="panel dev-result-card">
-          <div className="generation-card-head">
-            <h2>Mel-Spectrogram</h2>
-            <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
-          </div>
-          <div className="dev-result-body">
-            <ReviewSection title="▤ Spectral Mapping">
-              {file ? (
-                <SpectrogramCanvas file={file} />
-              ) : (
-                <Placeholder kind="image">
-                  Spectrogram appears once an audio file is loaded.
-                </Placeholder>
-              )}
-            </ReviewSection>
-          </div>
-        </main>
-
-        <aside className="panel dev-result-card">
+      {/* ── Row 2: per-head analysis ─────────────────────────────────────── */}
+      <div className="dev-results-row analysis-heads-row">
+        <aside className="panel dev-result-card analysis-heads-card">
           <div className="generation-card-head">
             <h2>Analysis Heads</h2>
             <p>Each head picks its own model and runs on its own button</p>
@@ -207,13 +191,35 @@ export default function DevAnalysisPage() {
   );
 }
 
+function SpectrogramPanel({ file }) {
+  return (
+    <main className="panel dev-result-card analysis-spectrogram-card">
+      <div className="generation-card-head">
+        <h2>Mel-Spectrogram</h2>
+        <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
+      </div>
+      <div className="dev-result-body">
+        <ReviewSection title="▤ Spectral Mapping">
+          {file ? (
+            <SpectrogramCanvas file={file} />
+          ) : (
+            <Placeholder kind="image">
+              Spectrogram appears once an audio file is loaded.
+            </Placeholder>
+          )}
+        </ReviewSection>
+      </div>
+    </main>
+  );
+}
+
 // ─── Uploader ────────────────────────────────────────────────────────────────
 
 function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop }) {
   const inputId = "dev-analysis-file";
   return (
     <section
-      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
+      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}${file ? " has-file" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
@@ -245,7 +251,7 @@ function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop })
             </label>
           </div>
           {audioUrl && (
-            <audio controls src={audioUrl} style={{ width: "100%", marginTop: 12 }} />
+            <audio className="upload-audio-preview" controls src={audioUrl} />
           )}
         </div>
       )}
