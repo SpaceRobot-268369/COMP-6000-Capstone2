@@ -1,0 +1,18 @@
+{
+  "pretrained_model_name": "facebook/audiogen-medium",
+  "manifest_path": "resources\\layer_c_event_train_clean\\boobook_manifest.csv",
+  "num_examples": 200,
+  "num_epochs": 3,
+  "batch_size": 1,
+  "learning_rate": 5e-05,
+  "sample_rate": 16000,
+  "frame_rate": 50,
+  "target_modules": [
+    "out_proj",
+    "linear1",
+    "linear2"
+  ],
+  "lora_rank": 8,
+  "lora_alpha": 32,
+  "lora_dropout": 0.1
+}
