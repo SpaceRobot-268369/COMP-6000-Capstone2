@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
-import TransformationPage from "./pages/TransformationPage.jsx";
+import ImmersivePage from "./pages/ImmersivePage.jsx";
 import GenerationPage from "./pages/GenerationPage.jsx";
+import DemoPage from "./pages/DemoPage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
 import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
 import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
@@ -157,9 +158,13 @@ export default function App() {
               <span className="nav-icon">✦</span>
               <span>Generation</span>
             </NavLink>
-            <NavLink to="/transformation" className={sidebarLinkClass}>
-              <span className="nav-icon">≋</span>
-              <span>Transformation</span>
+            <NavLink to="/demo" className={sidebarLinkClass}>
+              <span className="nav-icon">❖</span>
+              <span>Demo</span>
+            </NavLink>
+            <NavLink to="/immersive" className={sidebarLinkClass}>
+              <span className="nav-icon">❂</span>
+              <span>Immersive</span>
             </NavLink>
             <NavLink to="/dev/layers" className={sidebarLinkClass}>
               <span className="nav-icon">⌬</span>
@@ -212,7 +217,10 @@ export default function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/analysis" element={<HomePage />} />
           <Route path="/generation" element={<GenerationPage />} />
-          <Route path="/transformation" element={<TransformationPage />} />
+          <Route path="/demo" element={<DemoPage />} />
+          {/* Transformation is out of scope for the demo — redirect any stale links. */}
+          <Route path="/transformation" element={<Navigate to="/about" replace />} />
+          <Route path="/immersive" element={<ImmersivePage />} />
           <Route
             path="/dev/layers"
             element={
