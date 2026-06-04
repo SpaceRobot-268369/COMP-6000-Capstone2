@@ -57,8 +57,13 @@ production it must be the public HTTPS origin
 value — a mismatch makes the backend reject generate requests with a 500.
 
 `AI_REQUEST_TIMEOUT_MS` must exceed the synchronous generation time (30-90s warm
-on serverB) or the backend returns 504 before the audio comes back. It must also
-stay under the nginx `/api/` `proxy_read_timeout` (200s).
+on serverB, far longer for a cold model load) or the backend returns 504 before
+the audio comes back. It must also stay **under** the nginx `/api/`
+`proxy_read_timeout` (600s) so the backend's descriptive error surfaces ahead of
+a bare nginx 504 — the deployed default is `540000` (9 min). serverB pre-warms
+its default models on boot (`AI_PREWARM`, see the on-demand worker doc), so the
+warm path is the norm; the headroom mainly covers cold loads of non-default
+attempts.
 
 Automatic serverB reconnect is split into two layers. The backend restarts the
 configured `ai-tunnel` container through Docker when health checks go offline.

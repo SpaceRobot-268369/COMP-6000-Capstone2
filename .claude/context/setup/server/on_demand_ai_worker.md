@@ -221,8 +221,47 @@ the live worker.
 
 Rules:
 
-- The `shiny-pikachu/` clone owns the served process. Restart flow is
-  `cd ~/shiny-pikachu && git pull && systemctl restart …` (or equivalent).
+- The `shiny-pikachu/` clone owns the served process. CI/CD **fully** redeploys
+  serverB via the `sync-server-b-models` workflow
+  ([.github/workflows/sync-server-b-models.yml](../../../../.github/workflows/sync-server-b-models.yml)
+  → [script/deploy/sync_server_b_models.sh](../../../../script/deploy/sync_server_b_models.sh)),
+  which runs after CI passes on `main` when `acoustic_ai/**`,
+  `model/production/**`, `model/candidates/**`, `registry.yaml`, or
+  `requirements.txt` change. **No manual SSH is needed for a normal deploy** —
+  the workflow does the whole thing:
+
+  | Step | Done by CICD? |
+  |---|---|
+  | `git pull` the main checkout (code) | ✅ yes |
+  | `pip install -r acoustic_ai/requirements.txt` (deps) | ✅ yes |
+  | `dvc pull` **production** models + served **candidate** models + sample tiers | ✅ yes |
+  | **Restart uvicorn** (loads new code/models, re-runs pre-warm) | ✅ yes |
+
+  The restart is **unconditional**: it stops and relaunches the service, so any
+  generation/training job in flight at deploy time is interrupted (accepted
+  trade-off — deploys fire on merge and serverB is often off). Datasets under
+  `resources/` are intentionally not pulled — only model weights + samples.
+
+- **Manual deploy** is only needed when pushing *ahead* of CICD (e.g. a hotfix
+  on an unmerged branch). Equivalent sequence:
+
+  ```bash
+  ssh shinypokemon 'cd ~/shiny-pikachu && \
+    git pull && \
+    ./acoustic_ai/.venv/bin/pip install -r acoustic_ai/requirements.txt && \
+    dvc pull && \
+    kill $(cat /tmp/shiny-pikachu-ai.pid) 2>/dev/null; sleep 2'
+  # then re-run the start command below — the restart is what loads the new
+  # code/models and re-runs pre-warm.
+  ```
+
+  To run the exact CICD path by hand, invoke the deploy script directly
+  (`SERVER_B_RESTART=0` skips the restart for a sync-only dry run):
+
+  ```bash
+  ssh shinypokemon 'cd ~/shiny-pikachu && \
+    SERVER_B_DEPLOY_DIR=$PWD bash script/deploy/sync_server_b_models.sh'
+  ```
 - Each clone has its own `acoustic_ai/.venv` — no sharing or symlinking,
   so a `requirements.txt` change on an experiment branch cannot break the
   live service.
@@ -254,6 +293,23 @@ ssh shinypokemon 'tail -f /tmp/shiny-pikachu-ai.log'
 The server must bind `127.0.0.1` only — public ingress is denied by design
 (see Network Topology). Reach it from server A through the
 `ai-tunnel` Compose sidecar at `http://ai-tunnel:8000`.
+
+**Model pre-warming.** On startup the server eager-loads each layer's
+`default` attempt in a background thread (`AI_PREWARM`, parsed in
+`acoustic_ai/server/server.py`). This moves the heavy cold load (Layer A =
+AudioLDM2 + 16 LoRA adapters; Layer C = AudioGen) off the first request, which
+otherwise ran *inside* the request and blew past the backend
+`AI_REQUEST_TIMEOUT_MS` ("AI request timed out"). uvicorn binds the port
+immediately and `/health` answers while warming proceeds; `tail` the log to
+watch `[prewarm] ready: …` lines. Override:
+
+- unset / `AI_PREWARM=all` — warm every layer default (recommended on serverB).
+- `AI_PREWARM=0` — disable (pure lazy loading; first hit pays the cold load).
+- `AI_PREWARM=layer_a,layer_c` — warm only these layers' defaults (lower VRAM).
+
+A pre-warm failure for one head (e.g. a missing dep or un-pulled checkpoint) is
+logged and skipped — it never blocks boot, and it surfaces the same drift early
+in the startup log instead of on a user's first request.
 
 ## Server B Health Check API
 

@@ -441,6 +441,44 @@ def _get_state(spec: AttemptSpec):
         return state
 
 
+def warm(layer_id: str, attempt_id: str) -> None:
+    """Eager-load and cache an attempt's handler state (no generation).
+
+    This is the same lazy ``_get_state`` the first request would otherwise
+    trigger inside the request path — calling it up front (see
+    ``server.prewarm``) keeps the heavy cold load (e.g. the Layer A 16-adapter
+    AudioLDM2 bank) out of the request, so the first user generate no longer
+    blows past the backend ``AI_REQUEST_TIMEOUT_MS``.
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    _get_state(spec)
+
+
+def prewarm_defaults(layers: set[str] | None = None) -> list[dict]:
+    """Eager-load each layer's ``default`` attempt. Resilient: a failure for
+    one attempt (un-installed dep, un-pulled checkpoint, …) is captured and
+    skipped, never raised — one broken head must not stop the server booting.
+
+    ``layers`` restricts which layer defaults are warmed (None => all).
+    Returns one result row per warmed layer default, for the caller to log.
+    """
+    results: list[dict] = []
+    for layer_id, layer_block in _registry_doc()["layers"].items():
+        if layers is not None and layer_id not in layers:
+            continue
+        default = layer_block.get("default")
+        if not default:
+            continue
+        row = {"layer": layer_id, "attempt": default, "ok": True, "error": None}
+        try:
+            warm(layer_id, default)
+        except Exception as exc:  # noqa: BLE001 — boot must survive any handler failure
+            row["ok"] = False
+            row["error"] = str(exc)
+        results.append(row)
+    return results
+
+
 def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params) -> dict:
     """Dispatch to the attempt's handler.generate().
 
