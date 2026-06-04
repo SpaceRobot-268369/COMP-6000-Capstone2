@@ -559,11 +559,22 @@ def analyze(
     model_backend: str = "clap",
     audioset_backend: str = "panns",
     guard_backend: str = "none",
+    strict_backends: bool = False,
 ) -> dict[str, Any]:
     audio = load_audio(audio_path, int(params["sample_rate"]))
-    scorer = build_scorer(params, model_backend)
-    audioset_scorer = build_audioset_scorer(audioset_backend)
-    guard_scorer = build_audioset_scorer(guard_backend)
+    scorer = build_scorer(
+        params,
+        model_backend,
+        required=strict_backends and model_backend != "none",
+    )
+    audioset_scorer = build_audioset_scorer(
+        audioset_backend,
+        required=strict_backends and audioset_backend != "none",
+    )
+    guard_scorer = build_audioset_scorer(
+        guard_backend,
+        required=strict_backends and guard_backend != "none",
+    )
     window_results = []
     model_available = False
     audioset_available = False
@@ -666,7 +677,11 @@ def analyze(
             "audioset_available": audioset_available,
             "guard_backend": guard_backend,
             "guard_available": guard_available,
-            "note": "CLAP scorer is wired; it degrades safely when dependencies or model files are unavailable.",
+            "strict_backends": strict_backends,
+            "note": (
+                "CLAP/PANNs/AST are required when strict_backends is true; "
+                "non-strict CLI runs degrade safely for lightweight checks."
+            ),
         },
     }
 
@@ -694,6 +709,11 @@ def parse_args() -> argparse.Namespace:
         default="none",
         help="Optional conservative guard scorer. AST is useful for thunder/wind cross-checks.",
     )
+    parser.add_argument(
+        "--strict-backends",
+        action="store_true",
+        help="Fail if any requested model backend cannot be initialized.",
+    )
     return parser.parse_args()
 
 
@@ -706,6 +726,7 @@ def main() -> None:
         model_backend=args.model_backend,
         audioset_backend=args.audioset_backend,
         guard_backend=args.guard_backend,
+        strict_backends=args.strict_backends,
     )
     text = json.dumps(result, indent=2, ensure_ascii=False)
     if args.out:

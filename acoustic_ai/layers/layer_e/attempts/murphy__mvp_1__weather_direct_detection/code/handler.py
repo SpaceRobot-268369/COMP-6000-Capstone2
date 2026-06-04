@@ -24,11 +24,13 @@ class WeatherAnalyzer:
         model_backend: str = "clap",
         audioset_backend: str = "panns",
         guard_backend: str = "ast",
+        strict_backends: bool = True,
     ) -> None:
         self.params = params
         self.model_backend = model_backend
         self.audioset_backend = audioset_backend
         self.guard_backend = guard_backend
+        self.strict_backends = strict_backends
 
     def analyze(self, audio_path: str | Path) -> dict[str, Any]:
         return run_weather_analysis(
@@ -37,6 +39,7 @@ class WeatherAnalyzer:
             model_backend=self.model_backend,
             audioset_backend=self.audioset_backend,
             guard_backend=self.guard_backend,
+            strict_backends=self.strict_backends,
         )
 
 
@@ -53,6 +56,7 @@ def load(
         model_backend=str((params or {}).get("model_backend", "clap")),
         audioset_backend=str((params or {}).get("audioset_backend", "panns")),
         guard_backend=str((params or {}).get("guard_backend", "ast")),
+        strict_backends=bool((params or {}).get("strict_backends", True)),
     )
 
 

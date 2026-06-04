@@ -104,6 +104,7 @@ Run from the repo root on serverB or an environment with the AI dependencies:
   --model-backend clap \
   --audioset-backend panns \
   --guard-backend ast \
+  --strict-backends \
   --out acoustic_ai/layers/layer_e/attempts/murphy__mvp_1__weather_direct_detection/dev-artifacts-self-testing/weather_smoke.json
 ```
 
@@ -112,10 +113,14 @@ The smoke passes when:
 - the command exits successfully
 - output JSON follows `schema.md`
 - `debug.model_scores_available` is `true` in the real CLAP environment
+- `debug.audioset_available` and `debug.guard_available` are `true` for the
+  registered MVP stack
 
 If model dependencies are unavailable, the command should still complete with
-`model_scores_unavailable`; that only validates the fallback path, not E-B
-accuracy.
+`model_scores_unavailable` when `--strict-backends` is omitted; that only
+validates the fallback path, not E-B accuracy. The registered API handler runs
+with strict backends so it does not report an MVP result when CLAP, PANNs, or
+AST cannot initialize.
 
 ## Calibration Report
 

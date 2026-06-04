@@ -6,10 +6,19 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from acoustic_ai.layers.layer_e.attempts.murphy__mvp_1__weather_direct_detection.code.audioset_scores import (
+    AudioSetBackendUnavailableError,
+    build_audioset_scorer,
+)
 from acoustic_ai.layers.layer_e.attempts.murphy__mvp_1__weather_direct_detection.code.evaluate_weather_outputs import (
     load_manifest,
     summarize,
+)
+from acoustic_ai.layers.layer_e.attempts.murphy__mvp_1__weather_direct_detection.code.model_scores import (
+    ModelBackendUnavailableError,
+    build_scorer,
 )
 
 
@@ -67,6 +76,34 @@ class WeatherEvaluatorTest(unittest.TestCase):
                     }
                 ],
             )
+
+
+class WeatherBackendAvailabilityTest(unittest.TestCase):
+    def test_panns_fallback_is_available_only_for_non_strict_runs(self) -> None:
+        with patch(
+            "acoustic_ai.layers.layer_e.attempts.murphy__mvp_1__weather_direct_detection.code.audioset_scores.PannsScorer",
+            side_effect=RuntimeError("missing panns"),
+        ):
+            scorer = build_audioset_scorer("panns")
+            result = scorer.score_window([], 22050)
+            self.assertFalse(result.available)
+            self.assertIn("PANNs backend unavailable", result.raw["reason"])
+
+            with self.assertRaises(AudioSetBackendUnavailableError):
+                build_audioset_scorer("panns", required=True)
+
+    def test_clap_backend_can_be_required_for_registered_mvp(self) -> None:
+        with patch(
+            "acoustic_ai.layers.layer_e.attempts.murphy__mvp_1__weather_direct_detection.code.model_scores._build_transformers_clap_delegate",
+            return_value=(None, "missing clap"),
+        ):
+            scorer = build_scorer({"prompts": {}}, "clap")
+            result = scorer.score_window([], 22050)
+            self.assertFalse(result.available)
+            self.assertEqual(result.raw["reason"], "missing clap")
+
+            with self.assertRaises(ModelBackendUnavailableError):
+                build_scorer({"prompts": {}}, "clap", required=True)
 
 
 if __name__ == "__main__":
