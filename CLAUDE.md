@@ -36,7 +36,7 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 | layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
 | layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
 | layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
-| layer-e (Analysis) | Ambient similarity + weather + event detectors | Partial (layer-a working) |
+| layer-e (Analysis) | Three detector heads (ambient similarity + weather + event) on the raw mixture → aggregator fuses latent context (season/diel) → report | Partial (layer-a working) |
 
 Each layer hosts independent attempts under
 `acoustic_ai/layers/<layer-code>/attempts/<member>__<stage>__<slug>/`.
@@ -112,13 +112,15 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 ├── commands/                              # Custom slash-command definitions
 ├── skills/                                # Reusable agent skills
 │   ├── commit_changes.md
-│   └── dvc_push.md
+│   ├── dvc_push.md
+│   └── pre_pr_checklist.md
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
     │   ├── prerequisites.md               # Conceptual on-ramp: audio fundamentals, encoder/decoder, LoRA, ecosystem
     │   ├── architecture.md
     │   ├── pipeline_design.md
+    │   ├── analysis_synthesis_policy.md    # Layer E: aggregator fusion + LLM-OSS report policy + per-head pass standards
     │   ├── distillation_strategy.md
     │   ├── runbooks/
     │   │   ├── layer_a_smoke_1_spring_night.md
@@ -155,6 +157,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | **AI prerequisites** (audio fundamentals, encoder/decoder, LoRA, pre-trained ecosystem) | [.claude/context/ai/prerequisites.md](.claude/context/ai/prerequisites.md) |
 | AI architecture | [.claude/context/ai/architecture.md](.claude/context/ai/architecture.md) |
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
+| **Analysis synthesis policy** (Layer E aggregator fusion, LLM-OSS report registers, per-head pass standards, phenology table) | [.claude/context/ai/analysis_synthesis_policy.md](.claude/context/ai/analysis_synthesis_policy.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
@@ -177,6 +180,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
 | DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
+| Pre-PR checklist skill | [.claude/skills/pre_pr_checklist.md](.claude/skills/pre_pr_checklist.md) |
 
 ---
 

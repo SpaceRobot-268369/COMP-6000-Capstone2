@@ -365,16 +365,93 @@ Rollback strategy:
 - redeploy the previous SHA if post-deploy checks fail;
 - preserve logs from the failed deployment for review.
 
-## Future: Server B AI Service Deployment
+## Server B Production Model Sync
 
-This is not part of the current CI/CD scope. The current deployment target is:
+This is the current Server B automation scope. It keeps Server B's main checkout,
+production model artifacts, and committed attempt sample artifacts current
+without changing the running service process.
+
+Suggested workflow file:
+
+```text
+.github/workflows/sync-server-b-models.yml
+```
+
+Trigger:
+
+```text
+workflow_run after CI succeeds on main
+workflow_dispatch for manual sync
+```
+
+The workflow checks whether the main update touched production model or AI
+service paths:
+
+```text
+model/production/**
+acoustic_ai/registry.yaml
+acoustic_ai/server/**
+acoustic_ai/layers/**
+acoustic_ai/requirements.txt
+```
+
+If a sync is needed, GitHub Actions SSHes to Server B and runs:
+
+```text
+script/deploy/sync_server_b_models.sh
+```
+
+Current behavior:
+
+- update only `~/shiny-pikachu`;
+- require `~/shiny-pikachu` to be a clean `main` checkout;
+- run `git fetch`, `git checkout main`, and `git pull --ff-only origin main`;
+- call Server B's local DVC executable, including `~/.local/bin/dvc`, because
+  non-interactive SSH sessions may not include that directory in `PATH`;
+- pull `model/production/**/*.dvc` targets plus committed attempt sample
+  targets under `acoustic_ai/layers/**/{expected,showcase}/**/*.dvc`;
+- verify the corresponding production model/sample files are materialised;
+- report which process, if any, is listening on `127.0.0.1:8000`;
+- never start, stop, or restart uvicorn.
+
+This sync-only mode is deliberate. If Server B is currently serving from a
+per-member experiment clone, the workflow leaves that process untouched and
+prints a warning. Once the live AI service is moved back to `~/shiny-pikachu`,
+a later hardening step can safely add an opt-in restart.
+
+DVC policy:
+
+- Pull production model pointers under `model/production/` and attempt sample
+  pointers under `acoustic_ai/layers/**/{expected,showcase}/`.
+- Do not run broad `dvc pull` from CI unless explicitly requested.
+- Keep DVC/S3 credentials on Server B under the local `capstone2` AWS profile;
+  do not store S3 credentials in GitHub Actions secrets for this workflow.
+
+Required GitHub Actions secrets:
+
+```text
+SERVER_B_SSH_KEY
+```
+
+Optional GitHub Actions secrets:
+
+```text
+SERVER_B_HOST=shinypokemon.adelaideuni.cloud
+SERVER_B_USER=ubuntu
+SERVER_B_DEPLOY_DIR=/home/ubuntu/shiny-pikachu
+```
+
+## Future: Server B AI Service Deployment / Restart
+
+This is not part of the current sync-only scope. The current deployment target
+remains:
 
 ```text
 PR merge to main -> GHCR images -> automatic Server A deploy
 ```
 
-The notes below are retained for a later Server B worker/service deployment
-phase.
+The notes below are retained for a later Server B worker/service deployment or
+restart phase.
 
 Suggested workflow file:
 
@@ -407,7 +484,7 @@ Per-member experiment clones should remain separate, for example:
 ~/lucano/COMP-6000-Capstone2
 ```
 
-Deployment flow:
+Future deployment flow:
 
 ```bash
 ssh shinypokemon '
@@ -425,12 +502,6 @@ ssh shinypokemon '
   curl -fsS http://127.0.0.1:8000/health
 '
 ```
-
-DVC policy:
-
-- Pull only the production model pointers needed by `acoustic_ai/registry.yaml`.
-- Do not run broad `dvc pull` from CI unless explicitly requested.
-- Ensure binary model files remain DVC/S3 managed and are not committed to git.
 
 Server B post-deploy checks:
 
@@ -608,14 +679,14 @@ verification if the current API surface is not sufficient.
   manual reviewers. If reviewers are configured, deployment will pause for
   approval.
 
-### Phase 4: Future Server B AI Deploy
+### Phase 4: Server B Production Model Sync
 
-- Out of current scope.
-- Later, add `workflow_dispatch` deploy to Server B if the team wants CI/CD to
-  update the worker/service code.
+- Add sync-only Server B automation after CI succeeds on `main`.
 - Update `~/shiny-pikachu` only from `main`.
-- Restart uvicorn and verify `/health`.
-- Add optional targeted DVC pull for production model artifacts.
+- Pull only targeted production DVC model pointers.
+- Report the current `127.0.0.1:8000` service source, but do not restart it.
+- Later, add `workflow_dispatch` deploy/restart to Server B if the team wants
+  CI/CD to update the live worker/service process.
 
 ### Phase 5: Hardening
 

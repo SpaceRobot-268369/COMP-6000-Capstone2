@@ -43,8 +43,19 @@ APP_SECRET=...
 AI_SERVER_LABEL=shinypokemon
 AI_SSH_USER=ubuntu
 AI_SSH_HOST=shinypokemon.adelaideuni.cloud
+AI_REQUEST_TIMEOUT_MS=300000
 SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 ```
+
+`FRONTEND_URL` is the backend CORS allowlist and is matched **exactly** against
+the browser `Origin` header (scheme + host + port, case-sensitive). In
+production it must be the public HTTPS origin
+(`https://spacerobot-268369.adelaideuni.cloud`), not the `:5173`/`http` dev
+value — a mismatch makes the backend reject generate requests with a 500.
+
+`AI_REQUEST_TIMEOUT_MS` must exceed the synchronous generation time (30-90s warm
+on serverB) or the backend returns 504 before the audio comes back. It must also
+stay under the nginx `/api/` `proxy_read_timeout` (200s).
 
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.

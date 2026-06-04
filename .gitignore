@@ -138,3 +138,4 @@ acoustic_ai/=*
 /.claude/worktrees
 /.claude/launch.json
 .antigravitycli/
+/local_data/
