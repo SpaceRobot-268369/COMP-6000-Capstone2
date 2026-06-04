@@ -15,17 +15,23 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const PgSession = connectPgSimple(session);
 
+// Compare origins case-insensitively: browsers lowercase the scheme+host of
+// the Origin header, so an allow-list entry with different casing would never
+// match an otherwise-valid origin.
 const allowedOrigins = new Set(
   (process.env.FRONTEND_URL || "http://localhost:5173,http://127.0.0.1:5173")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.trim().toLowerCase())
     .filter(Boolean),
 );
 app.use(cors({
   origin(origin, callback) {
     if (!origin) return callback(null, false);
-    if (allowedOrigins.has(origin)) return callback(null, origin);
-    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    if (allowedOrigins.has(origin.toLowerCase())) return callback(null, origin);
+    // Reject cleanly: omit the Access-Control-Allow-Origin header so the
+    // browser blocks the response as a CORS error. Passing an Error here would
+    // hit Express's default error handler and surface a confusing 500 instead.
+    return callback(null, false);
   },
   credentials: true,
 }));
