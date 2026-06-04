@@ -1,0 +1,6 @@
+outs:
+- md5: 11d90780b419981e4c0f0522f9be4e65.dir
+  size: 8333376
+  nfiles: 70
+  hash: md5
+  path: yellow_throated_miner

@@ -1,0 +1,64 @@
+rank,species_common_name,species_scientific_name,species_slug,default_low_hz,default_high_hz,band_source,review_status,notes
+1,Splendid Fairywren,Malurus splendens,splendid_fairywren,3000,10000,prior_final_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+2,Chestnut-rumped Thornbill,Acanthiza uropygialis,chestnut_rumped_thornbill,3500,9500,prior_human_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+3,Crested Bellbird,Oreoica gutturalis,crested_bellbird,700,4000,prior_human_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+4,White-browed Woodswallow,Artamus superciliosus,white_browed_woodswallow,1200,8000,prior_human_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+5,Red-capped Robin,Petroica goodenovii,red_capped_robin,1800,8500,prior_human_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+6,Superb Fairywren,Malurus cyaneus,superb_fairywren,2800,10000,prior_human_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+7,Horsfield's Bronze-cuckoo,Chrysococcyx basalis,horsfields_bronze_cuckoo,2100,4100,prior_final_pass,initial,Initial v2 default; tighten per sample during spectrogram review.
+8,Australian Raven,Corvus coronoides,australian_raven,300,3500,heuristic_low_voiced_large_or_nocturnal_bird,initial,Initial v2 default; tighten per sample during spectrogram review.
+9,Black Honeyeater,Sugomel nigrum,black_honeyeater,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+10,Masked Woodswallow,Artamus personatus,masked_woodswallow,1200,8000,heuristic_woodswallow_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+11,Spotted Nightjar,Eurostopodus argus,spotted_nightjar,600,5500,heuristic_nocturnal_churring_or_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+12,Rufous Songlark,Cincloramphus mathewsi,rufous_songlark,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+13,Budgerigar,Melopsittacus undulatus,budgerigar,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+14,White-winged Triller,Lalage tricolor,white_winged_triller,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+15,Black-faced Cuckooshrike,Coracina novaehollandiae,black_faced_cuckooshrike,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+16,Cockatiel,Nymphicus hollandicus,cockatiel,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+17,Willie Wagtail,Rhipidura leucophrys,willie_wagtail,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+18,Chestnut-breasted Quail-thrush,Cinclosoma castaneothorax,chestnut_breasted_quail_thrush,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+19,Mulga Parrot,Psephotus varius,mulga_parrot,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+20,Pallid Cuckoo,Cacomantis pallidus,pallid_cuckoo,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+21,Scarlet Myzomela,Myzomela sanguinolenta,scarlet_myzomela,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+22,Tawny Frogmouth,Podargus strigoides,tawny_frogmouth,300,3500,heuristic_low_voiced_large_or_nocturnal_bird,initial,Initial v2 default; tighten per sample during spectrogram review.
+23,Gray Butcherbird,Cracticus torquatus,gray_butcherbird,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+24,Zebra Finch,Taeniopygia guttata,zebra_finch,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+25,Barn Owl,Tyto alba,barn_owl,300,3500,heuristic_low_voiced_large_or_nocturnal_bird,initial,Initial v2 default; tighten per sample during spectrogram review.
+26,Common Bronzewing,Phaps chalcoptera,common_bronzewing,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+27,Whimbrel,Numenius phaeopus,whimbrel,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+28,Common Greenshank,Tringa nebularia,common_greenshank,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+29,Common Sandpiper,Actitis hypoleucos,common_sandpiper,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+30,Pink Cockatoo,Lophochroa leadbeateri,pink_cockatoo,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+31,Inland Thornbill,Acanthiza apicalis,inland_thornbill,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+32,Spiny-cheeked Honeyeater,Acanthagenys rufogularis,spiny_cheeked_honeyeater,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+33,White-throated Nightjar,Eurostopodus mystacalis,white_throated_nightjar,600,5500,heuristic_nocturnal_churring_or_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+34,Spotted Quail-thrush,Cinclosoma punctatum,spotted_quail_thrush,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+35,Gray Shrikethrush,Colluricincla harmonica,gray_shrikethrush,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+36,Purple-backed Fairywren,Malurus assimilis,purple_backed_fairywren,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+37,Eurasian Coot,Fulica atra,eurasian_coot,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+38,Weebill,Smicrornis brevirostris,weebill,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+39,Pied Honeyeater,Certhionyx variegatus,pied_honeyeater,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+40,Wood Sandpiper,Tringa glareola,wood_sandpiper,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+41,Yellow-rumped Thornbill,Acanthiza chrysorrhoa,yellow_rumped_thornbill,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+42,Australian Ringneck,Barnardius zonarius,australian_ringneck,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+43,Crimson Chat,Epthianura tricolor,crimson_chat,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+44,White-winged Fairywren,Malurus leucopterus,white_winged_fairywren,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+45,Black-eared Cuckoo,Chrysococcyx osculans,black_eared_cuckoo,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+46,Red-backed Fairywren,Malurus melanocephalus,red_backed_fairywren,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+47,White-breasted Woodswallow,Artamus leucorynchus,white_breasted_woodswallow,1200,8000,heuristic_woodswallow_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+48,Singing Honeyeater,Gavicalis virescens,singing_honeyeater,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+49,Brown Falcon,Falco berigora,brown_falcon,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+50,Yellow-throated Miner,Manorina flavigula,yellow_throated_miner,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+51,Red-browed Firetail,Neochmia temporalis,red_browed_firetail,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+52,Restless Flycatcher,Myiagra inquieta,restless_flycatcher,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+53,Red-winged Parrot,Aprosmictus erythropterus,red_winged_parrot,800,7000,heuristic_parrot_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+54,Chestnut-crowned Babbler,Pomatostomus ruficeps,chestnut_crowned_babbler,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+55,Osprey,Pandion haliaetus,osprey,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+56,Red-browed Pardalote,Pardalotus rubricatus,red_browed_pardalote,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+57,Banded Lapwing,Vanellus tricolor,banded_lapwing,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+58,Spotted Dove,Streptopelia chinensis,spotted_dove,700,6500,heuristic_nonpasserine_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+59,Eastern Spinebill,Acanthorhynchus tenuirostris,eastern_spinebill,1500,9000,heuristic_honeyeater_high_mid_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+60,Gilbert's Whistler,Pachycephala inornata,gilberts_whistler,1200,7000,heuristic_song_or_whistle_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+61,Gray Fantail,Rhipidura albiscapa,gray_fantail,2500,10000,heuristic_small_passerine_high_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+62,Pacific Swift,Apus pacificus,pacific_swift,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.
+63,Southern Scrub-Robin,Drymodes brunneopygia,southern_scrub_robin,1000,8000,heuristic_general_bird_call_band,initial,Initial v2 default; tighten per sample during spectrogram review.

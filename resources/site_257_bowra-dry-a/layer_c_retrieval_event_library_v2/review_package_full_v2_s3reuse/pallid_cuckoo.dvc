@@ -1,0 +1,6 @@
+outs:
+- md5: 26247684666d5a48233aa15547c2d3e6.dir
+  size: 79325182
+  nfiles: 700
+  hash: md5
+  path: pallid_cuckoo

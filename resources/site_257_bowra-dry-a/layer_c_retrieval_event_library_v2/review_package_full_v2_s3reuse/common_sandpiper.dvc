@@ -1,0 +1,6 @@
+outs:
+- md5: b51457d24fa651ba9c2d45d11275f598.dir
+  size: 76164324
+  nfiles: 708
+  hash: md5
+  path: common_sandpiper

@@ -1,0 +1,6 @@
+outs:
+- md5: 653851e3f78d0e14b817b77a46c9e3c4.dir
+  size: 81113909
+  nfiles: 704
+  hash: md5
+  path: masked_woodswallow
