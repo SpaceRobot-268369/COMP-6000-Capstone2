@@ -1,0 +1,6 @@
+outs:
+- md5: 96c4acdf1e9ee04f2abbd56894e665e5.dir
+  size: 8296470
+  nfiles: 70
+  hash: md5
+  path: restless_flycatcher

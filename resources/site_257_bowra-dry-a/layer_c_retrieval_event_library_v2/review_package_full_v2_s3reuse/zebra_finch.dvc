@@ -1,0 +1,6 @@
+outs:
+- md5: e811ef925ce042baa2e8215e623a6174.dir
+  size: 85566753
+  nfiles: 704
+  hash: md5
+  path: zebra_finch

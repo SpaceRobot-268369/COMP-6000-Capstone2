@@ -1,0 +1,6 @@
+outs:
+- md5: 1426f8b736661abab9187ba6c2047c98.dir
+  size: 79621353
+  nfiles: 700
+  hash: md5
+  path: cockatiel
