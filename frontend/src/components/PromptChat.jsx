@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const SUGGESTIONS = [
+const PRESET_PROMPTS = [
   "Rainy autumn dawn, distant thunder",
   "Still winter night, moonlit",
   "Hot summer afternoon, cicadas",
@@ -26,6 +26,7 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
     onSubmit(text);
   }
 
+  // Prevent submit on shift+enter, submit on enter
   function onKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -60,9 +61,14 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
 
         {phase === "prompt" && (
           <>
-            <div className="demo-suggestions">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" className="demo-chip" onClick={() => setValue(s)}>
+            <div className="demo-presets">
+              {PRESET_PROMPTS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="demo-preset-chip"
+                  onClick={() => onSubmit(s)}
+                >
                   {s}
                 </button>
               ))}

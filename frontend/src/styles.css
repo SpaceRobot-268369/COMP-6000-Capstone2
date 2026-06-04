@@ -5179,18 +5179,18 @@ textarea {
   40% { opacity: 1; transform: scale(1); }
 }
 
-/* ---- suggestions ---- */
-.demo-suggestions {
+/* ---- presets ---- */
+.demo-presets {
   display: flex; flex-wrap: wrap; gap: 9px; justify-content: center;
 }
-.demo-chip {
+.demo-preset-chip {
   font-family: var(--demo-ui); font-size: 13px; letter-spacing: 0.02em;
   padding: 8px 14px; border-radius: 999px; cursor: pointer;
   color: #c9c5bc; background: rgba(255,255,255,0.045);
   border: 1px solid rgba(255,255,255,0.1);
   transition: background 0.18s, color 0.18s, border-color 0.18s;
 }
-.demo-chip:hover {
+.demo-preset-chip:hover {
   background: rgba(255,255,255,0.1); color: #f1ece1;
   border-color: rgba(255,255,255,0.22);
 }
@@ -5281,13 +5281,13 @@ textarea {
   background: #8b9d77 !important;
 }
 
-[data-theme="light"] .demo-chip {
+[data-theme="light"] .demo-preset-chip {
   color: #4c4538 !important;
   background: rgba(0, 0, 0, 0.03) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
 }
 
-[data-theme="light"] .demo-chip:hover {
+[data-theme="light"] .demo-preset-chip:hover {
   background: rgba(0, 0, 0, 0.07) !important;
   color: #1c1913 !important;
   border-color: rgba(0, 0, 0, 0.18) !important;
@@ -5322,4 +5322,47 @@ textarea {
   background: rgba(240, 237, 230, 0.8) !important;
   border-color: rgba(0, 0, 0, 0.28) !important;
 }
+
+/* ─── Premium View Transitions ─── */
+::view-transition-old(root) {
+  animation: 350ms cubic-bezier(0.4, 0, 0.2, 1) both fade-out-zoom;
+}
+::view-transition-new(root) {
+  animation: 600ms cubic-bezier(0.4, 0, 0.2, 1) both fade-in-zoom;
+}
+
+@keyframes fade-out-zoom {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(8px);
+  }
+}
+
+@keyframes fade-in-zoom {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 

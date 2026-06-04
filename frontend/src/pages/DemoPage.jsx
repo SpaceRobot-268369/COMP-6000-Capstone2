@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PromptChat from "../components/PromptChat.jsx";
-import ImmersivePage from "./ImmersivePage.jsx";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 
@@ -14,13 +14,11 @@ const GEN_STAGES = [
 const STAGE_MS = 650;
 
 /* The generation demo flow: a chatbot-style prompt → a staged generating
-   transition → the immersive woodland placed on the resolved scene, with a
-   second-person narration as its centre text.
-
-   One page owns a `phase` state machine so the GPU-heavy immersive engine is
-   mounted only in the immersive phase and disposed cleanly on "New scene". */
+   transition → navigating to the immersive woodland placed on the resolved scene,
+   with a second-person narration as its centre text. */
 export default function DemoPage() {
-  const [phase, setPhase] = useState("prompt"); // prompt | generating | immersive
+  const navigate = useNavigate();
+  const [phase, setPhase] = useState("prompt"); // prompt | generating
   const [userMessage, setUserMessage] = useState("");
   const [stageIndex, setStageIndex] = useState(0);
   const [resolved, setResolved] = useState(null);
@@ -47,29 +45,20 @@ export default function DemoPage() {
       timersRef.current.push(setTimeout(() => setStageIndex(i), STAGE_MS * i));
     });
     timersRef.current.push(
-      setTimeout(() => setPhase("immersive"), STAGE_MS * GEN_STAGES.length + 300),
-    );
-  }
+      setTimeout(() => {
+        const resolvedState = { ...params, narration };
+        const performNavigation = () => {
+          navigate("/immersive", {
+            state: { resolved: resolvedState, fromDemo: true },
+          });
+        };
 
-  function handleReset() {
-    clearTimers();
-    setPhase("prompt");
-    setResolved(null);
-    setUserMessage("");
-    setStageIndex(0);
-  }
-
-  if (phase === "immersive" && resolved) {
-    return (
-      <ImmersivePage
-        initial={resolved}
-        showDevPanel={false}
-        overlay={
-          <button type="button" className="demo-reset" onClick={handleReset}>
-            ↺ New scene
-          </button>
+        if (document.startViewTransition) {
+          document.startViewTransition(performNavigation);
+        } else {
+          performNavigation();
         }
-      />
+      }, STAGE_MS * GEN_STAGES.length + 300)
     );
   }
 
@@ -82,3 +71,4 @@ export default function DemoPage() {
     />
   );
 }
+
