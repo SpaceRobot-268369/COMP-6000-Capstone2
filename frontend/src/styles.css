@@ -5509,6 +5509,18 @@ body.theme-generation .main-panel:has(.demo-chat) {
   }
 }
 
+/* Looping idle drift that takes over once the entrance fade-in ends.
+   Starts/ends at translateY(0) for a seamless hand-off. */
+@keyframes demoTitleIdle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+@keyframes demoSubIdle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+
 @keyframes demoLabelFadeIn {
   from {
     opacity: 0;
@@ -5567,15 +5579,17 @@ body.theme-generation .main-panel:has(.demo-chat) {
   color: #f4efe4; margin: 0;
   text-wrap: balance;
   opacity: 0;
-  animation: demoTitleFadeIn 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0.28s;
+  animation:
+    demoTitleFadeIn 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.28s forwards,
+    demoTitleIdle 6s ease-in-out 1.23s infinite;
 }
 .demo-sub {
   font-family: var(--demo-ui); font-size: 15px; line-height: 1.5;
   color: #9a948690; color: #9a9486; margin: 14px auto 0; max-width: 30em;
   opacity: 0;
-  animation: demoSubFadeIn 1.05s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0.44s;
+  animation:
+    demoSubFadeIn 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.44s forwards,
+    demoSubIdle 7s ease-in-out 1.49s infinite;
 }
 
 /* ---- transcript ---- */
@@ -6610,6 +6624,7 @@ body.theme-analysis .navbar-link.active .nav-icon {
 /* Mode toggle */
 .flow-mode-toggle {
   display: inline-flex;
+  justify-self: center;
   gap: 4px;
   padding: 4px;
   border-radius: 999px;
@@ -6694,6 +6709,23 @@ body.theme-analysis .navbar-link.active .nav-icon {
 }
 
 .flow-node-output .flow-node-icon { color: #9cf6d6; }
+
+/* "LLM OSS" pill on the Prompt Parser node — mirrors the Analysis narration layer's purple LLM treatment. */
+.flow-node-tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 170, 255, 0.32);
+  background: rgba(200, 170, 255, 0.13);
+  color: #dacbff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 .flow-node-body strong {
   display: block;
@@ -6780,15 +6812,65 @@ body.theme-analysis .navbar-link.active .nav-icon {
   color: rgba(232, 239, 242, 0.55);
 }
 
+/* Why-decode rationale (generation only), beside the Prompt Decoder node */
+.flow-decoder-why {
+  width: 100%;
+  max-width: 520px;
+  margin: 12px 0 0;
+  padding: 14px 18px;
+  border: 1px dashed rgba(177, 242, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(177, 242, 255, 0.04);
+}
+
+.flow-decoder-why-lead {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(186, 238, 248, 0.7);
+}
+
+.flow-decoder-why-text {
+  margin: 7px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(232, 239, 242, 0.62);
+}
+
+.flow-decoder-why-eg {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(177, 242, 255, 0.12);
+  font-size: 0.82rem;
+  font-style: italic;
+  color: rgba(216, 245, 255, 0.82);
+}
+
+.flow-decoder-why-eg span {
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(186, 238, 248, 0.5);
+}
+
 /* Three parallel layer cards */
 .flow-layers {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   width: 100%;
+  /* Sit above the merge/mixer stack so an opened OUT-port popover (which floats
+     down into the merge region) is not painted over by the Mixer card. */
+  position: relative;
+  z-index: 2;
 }
 
 .flow-layer-card {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 12px;
@@ -6797,6 +6879,147 @@ body.theme-analysis .navbar-link.active .nav-icon {
   padding: 18px 16px;
   animation: flow-card-in 480ms ease both;
   animation-delay: calc(var(--i) * 120ms);
+}
+
+/* Ports straddle the card edge — must not be clipped by .panel's overflow */
+.flow-layer-card.flow-has-ports { overflow: visible; }
+
+/* Input / output connection ports straddling the card edge */
+.flow-port {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.flow-port-in { top: -16px; }
+.flow-port-out { bottom: -16px; }
+
+/* the clickable / hoverable circle */
+.flow-port-dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: #0c1418;
+  cursor: pointer;
+  transition: transform 130ms ease, box-shadow 130ms ease;
+}
+
+.flow-port-dot > i {
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flow-port-dot:hover { transform: scale(1.14); }
+.flow-port-dot:focus-visible { outline: 2px solid #b4f0ff; outline-offset: 2px; }
+
+/* short stub linking the circle into the card body */
+.flow-port-dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  height: 9px;
+  transform: translateX(-50%);
+}
+
+.flow-port-in .flow-port-dot {
+  border: 2px solid rgba(177, 242, 255, 0.7);
+  box-shadow: 0 0 10px rgba(177, 242, 255, 0.35);
+}
+.flow-port-in .flow-port-dot > i { color: #b4f0ff; }
+.flow-port-in .flow-port-dot::after {
+  top: 100%;
+  background: linear-gradient(180deg, rgba(177, 242, 255, 0.7), transparent);
+}
+
+.flow-port-out .flow-port-dot {
+  border: 2px solid rgba(133, 246, 207, 0.7);
+  box-shadow: 0 0 10px rgba(133, 246, 207, 0.35);
+}
+.flow-port-out .flow-port-dot > i { color: #9cf6d6; }
+.flow-port-out .flow-port-dot::after {
+  bottom: 100%;
+  background: linear-gradient(0deg, rgba(133, 246, 207, 0.7), transparent);
+}
+
+.flow-port.is-pinned .flow-port-dot { transform: scale(1.14); }
+.flow-port-in.is-pinned .flow-port-dot { background: rgba(177, 242, 255, 0.16); }
+.flow-port-out.is-pinned .flow-port-dot { background: rgba(133, 246, 207, 0.16); }
+
+/* hover / click popover carrying the input or output info */
+.flow-port-pop {
+  position: absolute;
+  left: 50%;
+  display: grid;
+  gap: 5px;
+  width: max-content;
+  max-width: 230px;
+  padding: 10px 12px;
+  transform: translateX(-50%);
+  border-radius: 9px;
+  border: 1px solid rgba(177, 242, 255, 0.22);
+  background: rgba(12, 20, 24, 0.97);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+  z-index: 6;
+}
+
+.flow-port-in .flow-port-pop { bottom: calc(100% + 9px); }
+.flow-port-out .flow-port-pop {
+  top: calc(100% + 9px);
+  border-color: rgba(133, 246, 207, 0.24);
+}
+
+/* Info shows on click (pinned) only — hover just highlights the circle, so
+   the two interactions no longer conflict. */
+.flow-port.is-pinned .flow-port-pop {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.flow-port-pop-title {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #cdeffb;
+}
+.flow-port-out .flow-port-pop-title { color: #b8f5dd; }
+
+.flow-port-pop-field {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(186, 238, 248, 0.5);
+}
+
+.flow-port-pop-code {
+  display: block;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #cdeffb;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.flow-port-pop-text {
+  color: rgba(232, 239, 242, 0.78);
+  font-size: 0.76rem;
+  line-height: 1.45;
 }
 
 @keyframes flow-card-in {
@@ -6934,25 +7157,48 @@ body.theme-analysis .navbar-link.active .nav-icon {
 }
 
 /* ── Light mode ── */
-[data-theme="light"] .flow-mode-toggle { border-color: rgba(0, 100, 140, 0.18); background: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .flow-mode-toggle { border-color: rgba(0, 100, 140, 0.25); background: rgba(0, 0, 0, 0.04); }
 [data-theme="light"] .flow-mode-tab { color: rgba(0, 30, 50, 0.55); }
 [data-theme="light"] .flow-mode-tab:hover { color: #005070; }
 [data-theme="light"] .flow-mode-tab.active { color: #07131a; }
-[data-theme="light"] .flow-node { border-color: rgba(0, 120, 165, 0.22); background: rgba(0, 120, 165, 0.05); }
-[data-theme="light"] .flow-node-output { border-color: rgba(0, 150, 110, 0.28); background: rgba(0, 150, 110, 0.06); }
-[data-theme="light"] .flow-node-icon { background: rgba(0, 0, 0, 0.05); color: #0077a5; }
+[data-theme="light"] .flow-node { border-color: rgba(0, 120, 165, 0.34); background: rgba(0, 120, 165, 0.08); }
+[data-theme="light"] .flow-node-output { border-color: rgba(0, 150, 110, 0.38); background: rgba(0, 150, 110, 0.09); }
+[data-theme="light"] .flow-node-icon { background: rgba(0, 120, 165, 0.12); color: #0077a5; }
+[data-theme="light"] .flow-node-tag { border-color: rgba(95, 80, 150, 0.3); background: rgba(95, 80, 150, 0.1); color: #59458a; }
 [data-theme="light"] .flow-node-body strong { color: #0d2330; }
-[data-theme="light"] .flow-node-body span { color: rgba(0, 30, 50, 0.5); }
-[data-theme="light"] .flow-fan::before { background: rgba(0, 120, 165, 0.2); }
+[data-theme="light"] .flow-node-body span { color: rgba(0, 30, 50, 0.62); }
+[data-theme="light"] .flow-fan::before { background: rgba(0, 120, 165, 0.32); }
 [data-theme="light"] .flow-conn,
 [data-theme="light"] .flow-drop { background-image: linear-gradient(180deg, transparent, rgba(0, 120, 165, 0.55), transparent); }
 [data-theme="light"] .flow-parallel-title { color: #004060; }
-[data-theme="light"] .flow-parallel-note { color: rgba(0, 30, 50, 0.55); }
-[data-theme="light"] .flow-layer-step { background: rgba(0, 120, 165, 0.1); color: #0077a5; }
-[data-theme="light"] .flow-layer-step-merge { background: rgba(0, 150, 110, 0.12); color: #00805a; }
+[data-theme="light"] .flow-parallel-note { color: rgba(0, 30, 50, 0.62); }
+[data-theme="light"] .flow-layer-step { background: rgba(0, 120, 165, 0.12); color: #006a98; }
+[data-theme="light"] .flow-layer-step-merge { background: rgba(0, 150, 110, 0.14); color: #00734f; }
 [data-theme="light"] .flow-layer-label { color: #0d2330; }
-[data-theme="light"] .flow-layer-fact { border-color: rgba(0, 100, 140, 0.1); background: rgba(0, 0, 0, 0.025); }
+/* Inner cards get a tint + firmer border so they separate from the white diagram card */
+[data-theme="light"] .flow-layer-card { border-color: rgba(0, 100, 140, 0.22); background: linear-gradient(180deg, #f2f7fb, #e8f0f5); box-shadow: 0 1px 3px rgba(0, 60, 90, 0.07); }
+[data-theme="light"] .flow-layer-fact { border-color: rgba(0, 100, 140, 0.16); background: #ffffff; }
 [data-theme="light"] .flow-layer-fact span { color: rgba(0, 100, 140, 0.62); }
-[data-theme="light"] .flow-layer-fact p { color: rgba(0, 30, 50, 0.66); }
-[data-theme="light"] .flow-layer-card-llm { border-color: rgba(95, 80, 150, 0.2); background: rgba(95, 80, 150, 0.045); }
-[data-theme="light"] .flow-layer-card-llm .flow-layer-step { background: rgba(95, 80, 150, 0.1); color: #59458a; }
+[data-theme="light"] .flow-layer-fact p { color: rgba(0, 30, 50, 0.7); }
+[data-theme="light"] .flow-layer-card-llm { border-color: rgba(95, 80, 150, 0.28); background: linear-gradient(180deg, #f3f0fb, #ece6f7); }
+[data-theme="light"] .flow-layer-card-llm .flow-layer-step { background: rgba(95, 80, 150, 0.12); color: #59458a; }
+[data-theme="light"] .flow-decoder-why { border-color: rgba(0, 120, 165, 0.4); background: rgba(0, 120, 165, 0.055); }
+[data-theme="light"] .flow-decoder-why-lead { color: rgba(0, 100, 140, 0.7); }
+[data-theme="light"] .flow-decoder-why-text { color: rgba(0, 30, 50, 0.66); }
+[data-theme="light"] .flow-decoder-why-eg { border-top-color: rgba(0, 120, 165, 0.15); color: #0a3346; }
+[data-theme="light"] .flow-decoder-why-eg span { color: rgba(0, 100, 140, 0.55); }
+[data-theme="light"] .flow-port-dot { background: #eef5f8; }
+[data-theme="light"] .flow-port-in .flow-port-dot { border-color: rgba(0, 120, 165, 0.7); box-shadow: 0 0 8px rgba(0, 120, 165, 0.25); }
+[data-theme="light"] .flow-port-in .flow-port-dot > i { color: #0077a5; }
+[data-theme="light"] .flow-port-out .flow-port-dot { border-color: rgba(0, 150, 110, 0.7); box-shadow: 0 0 8px rgba(0, 150, 110, 0.25); }
+[data-theme="light"] .flow-port-out .flow-port-dot > i { color: #00805a; }
+[data-theme="light"] .flow-port-in .flow-port-dot::after { background: linear-gradient(180deg, rgba(0, 120, 165, 0.7), transparent); }
+[data-theme="light"] .flow-port-out .flow-port-dot::after { background: linear-gradient(0deg, rgba(0, 150, 110, 0.7), transparent); }
+[data-theme="light"] .flow-port-pop { border-color: rgba(0, 120, 165, 0.28); background: #ffffff; box-shadow: 0 12px 30px rgba(0, 60, 90, 0.18); }
+[data-theme="light"] .flow-port-out .flow-port-pop { border-color: rgba(0, 150, 110, 0.3); }
+[data-theme="light"] .flow-port-pop-title { color: #005f86; }
+[data-theme="light"] .flow-port-out .flow-port-pop-title { color: #00765a; }
+[data-theme="light"] .flow-port-pop-field { color: rgba(0, 100, 140, 0.62); }
+[data-theme="light"] .flow-port-pop-code { background: rgba(0, 30, 50, 0.06); color: #07394f; }
+[data-theme="light"] .flow-port-pop-text { color: rgba(0, 30, 50, 0.72); }
+[data-theme="light"] .flow-merge-wave span { background: linear-gradient(180deg, #1f9fbb, #28a07d); }
