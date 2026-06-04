@@ -164,17 +164,24 @@ layers:
     default: murphy__mvp_1__weather_stem_selector
     attempts:
       murphy__smoke_1__audioldm2_wind:
-        label: "Wind-only generate smoke (AudioLDM2 LoRA)"
+        label: "Generate wind — AudioLDM2 LoRA smoke"
         author: murphy
         stage: smoke_1
         status: smoke_candidate
         uses_seed: true
         checkpoint: model/candidates/murphy/smoke_1__audioldm2_wind
         description: |
-          Layer B generate-route smoke attempt for single-element wind synthesis.
-          Uses a locked prompt and seed-driven AudioLDM2 + LoRA inference to
-          produce a short wind stem. This attempt is generation-only and does
-          not use the retrieval pool at runtime.
+          Generates a short wind-only weather stem with the Layer B AudioLDM2
+          LoRA smoke attempt. This is the model-testing generate path, separate
+          from the site-only weather stem selector.
+
+          Runtime accepts a seed only. Weather type is fixed to wind, and the
+          prompt, duration, guidance scale, inference steps, RMS target, and
+          filtering are locked by the registry and handler so repeated frontend
+          tests are comparable.
+
+          Output is a generated WAV plus metadata for frontend inspection. This
+          is not the retrieval pool and not a full Layer D soundscape mix.
         params:
           base_model: cvssp/audioldm2
           prompt: >-
@@ -191,16 +198,26 @@ layers:
           - Training data comes from a filtered wind-only manifest built from site pool.
 
       murphy__mvp_1__wind_intensity_bank:
-        label: "Wind intensity bank (generate, medium/heavy + derived light)"
+        label: "Generate wind — intensity bank"
         author: murphy
         stage: mvp_1
         status: mvp_candidate
         uses_seed: true
         checkpoint: model/candidates/murphy/mvp_1__wind_intensity_bank
         description: |
-          Layer B wind intensity bank (sealed). light = v2 light_a (lowpass 6k);
-          medium = v3 denoise bump; heavy = v2 frozen. medium/heavy use LoRA
-          adapters; light is derived from medium.
+          Generates wind-only Layer B weather stems from the sealed AudioLDM2
+          wind intensity bank. This is the frontend-facing model test for
+          layerB_generate_wind and sits beside, not in place of, the site-only
+          weather stem selector.
+
+          Runtime controls are seed and wind intensity. Weather type is fixed to
+          wind. The sealed profiles are: light = v2 light_a with 6 kHz lowpass,
+          medium = v3 denoise bump, and heavy = v2 frozen. Medium and heavy use
+          LoRA adapters; light is derived from medium.
+
+          Output is a generated WAV plus metadata for review in the developer
+          Generation page. Layer D still owns final placement and full
+          soundscape mixing.
         params:
           base_model: cvssp/audioldm2
           default_intensity: medium
