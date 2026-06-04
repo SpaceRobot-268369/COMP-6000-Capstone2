@@ -218,6 +218,54 @@ layers:
         notes:
           - Per-species LoRA; 16 kHz native.
 
+      burger__mvp_2__retrieval_v2_library:
+        label: "Layer C retrieval v2 audited library"
+        author: burger
+        stage: mvp_2
+        status: demo_ready
+        uses_seed: true
+        uses_cells: true
+        checkpoint: null
+        description: |
+          Layer C retrieval v2 baseline backed by the rebuilt 63-species
+          audited library. It selects real Pass-reviewed snippets from the v2
+          event index and schedules them into a 60-second ecological timeline.
+        params:
+          method: retrieval
+          species_common_name: "Splendid Fairywren"
+          event_type: layer_c_retrieval_v2_library
+          retrieval_index: resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/layer_c_retrieval_v2_event_index.csv
+          duration_s: 60.0
+          count: 12
+          default_cell: summer_morning
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+          cells:
+            spring_dawn: {}
+            spring_morning: {}
+            spring_afternoon: {}
+            spring_night: {}
+            summer_dawn: {}
+            summer_morning: {}
+            summer_afternoon: {}
+            summer_night: {}
+            autumn_dawn: {}
+            autumn_morning: {}
+            autumn_afternoon: {}
+            autumn_night: {}
+            winter_dawn: {}
+            winter_morning: {}
+            winter_afternoon: {}
+            winter_night: {}
+        notes:
+          - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
+          - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
+          - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
+
   layer_d:
     label: "Layer D — Mixer"
     default: lucas__smoke_1__layered_mix

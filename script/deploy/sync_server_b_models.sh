@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Sync the Server B main checkout and materialise production model artifacts.
+# Sync the Server B main checkout and materialise deploy-time DVC artifacts.
 # This is intentionally sync-only: it never starts, stops, or restarts uvicorn.
 
 deploy_dir="${SERVER_B_DEPLOY_DIR:-$HOME/shiny-pikachu}"
@@ -69,22 +69,30 @@ sync_git() {
   log "Checkout after sync: $after_sha"
 }
 
-pull_production_models() {
+pull_dvc_artifacts() {
   dvc_bin="$(find_dvc)"
   log "Using DVC: $("$dvc_bin" --version)"
 
-  if [ ! -d model/production ]; then
-    log "No model/production directory found; nothing to materialise"
-    return 0
-  fi
+  mapfile -d '' dvc_pointers < <(
+    {
+      if [ -d model/production ]; then
+        find model/production -name '*.dvc' -type f -print0
+      fi
 
-  mapfile -d '' dvc_pointers < <(find model/production -name '*.dvc' -type f -print0 | sort -z)
+      if [ -d acoustic_ai/layers ]; then
+        find acoustic_ai/layers -name '*.dvc' -type f \
+          \( -path '*/expected/*' -o -path '*/showcase/*' \) \
+          -print0
+      fi
+    } | sort -z
+  )
+
   if [ "${#dvc_pointers[@]}" -eq 0 ]; then
-    log "No production DVC pointers found; nothing to materialise"
+    log "No production model or sample DVC pointers found; nothing to materialise"
     return 0
   fi
 
-  log "Pulling ${#dvc_pointers[@]} production DVC pointer(s)"
+  log "Pulling ${#dvc_pointers[@]} production model/sample DVC pointer(s)"
   "$dvc_bin" pull "${dvc_pointers[@]}"
 
   missing=()
@@ -97,10 +105,10 @@ pull_production_models() {
 
   if [ "${#missing[@]}" -gt 0 ]; then
     printf '%s\n' "${missing[@]}" >&2
-    fail "Some production model artifacts are still missing after dvc pull"
+    fail "Some production model/sample artifacts are still missing after dvc pull"
   fi
 
-  log "Production model artifacts are materialised"
+  log "Production model/sample artifacts are materialised"
 }
 
 report_service_state() {
@@ -157,9 +165,9 @@ main() {
   log "Deploy checkout: $deploy_dir"
   ensure_git_checkout
   sync_git
-  pull_production_models
+  pull_dvc_artifacts
   report_service_state
-  log "Server B model sync complete"
+  log "Server B artifact sync complete"
 }
 
 main "$@"

@@ -1,0 +1,6 @@
+outs:
+- md5: 3f7406bd49d407b47ed65e83b92cd26d.dir
+  size: 8395731
+  nfiles: 70
+  hash: md5
+  path: red_winged_parrot

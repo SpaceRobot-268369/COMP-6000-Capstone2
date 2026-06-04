@@ -1,0 +1,6 @@
+outs:
+- md5: 17cff59241cc905d12b4f93d19e03eec.dir
+  size: 49431209
+  nfiles: 360
+  hash: md5
+  path: australian_ringneck
