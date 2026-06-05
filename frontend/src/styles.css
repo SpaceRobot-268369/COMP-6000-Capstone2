@@ -5801,12 +5801,15 @@ body.theme-generation .main-panel:has(.demo-chat) {
    in via grid areas, so the centre column stays horizontally centred. */
 .demo-chat.theme-generation .demo-chat-inner {
   width: min(1180px, 100%);
+  min-height: calc(100vh - 152px);
   display: grid;
   grid-template-columns: 1fr minmax(0, 560px) 1fr;
+  grid-template-rows: auto auto 1fr auto;
   grid-template-areas:
     "head  head    head"
     ".     trans   ."
-    "lrail center  rrail";
+    "lrail center  rrail"
+    "input input   input";
   align-items: center;
   column-gap: clamp(20px, 3vw, 56px);
   row-gap: 22px;
@@ -5816,13 +5819,30 @@ body.theme-generation .main-panel:has(.demo-chat) {
 .demo-rail-left { grid-area: lrail; }
 .demo-rail-right { grid-area: rrail; }
 .demo-center { grid-area: center; }
+.demo-chat.theme-generation .demo-composer { grid-area: input; }
 
-/* centre column: preset chips above the prompt input, both page-centred */
+/* centre column: preset chips in a distinct panel so they read as their own
+   group, separate from the two side rails. */
 .demo-center {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
   width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(120, 116, 140, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  animation: demoCardFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+/* prompt input floats, pinned to the bottom of the page, centred */
+.demo-chat.theme-generation .demo-composer {
+  justify-self: center;
+  width: min(640px, 100%);
+  position: sticky;
+  bottom: 20px;
+  z-index: 6;
 }
 
 .demo-rail {
@@ -5917,15 +5937,19 @@ body.theme-generation .main-panel:has(.demo-chat) {
 @media (max-width: 1080px) {
   .demo-chat.theme-generation .demo-chat-inner {
     width: min(720px, 100%);
+    min-height: 0;
     grid-template-columns: 1fr;
+    grid-template-rows: none;
     grid-template-areas:
       "head"
       "trans"
       "lrail"
       "rrail"
-      "center";
+      "center"
+      "input";
     row-gap: 26px;
   }
+  .demo-chat.theme-generation .demo-composer { justify-self: stretch; width: 100%; }
   .demo-rail-left,
   .demo-rail-right {
     align-items: flex-start; text-align: left; justify-self: stretch;
@@ -5946,9 +5970,14 @@ body.theme-generation .main-panel:has(.demo-chat) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .demo-rail { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .demo-rail,
+  .demo-center { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
 
+[data-theme="light"] .demo-center {
+  background: rgba(120, 110, 70, 0.08);
+  border-color: rgba(60, 53, 42, 0.14);
+}
 [data-theme="light"] .demo-rail-label { color: #6f6a5c; }
 [data-theme="light"] .demo-seg-btn,
 [data-theme="light"] .demo-opt-chip {

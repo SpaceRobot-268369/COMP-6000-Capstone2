@@ -39,20 +39,6 @@ const workflows = [
     status: "partial",
     featured: true,
   },
-  {
-    icon: "≋",
-    title: "Transformation",
-    to: "/transformation",
-    tagline: "Shift an existing recording to new conditions",
-    description:
-      "Upload a source recording then dial in a new set of environmental conditions. The model encodes the source into the VAE latent space, adjusts it toward the target conditions, and decodes a transformed soundscape. Hear what the same site might sound like in a different season or under a changing climate.",
-    steps: [
-      "Upload source audio",
-      "Set target env conditions",
-      "Encode → adjust z → decode → output audio",
-    ],
-    status: "planned",
-  },
 ];
 
 const dataStats = [
@@ -83,10 +69,11 @@ export default function AboutPage() {
           <h1 className="intro-hero-title">Speculative Soundscape Generation</h1>
           <p className="intro-hero-lead">
             An AI system that learns relationships between environmental conditions and
-            ecoacoustic recordings, then generates or transforms soundscapes under new
-            ecological conditions. Built as a <strong>layered composition</strong> — ambient
-            bed, weather, and events mixed separately rather than one generated waveform — on
-            510 hours of field recordings from a single semi-arid site in Queensland, Australia.
+            ecoacoustic recordings, then analyses recordings or generates speculative
+            soundscapes from ecological conditions. Built as a <strong>layered composition</strong>
+            — ambient bed, weather, and events mixed separately rather than one generated
+            waveform — on 510 hours of field recordings from a single semi-arid site in
+            Queensland, Australia.
           </p>
           <div className="intro-hero-links">
             <Link to="/" className="intro-cta-primary">Start Analysis →</Link>
@@ -98,15 +85,15 @@ export default function AboutPage() {
           <div className="intro-wave intro-wave-b" />
           <div className="intro-wave intro-wave-c" />
           <span className="intro-node intro-node-1">● env conditioning</span>
-          <span className="intro-node intro-node-2">● latent z = 256 dim</span>
+          <span className="intro-node intro-node-2">● layer contracts</span>
         </div>
       </header>
 
-      {/* ── Three workflows ── */}
+      {/* ── Current workflows ── */}
       <section className="intro-section">
         <div className="intro-section-head">
-          <p className="eyebrow">THREE MODES</p>
-          <p className="intro-section-sub">Each mode orchestrates the same five-layer model stack in a different direction.</p>
+          <p className="eyebrow">CURRENT MODES</p>
+          <p className="intro-section-sub">The demo focuses on analysis and generation, both grounded in the same layered model stack.</p>
         </div>
         <div className="intro-workflow-grid">
           {workflows.map((w) => {

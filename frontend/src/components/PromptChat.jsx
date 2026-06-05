@@ -299,6 +299,7 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
                   {s}
                 </button>
               ))}
+              </div>
             </div>
 
             <div className="demo-composer">
@@ -319,7 +320,6 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
               >
                 ↵
               </button>
-            </div>
             </div>
           </>
         )}
