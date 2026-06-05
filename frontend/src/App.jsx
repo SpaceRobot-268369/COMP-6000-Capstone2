@@ -151,7 +151,7 @@ export default function App() {
     }
   }, [location, navigate]);
 
-  const refreshCurrentUser = useCallback(async ({ showChecking = false } = {}) => {
+  const refreshCurrentUser = useCallback(({ showChecking = false } = {}) => {
     let cancelled = false;
 
     async function restoreSession() {
