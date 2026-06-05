@@ -92,16 +92,28 @@ export function sampleWavUrl(sample) {
   return `${base}/api${sample.wav_url}`;
 }
 
-// ─── Stage-3 product endpoints (placeholders) ─────────────────────────────────
-// Analysis / Generation / Transformation routes will be reimplemented on top of
-// the new layer/attempt registry in a follow-up. The current stubs keep the
-// build green and surface a clear message at click time.
+// ─── Stage-3 product endpoints ──────────────────────────────────────────────────
+// Analysis uses the Layer E head orchestrator + aggregator. Generation and
+// transformation remain placeholders.
 
 const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
+export async function analyseAudio(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/api/analysis`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
+  }
+  return res.json();
+}
 
 /**
  * Run one Layer E analysis head on an uploaded audio file. Analysis is

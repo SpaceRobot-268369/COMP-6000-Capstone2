@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import sys
 import threading
 from dataclasses import dataclass
 from functools import lru_cache
@@ -36,6 +37,9 @@ import yaml
 _AI_ROOT = Path(__file__).resolve().parent.parent     # acoustic_ai/
 _PROJECT_ROOT = _AI_ROOT.parent
 _REGISTRY_PATH = _AI_ROOT / "registry.yaml"
+
+if str(_AI_ROOT) not in sys.path:
+    sys.path.insert(0, str(_AI_ROOT))
 
 # --- types -----------------------------------------------------------------
 
@@ -213,6 +217,26 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         params=dict(att.get("params") or {}),
         notes=list(att.get("notes") or []),
     )
+
+
+def default_layer_e_head_attempt(head: str) -> str:
+    """Return the default attempt for one Layer E analysis head.
+
+    The layer-level default is the ambient head. For weather/events/aggregator
+    we select the first registered attempt whose `head:` field matches.
+    """
+    layers = _registry_doc().get("layers", {})
+    layer = layers.get("layer_e")
+    if not layer:
+        raise KeyError("unknown layer: 'layer_e'")
+    attempts = layer.get("attempts", {})
+    layer_default = layer.get("default")
+    if layer_default and attempts.get(layer_default, {}).get("head") == head:
+        return str(layer_default)
+    for attempt_id, attempt in attempts.items():
+        if attempt.get("head") == head:
+            return str(attempt_id)
+    raise KeyError(f"Layer E has no registered {head!r} analysis head")
 
 
 # --- handler dispatch ------------------------------------------------------
@@ -495,6 +519,52 @@ def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params)
     return result
 
 
+def orchestrate_analysis(
+    audio_path: str,
+    *,
+    ambient_attempt: str | None = None,
+    weather_attempt: str | None = None,
+    events_attempt: str | None = None,
+    aggregator_attempt: str | None = None,
+    include_head_reports: bool = True,
+) -> dict:
+    """Run E-A/E-B/E-C analysis heads and fuse them through the aggregator."""
+
+    attempts = {
+        "ambient": ambient_attempt or default_layer_e_head_attempt("ambient"),
+        "weather": weather_attempt or default_layer_e_head_attempt("weather"),
+        "events": events_attempt or default_layer_e_head_attempt("events"),
+        "aggregator": aggregator_attempt or default_layer_e_head_attempt("aggregator"),
+    }
+
+    ambient = analyze("layer_e", attempts["ambient"], audio_path)
+    weather = analyze("layer_e", attempts["weather"], audio_path)
+    events = analyze("layer_e", attempts["events"], audio_path)
+    aggregator = aggregate_analysis_reports(
+        attempts["aggregator"],
+        ambient_report=ambient.get("report", {}),
+        weather_report=weather.get("report", {}),
+        events_report=events.get("report", {}),
+    )
+
+    result = {
+        "report": aggregator["report"],
+        "attempts": {
+            "ambient": ambient["attempt"],
+            "weather": weather["attempt"],
+            "events": events["attempt"],
+            "aggregator": aggregator["attempt"],
+        },
+    }
+    if include_head_reports:
+        result["head_reports"] = {
+            "ambient": ambient.get("report", {}),
+            "weather": weather.get("report", {}),
+            "events": events.get("report", {}),
+        }
+    return result
+
+
 def _attempt_snapshot(spec: AttemptSpec) -> dict:
     """Compact spec block attached to every dispatch result for traceability."""
     return {
@@ -507,6 +577,33 @@ def _attempt_snapshot(spec: AttemptSpec) -> dict:
         "status": spec.status,
         "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
     }
+
+
+def aggregate_analysis_reports(
+    attempt_id: str,
+    *,
+    ambient_report: dict,
+    weather_report: dict,
+    events_report: dict,
+) -> dict:
+    """Dispatch report fusion to a Layer E aggregator attempt."""
+    spec = get_attempt("layer_e", attempt_id)
+    if spec.head != "aggregator":
+        raise ValueError(f"{attempt_id} is not a Layer E aggregator attempt")
+    mod = _get_handler_module(spec)
+    if not hasattr(mod, "aggregate"):
+        raise NotImplementedError(
+            f"layer_e/{attempt_id} handler has no aggregate(); this attempt "
+            f"does not support report fusion."
+        )
+    state = _get_state(spec)
+    report = mod.aggregate(
+        state,
+        ambient_report=ambient_report,
+        weather_report=weather_report,
+        events_report=events_report,
+    )
+    return {"report": report, "attempt": _attempt_snapshot(spec)}
 
 
 def analyze(layer_id: str, attempt_id: str, audio_path: str) -> dict:

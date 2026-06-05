@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
-import { analyseUpload, fetchLayerRegistry } from "../lib/api.js";
+import { analyseAudio, analyseUpload, fetchLayerRegistry } from "../lib/api.js";
 
 /**
  * Dev page for Analysis Mode (Layer E) — a per-head testing harness.
@@ -62,6 +62,7 @@ export default function DevAnalysisPage() {
 
   const [registry, setRegistry] = useState(null);
   const [regError, setRegError] = useState("");
+  const [fullAnalysis, setFullAnalysis] = useState({ status: "idle", result: null, error: "" });
 
   // Independent per-head runtime state (selected attempt + analysis result).
   const [heads, setHeads] = useState(() => ({
@@ -117,6 +118,7 @@ export default function DevAnalysisPage() {
       }
       return next;
     });
+    setFullAnalysis({ status: "idle", result: null, error: "" });
   }
 
   function onDrop(e) {
@@ -141,6 +143,17 @@ export default function DevAnalysisPage() {
     }
   }
 
+  async function runFullAnalysis() {
+    if (!file) return;
+    setFullAnalysis({ status: "analysing", result: null, error: "" });
+    try {
+      const data = await analyseAudio(file);
+      setFullAnalysis({ status: "done", result: data, error: "" });
+    } catch (err) {
+      setFullAnalysis({ status: "error", result: null, error: err.message });
+    }
+  }
+
   return (
     <section className="generation-page theme-analysis">
       <header className="generation-topbar">
@@ -162,6 +175,14 @@ export default function DevAnalysisPage() {
         />
 
         <SpectrogramPanel file={file} />
+      </div>
+
+      <div className="dev-results-row analysis-heads-row">
+        <FullAnalysisCard
+          state={fullAnalysis}
+          hasFile={!!file}
+          onRun={runFullAnalysis}
+        />
       </div>
 
       {/* ── Row 2: per-head analysis ─────────────────────────────────────── */}
@@ -214,6 +235,172 @@ function SpectrogramPanel({ file }) {
 }
 
 // ─── Uploader ────────────────────────────────────────────────────────────────
+
+function FullAnalysisCard({ state, hasFile, onRun }) {
+  const analysing = state.status === "analysing";
+  const done = state.status === "done";
+  const report = state.result?.report;
+
+  return (
+    <aside className="panel dev-result-card analysis-heads-card">
+      <div className="generation-card-head">
+        <h2>Full Analysis</h2>
+        <p>Runs E-A, E-B, E-C, then fuses them through the Aggregator</p>
+      </div>
+      <div className="dev-result-body">
+        <ReviewSection title="Aggregator">
+          <div className="upload-actions" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className="analyse-btn"
+              onClick={onRun}
+              disabled={!hasFile || analysing}
+            >
+              {analysing ? "Analysing..." : "Run Full Analysis"}
+            </button>
+            {!hasFile && (
+              <span style={{ fontSize: 12, opacity: 0.6, alignSelf: "center" }}>
+                Upload a clip first
+              </span>
+            )}
+          </div>
+
+          {state.error && <p className="analysis-error">{state.error}</p>}
+
+          {done && report ? (
+            <FullAnalysisResult result={state.result} />
+          ) : (
+            <Placeholder kind="json" loading={analysing}>
+              {analysing ? "Running all heads and fusing report..." : "Run the full stack to see the fused report."}
+            </Placeholder>
+          )}
+
+          {done && state.result && (
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.7 }}>
+                {"{ } Raw full analysis"}
+              </summary>
+              <pre className="layer-a-json">{JSON.stringify(state.result, null, 2)}</pre>
+            </details>
+          )}
+        </ReviewSection>
+      </div>
+    </aside>
+  );
+}
+
+function FullAnalysisResult({ result }) {
+  const report = result?.report || {};
+  const context = report.inferred_context || {};
+  const weather = report.observations?.weather || {};
+  const events = Array.isArray(report.observations?.events) ? report.observations.events : [];
+  const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
+  const limitations = Array.isArray(report.limitations) ? report.limitations : [];
+  const attempts = result?.attempts || {};
+
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Diel</p>
+        <code>{context.diel?.estimate || "undetermined"} · {fmtPct(context.diel?.posterior)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Season</p>
+        <code>{context.season?.estimate || "undetermined"} · {fmtPct(context.season?.posterior)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Weather</p>
+        <code>{weather.derived_label || "none"} · {fmtPct(weather.confidence)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Events</p>
+        <code>{events.length}</code>
+      </div>
+      <ConfidenceBar value={report.confidence} label="Aggregator confidence" />
+
+      <ContextDistribution title="Diel distribution" distribution={context.diel?.distribution} />
+      <ContextDistribution title="Season distribution" distribution={context.season?.distribution} />
+
+      {events.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Detected events</p>
+            <span>{events.length} event observations</span>
+          </div>
+          <div className="analysis-report-chips">
+            {events.slice(0, 8).map((event, idx) => (
+              <span key={`${event.label}-${event.onset_s}-${idx}`}>
+                {event.common_name || formatSpeciesLabel(event.label)} · {fmtPct(event.confidence)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {disagreements.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Disagreements</p>
+            <span>{disagreements.length}</span>
+          </div>
+          <div className="analysis-report-chips">
+            {disagreements.map((item, idx) => (
+              <span key={`${item.field}-${idx}`}>
+                {item.field}: {formatSignal(item.resolution)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {limitations.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Limitations</p>
+            <span>{limitations.length}</span>
+          </div>
+          <div className="analysis-report-chips">
+            {limitations.slice(0, 5).map((item, idx) => (
+              <span key={`${item}-${idx}`}>{item}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="analysis-report-summary">
+        <div className="analysis-report-head">
+          <p>Attempts</p>
+          <span>ambient · weather · events · aggregator</span>
+        </div>
+        <div className="analysis-report-chips">
+          {["ambient", "weather", "events", "aggregator"].map((key) => (
+            <span key={key}>{key}: {attempts[key]?.id || "unknown"}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContextDistribution({ title, distribution }) {
+  const rows = distribution && typeof distribution === "object"
+    ? Object.entries(distribution)
+    : [];
+  if (rows.length === 0) return null;
+  return (
+    <div className="analysis-report-summary">
+      <div className="analysis-report-head">
+        <p>{title}</p>
+        <span>{rows.length} bins</span>
+      </div>
+      <div className="analysis-report-chips">
+        {rows.map(([key, value]) => (
+          <span key={key}>{key}: {fmtPct(value)}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop }) {
   const inputId = "dev-analysis-file";

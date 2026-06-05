@@ -925,6 +925,30 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
   }
 });
 
+// Full Analysis Mode orchestration. The backend forwards the uploaded audio to
+// FastAPI, which runs E-A/E-B/E-C and fuses the report through Layer E
+// Aggregator.
+app.post("/api/analysis", requireAuth, async (req, res) => {
+  const operation = "orchestrated analysis";
+  try {
+    const r = await fetchAi(
+      "/analysis/run",
+      {
+        method: "POST",
+        headers: { "content-type": req.headers["content-type"] || "application/octet-stream" },
+        body: req,
+        duplex: "half",
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
 // Per-attempt upload analysis (Layer E). Unlike /generate (JSON seed), this
 // forwards a multipart audio upload. `express.json()` ignores non-JSON bodies,
 // so the raw multipart stream is still intact on `req` and we pipe it straight
