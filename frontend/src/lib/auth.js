@@ -48,13 +48,14 @@ function normalizeErrorMessage(message, status) {
   return defaultRequestError;
 }
 
-async function sendRequest(base, path, payload) {
+async function sendRequest(base, path, { method = "POST", payload } = {}) {
   const response = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: {
+    method,
+    headers: payload ? {
       "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    } : undefined,
+    credentials: "include",
+    body: payload ? JSON.stringify(payload) : undefined,
   });
 
   const rawText = await response.text();
@@ -63,13 +64,14 @@ async function sendRequest(base, path, payload) {
   return { response, data };
 }
 
-async function request(path, payload) {
+async function request(path, options = {}) {
   const bases = getApiBases();
   let lastMessage = defaultRequestError;
+  let lastStatus = 0;
 
   for (const base of bases) {
     try {
-      const { response, data } = await sendRequest(base, path, payload);
+      const { response, data } = await sendRequest(base, path, options);
 
       if (response.ok) {
         return data;
@@ -77,22 +79,36 @@ async function request(path, payload) {
 
       const message = normalizeErrorMessage(data.message, response.status);
       lastMessage = message;
+      lastStatus = response.status;
 
       if (!isRetryableStatus(response.status)) {
-        throw new Error(message);
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
       }
     } catch (error) {
       lastMessage = error.message || networkRequestError;
+      lastStatus = error.status || 0;
     }
   }
 
-  throw new Error(lastMessage);
+  const error = new Error(lastMessage);
+  error.status = lastStatus;
+  throw error;
+}
+
+export function getCurrentUser() {
+  return request("/api/me", { method: "GET" });
 }
 
 export function loginAccount(payload) {
-  return request("/api/login", payload);
+  return request("/api/login", { payload });
 }
 
 export function registerAccount(payload) {
-  return request("/api/register", payload);
+  return request("/api/register", { payload });
+}
+
+export function logoutAccount() {
+  return request("/api/logout");
 }

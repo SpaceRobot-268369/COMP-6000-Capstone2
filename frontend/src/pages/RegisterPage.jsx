@@ -40,7 +40,7 @@ export default function RegisterPage({ accountName, onRegister }) {
         password: form.password,
       });
 
-      onRegister(data.user.username);
+      onRegister(data.user);
       navigate("/");
     } catch (error) {
       setErrorMessage(error.message);

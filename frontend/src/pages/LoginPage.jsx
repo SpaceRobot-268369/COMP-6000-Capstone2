@@ -31,7 +31,7 @@ export default function LoginPage({ accountName, onLogin }) {
         password: form.password,
       });
 
-      onLogin(data.user.username);
+      onLogin(data.user);
       navigate("/");
     } catch (error) {
       setErrorMessage(error.message);

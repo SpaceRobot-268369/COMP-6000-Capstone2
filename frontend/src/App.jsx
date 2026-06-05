@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
 import ServerStatus from "./components/ServerStatus.jsx";
+import { getCurrentUser, logoutAccount } from "./lib/auth.js";
 import {
   checkServerBStatus,
   createCheckingStatus,
@@ -19,7 +20,6 @@ import {
   reconnectServerB,
 } from "./lib/serverBStatus.js";
 
-const accountStorageKey = "sonic-lab-account-name";
 const minServerBCheckingMs = 350;
 
 function wait(ms) {
@@ -38,14 +38,41 @@ function navbarActionClass({ isActive }) {
   return `navbar-action${isActive ? " active" : ""}`;
 }
 
+function RequireAdmin({ currentUser, authChecking, children }) {
+  const routeLocation = useLocation();
+
+  if (authChecking) {
+    return (
+      <section className="account-page">
+        <section className="panel account-card">
+          <p className="account-lead">Checking account access...</p>
+        </section>
+      </section>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace state={{ from: routeLocation }} />;
+  }
+
+  if (currentUser.role !== "admin") {
+    return <Navigate to="/about" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
-  const [accountName, setAccountName] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [serverBStatus, setServerBStatus] = useState(() => createCheckingStatus());
   const [serverBLogs, setServerBLogs] = useState([]);
   const [serverBChecking, setServerBChecking] = useState(false);
   const serverBCheckInFlightRef = useRef(false);
   const serverBPollStartedRef = useRef(false);
+  const accountName = currentUser?.username || "";
   const isLoggedIn = Boolean(accountName);
+  const isAdmin = currentUser?.role === "admin";
 
   const [devDropdownOpen, setDevDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -67,10 +94,29 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const storedAccountName = window.localStorage.getItem(accountStorageKey);
-    if (storedAccountName) {
-      setAccountName(storedAccountName);
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const data = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(data.user || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthChecking(false);
+        }
+      }
     }
+
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const runServerBCheck = useCallback(async (source = "auto") => {
@@ -143,20 +189,16 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [runServerBCheck]);
 
-  function handleAuthenticate(value) {
-    const nextValue = value.trim();
-    setAccountName(nextValue);
-    if (nextValue) {
-      window.localStorage.setItem(accountStorageKey, nextValue);
-      return;
-    }
-
-    window.localStorage.removeItem(accountStorageKey);
+  function handleAuthenticate(user) {
+    setCurrentUser(user || null);
   }
 
-  function handleLogout() {
-    setAccountName("");
-    window.localStorage.removeItem(accountStorageKey);
+  async function handleLogout() {
+    try {
+      await logoutAccount();
+    } finally {
+      setCurrentUser(null);
+    }
   }
 
   return (
@@ -207,39 +249,41 @@ export default function App() {
 
             <div className="navbar-controls">
               {/* Dev Tools Dropdown */}
-              <div 
-                className={`navbar-dropdown-wrapper ${devDropdownOpen ? "open" : ""}`}
-                onMouseEnter={() => setDevDropdownOpen(true)}
-                onMouseLeave={() => setDevDropdownOpen(false)}
-              >
-                <button 
-                  type="button" 
-                  className="navbar-dropdown-trigger"
-                  onClick={() => setDevDropdownOpen(!devDropdownOpen)}
+              {isAdmin ? (
+                <div 
+                  className={`navbar-dropdown-wrapper ${devDropdownOpen ? "open" : ""}`}
+                  onMouseEnter={() => setDevDropdownOpen(true)}
+                  onMouseLeave={() => setDevDropdownOpen(false)}
                 >
-                  <span className="nav-icon">⌬</span>
-                  <span>Developer</span>
-                  <span className="dropdown-arrow">▼</span>
-                </button>
-                <div className="navbar-dropdown-menu">
-                  <NavLink to="/dev/layers" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                  <button 
+                    type="button" 
+                    className="navbar-dropdown-trigger"
+                    onClick={() => setDevDropdownOpen(!devDropdownOpen)}
+                  >
                     <span className="nav-icon">⌬</span>
-                    <span>Dev — Generation</span>
-                  </NavLink>
-                  <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
-                    <span className="nav-icon">◉</span>
-                    <span>Dev — Analysis</span>
-                  </NavLink>
-                  <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
-                    <span className="nav-icon">❂</span>
-                    <span>Immersive</span>
-                  </NavLink>
-                  <div className="dropdown-divider"></div>
-                  <div className="navbar-dropdown-status">
-                    <ServerStatus status={serverBStatus} />
+                    <span>Developer</span>
+                    <span className="dropdown-arrow">▼</span>
+                  </button>
+                  <div className="navbar-dropdown-menu">
+                    <NavLink to="/dev/layers" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">⌬</span>
+                      <span>Dev — Generation</span>
+                    </NavLink>
+                    <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">◉</span>
+                      <span>Dev — Analysis</span>
+                    </NavLink>
+                    <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">❂</span>
+                      <span>Immersive</span>
+                    </NavLink>
+                    <div className="dropdown-divider"></div>
+                    <div className="navbar-dropdown-status">
+                      <ServerStatus status={serverBStatus} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
               {/* Theme Toggle */}
               <ThemeToggle />
@@ -312,23 +356,34 @@ export default function App() {
           <Route
             path="/dev/layers"
             element={
-              <LayerATestPage
-                mode="generation"
-                eyebrow="DEVELOPER TOOLS — GENERATION"
-                title="Generation Layers Dev Test"
-              />
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <LayerATestPage
+                  mode="generation"
+                  eyebrow="DEVELOPER TOOLS — GENERATION"
+                  title="Generation Layers Dev Test"
+                />
+              </RequireAdmin>
             }
           />
-          <Route path="/dev/analysis" element={<DevAnalysisPage />} />
+          <Route
+            path="/dev/analysis"
+            element={
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <DevAnalysisPage />
+              </RequireAdmin>
+            }
+          />
           <Route
             path="/server-b"
             element={
-              <ServerBStatusPage
-                status={serverBStatus}
-                logs={serverBLogs}
-                checking={serverBChecking}
-                onRecheck={() => runServerBCheck("manual")}
-              />
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <ServerBStatusPage
+                  status={serverBStatus}
+                  logs={serverBLogs}
+                  checking={serverBChecking}
+                  onRecheck={() => runServerBCheck("manual")}
+                />
+              </RequireAdmin>
             }
           />
           <Route
