@@ -65,6 +65,10 @@ function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const usernamePattern = /^[a-zA-Z0-9_-]{3,32}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const minPasswordLength = 6;
+
 function scryptPassword(password, salt) {
   return new Promise((resolve, reject) => {
     crypto.scrypt(password, salt, 64, (err, key) => {
@@ -140,6 +144,18 @@ app.post("/api/register", async (req, res) => {
 
   if (!username || !email || !password) {
     return res.status(400).json({ ok: false, message: "Username, email, and password are required." });
+  }
+
+  if (!usernamePattern.test(username)) {
+    return res.status(400).json({ ok: false, message: "Username must be 3-32 letters, numbers, underscores, or hyphens." });
+  }
+
+  if (!emailPattern.test(email)) {
+    return res.status(400).json({ ok: false, message: "Please enter a valid email address." });
+  }
+
+  if (password.length < minPasswordLength) {
+    return res.status(400).json({ ok: false, message: `Password must be at least ${minPasswordLength} characters.` });
   }
 
   try {

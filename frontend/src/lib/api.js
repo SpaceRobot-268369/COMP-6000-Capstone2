@@ -13,6 +13,13 @@
  */
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const authExpiredEventName = "sonic-lab-auth-expired";
+
+function notifyAuthExpired() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(authExpiredEventName));
+  }
+}
 
 function apiErrorMessage(err, fallback) {
   return (
@@ -39,6 +46,7 @@ export async function fetchLayerRegistry() {
   const res = await fetch(`${API_BASE}/api/layers`, { credentials: "include" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 401) notifyAuthExpired();
     throw new Error(apiErrorMessage(err, `Failed to list layers (${res.status})`));
   }
   return res.json();
@@ -76,6 +84,7 @@ export async function fetchAttemptSamples(layerId, attemptId) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 401) notifyAuthExpired();
     throw new Error(apiErrorMessage(err, `Failed to list samples (${res.status})`));
   }
   return res.json();
@@ -134,6 +143,7 @@ export async function analyseUpload(layerId, attemptId, file) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 401) notifyAuthExpired();
     throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
   }
   return res.json();
@@ -168,6 +178,7 @@ export async function generateAttempt(
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 401) notifyAuthExpired();
     throw new Error(apiErrorMessage(err, `Generation failed (${res.status})`));
   }
   return res.json();

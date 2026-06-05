@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ImmersivePage from "./pages/ImmersivePage.jsx";
@@ -21,6 +21,8 @@ import {
 } from "./lib/serverBStatus.js";
 
 const minServerBCheckingMs = 350;
+const authExpiredEventName = "sonic-lab-auth-expired";
+const sessionRefreshMs = 60 * 1000;
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -36,6 +38,10 @@ function navbarDropdownItemClass({ isActive }) {
 
 function navbarActionClass({ isActive }) {
   return `navbar-action${isActive ? " active" : ""}`;
+}
+
+function isAdminRoute(pathname) {
+  return pathname.startsWith("/dev/") || pathname === "/server-b";
 }
 
 function RequireAdmin({ currentUser, authChecking, children }) {
@@ -56,7 +62,48 @@ function RequireAdmin({ currentUser, authChecking, children }) {
   }
 
   if (currentUser.role !== "admin") {
-    return <Navigate to="/about" replace />;
+    return (
+      <section className="account-page">
+        <header className="account-topbar">
+          <div>
+            <p className="eyebrow">ACCOUNT</p>
+            <h1>Admin access required</h1>
+            <p className="account-lead">
+              Developer tools are only available to admin accounts.
+            </p>
+          </div>
+        </header>
+        <section className="panel account-card">
+          <p className="account-feedback error">
+            Your current account does not have permission to view this page.
+          </p>
+          <NavLink to="/about" className="auth-primary-btn">
+            Back to introduction
+          </NavLink>
+        </section>
+      </section>
+    );
+  }
+
+  return children;
+}
+
+function RequireGuest({ currentUser, authChecking, children }) {
+  const routeLocation = useLocation();
+  const fromPath = routeLocation.state?.from?.pathname || "/about";
+
+  if (authChecking) {
+    return (
+      <section className="account-page">
+        <section className="panel account-card">
+          <p className="account-lead">Checking account access...</p>
+        </section>
+      </section>
+    );
+  }
+
+  if (currentUser) {
+    return <Navigate to={fromPath} replace />;
   }
 
   return children;
@@ -79,6 +126,10 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
+  const authReturnLocation = location.pathname === "/login" || location.pathname === "/register"
+    ? { pathname: "/about" }
+    : location;
 
   useEffect(() => {
     const path = location.pathname;
@@ -93,10 +144,21 @@ export default function App() {
     };
   }, [location.pathname]);
 
-  useEffect(() => {
+  const handleSessionExpired = useCallback(() => {
+    setCurrentUser(null);
+    if (isAdminRoute(location.pathname)) {
+      navigate("/login", { replace: true, state: { from: location } });
+    }
+  }, [location, navigate]);
+
+  const refreshCurrentUser = useCallback(async ({ showChecking = false } = {}) => {
     let cancelled = false;
 
     async function restoreSession() {
+      if (showChecking) {
+        setAuthChecking(true);
+      }
+
       try {
         const data = await getCurrentUser();
         if (!cancelled) {
@@ -104,10 +166,10 @@ export default function App() {
         }
       } catch {
         if (!cancelled) {
-          setCurrentUser(null);
+          handleSessionExpired();
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && showChecking) {
           setAuthChecking(false);
         }
       }
@@ -117,7 +179,36 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [handleSessionExpired]);
+
+  useEffect(() => {
+    return refreshCurrentUser({ showChecking: true });
+  }, [refreshCurrentUser]);
+
+  useEffect(() => {
+    window.addEventListener(authExpiredEventName, handleSessionExpired);
+    return () => window.removeEventListener(authExpiredEventName, handleSessionExpired);
+  }, [handleSessionExpired]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return undefined;
+    }
+
+    function handleFocus() {
+      refreshCurrentUser();
+    }
+
+    window.addEventListener("focus", handleFocus);
+    const timer = window.setInterval(() => {
+      refreshCurrentUser();
+    }, sessionRefreshMs);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(timer);
+    };
+  }, [currentUser, refreshCurrentUser]);
 
   const runServerBCheck = useCallback(async (source = "auto") => {
     if (serverBCheckInFlightRef.current) {
@@ -198,6 +289,9 @@ export default function App() {
       await logoutAccount();
     } finally {
       setCurrentUser(null);
+      if (isAdminRoute(location.pathname)) {
+        navigate("/about", { replace: true });
+      }
     }
   }
 
@@ -300,14 +394,18 @@ export default function App() {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 >
                   <span className="nav-icon">👤</span>
-                  <span>{isLoggedIn ? accountName : "Account"}</span>
+                  <span>{authChecking ? "Checking..." : isLoggedIn ? accountName : "Account"}</span>
                   <span className="dropdown-arrow">▼</span>
                 </button>
                 <div className="navbar-dropdown-menu user-dropdown">
                   <div className="navbar-dropdown-header">
-                    {isLoggedIn ? "Account Logged In" : "Not Logged In"}
+                    {authChecking ? "Checking Account" : isLoggedIn ? "Account Logged In" : "Not Logged In"}
                   </div>
-                  {isLoggedIn ? (
+                  {authChecking ? (
+                    <div className="navbar-user-simple">
+                      <span className="navbar-username">Restoring session...</span>
+                    </div>
+                  ) : isLoggedIn ? (
                     <div className="navbar-user-simple">
                       <strong className="navbar-user-name">{accountName}</strong>
                       <button 
@@ -322,6 +420,7 @@ export default function App() {
                     <div className="navbar-user-actions">
                       <NavLink 
                         to="/login" 
+                        state={{ from: authReturnLocation }}
                         className={navbarActionClass} 
                         onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
                       >
@@ -329,6 +428,7 @@ export default function App() {
                       </NavLink>
                       <NavLink 
                         to="/register" 
+                        state={{ from: authReturnLocation }}
                         className={navbarActionClass} 
                         onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
                       >
@@ -388,11 +488,19 @@ export default function App() {
           />
           <Route
             path="/login"
-            element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}
+            element={
+              <RequireGuest currentUser={currentUser} authChecking={authChecking}>
+                <LoginPage accountName={accountName} onLogin={handleAuthenticate} />
+              </RequireGuest>
+            }
           />
           <Route
             path="/register"
-            element={<RegisterPage accountName={accountName} onRegister={handleAuthenticate} />}
+            element={
+              <RequireGuest currentUser={currentUser} authChecking={authChecking}>
+                <RegisterPage accountName={accountName} onRegister={handleAuthenticate} />
+              </RequireGuest>
+            }
           />
         </Routes>
       </main>
