@@ -122,6 +122,7 @@ class GenerateRequest(BaseModel):
     # Layer B weather-stem controls. Other attempts ignore these.
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
+    wind_intensity: Optional[str] = None
     duration_s: Optional[float] = None
 
 
@@ -168,6 +169,7 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
             seed=run_seed, season=body.season, diel=body.diel,
             weather_type=body.weather_type,
             intensity=body.intensity,
+            wind_intensity=body.wind_intensity,
             duration_s=body.duration_s,
         )
     except KeyError as exc:

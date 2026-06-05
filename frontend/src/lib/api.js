@@ -47,13 +47,22 @@ export async function fetchLayerRegistry() {
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
- * Generate audio with a specific layer/attempt. Only `seed` is sent; every
- * other parameter is owned by the registry/handler server-side (see CLAUDE.md
- * → "Layer A dev-generation contract").
+ * Generate audio with a specific layer/attempt. Most model behavior stays
+ * registry/handler-owned; the dev UI only forwards the small runtime selector
+ * set needed by each attempt.
  *
  * @param {string} layerId    e.g. "layer_a"
  * @param {string} attemptId  e.g. "lucas__smoke_1__audioldm2_spring_night"
- * @param {{seed?: number}} params
+ * @param {{
+ *   seed?: number,
+ *   retrieval_seed?: number,
+ *   season?: string,
+ *   diel?: string,
+ *   weather_type?: string,
+ *   intensity?: string,
+ *   wind_intensity?: string,
+ *   duration_s?: number
+ * }} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, sample_rate:number, duration_s:number}>}
  */
 // ─── Cached samples (no model load required) ──────────────────────────────────
@@ -145,7 +154,7 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
+  { seed, retrieval_seed, season, diel, weather_type, intensity, wind_intensity, duration_s } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -156,6 +165,7 @@ export async function generateAttempt(
   }
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
+  if (wind_intensity) payload.wind_intensity = wind_intensity;
   if (duration_s) payload.duration_s = duration_s;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,

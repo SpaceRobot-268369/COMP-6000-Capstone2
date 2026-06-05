@@ -17,6 +17,11 @@ const WEATHER_INTENSITY_OPTIONS = [
   { value: "medium", label: "medium" },
   { value: "heavy", label: "heavy" },
 ];
+const WEATHER_STEM_SELECTOR_ATTEMPT = "murphy__mvp_1__weather_stem_selector";
+const WIND_GENERATOR_ATTEMPTS = new Set([
+  "murphy__smoke_1__audioldm2_wind",
+  "murphy__mvp_1__wind_intensity_bank",
+]);
 
 const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
 const ANALYSIS_LAYER_IDS   = ["layer_e"];
@@ -44,6 +49,7 @@ export default function LayerATestPage({
   const [diel,     setDiel]     = useState("");        // bank attempts only
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
+  const [windIntensity, setWindIntensity] = useState("medium");
   const [weatherDuration, setWeatherDuration] = useState(10);
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
@@ -109,7 +115,10 @@ export default function LayerATestPage({
   );
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
-  const usesWeatherControls = layerId === "layer_b";
+  const usesWeatherStemControls = layerId === "layer_b" && attemptId === WEATHER_STEM_SELECTOR_ATTEMPT;
+  const usesWindGeneratorControls = layerId === "layer_b" && WIND_GENERATOR_ATTEMPTS.has(attemptId);
+  const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls;
+  const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
@@ -220,17 +229,24 @@ export default function LayerATestPage({
     try {
       const runParams = {};
       if (usesSeed) {
-        if (usesWeatherControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
+        if (usesWeatherStemControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
         else runParams.seed = Number(seed) || DEFAULT_SEED;
       }
       if (usesCells && season && diel) {
         runParams.season = season;
         runParams.diel = diel;
       }
-      if (usesWeatherControls) {
+      if (usesWeatherStemControls) {
         runParams.weather_type = weatherType;
         runParams.intensity = weatherIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
+      }
+      if (usesWindGeneratorControls) {
+        runParams.weather_type = "wind";
+        if (isWindIntensityBank) {
+          runParams.intensity = windIntensity;
+          runParams.wind_intensity = windIntensity;
+        }
       }
       const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
@@ -260,7 +276,12 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
+  const layerBTag = usesWeatherStemControls
+    ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__retrieval_seed`
+    : usesWindGeneratorControls
+      ? `__wind${isWindIntensityBank ? `_${windIntensity}` : ""}__seed`
+      : "__seed";
+  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesLayerBControls ? layerBTag : "__seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -374,7 +395,7 @@ export default function LayerATestPage({
                 </section>
               )}
 
-              {usesWeatherControls && (
+              {usesWeatherStemControls && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
                     Weather stem
@@ -408,17 +429,54 @@ export default function LayerATestPage({
                 </section>
               )}
 
+              {usesWindGeneratorControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Wind generator
+                    <span className="dev-controls-section-pill">
+                      wind{isWindIntensityBank ? ` · ${windIntensity}` : " · locked profile"}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="wind" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Wind intensity"
+                      value={windIntensity}
+                      onChange={setWindIntensity}
+                      options={WEATHER_INTENSITY_OPTIONS}
+                      disabled={!isWindIntensityBank}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Duration</span>
+                      <input
+                        className="layer-a-input"
+                        type="text"
+                        value={currentAttempt?.params?.audio_length_in_s ? `${currentAttempt.params.audio_length_in_s}s` : "server locked"}
+                        disabled
+                      />
+                      <small>Owned by registry / handler.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
                   <SeedField
-                    label={usesWeatherControls ? "Retrieval seed" : "Seed"}
+                    label={usesWeatherStemControls ? "Retrieval seed" : "Seed"}
                     value={seed}
                     onChange={setSeed}
                     disabled={!usesSeed}
                     hint={
-                      usesWeatherControls
+                      usesWeatherStemControls
                         ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                        : usesWindGeneratorControls
+                          ? "Same seed + same wind generator settings = same model sample."
                         : usesSeed
                           ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
@@ -572,7 +630,7 @@ export default function LayerATestPage({
                          style={{ width: "100%" }} />
                   <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
                     {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s ·{" "}
-                    {usesWeatherControls
+                    {usesWeatherStemControls
                       ? `retrieval_seed ${result.metadata?.retrieval_seed ?? result.metadata?.seed ?? seed}`
                       : `seed ${result.metadata?.seed ?? seed}`}
                   </p>
@@ -791,12 +849,13 @@ function LabeledNumber({ label, value, min, max, step = 1, hint, onChange, disab
   );
 }
 
-function LabeledSelect({ label, value, options, onChange }) {
+function LabeledSelect({ label, value, options, onChange, disabled = false }) {
   return (
-    <label className="layer-a-field">
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
       <span>{label}</span>
       <select className="layer-a-input"
               value={value}
+              disabled={disabled}
               onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
