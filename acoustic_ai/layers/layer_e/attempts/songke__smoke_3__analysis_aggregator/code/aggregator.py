@@ -90,6 +90,14 @@ def aggregate_reports(
         float(adapted["observations"]["weather"].get("confidence", 0.0)),
     ]
     confidence = round(sum(confidence_values) / len(confidence_values), 6)
+    limitations = _dedupe(limitations)
+    decision = build_decision_json(
+        observations=adapted["observations"],
+        diel=diel,
+        season=season,
+        confidence=confidence,
+        limitations=limitations,
+    )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -99,9 +107,57 @@ def aggregate_reports(
             "diel": diel,
             "season": season,
         },
+        "decision": decision,
+        "llm_input": build_llm_input(decision),
         "disagreements": disagreements,
         "confidence": confidence,
-        "limitations": _dedupe(limitations),
+        "limitations": limitations,
+    }
+
+
+def build_decision_json(
+    *,
+    observations: dict[str, Any],
+    diel: dict[str, Any],
+    season: dict[str, Any],
+    confidence: float,
+    limitations: list[str],
+) -> dict[str, Any]:
+    """Build the compact machine-readable decision passed to a future LLM."""
+    weather = observations.get("weather") if isinstance(observations.get("weather"), dict) else {}
+    events = observations.get("events") if isinstance(observations.get("events"), list) else []
+
+    return {
+        "schema_version": "analysis_decision.v1",
+        "time_of_day": {
+            "value": diel.get("estimate", "undetermined"),
+            "confidence": float(diel.get("posterior", 0.0)),
+            "distribution": dict(diel.get("distribution") or {}),
+            "evidence": diel.get("primary_evidence"),
+        },
+        "season": {
+            "value": season.get("estimate", "undetermined"),
+            "confidence": float(season.get("posterior", 0.0)),
+            "distribution": dict(season.get("distribution") or {}),
+            "evidence": season.get("primary_evidence"),
+        },
+        "weather": _decision_weather(weather),
+        "detected_calls": [_decision_event(event) for event in events],
+        "overall_confidence": confidence,
+        "limitations": list(limitations),
+    }
+
+
+def build_llm_input(decision: dict[str, Any]) -> dict[str, Any]:
+    """Package the decision JSON for a future narration step."""
+    return {
+        "schema_version": "analysis_llm_input.v1",
+        "task": (
+            "Convert this ecoacoustic analysis decision JSON into concise, "
+            "human-readable language. Do not invent species, season, time of "
+            "day, weather, or confidence beyond the provided fields."
+        ),
+        "decision": decision,
     }
 
 
@@ -257,6 +313,45 @@ def _source_top_values(evidence: list[dict[str, Any]]) -> dict[str, dict[str, An
         value = max(values, key=values.get)
         tops[source] = {"value": value, "weight": values[value]}
     return tops
+
+
+def _decision_weather(weather: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "label": weather.get("derived_label") or "none",
+        "confidence": _safe_float(weather.get("confidence")),
+        "rain": _weather_component(weather, "rain"),
+        "wind": _weather_component(weather, "wind"),
+        "thunder": _weather_component(weather, "thunder"),
+        "warnings": list(weather.get("warnings") or []),
+    }
+
+
+def _weather_component(weather: dict[str, Any], key: str) -> dict[str, Any]:
+    component = weather.get(key) if isinstance(weather.get(key), dict) else {}
+    summary = component.get("summary") if isinstance(component.get("summary"), dict) else {}
+    return {
+        "label": summary.get("label") or "unknown",
+        "confidence": _safe_float(summary.get("confidence")),
+        "intensity": _safe_float(summary.get("intensity")),
+        "coverage": _safe_float(summary.get("coverage")),
+    }
+
+
+def _decision_event(event: dict[str, Any]) -> dict[str, Any]:
+    phenology = event.get("phenology") if isinstance(event.get("phenology"), dict) else {}
+    return {
+        "label": event.get("label"),
+        "common_name": event.get("common_name") or phenology.get("common_name"),
+        "scientific_name": event.get("scientific_name") or phenology.get("scientific_name"),
+        "confidence": _safe_float(event.get("confidence")),
+        "onset_s": event.get("onset_s"),
+        "offset_s": event.get("offset_s"),
+        "diel_signal": phenology.get("diel_signal"),
+        "diel_confidence": _safe_float(phenology.get("diel_confidence")),
+        "season_signal": phenology.get("season_signal"),
+        "season_confidence": _safe_float(phenology.get("season_confidence")),
+        "habitat_signal": phenology.get("habitat_signal"),
+    }
 
 
 def _merge_params(params: dict[str, Any] | None) -> dict[str, Any]:

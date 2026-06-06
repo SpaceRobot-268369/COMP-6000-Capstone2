@@ -378,6 +378,14 @@ function FullAnalysisResult({ result }) {
           ))}
         </div>
       </div>
+      {report.decision && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.7 }}>
+            {"{ } LLM-ready decision JSON"}
+          </summary>
+          <pre className="layer-a-json">{JSON.stringify(report.decision, null, 2)}</pre>
+        </details>
+      )}
     </div>
   );
 }

@@ -35,6 +35,9 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
 
         self.assertEqual(result["inferred_context"]["diel"]["estimate"], "night")
         self.assertGreater(result["inferred_context"]["diel"]["posterior"], 0.5)
+        self.assertEqual(result["decision"]["time_of_day"]["value"], "night")
+        self.assertEqual(result["decision"]["detected_calls"][0]["common_name"], "Southern Boobook")
+        self.assertEqual(result["llm_input"]["decision"]["time_of_day"]["value"], "night")
         self.assertEqual(result["disagreements"][0]["field"], "diel")
         self.assertEqual(result["disagreements"][0]["resolution"], "events_preferred")
         self.assertEqual(result["inferred_context"]["season"]["estimate"], "undetermined")
@@ -64,6 +67,8 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         result = aggregate_reports(weather_report={"observations": {"weather": weather}})
 
         self.assertEqual(result["observations"]["weather"]["derived_label"], "wind")
+        self.assertEqual(result["decision"]["weather"]["label"], "wind")
+        self.assertEqual(result["decision"]["weather"]["wind"]["label"], "moderate")
         self.assertEqual(result["observations"]["weather"]["warnings"], ["possible_wind_overload"])
         self.assertEqual(result["observations"]["weather"]["wind"]["summary"]["intensity"], 0.62)
 

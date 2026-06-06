@@ -27,6 +27,8 @@ It returns one fused report:
     "diel": {},
     "season": {}
   },
+  "decision": {},
+  "llm_input": {},
   "disagreements": [],
   "confidence": 0.0,
   "limitations": []
@@ -41,6 +43,8 @@ It returns one fused report:
 | `mode` | string | Always `analysis` for this report. |
 | `observations` | object | Direct things the heads heard in the audio. |
 | `inferred_context` | object | Aggregator guesses from evidence, not direct detections. |
+| `decision` | object | Compact machine-readable final decision for downstream narration. |
+| `llm_input` | object | Wrapper payload for a future LLM narration step. |
 | `disagreements` | array | Conflicts or weak evidence that affected the final answer. |
 | `confidence` | number | Overall fused confidence in `[0, 1]`. |
 | `limitations` | array | Human-readable caveats. |
@@ -269,6 +273,80 @@ Allowed `resolution` values for v1:
 - `ambient_used_as_fallback`
 - `low_confidence_range_reported`
 - `undetermined`
+
+## Decision JSON
+
+`decision` is the compact result that should be passed to a later LLM step. It
+keeps the fields that humans usually ask for: when the recording sounds like it
+was made, what season is most likely, what weather was detected, and what calls
+or acoustic events were heard.
+
+```json
+{
+  "schema_version": "analysis_decision.v1",
+  "time_of_day": {
+    "value": "night",
+    "confidence": 0.88,
+    "distribution": {
+      "dawn": 0.02,
+      "morning": 0.04,
+      "afternoon": 0.06,
+      "night": 0.88
+    },
+    "evidence": "E-C: Southern Boobook supports night"
+  },
+  "season": {
+    "value": "undetermined",
+    "confidence": 0.40,
+    "distribution": {
+      "spring": 0.15,
+      "summer": 0.40,
+      "autumn": 0.35,
+      "winter": 0.10
+    },
+    "evidence": "No reliable season evidence"
+  },
+  "weather": {
+    "label": "wind",
+    "confidence": 0.80,
+    "rain": { "label": "none", "confidence": 0.90, "intensity": 0.0, "coverage": 0.0 },
+    "wind": { "label": "moderate", "confidence": 0.83, "intensity": 0.62, "coverage": 0.95 },
+    "thunder": { "label": "none", "confidence": 0.90, "intensity": 0.0, "coverage": 0.0 },
+    "warnings": []
+  },
+  "detected_calls": [
+    {
+      "label": "ninox_boobook",
+      "common_name": "Southern Boobook",
+      "scientific_name": "Ninox boobook",
+      "confidence": 0.91,
+      "onset_s": 12.4,
+      "offset_s": 17.1,
+      "diel_signal": "night",
+      "diel_confidence": 0.85,
+      "season_signal": "weak",
+      "season_confidence": 0.20,
+      "habitat_signal": "woodland/open woodland"
+    }
+  ],
+  "overall_confidence": 0.72,
+  "limitations": []
+}
+```
+
+## LLM input
+
+`llm_input` wraps `decision` with a task instruction. It is intentionally
+grounded: the LLM should convert the JSON into readable language, not invent
+extra species, seasons, weather, or certainty.
+
+```json
+{
+  "schema_version": "analysis_llm_input.v1",
+  "task": "Convert this ecoacoustic analysis decision JSON into concise, human-readable language. Do not invent species, season, time of day, weather, or confidence beyond the provided fields.",
+  "decision": {}
+}
+```
 
 ## Confidence
 
