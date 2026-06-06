@@ -203,7 +203,7 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: lucas__smoke_1__audiogen_boobook
+    default: burger__mvp_2__retrieval_v2_library
     attempts:
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
@@ -231,7 +231,7 @@ layers:
           audited library. It selects real Pass-reviewed snippets from the v2
           event index and schedules them into a 60-second ecological timeline.
         deploy_dvc:
-          - acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/splendid_fairywren.dvc
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
         params:
           method: retrieval
           species_common_name: "Splendid Fairywren"
@@ -244,6 +244,7 @@ layers:
           default_diel: morning
           ecological_mode: true
           enable_variation: false
+          layer_c_only: true
           ambient_gain_db: -26.0
           events_gain_db: -2.0
           cells:

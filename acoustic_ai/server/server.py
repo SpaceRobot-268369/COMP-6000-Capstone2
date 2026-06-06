@@ -123,6 +123,8 @@ class GenerateRequest(BaseModel):
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
     duration_s: Optional[float] = None
+    # Layer C retrieval selector. Other layers ignore this through **kwargs.
+    species_common_name: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +171,7 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
             weather_type=body.weather_type,
             intensity=body.intensity,
             duration_s=body.duration_s,
+            species_common_name=body.species_common_name,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -185,7 +188,7 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
     sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
 
-    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s)
+    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, metadata)
 
     return {
         "ok":          True,
@@ -306,12 +309,16 @@ def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
 
 
 def _mel_to_png_b64(layer_id: str, attempt_id: str,
-                    mel_db, duration_s: float) -> str:
+                    mel_db, metadata: dict) -> str:
     """Render a mel-spectrogram PNG. For Layer A we use the attempt-local
     visualization helper to keep visual style consistent across attempts.
     """
     if mel_db is None:
         return ""
+
+    audio_meta = metadata.get("audio", {}) if isinstance(metadata, dict) else {}
+    duration_s = float(audio_meta.get("duration_s", 0.0))
+    sample_rate = int(audio_meta.get("sample_rate", 0))
 
     # Try attempt-local renderer first (Layer A + Layer C ship one).
     try:
@@ -330,14 +337,54 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        import librosa
+        import librosa.display
 
         fig, ax = plt.subplots(figsize=(10, 4))
-        ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma",
-                  vmin=-80, vmax=0)
-        ax.set_xlabel("Time frames")
-        ax.set_ylabel("Mel bins")
-        ax.set_title(f"{layer_id} / {attempt_id}")
-        plt.colorbar(ax.images[0], ax=ax, label="dB")
+        if sample_rate > 0:
+            hop_length = max(1, int(round(duration_s * sample_rate / mel_db.shape[1])))
+            if layer_id == "layer_c":
+                mel_arr = np.asarray(mel_db)
+                time_edges = np.linspace(0, duration_s, mel_arr.shape[1] + 1)
+                mel_centers = librosa.mel_frequencies(
+                    n_mels=mel_arr.shape[0],
+                    fmin=0,
+                    fmax=sample_rate / 2.0,
+                )
+                freq_edges = np.concatenate(
+                    ([0.0], (mel_centers[:-1] + mel_centers[1:]) / 2.0, [sample_rate / 2.0])
+                )
+                img = ax.pcolormesh(
+                    time_edges,
+                    freq_edges,
+                    mel_arr,
+                    cmap="magma",
+                    vmin=-80,
+                    vmax=0,
+                    shading="auto",
+                )
+            else:
+                img = librosa.display.specshow(
+                    np.asarray(mel_db),
+                    sr=sample_rate,
+                    hop_length=hop_length,
+                    x_axis="time",
+                    y_axis="mel",
+                    cmap="magma",
+                    vmin=-80,
+                    vmax=0,
+                    ax=ax,
+                )
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Hz")
+            _format_layer_c_axes(ax, layer_id, duration_s, sample_rate)
+        else:
+            img = ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma",
+                            vmin=-80, vmax=0)
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Frequency")
+        ax.set_title(_spectrogram_title(layer_id, attempt_id, metadata))
+        plt.colorbar(img, ax=ax, label="dB")
         plt.tight_layout()
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=100)
@@ -346,6 +393,37 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         return base64.b64encode(buf.read()).decode("utf-8")
     except ImportError:
         return ""
+
+
+def _format_layer_c_axes(ax, layer_id: str, duration_s: float, sample_rate: int) -> None:
+    """Use fixed audit-friendly seconds/Hz ticks for Layer C comparison plots."""
+
+    if layer_id != "layer_c" or duration_s <= 0 or sample_rate <= 0:
+        return
+
+    target_duration = max(60.0, duration_s)
+    ax.set_xlim(0, target_duration)
+    x_ticks = np.arange(0, target_duration + 0.1, 10.0)
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels([f"{int(tick)}s" for tick in x_ticks])
+
+    max_hz = min(10000, sample_rate / 2.0)
+    y_ticks = [0, 500, 1000, 2000, 4000, 6000, 8000, 10000]
+    y_ticks = [tick for tick in y_ticks if 0 <= tick <= max_hz]
+    ax.set_ylim(0, max_hz)
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([str(tick) for tick in y_ticks])
+
+
+def _spectrogram_title(layer_id: str, attempt_id: str, metadata: dict) -> str:
+    if layer_id == "layer_c" and isinstance(metadata, dict):
+        species = metadata.get("species")
+        method = metadata.get("method")
+        if species and method:
+            return f"{species} · {method}"
+        if species:
+            return str(species)
+    return f"{layer_id} / {attempt_id}"
 
 
 # ---------------------------------------------------------------------------

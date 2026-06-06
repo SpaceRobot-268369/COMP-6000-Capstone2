@@ -9,6 +9,7 @@ default_season: summer
 default_diel: morning
 ecological_mode: true
 enable_variation: false
+layer_c_only: true
 ambient_gain_db: -26.0
 events_gain_db: -2.0
 cells:

@@ -17,13 +17,14 @@ code/
 data/
   media_asset_bank/
     layer_c_retrieval_v2_event_index.csv
-    layer_c_retrieval_v2_pass_manifest.csv
-    review_package_full_v2_s3reuse/*.dvc
+    species_band_config_final_human_v1.csv
+    review_package_full_v2_final_human_bandpass.dvc
 ```
 
 The media asset bank is attempt-local derived data. Git tracks the manifests,
 metadata, and `.dvc` pointers; DVC/S3 stores the materialized review package
-audio and spectrogram files.
+audio and spectrogram files. The runtime route uses the final human-audited
+bandpass package and returns Layer C only output, not an A-layer mix.
 
 ## Data Summary
 
@@ -31,6 +32,7 @@ audio and spectrogram files.
 - Pass-reviewed snippets: 4,329
 - Default demo species: Splendid Fairywren
 - Default context: summer morning
+- Runtime package: final human-audited bandpass snippets
 - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid
   candidates under the current screening rules.
 
@@ -40,8 +42,8 @@ The registered attempt is `burger__mvp_2__retrieval_v2_library`.
 Its `retrieval_index` is declared in `acoustic_ai/registry.yaml` and points to
 `data/media_asset_bank/layer_c_retrieval_v2_event_index.csv`.
 
-To materialize one species for local generation testing:
+To materialize the audited retrieval package for local generation testing:
 
 ```bash
-dvc pull acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/splendid_fairywren.dvc
+dvc pull acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
 ```

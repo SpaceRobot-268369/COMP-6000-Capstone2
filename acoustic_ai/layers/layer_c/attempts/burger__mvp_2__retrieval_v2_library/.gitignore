@@ -7,3 +7,4 @@
 *.webm
 /showcase/**/*.png
 /showcase/**/metadata.json
+/expected

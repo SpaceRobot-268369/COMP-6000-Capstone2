@@ -1,0 +1,6 @@
+outs:
+- md5: 30f2490fb0d45548a40af23612c885df.dir
+  size: 16394931
+  nfiles: 190
+  hash: md5
+  path: expected
