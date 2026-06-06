@@ -528,7 +528,12 @@ def orchestrate_analysis(
     aggregator_attempt: str | None = None,
     include_head_reports: bool = True,
 ) -> dict:
-    """Run E-A/E-B/E-C analysis heads and fuse them through the aggregator."""
+    """Run E-A/E-B/E-C analysis heads and fuse available reports.
+
+    The analysis heads are independent. If one head is missing local model/DVC
+    artefacts, keep the other heads useful and return the failure under
+    ``head_errors`` instead of aborting the full analysis response.
+    """
 
     attempts = {
         "ambient": ambient_attempt or default_layer_e_head_attempt("ambient"),
@@ -537,30 +542,47 @@ def orchestrate_analysis(
         "aggregator": aggregator_attempt or default_layer_e_head_attempt("aggregator"),
     }
 
-    ambient = analyze("layer_e", attempts["ambient"], audio_path)
-    weather = analyze("layer_e", attempts["weather"], audio_path)
-    events = analyze("layer_e", attempts["events"], audio_path)
+    head_results: dict[str, dict] = {}
+    head_errors: dict[str, dict] = {}
+
+    for head in ("ambient", "weather", "events"):
+        attempt_id = attempts[head]
+        try:
+            head_results[head] = analyze("layer_e", attempt_id, audio_path)
+        except Exception as exc:  # noqa: BLE001 - keep independent heads available
+            head_errors[head] = {
+                "attempt_id": attempt_id,
+                "error": str(exc),
+                "error_type": exc.__class__.__name__,
+            }
+            head_results[head] = {
+                "report": {},
+                "attempt": _attempt_snapshot(get_attempt("layer_e", attempt_id)),
+            }
+
     aggregator = aggregate_analysis_reports(
         attempts["aggregator"],
-        ambient_report=ambient.get("report", {}),
-        weather_report=weather.get("report", {}),
-        events_report=events.get("report", {}),
+        ambient_report=head_results["ambient"].get("report", {}),
+        weather_report=head_results["weather"].get("report", {}),
+        events_report=head_results["events"].get("report", {}),
     )
 
     result = {
         "report": aggregator["report"],
         "attempts": {
-            "ambient": ambient["attempt"],
-            "weather": weather["attempt"],
-            "events": events["attempt"],
+            "ambient": head_results["ambient"]["attempt"],
+            "weather": head_results["weather"]["attempt"],
+            "events": head_results["events"]["attempt"],
             "aggregator": aggregator["attempt"],
         },
     }
+    if head_errors:
+        result["head_errors"] = head_errors
     if include_head_reports:
         result["head_reports"] = {
-            "ambient": ambient.get("report", {}),
-            "weather": weather.get("report", {}),
-            "events": events.get("report", {}),
+            "ambient": head_results["ambient"].get("report", {}),
+            "weather": head_results["weather"].get("report", {}),
+            "events": head_results["events"].get("report", {}),
         }
     return result
 
