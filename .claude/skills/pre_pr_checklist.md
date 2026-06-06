@@ -84,7 +84,8 @@ Stop at the first failure, fix, then resume.
 - [ ] ⚠️ Smoke/registry checks run with `acoustic_ai/.venv` — **never** system
       python (incompatible torch/torchaudio).
 - [ ] ⚠️ Feature exercised through the real path, not only compile/import.
-- [ ] ⚠️ PR body states exact commands run + known limitations.
+- [ ] ⚠️ PR body states exact commands run + known limitations — draft it to
+      the repo PR standard ([draft_pr](draft_pr.md)).
 
 ### 7. Branch + commits
 - [ ] Branch name `<type>/<author>/<short-desc>`.
