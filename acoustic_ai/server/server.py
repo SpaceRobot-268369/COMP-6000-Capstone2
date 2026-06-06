@@ -28,7 +28,7 @@ from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -99,6 +99,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Soundscape Inference API", version="0.2.0", lifespan=lifespan)
+
+
+def _clean_form_value(value: str | None) -> str | None:
+    value = value.strip() if isinstance(value, str) else ""
+    return value or None
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],
@@ -198,7 +203,13 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
 
 
 @app.post("/analysis/run")
-async def orchestrated_analysis(file: UploadFile = File(...)) -> dict:
+async def orchestrated_analysis(
+    file: UploadFile = File(...),
+    ambient_attempt: str | None = Form(default=None),
+    weather_attempt: str | None = Form(default=None),
+    events_attempt: str | None = Form(default=None),
+    aggregator_attempt: str | None = Form(default=None),
+) -> dict:
     """Run the full Layer E analysis stack over one uploaded audio clip."""
     suffix = Path(file.filename or "upload.wav").suffix or ".wav"
     try:
@@ -235,7 +246,13 @@ async def orchestrated_analysis(file: UploadFile = File(...)) -> dict:
                 check=True,
             )
             analysis_path = converted_path
-        result = registry.orchestrate_analysis(analysis_path)
+        result = registry.orchestrate_analysis(
+            analysis_path,
+            ambient_attempt=_clean_form_value(ambient_attempt),
+            weather_attempt=_clean_form_value(weather_attempt),
+            events_attempt=_clean_form_value(events_attempt),
+            aggregator_attempt=_clean_form_value(aggregator_attempt),
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except NotImplementedError as exc:

@@ -92,6 +92,19 @@ The request is a multipart upload with a `file` field. The endpoint runs the
 registered Layer E ambient, weather, and events heads, then fuses their reports
 through this aggregator.
 
+Optional multipart fields can override the registry defaults:
+
+```text
+ambient_attempt
+weather_attempt
+events_attempt
+aggregator_attempt
+```
+
+The Dev Analysis page sends the currently selected E-A/E-B/E-C/Aggregator
+attempts when running Full Analysis, so future tuned models can be tested
+without changing code.
+
 The browser-facing Express proxy is:
 
 ```text

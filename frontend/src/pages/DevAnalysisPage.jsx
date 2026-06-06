@@ -63,6 +63,7 @@ export default function DevAnalysisPage() {
   const [registry, setRegistry] = useState(null);
   const [regError, setRegError] = useState("");
   const [fullAnalysis, setFullAnalysis] = useState({ status: "idle", result: null, error: "" });
+  const [aggregatorAttemptId, setAggregatorAttemptId] = useState("");
 
   // Independent per-head runtime state (selected attempt + analysis result).
   const [heads, setHeads] = useState(() => ({
@@ -79,6 +80,8 @@ export default function DevAnalysisPage() {
         const layerE = (doc.layers || []).find((l) => l.id === LAYER_ID);
         const attempts = layerE?.attempts || [];
         const def = layerE?.default;
+        const aggregators = attempts.filter((a) => a.head === "aggregator");
+        setAggregatorAttemptId(aggregators[0]?.id || "");
         setHeads((prev) => {
           const next = { ...prev };
           for (const h of HEADS) {
@@ -96,7 +99,7 @@ export default function DevAnalysisPage() {
   const attemptsByHead = useMemo(() => {
     const layerE = registry?.layers?.find((l) => l.id === LAYER_ID);
     const attempts = layerE?.attempts || [];
-    const map = { ambient: [], weather: [], events: [] };
+    const map = { ambient: [], weather: [], events: [], aggregator: [] };
     for (const a of attempts) {
       if (map[a.head]) map[a.head].push(a);
     }
@@ -147,7 +150,12 @@ export default function DevAnalysisPage() {
     if (!file) return;
     setFullAnalysis({ status: "analysing", result: null, error: "" });
     try {
-      const data = await analyseAudio(file);
+      const data = await analyseAudio(file, {
+        ambient: heads.ambient.attemptId,
+        weather: heads.weather.attemptId,
+        events: heads.events.attemptId,
+        aggregator: aggregatorAttemptId,
+      });
       setFullAnalysis({ status: "done", result: data, error: "" });
     } catch (err) {
       setFullAnalysis({ status: "error", result: null, error: err.message });
@@ -182,6 +190,9 @@ export default function DevAnalysisPage() {
           state={fullAnalysis}
           hasFile={!!file}
           onRun={runFullAnalysis}
+          aggregatorAttemptId={aggregatorAttemptId}
+          aggregatorAttempts={attemptsByHead.aggregator}
+          onAggregatorAttemptChange={setAggregatorAttemptId}
         />
       </div>
 
@@ -236,7 +247,14 @@ function SpectrogramPanel({ file }) {
 
 // ─── Uploader ────────────────────────────────────────────────────────────────
 
-function FullAnalysisCard({ state, hasFile, onRun }) {
+function FullAnalysisCard({
+  state,
+  hasFile,
+  onRun,
+  aggregatorAttemptId,
+  aggregatorAttempts,
+  onAggregatorAttemptChange,
+}) {
   const analysing = state.status === "analysing";
   const done = state.status === "done";
   const report = state.result?.report;
@@ -249,12 +267,21 @@ function FullAnalysisCard({ state, hasFile, onRun }) {
       </div>
       <div className="dev-result-body">
         <ReviewSection title="Aggregator">
+          {aggregatorAttempts?.length > 0 && (
+            <AttemptPicker
+              headCode="Aggregator"
+              attemptId={aggregatorAttemptId}
+              attempts={aggregatorAttempts}
+              onChange={onAggregatorAttemptChange}
+            />
+          )}
+
           <div className="upload-actions" style={{ marginBottom: 8 }}>
             <button
               type="button"
               className="analyse-btn"
               onClick={onRun}
-              disabled={!hasFile || analysing}
+              disabled={!hasFile || analysing || !aggregatorAttemptId}
             >
               {analysing ? "Analysing..." : "Run Full Analysis"}
             </button>

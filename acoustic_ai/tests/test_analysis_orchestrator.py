@@ -81,6 +81,32 @@ class AnalysisOrchestratorTest(unittest.TestCase):
         self.assertNotIn("head_reports", result)
         self.assertEqual(result["report"]["schema_version"], "analysis_aggregator.v1")
 
+    def test_explicit_attempts_are_used_for_full_analysis(self) -> None:
+        ambient_id = registry.default_layer_e_head_attempt("ambient")
+        weather_id = registry.default_layer_e_head_attempt("weather")
+        events_id = registry.default_layer_e_head_attempt("events")
+        aggregator_id = registry.default_layer_e_head_attempt("aggregator")
+        calls = []
+
+        def fake_analyze(layer_id: str, attempt_id: str, audio_path: str) -> dict:
+            calls.append((layer_id, attempt_id, audio_path))
+            return {"report": {}, "attempt": {"id": attempt_id}}
+
+        with patch.object(registry, "analyze", side_effect=fake_analyze):
+            result = registry.orchestrate_analysis(
+                "clip.wav",
+                ambient_attempt=ambient_id,
+                weather_attempt=weather_id,
+                events_attempt=events_id,
+                aggregator_attempt=aggregator_id,
+            )
+
+        self.assertEqual(
+            [attempt_id for _layer_id, attempt_id, _audio_path in calls],
+            [ambient_id, weather_id, events_id],
+        )
+        self.assertEqual(result["attempts"]["aggregator"]["id"], aggregator_id)
+
 
 if __name__ == "__main__":
     unittest.main()
