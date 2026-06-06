@@ -546,15 +546,17 @@ def orchestrate_analysis(
         weather_report=weather.get("report", {}),
         events_report=events.get("report", {}),
     )
+    model_lineage = {
+        "ambient": ambient["attempt"],
+        "weather": weather["attempt"],
+        "events": events["attempt"],
+        "aggregator": aggregator["attempt"],
+    }
+    aggregator["report"]["model_lineage"] = model_lineage
 
     result = {
         "report": aggregator["report"],
-        "attempts": {
-            "ambient": ambient["attempt"],
-            "weather": weather["attempt"],
-            "events": events["attempt"],
-            "aggregator": aggregator["attempt"],
-        },
+        "attempts": model_lineage,
     }
     if include_head_reports:
         result["head_reports"] = {

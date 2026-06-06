@@ -30,6 +30,7 @@ It returns one fused report:
   "decision": {},
   "narration": {},
   "llm_input": {},
+  "model_lineage": {},
   "disagreements": [],
   "overall_confidence": 0.0,
   "limitations": []
@@ -47,6 +48,7 @@ It returns one fused report:
 | `decision` | object | Compact machine-readable final decision for downstream narration. |
 | `narration` | object | Deterministic human-readable fallback generated from `decision`. |
 | `llm_input` | object | Wrapper payload for a future LLM narration step. |
+| `model_lineage` | object | Attempt snapshots for the E-A, E-B, E-C, and aggregator models used. |
 | `disagreements` | array | Conflicts or weak evidence that affected the final answer. |
 | `overall_confidence` | number | Overall confidence in the fused analysis context and observations. |
 | `limitations` | array | Human-readable caveats. |
@@ -399,6 +401,36 @@ presentation text; `decision` remains the stable machine-readable contract.
     "Detected calls: Southern Boobook"
   ],
   "caveats": []
+}
+```
+
+## Model lineage
+
+`model_lineage` records which registered attempts produced the report. This
+lets reviewers and downstream narration know which E-A/E-B/E-C/Aggregator
+models were used without depending on the outer API wrapper.
+
+```json
+{
+  "ambient": {
+    "id": "lucas__mvp_2__clap_knn_probe_enlarged",
+    "label": "Ambient context - CLAP k-NN + probe (enlarged pool)",
+    "head": "ambient",
+    "stage": "mvp_2",
+    "status": "candidate"
+  },
+  "weather": {
+    "id": "murphy__mvp_1__weather_direct_detection",
+    "head": "weather"
+  },
+  "events": {
+    "id": "songke__smoke_2__known_species_clap_probe",
+    "head": "events"
+  },
+  "aggregator": {
+    "id": "songke__smoke_3__analysis_aggregator",
+    "head": "aggregator"
+  }
 }
 ```
 

@@ -296,7 +296,7 @@ function FullAnalysisResult({ result }) {
   const events = Array.isArray(report.observations?.events) ? report.observations.events : [];
   const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
   const limitations = Array.isArray(report.limitations) ? report.limitations : [];
-  const attempts = result?.attempts || {};
+  const attempts = report.model_lineage || result?.attempts || {};
   const narration = report.narration || {};
   const narrationBullets = Array.isArray(narration.bullets) ? narration.bullets : [];
 

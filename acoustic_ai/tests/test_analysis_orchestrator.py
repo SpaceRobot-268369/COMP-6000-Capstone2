@@ -67,6 +67,8 @@ class AnalysisOrchestratorTest(unittest.TestCase):
         self.assertEqual(result["attempts"]["weather"]["head"], "weather")
         self.assertEqual(result["attempts"]["events"]["head"], "events")
         self.assertEqual(result["attempts"]["aggregator"]["head"], "aggregator")
+        self.assertEqual(result["report"]["model_lineage"]["ambient"]["head"], "ambient")
+        self.assertEqual(result["report"]["model_lineage"]["aggregator"]["head"], "aggregator")
         self.assertIn("head_reports", result)
 
     def test_can_omit_head_reports(self) -> None:

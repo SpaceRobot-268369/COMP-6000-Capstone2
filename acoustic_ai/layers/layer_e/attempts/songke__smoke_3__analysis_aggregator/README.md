@@ -176,6 +176,12 @@ Expected output shape:
     "summary": "The recording is best described as night with none weather. The season is undetermined. The detected call evidence includes Southern Boobook.",
     "bullets": []
   },
-  "llm_input": {}
+  "llm_input": {},
+  "model_lineage": {
+    "ambient": { "id": "lucas__mvp_2__clap_knn_probe_enlarged", "head": "ambient" },
+    "weather": { "id": "murphy__mvp_1__weather_direct_detection", "head": "weather" },
+    "events": { "id": "songke__smoke_2__known_species_clap_probe", "head": "events" },
+    "aggregator": { "id": "songke__smoke_3__analysis_aggregator", "head": "aggregator" }
+  }
 }
 ```
