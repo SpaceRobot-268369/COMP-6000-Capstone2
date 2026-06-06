@@ -12,14 +12,14 @@
 import * as THREE from 'three';
 import { PostPipeline } from './post.js';
 import {
-  buildWorld, setupParticles, updateParticles, setRain, updateRain, disposeWorld,
+  buildWorld, setupParticles, updateParticles, setRain, updateRain, setWind, disposeWorld,
 } from './world.js';
 import { buildScene, SEASON_LABEL, TIME_LABEL } from './scenes.js';
 import { createTypography } from './typography.js';
 import { createAudio } from './audio.js';
 
 const DEFAULT_INITIAL = {
-  season: 'autumn', time: 'dawn', rain: false, rainAmount: 0.6, thunder: false, narration: null,
+  season: 'autumn', time: 'dawn', rain: false, rainAmount: 0.6, wind: 0, thunder: false, narration: null,
 };
 
 export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, audioEl, initial }) {
@@ -54,7 +54,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
 
   // ---- state ----
   const APP = {
-    state: { season: init.season, time: init.time, rain: init.rain, rainAmount: init.rainAmount },
+    state: { season: init.season, time: init.time, rain: init.rain, rainAmount: init.rainAmount, wind: init.wind },
     narration: init.narration,
     cur: null, from: null, to: null, tx: 1, txDur: 2.6,
     flashT: -10, boltShown: false, pendingParticle: false, particleSwapped: true,
@@ -212,6 +212,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
   // ---- initial scene + title ----
   setScene(init.season, init.time, true);
   if (init.rain) setRain(WORLD, true, init.rainAmount);
+  setWind(WORLD, init.wind);
   const titleTimer = setTimeout(
     () => typo.play(SEASON_LABEL[APP.state.season], TIME_LABEL[APP.state.time], APP.narration),
     600,
@@ -359,6 +360,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     setTime: (t) => setScene(APP.state.season, t),
     setRain: (on) => { APP.state.rain = on; setRain(WORLD, on, APP.state.rainAmount); },
     setRainAmount: (v) => { APP.state.rainAmount = v; if (APP.state.rain) setRain(WORLD, true, v); },
+    setWind: (v) => { APP.state.wind = v; setWind(WORLD, v); },
     thunder: () => { APP.flashT = clock.getElapsedTime(); APP.boltShown = false; },
     replayTitle: () => typo.play(SEASON_LABEL[APP.state.season], TIME_LABEL[APP.state.time], APP.narration),
     setNarration: (text) => { APP.narration = text; },
