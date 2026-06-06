@@ -197,6 +197,47 @@ layers:
           - Runtime accepts seed only; prompt and generation params are server-locked.
           - Training data comes from a filtered wind-only manifest built from site pool.
 
+      murphy__smoke_1__audioldm2_rain:
+        label: "Generate rain — AudioLDM2 LoRA smoke"
+        author: murphy
+        stage: smoke_1
+        status: smoke_candidate
+        uses_seed: true
+        checkpoint: model/candidates/murphy/smoke_1__audioldm2_rain
+        description: |
+          Generates a short rain-only weather stem with the Layer B AudioLDM2
+          LoRA smoke attempt. This is the model-testing generate path, separate
+          from the site-only weather stem selector.
+
+          Runtime accepts a seed only. Weather type is fixed to rain, and the
+          prompt, duration, guidance scale, inference steps, RMS target, and
+          filtering are locked by the registry and handler so repeated frontend
+          tests are comparable.
+
+          Output is a generated WAV plus metadata for frontend inspection. This
+          is not the retrieval pool and not a full Layer D soundscape mix.
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            steady rain over dry eucalyptus woodland, Bowra, Australia
+          negative_prompt: >-
+            hiss, static noise, background hum, tape noise, birds, insects, wind gusts, reverb, music, machinery, low quality, distortion
+          guidance_scale: 3.0
+          num_inference_steps: 200
+          audio_length_in_s: 5.0
+          output_target_rms: 0.05
+          highpass_hz: 80.0
+          denoise_enabled: true
+          denoise_strength: 0.15
+          denoise_noise_quantile: 0.2
+          denoise_floor_ratio: 0.38
+          denoise_hop_length: 512
+          fade_ms: 80.0
+        notes:
+          - Layer B generate-path smoke for rain only.
+          - Runtime accepts seed only; prompt and generation params are server-locked.
+          - Training data comes from the rain smoke pool with recording-group train/val split.
+
       murphy__mvp_1__wind_intensity_bank:
         label: "Generate wind — intensity bank"
         author: murphy

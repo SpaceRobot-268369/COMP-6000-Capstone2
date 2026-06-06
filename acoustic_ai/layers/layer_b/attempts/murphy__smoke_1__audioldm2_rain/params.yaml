@@ -1,0 +1,39 @@
+training:
+  base_model: cvssp/audioldm2
+  manifest: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/data/rain_manifest.csv
+  val_manifest: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/data/rain_manifest_val.csv
+  num_epochs: 4
+  batch_size: 4
+  learning_rate: 1.0e-5
+  lr_scheduler: constant
+  lr_warmup_steps: 100
+  mixed_precision: fp16
+  max_duration_s: 5.0
+  input_sample_rate: 16000
+  normalize_audio: false
+  target_rms: 0.005
+  seed: 42
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+inference:
+  prompt: >-
+    steady rain over dry eucalyptus woodland,
+    Bowra, Australia
+  negative_prompt: >-
+    hiss, static noise, background hum, tape noise, birds, insects,
+    wind gusts, reverb, music, machinery, low quality, distortion
+  guidance_scale: 3.0
+  num_inference_steps: 200
+  audio_length_in_s: 5.0
+  output_target_rms: 0.05
+  highpass_hz: 80.0
+  denoise_enabled: true
+  denoise_strength: 0.15
+  denoise_noise_quantile: 0.2
+  denoise_floor_ratio: 0.38
+  denoise_hop_length: 512
+  fade_ms: 80.0

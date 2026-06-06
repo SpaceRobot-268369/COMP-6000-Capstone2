@@ -233,7 +233,7 @@ const AI_REQUEST_TIMEOUT_MS = Number.isFinite(aiRequestTimeoutMs) && aiRequestTi
 const LAYER_B_GENERATE_SERVER = (process.env.LAYER_B_GENERATE_SERVER_URL || "").replace(/\/+$/, "");
 const LAYER_B_GENERATE_ATTEMPTS = new Set(
   (process.env.LAYER_B_GENERATE_ATTEMPTS ||
-    "murphy__smoke_1__audioldm2_wind,murphy__mvp_1__wind_intensity_bank")
+    "murphy__smoke_1__audioldm2_wind,murphy__smoke_1__audioldm2_rain,murphy__mvp_1__wind_intensity_bank")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
