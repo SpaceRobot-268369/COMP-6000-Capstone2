@@ -270,14 +270,21 @@ layers:
 
   layer_d:
     label: "Layer D — Mixer"
-    default: songke__smoke_1__layered_mix
+    default: songke__mvp_1__layered_mix
     attempts:
-      songke__smoke_1__layered_mix:
-        label: "Layered mix (smoke)"
+      songke__mvp_1__layered_mix:
+        label: "Layered mix"
         author: songke
-        stage: smoke_1
-        status: smoke_test
+        stage: mvp_1
+        status: mvp_candidate
         checkpoint: null
+        description: |
+          Final Layer D mixer for the generation pipeline. Receives upstream
+          Layer A ambient, Layer B weather, and Layer C event WAV stems,
+          normalizes their technical format, aligns them to the target
+          duration, applies gain staging, weather smoothing, event fade
+          smoothing, event band-pass cleanup, and peak protection, then returns
+          the final mixed soundscape WAV with traceable mix metadata.
         params:
           default_duration_s: 30.0
           weather_gain_db: -12.0

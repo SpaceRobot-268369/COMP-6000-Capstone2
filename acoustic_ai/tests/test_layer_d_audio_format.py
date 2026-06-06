@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from acoustic_ai.layers.layer_d.attempts.songke__smoke_1__layered_mix.code.audio_format import (
+from acoustic_ai.layers.layer_d.attempts.songke__mvp_1__layered_mix.code.audio_format import (
     normalize_audio_format,
 )
 

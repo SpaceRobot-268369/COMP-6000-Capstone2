@@ -2,7 +2,7 @@
 
 ## Status
 
-Smoke implementation complete. The attempt can normalize, prepare, mix, and
+MVP implementation complete. The attempt can normalize, prepare, mix, and
 export upstream Layer A/B/C WAV stems through its registry handler. System-level
 generation orchestration is implemented through `POST /generation/render` on
 the AI server and `POST /api/generation` on the Express backend.
@@ -23,7 +23,7 @@ did not exhibit audible phase cancellation or missing content after downmixing.
 Comparison outputs and the listening review are local development artifacts
 under `dev-artifacts-self-testing/format_comparison/`.
 
-## Smoke Defaults
+## MVP Defaults
 
 - Ambient gain: 0 dB
 - Weather gain: -12 dB

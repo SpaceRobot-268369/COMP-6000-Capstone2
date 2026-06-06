@@ -33,7 +33,7 @@ The FastAPI server reads it to drive `GET /layers` (frontend dropdown) and
 | layer_b | `murphy__mvp_1__weather_stem_selector` | MVP candidate: short weather stems by type/intensity/seed |
 | layer_b | `lucas__smoke_1__curated_assets` | placeholder / shared asset-index host |
 | layer_c | `lucas__smoke_1__audiogen_boobook` | ✓ active |
-| layer_d | `songke__smoke_1__layered_mix` | smoke implementation + generation orchestration |
+| layer_d | `songke__mvp_1__layered_mix` | MVP mixer + generation orchestration |
 | layer_e | `lucas__smoke_1__detectors` | partial |
 
 The earlier CLAP diffusion experiment (would have been `smoke_3`) was dropped

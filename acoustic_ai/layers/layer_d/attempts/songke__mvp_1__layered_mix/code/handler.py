@@ -1,4 +1,4 @@
-"""Registry handler for the Layer D layered mixer smoke implementation."""
+"""Registry handler for the Layer D layered mixer MVP implementation."""
 
 from __future__ import annotations
 
