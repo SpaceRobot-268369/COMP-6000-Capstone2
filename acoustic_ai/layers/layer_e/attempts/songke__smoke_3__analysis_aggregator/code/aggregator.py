@@ -159,9 +159,12 @@ def build_llm_input(decision: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "analysis_llm_input.v1",
         "task": (
-            "Convert this ecoacoustic analysis decision JSON into concise, "
-            "human-readable language. Do not invent species, season, time of "
-            "day, weather, or confidence beyond the provided fields."
+            "Render this ecoacoustic analysis decision JSON as immersive, "
+            "third-person perspective narration with an analytical tone. "
+            "Narrate only the provided observations, inferred context, "
+            "disagreements, limitations, timestamps, and confidence values; "
+            "do not invent species, season, time of day, weather, certainty, "
+            "or causes beyond the JSON."
         ),
         "decision": decision,
     }
@@ -435,12 +438,32 @@ def _has_weather_observation(weather: dict[str, Any]) -> bool:
 def _weather_component(weather: dict[str, Any], key: str) -> dict[str, Any]:
     component = weather.get(key) if isinstance(weather.get(key), dict) else {}
     summary = component.get("summary") if isinstance(component.get("summary"), dict) else {}
-    return {
+    out = {
         "label": summary.get("label") or "unknown",
         "confidence": _safe_float(summary.get("confidence")),
         "intensity": _safe_float(summary.get("intensity")),
         "coverage": _safe_float(summary.get("coverage")),
     }
+    if key == "thunder":
+        out["events"] = _timeline_events(component.get("events")) if "events" in component else None
+        out["mean_interval_s"] = component.get("mean_interval_s")
+    return out
+
+
+def _timeline_events(value: Any) -> list[dict[str, Any]] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        return None
+    events = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        row = dict(item)
+        row.setdefault("onset_s", row.get("start_s"))
+        row.setdefault("offset_s", row.get("end_s"))
+        events.append(row)
+    return events
 
 
 def _decision_event(event: dict[str, Any]) -> dict[str, Any]:

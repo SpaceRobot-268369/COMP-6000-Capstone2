@@ -38,6 +38,8 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         self.assertEqual(result["decision"]["time_of_day"]["value"], "night")
         self.assertEqual(result["decision"]["detected_calls"][0]["common_name"], "Southern Boobook")
         self.assertEqual(result["llm_input"]["decision"]["time_of_day"]["value"], "night")
+        self.assertIn("immersive", result["llm_input"]["task"])
+        self.assertIn("third-person", result["llm_input"]["task"])
         self.assertEqual(result["narration"]["schema_version"], "analysis_narration.v1")
         self.assertIn("Southern Boobook", result["narration"]["summary"])
         self.assertIn("night", result["narration"]["summary"])
@@ -65,7 +67,11 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         weather = {
             "wind": {"summary": {"intensity": 0.62, "label": "moderate", "confidence": 0.83}},
             "rain": {"summary": {"intensity": 0.0, "label": "none", "confidence": 0.9}},
-            "thunder": {"summary": {"intensity": 0.0, "label": "none", "confidence": 0.9}},
+            "thunder": {
+                "summary": {"intensity": 0.2, "label": "light", "confidence": 0.7},
+                "events": [{"start_s": 4.0, "end_s": 5.2, "confidence": 0.66}],
+                "mean_interval_s": None,
+            },
             "confidence": 0.88,
             "derived_label": "wind",
             "warnings": ["possible_wind_overload"],
@@ -78,6 +84,9 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         self.assertEqual(result["disagreements"][0]["resolution"], "direct_observation_kept")
         self.assertEqual(result["observations"]["weather"]["warnings"], ["possible_wind_overload"])
         self.assertEqual(result["observations"]["weather"]["wind"]["summary"]["intensity"], 0.62)
+        self.assertEqual(result["decision"]["weather"]["thunder"]["events"][0]["onset_s"], 4.0)
+        self.assertEqual(result["decision"]["weather"]["thunder"]["events"][0]["offset_s"], 5.2)
+        self.assertIsNone(result["decision"]["weather"]["thunder"]["mean_interval_s"])
 
     def test_strong_ambient_can_be_used_as_context_fallback(self) -> None:
         result = aggregate_reports(

@@ -6,11 +6,14 @@ The aggregator receives three existing head reports:
 
 ```json
 {
-  "ambient_report": {},
-  "weather_report": {},
-  "events_report": {}
+  "ambient_report": "E-A JSON from lucas__mvp_2__clap_knn_probe_enlarged",
+  "weather_report": "E-B JSON from murphy__mvp_1__weather_direct_detection",
+  "events_report": "E-C JSON from songke__smoke_2__known_species_clap_probe"
 }
 ```
+
+The sample inputs below must stay aligned with the three head contracts. They
+are not simplified aggregator-only sketches.
 
 It returns one fused report:
 
@@ -330,7 +333,14 @@ or acoustic events were heard.
     "confidence": 0.80,
     "rain": { "label": "none", "confidence": 0.90, "intensity": 0.0, "coverage": 0.0 },
     "wind": { "label": "moderate", "confidence": 0.83, "intensity": 0.62, "coverage": 0.95 },
-    "thunder": { "label": "none", "confidence": 0.90, "intensity": 0.0, "coverage": 0.0 },
+    "thunder": {
+      "label": "none",
+      "confidence": 0.90,
+      "intensity": 0.0,
+      "coverage": 0.0,
+      "events": [],
+      "mean_interval_s": null
+    },
     "warnings": []
   },
   "detected_calls": [
@@ -372,13 +382,14 @@ or acoustic events were heard.
 ## LLM input
 
 `llm_input` wraps `decision` with a task instruction. It is intentionally
-grounded: the LLM should convert the JSON into readable language, not invent
-extra species, seasons, weather, or certainty.
+grounded: the LLM should render immersive, third-person perspective narration
+with an analytical tone, while not inventing extra species, seasons, weather,
+timestamps, certainty, or causes.
 
 ```json
 {
   "schema_version": "analysis_llm_input.v1",
-  "task": "Convert this ecoacoustic analysis decision JSON into concise, human-readable language. Do not invent species, season, time of day, weather, or confidence beyond the provided fields.",
+  "task": "Render this ecoacoustic analysis decision JSON as immersive, third-person perspective narration with an analytical tone. Narrate only the provided observations, inferred context, disagreements, limitations, timestamps, and confidence values; do not invent species, season, time of day, weather, certainty, or causes beyond the JSON.",
   "decision": {}
 }
 ```
