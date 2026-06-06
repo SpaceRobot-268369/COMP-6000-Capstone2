@@ -233,7 +233,7 @@ export function buildWorld(scene, opts) {
   WORLD.rain.visible = false; scene.add(WORLD.rain);
   WORLD.rainGeo = rgeo;
 
-  WORLD.wind = 0;          // 0 = calm … 1 = gale; blows toward +x
+  WORLD.wind = 0;          // placeholder — control is wired but has no visual yet
   WORLD.curParticle = null;
   return WORLD;
 }
@@ -270,11 +270,6 @@ export function setupParticles(WORLD, p) {
 
 export function updateParticles(WORLD, dt, t, amp) {
   const d = WORLD.pData, type = WORLD.curParticle;
-  const wind = WORLD.wind || 0;
-  // nonlinear so a gentle breeze stays gentle but a gale really rips
-  const gust = wind * (1 + wind);
-  // light debris rides the wind hardest; airborne pollen/dust drifts less
-  const ride = type === 'leaves' ? 16 : type === 'snow' ? 11 : 7;
   for (let i = 0; i < d.length; i++) {
     const p = d[i];
     if (type === 'snow') { p.y -= p.fall * 2.4 * dt; p.x += Math.sin(t * 0.6 + p.ph) * p.sway * dt; }
@@ -283,11 +278,8 @@ export function updateParticles(WORLD, dt, t, amp) {
       p.y += Math.sin(t * 0.3 + p.ph) * 0.25 * dt + p.fall * 0.12 * dt;
       p.x += Math.cos(t * 0.4 + p.ph) * p.drift * 1.4 * dt;
     }
-    if (wind > 0) p.x += gust * ride * dt;
     if (p.y < 0) { p.y = 40; p.x = (Math.random() - 0.5) * 110; }
     if (p.y > 42) p.y = 0.2;
-    // wrap horizontally so the field keeps flowing instead of piling downwind
-    if (p.x > 60) p.x -= 120; else if (p.x < -60) p.x += 120;
     const i3 = i * 3;
     WORLD.pPos[i3] = p.x; WORLD.pPos[i3 + 1] = p.y; WORLD.pPos[i3 + 2] = p.z;
     WORLD.pSize[i] = p.s * (1 + (type === 'leaves' ? 0.3 * Math.sin(t * 3 + p.ph) : 0));
@@ -304,30 +296,31 @@ export function setRain(WORLD, on, intensity) {
   WORLD.rainIntensity = intensity;
   const count = on ? Math.floor(RAIN_MAX * intensity) : 0;
   WORLD.rainGeo.setDrawRange(0, count * 2);
+  // heavier rain isn't just denser — the streaks are bolder too, so a small
+  // slider move reads at a glance instead of only nudging the drop count
+  WORLD.rainMat.opacity = 0.16 + intensity * 0.4;
 }
 
 export function updateRain(WORLD, dt) {
   if (!WORLD.rain.visible) return;
-  const count = Math.floor(RAIN_MAX * (WORLD.rainIntensity || 0.6));
+  const intensity = WORLD.rainIntensity || 0.6;
+  const count = Math.floor(RAIN_MAX * intensity);
   const pos = WORLD.rPos;
-  const wind = WORLD.wind || 0;
-  // nonlinear so a gale drives the rain far harder than a light breeze
-  const gust = wind * (1 + wind);
+  const speedK = 0.7 + intensity * 0.6;        // heavier rain falls faster …
+  const lenK = 0.7 + intensity * 0.8;          // … in longer streaks
   for (let i = 0; i < count; i++) {
     const r = WORLD.rData[i];
-    r.y -= r.sp * dt;
-    if (wind > 0) r.x += gust * 34 * dt;
+    r.y -= r.sp * speedK * dt;
     if (r.y < 0) { r.y = 55 + Math.random() * 8; r.x = (Math.random() - 0.5) * 90; r.z = -100 + Math.random() * 110; }
-    else if (r.x > 55) r.x -= 110;       // wrap so wind-blown rain keeps crossing the frame
-    const i6 = i * 6;
-    // streak leans downwind: near-vertical when calm, raked over in a gale
-    const lean = (0.2 + gust * 4.6) * r.len;
+    const i6 = i * 6, slant = 1.4;
     pos[i6] = r.x; pos[i6 + 1] = r.y; pos[i6 + 2] = r.z;
-    pos[i6 + 3] = r.x + lean; pos[i6 + 4] = r.y - r.len * 2.2; pos[i6 + 5] = r.z;
+    pos[i6 + 3] = r.x - slant * 0.15; pos[i6 + 4] = r.y - r.len * 2.2 * lenK; pos[i6 + 5] = r.z;
   }
   WORLD.rainGeo.attributes.position.needsUpdate = true;
 }
 
+// Placeholder: stores the intensity so the UI control stays wired, but wind has
+// no visual effect yet. Rain and the ambient particle field are unaffected.
 export function setWind(WORLD, intensity) {
   WORLD.wind = Math.max(0, Math.min(1, intensity || 0));
 }
