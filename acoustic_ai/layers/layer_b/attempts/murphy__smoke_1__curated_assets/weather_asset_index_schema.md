@@ -10,7 +10,7 @@ it can contain rain, wind, thunder, or a mixture of those components.
 ## Current Location
 
 ```text
-acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
 ```
 
 This location is inherited from the current placeholder Layer B attempt. Future

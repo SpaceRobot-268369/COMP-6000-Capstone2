@@ -19,7 +19,7 @@ from pathlib import Path
 _ATTEMPT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_INDEX = (
     _ATTEMPT_ROOT.parent
-    / "lucas__smoke_1__curated_assets"
+    / "murphy__smoke_1__curated_assets"
     / "data"
     / "weather"
     / "asset_index.csv"

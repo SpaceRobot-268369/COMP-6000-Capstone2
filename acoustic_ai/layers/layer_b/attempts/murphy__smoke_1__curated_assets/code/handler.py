@@ -15,5 +15,5 @@ def load(checkpoint_dir: Optional[Path], params: dict, extra: dict | None = None
 def generate(state, seed: Optional[int] = None, **_ignored) -> dict:
     raise NotImplementedError(
         "This attempt has no generate() implementation. "
-        "See layer_b/attempts/lucas__smoke_1__curated_assets/README.md for status."
+        "See layer_b/attempts/murphy__smoke_1__curated_assets/README.md for status."
     )

@@ -15,7 +15,7 @@ Outputs:
   }
 
 Shared label source:
-  acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/weather_asset_index_schema.md
+  acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/weather_asset_index_schema.md
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ DEFAULT_WEATHER_ASSET_INDEX = (
     / "layers"
     / "layer_b"
     / "attempts"
-    / "lucas__smoke_1__curated_assets"
+    / "murphy__smoke_1__curated_assets"
     / "data"
     / "weather"
     / "asset_index.csv"

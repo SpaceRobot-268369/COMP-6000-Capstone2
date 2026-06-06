@@ -9,7 +9,7 @@ from pathlib import Path
 
 _ATTEMPT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_INDEX = (
-    _ATTEMPT_ROOT.parent / "lucas__smoke_1__curated_assets" / "data" / "weather" / "asset_index.csv"
+    _ATTEMPT_ROOT.parent / "murphy__smoke_1__curated_assets" / "data" / "weather" / "asset_index.csv"
 )
 _DEFAULT_OUT = _ATTEMPT_ROOT / "data" / "wind_manifest_medium.csv"
 _DEFAULT_CAPTIONS = {
