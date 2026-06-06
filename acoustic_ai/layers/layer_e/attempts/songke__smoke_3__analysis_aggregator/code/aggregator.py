@@ -111,6 +111,7 @@ def aggregate_reports(
             "season": season,
         },
         "decision": decision,
+        "narration": build_narration(decision),
         "llm_input": build_llm_input(decision),
         "disagreements": disagreements,
         "overall_confidence": confidence,
@@ -163,6 +164,54 @@ def build_llm_input(decision: dict[str, Any]) -> dict[str, Any]:
             "day, weather, or confidence beyond the provided fields."
         ),
         "decision": decision,
+    }
+
+
+def build_narration(decision: dict[str, Any]) -> dict[str, Any]:
+    """Create a deterministic human-readable summary from the decision JSON.
+
+    This is a local fallback for review and demo surfaces. A future LLM-OSS
+    narration layer can replace this text while keeping the same decision JSON.
+    """
+    time_value = _human_value(decision.get("time_of_day", {}).get("value"))
+    season_value = _human_value(decision.get("season", {}).get("value"))
+    weather_label = _human_value(decision.get("weather", {}).get("label"))
+    calls = decision.get("detected_calls") if isinstance(decision.get("detected_calls"), list) else []
+    call_names = [
+        call.get("common_name") or _human_value(call.get("label"))
+        for call in calls
+        if isinstance(call, dict) and (call.get("common_name") or call.get("label"))
+    ]
+
+    if call_names:
+        call_phrase = ", ".join(call_names[:3])
+        if len(call_names) > 3:
+            call_phrase += f", and {len(call_names) - 3} more"
+    else:
+        call_phrase = "no known species calls"
+
+    summary = (
+        f"The recording is best described as {time_value} with {weather_label} weather. "
+        f"The season is {season_value}. The detected call evidence includes {call_phrase}."
+    )
+
+    bullets = [
+        f"Time of day: {time_value} ({_percent(decision.get('time_of_day', {}).get('confidence'))})",
+        f"Season: {season_value} ({_percent(decision.get('season', {}).get('confidence'))})",
+        f"Weather: {weather_label} ({_percent(decision.get('weather', {}).get('confidence'))})",
+        f"Detected calls: {call_phrase}",
+    ]
+    caveats = list(decision.get("limitations") or [])
+    disagreements = decision.get("disagreements") if isinstance(decision.get("disagreements"), list) else []
+    if disagreements:
+        caveats.append(f"{len(disagreements)} analysis disagreement(s) were recorded in the fused report.")
+
+    return {
+        "schema_version": "analysis_narration.v1",
+        "source": "deterministic_fallback",
+        "summary": summary,
+        "bullets": bullets,
+        "caveats": _dedupe(caveats),
     }
 
 
@@ -409,6 +458,18 @@ def _decision_event(event: dict[str, Any]) -> dict[str, Any]:
         "season_confidence": _safe_float(phenology.get("season_confidence")),
         "habitat_signal": phenology.get("habitat_signal"),
     }
+
+
+def _human_value(value: Any) -> str:
+    if value in (None, "", "unknown"):
+        return "unknown"
+    if value == "undetermined":
+        return "undetermined"
+    return str(value).replace("_", " ")
+
+
+def _percent(value: Any) -> str:
+    return f"{round(_safe_float(value) * 100)}%"
 
 
 def _merge_params(params: dict[str, Any] | None) -> dict[str, Any]:

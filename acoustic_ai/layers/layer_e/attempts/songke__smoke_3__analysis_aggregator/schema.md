@@ -28,6 +28,7 @@ It returns one fused report:
     "season": {}
   },
   "decision": {},
+  "narration": {},
   "llm_input": {},
   "disagreements": [],
   "overall_confidence": 0.0,
@@ -44,6 +45,7 @@ It returns one fused report:
 | `observations` | object | Direct things the heads heard in the audio. |
 | `inferred_context` | object | Aggregator guesses from evidence, not direct detections. |
 | `decision` | object | Compact machine-readable final decision for downstream narration. |
+| `narration` | object | Deterministic human-readable fallback generated from `decision`. |
 | `llm_input` | object | Wrapper payload for a future LLM narration step. |
 | `disagreements` | array | Conflicts or weak evidence that affected the final answer. |
 | `overall_confidence` | number | Overall confidence in the fused analysis context and observations. |
@@ -376,6 +378,27 @@ extra species, seasons, weather, or certainty.
   "schema_version": "analysis_llm_input.v1",
   "task": "Convert this ecoacoustic analysis decision JSON into concise, human-readable language. Do not invent species, season, time of day, weather, or confidence beyond the provided fields.",
   "decision": {}
+}
+```
+
+## Narration fallback
+
+`narration` is a deterministic local summary for review and demo use before
+the LLM-OSS narration layer is connected. It must be treated as replaceable
+presentation text; `decision` remains the stable machine-readable contract.
+
+```json
+{
+  "schema_version": "analysis_narration.v1",
+  "source": "deterministic_fallback",
+  "summary": "The recording is best described as night with none weather. The season is undetermined. The detected call evidence includes Southern Boobook.",
+  "bullets": [
+    "Time of day: night (88%)",
+    "Season: undetermined (40%)",
+    "Weather: none (80%)",
+    "Detected calls: Southern Boobook"
+  ],
+  "caveats": []
 }
 ```
 

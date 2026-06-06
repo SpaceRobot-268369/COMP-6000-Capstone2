@@ -170,6 +170,12 @@ Expected output shape:
   "overall_confidence": 0.0,
   "limitations": [],
   "decision": {},
+  "narration": {
+    "schema_version": "analysis_narration.v1",
+    "source": "deterministic_fallback",
+    "summary": "The recording is best described as night with none weather. The season is undetermined. The detected call evidence includes Southern Boobook.",
+    "bullets": []
+  },
   "llm_input": {}
 }
 ```

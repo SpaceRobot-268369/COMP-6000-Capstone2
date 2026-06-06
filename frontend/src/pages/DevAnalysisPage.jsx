@@ -297,9 +297,30 @@ function FullAnalysisResult({ result }) {
   const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
   const limitations = Array.isArray(report.limitations) ? report.limitations : [];
   const attempts = result?.attempts || {};
+  const narration = report.narration || {};
+  const narrationBullets = Array.isArray(narration.bullets) ? narration.bullets : [];
 
   return (
     <div className="dev-controls-meta">
+      {narration.summary && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Narration</p>
+            <span>{narration.source || "deterministic"}</span>
+          </div>
+          <p style={{ margin: "6px 0 8px", fontSize: 13, lineHeight: 1.5 }}>
+            {narration.summary}
+          </p>
+          {narrationBullets.length > 0 && (
+            <div className="analysis-report-chips">
+              {narrationBullets.slice(0, 4).map((item, idx) => (
+                <span key={`${item}-${idx}`}>{item}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="gen-info-block">
         <p>Diel</p>
         <code>{context.diel?.estimate || "undetermined"} · {fmtPct(context.diel?.posterior)}</code>
