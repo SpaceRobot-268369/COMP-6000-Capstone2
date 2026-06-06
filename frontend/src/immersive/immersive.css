@@ -58,7 +58,7 @@
 }
 .immersive-page .word.show { opacity: 1; filter: blur(0); transform: none; }
 
-.immersive-page .immersive-bolt { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.immersive-page .immersive-bolt { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 90ms ease-out; }
 
 /* ---- dev control panel ---- */
 .immersive-page .immersive-panel {

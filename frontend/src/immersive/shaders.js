@@ -237,8 +237,8 @@ void main(){
   col = (col - 0.5) * uContrast + 0.5;
   col = max(col, 0.0);
 
-  // thunder flash also lifts the frame
-  col += uFlash * 0.6;
+  // thunder flash lifts the frame with a cool electric-blue cast
+  col += uFlash * vec3(0.50, 0.56, 0.68);
 
   // Scene-coloured atmospheric veil. It sits in post so it blends across sky,
   // trees, and ground together, hiding the two horizontal value jumps that make

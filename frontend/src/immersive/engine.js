@@ -191,22 +191,65 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     if (e < 0 || e > 1.5) return 0;
     const gate = Math.min(e / 0.045, 1);
     const f = 0.95 * Math.exp(-e * 4.6) + 0.5 * Math.exp(-Math.max(e - 0.13, 0) * 6.5);
-    return gate * f;
+    // a fast electric shimmer that decays within the first ~0.25s gives the
+    // flash an unstable, alive quality instead of a flat exponential fade
+    const flicker = 1 + 0.16 * Math.sin(e * 95) * Math.exp(-e * 9);
+    return gate * f * flicker;
   }
 
-  // ---- lightning bolt (optional, ~half the time) ----
+  // ---- lightning bolt (optional, fired on ~60% of strikes) ----
   const bctx = boltEl.getContext('2d');
+  let boltTimers = [];
   function sizeBolt() { boltEl.width = VW; boltEl.height = VH; }
   sizeBolt();
   function drawBolt() {
     const W = boltEl.width, H = boltEl.height;
     bctx.clearRect(0, 0, W, H);
-    bctx.strokeStyle = 'rgba(220,235,255,0.92)';
-    bctx.shadowColor = 'rgba(180,210,255,0.9)'; bctx.shadowBlur = 26;
-    let x = W * (0.3 + Math.random() * 0.4), y = -20;
-    const seg = H / 14; bctx.lineWidth = 2.4; bctx.beginPath(); bctx.moveTo(x, y);
-    while (y < H * 0.62) { y += seg * (0.7 + Math.random() * 0.6); x += (Math.random() - 0.5) * W * 0.09; bctx.lineTo(x, y); }
-    bctx.stroke(); bctx.shadowBlur = 0;
+    bctx.lineCap = 'round'; bctx.lineJoin = 'round';
+
+    // jagged main channel from the top down into the treeline
+    const seg = H / 16;
+    const channel = [[W * (0.32 + Math.random() * 0.36), -20]];
+    const endY = H * (0.55 + Math.random() * 0.18);
+    let cx = channel[0][0], cy = channel[0][1];
+    while (cy < endY) {
+      cy += seg * (0.7 + Math.random() * 0.6);
+      cx += (Math.random() - 0.5) * W * 0.085;
+      channel.push([cx, cy]);
+    }
+
+    // short forks branching off interior nodes — what sells it as lightning
+    const forks = [];
+    for (let i = 2; i < channel.length - 1; i++) {
+      if (Math.random() < 0.3) {
+        let fx = channel[i][0], fy = channel[i][1];
+        const branch = [[fx, fy]];
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        const n = 2 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) {
+          fx += dir * W * (0.02 + Math.random() * 0.05);
+          fy += seg * (0.45 + Math.random() * 0.5);
+          branch.push([fx, fy]);
+        }
+        forks.push(branch);
+      }
+    }
+
+    const stroke = (pts, lw, color, blur) => {
+      bctx.strokeStyle = color; bctx.lineWidth = lw;
+      bctx.shadowColor = 'rgba(170,200,255,0.95)'; bctx.shadowBlur = blur;
+      bctx.beginPath(); bctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) bctx.lineTo(pts[i][0], pts[i][1]);
+      bctx.stroke();
+    };
+
+    // two passes: a wide soft-blue halo, then a thin hot-white core
+    stroke(channel, 8, 'rgba(150,190,255,0.28)', 38);
+    forks.forEach((f) => stroke(f, 4, 'rgba(150,190,255,0.22)', 26));
+    stroke(channel, 2.4, 'rgba(238,245,255,0.98)', 14);
+    forks.forEach((f) => stroke(f, 1.4, 'rgba(224,236,255,0.9)', 10));
+
+    bctx.shadowBlur = 0;
   }
 
   // ---- initial scene + title ----
@@ -277,10 +320,17 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     WORLD.skyMat.uniforms.uFlash.value = flash;
     WORLD.skyMat.uniforms.uTime.value = t;
     post.matComposite.uniforms.uFlash.value = flash * 0.5;
-    // bolt: fire once per strike, ~55% of strikes
+    // bolt: fire once per strike, ~60% of strikes
     if (e >= 0 && e < 0.05 && !APP.boltShown) {
       APP.boltShown = true;
-      if (Math.random() < 0.55) { drawBolt(); boltEl.style.opacity = '0.9'; setTimeout(() => { boltEl.style.opacity = '0'; }, 120); }
+      if (Math.random() < 0.6) {
+        drawBolt();
+        // multi-step flicker fade so the strike pulses like a real return
+        // stroke instead of a single hard on/off frame
+        boltTimers.forEach(clearTimeout); boltTimers = [];
+        [[0, 0.95], [45, 0.45], [80, 0.92], [140, 0.3], [210, 0]].forEach(
+          ([ms, op]) => boltTimers.push(setTimeout(() => { boltEl.style.opacity = String(op); }, ms)));
+      }
     }
 
     // camera breath (+ loose audio sway)
@@ -343,6 +393,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     cancelAnimationFrame(rafId);
     clearTimeout(titleTimer); clearTimeout(settle1); clearTimeout(settle2);
     if (thunderTimer) clearTimeout(thunderTimer);
+    boltTimers.forEach(clearTimeout);
     window.removeEventListener('resize', onResize);
     if (ro) ro.disconnect();
     typo.dispose();
