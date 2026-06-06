@@ -116,16 +116,18 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     // colour so the foreground isn't dead black under a luminous morning.
     // dawn / night keep brightness < 0.95 → atmo 0 → trees stay dramatically dark.
     const atmo = Math.min(0.6, Math.max(0, p.brightness - 0.95) * 0.7);
-    if (atmo > 0.001) {
-      WORLD.treeMats.forEach(o => {
-        o.mat.color.setRGB(
-          o.base.r + (p.fog[0] - o.base.r) * atmo,
-          o.base.g + (p.fog[1] - o.base.g) * atmo,
-          o.base.b + (p.fog[2] - o.base.b) * atmo);
-      });
-    } else {
-      WORLD.treeMats.forEach(o => { o.mat.color.copy(o.base); });
-    }
+    WORLD.treeMats.forEach(o => {
+      // aerial perspective: the distant treeline dissolves toward the horizon
+      // fog so it never reads as a hard dark band against the bright horizon
+      // (the "line"); the close hero trees keep their crushed-black drama.
+      const d = -o.z;
+      const aerial = Math.min(0.78, Math.max(0, (d - 46) / 82) * 0.78);
+      const k = Math.max(atmo, aerial);
+      o.mat.color.setRGB(
+        o.base.r + (p.fog[0] - o.base.r) * k,
+        o.base.g + (p.fog[1] - o.base.g) * k,
+        o.base.b + (p.fog[2] - o.base.b) * k);
+    });
 
     // undergrowth takes on the season's vegetation colour in daylight (green in
     // spring/summer, amber in autumn, sparse grey in winter); at dawn/night the

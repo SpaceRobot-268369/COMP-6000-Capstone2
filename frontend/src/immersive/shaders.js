@@ -126,15 +126,19 @@ void main(){
   // treeline base (which a wide/short aspect ratio compresses into a hard line)
   float band = smoothstep(2.0, 60.0, r) * (1.0 - smoothstep(140.0, 360.0, r));
   float pool = pow(align, 2.2) * band;
-  col += uSunColor * pool * (0.34 * uBrightness);
+  col += uSunColor * pool * (0.20 * uBrightness);
   // tight light streak under the sun, longest when the sun is low (dawn)
   float streak = pow(align, 34.0) * band;
-  col += uSunColor * streak * uShaftLow * 0.5;
+  col += uSunColor * streak * uShaftLow * 0.3;
   // soft exponential fog — gentler than FogExp2 so the bright horizon fog fades
   // into the darker foreground over a long vertical span (no hard line when the
-  // frame is vertically compressed), while still reaching full fog at infinity
+  // frame is vertically compressed). The far ground settles to a DARKER fog than
+  // the sky (ground is naturally darker than the sky it sits under), so the
+  // bright horizon shrinks to a thin strip behind the trees instead of a wide
+  // luminous band under the treeline.
+  vec3 groundFog = uFog * 0.44;
   float f = 1.0 - exp(-uFogDensity * 1.7 * vDist);
-  col = mix(col, uFog, clamp(f, 0.0, 1.0));
+  col = mix(col, groundFog, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;
 
