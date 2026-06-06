@@ -389,8 +389,9 @@ layers:
         checkpoint: null
         params:
           fusion:
-            ambient_weight_cap: 0.25
+            ambient_weight_cap: 0.5
             event_weight_cap: 1.0
+            ambient_fallback_min_confidence: 0.6
             undetermined_threshold: 0.50
             conflict_margin: 0.20
         notes:

@@ -40,6 +40,7 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         self.assertEqual(result["llm_input"]["decision"]["time_of_day"]["value"], "night")
         self.assertEqual(result["disagreements"][0]["field"], "diel")
         self.assertEqual(result["disagreements"][0]["resolution"], "events_preferred")
+        self.assertEqual(result["decision"]["disagreements"][0]["resolution"], "events_preferred")
         self.assertEqual(result["inferred_context"]["season"]["estimate"], "undetermined")
 
     def test_weak_ambient_alone_does_not_force_precise_context(self) -> None:
@@ -69,8 +70,23 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         self.assertEqual(result["observations"]["weather"]["derived_label"], "wind")
         self.assertEqual(result["decision"]["weather"]["label"], "wind")
         self.assertEqual(result["decision"]["weather"]["wind"]["label"], "moderate")
+        self.assertEqual(result["disagreements"][0]["resolution"], "direct_observation_kept")
         self.assertEqual(result["observations"]["weather"]["warnings"], ["possible_wind_overload"])
         self.assertEqual(result["observations"]["weather"]["wind"]["summary"]["intensity"], 0.62)
+
+    def test_strong_ambient_can_be_used_as_context_fallback(self) -> None:
+        result = aggregate_reports(
+            ambient_report={
+                "estimated_conditions": {"season": "summer", "diel_bin": "morning"},
+                "confidence": 0.9,
+                "season_confidence": 0.9,
+            }
+        )
+
+        resolutions = {item["resolution"] for item in result["disagreements"]}
+        self.assertIn("ambient_used_as_fallback", resolutions)
+        self.assertEqual(result["decision"]["time_of_day"]["value"], "morning")
+        self.assertEqual(result["decision"]["season"]["value"], "summer")
 
     def test_broad_event_signal_stays_undetermined_but_preserves_distribution(self) -> None:
         result = aggregate_reports(

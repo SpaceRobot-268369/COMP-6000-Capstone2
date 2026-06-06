@@ -271,8 +271,23 @@ Allowed `resolution` values for v1:
 
 - `events_preferred`
 - `ambient_used_as_fallback`
+- `direct_observation_kept`
 - `low_confidence_range_reported`
 - `undetermined`
+
+Conflict policy:
+
+- E-B weather is a direct acoustic observation. The aggregator keeps it as the
+  weather decision and does not let E-A or E-C overwrite it.
+- E-C species/events are direct call observations. Strong species phenology can
+  override E-A for `time_of_day` / `diel`.
+- E-A ambient context is a weaker prior. It can fill `time_of_day` or `season`
+  only when E-C has no stronger evidence, and its fusion weight remains capped
+  below E-C so weak ambient estimates do not become hard claims.
+- If there is no clear winner, the field stays `undetermined` and the
+  disagreement is recorded with `low_confidence_range_reported`.
+- The LLM must not resolve conflicts. It receives the aggregator's decision and
+  the recorded disagreements, then translates them into readable language.
 
 ## Decision JSON
 
@@ -327,6 +342,15 @@ or acoustic events were heard.
       "season_signal": "weak",
       "season_confidence": 0.20,
       "habitat_signal": "woodland/open woodland"
+    }
+  ],
+  "disagreements": [
+    {
+      "field": "diel",
+      "ambient": "afternoon",
+      "events": "night",
+      "resolution": "events_preferred",
+      "reason": "Event phenology is stronger context evidence than ambient texture."
     }
   ],
   "overall_confidence": 0.72,

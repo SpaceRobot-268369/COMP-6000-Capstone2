@@ -16,8 +16,9 @@ SCHEMA_VERSION = "analysis_aggregator.v1"
 
 DEFAULT_PARAMS: dict[str, Any] = {
     "fusion": {
-        "ambient_weight_cap": 0.25,
+        "ambient_weight_cap": 0.5,
         "event_weight_cap": 1.0,
+        "ambient_fallback_min_confidence": 0.6,
         "undetermined_threshold": 0.50,
         "conflict_margin": 0.20,
     },
@@ -75,6 +76,7 @@ def aggregate_reports(
     disagreements = detect_disagreements(
         season=season,
         diel=diel,
+        observations=adapted["observations"],
         cfg=cfg,
     )
 
@@ -95,6 +97,7 @@ def aggregate_reports(
         observations=adapted["observations"],
         diel=diel,
         season=season,
+        disagreements=disagreements,
         confidence=confidence,
         limitations=limitations,
     )
@@ -120,6 +123,7 @@ def build_decision_json(
     observations: dict[str, Any],
     diel: dict[str, Any],
     season: dict[str, Any],
+    disagreements: list[dict[str, Any]],
     confidence: float,
     limitations: list[str],
 ) -> dict[str, Any]:
@@ -143,6 +147,7 @@ def build_decision_json(
         },
         "weather": _decision_weather(weather),
         "detected_calls": [_decision_event(event) for event in events],
+        "disagreements": list(disagreements),
         "overall_confidence": confidence,
         "limitations": list(limitations),
     }
@@ -218,6 +223,8 @@ def fuse_context_field(
     posterior = distribution[top_value]
     threshold = float(cfg["fusion"].get("undetermined_threshold", 0.50))
     estimate = top_value if posterior >= threshold else "undetermined"
+    if estimate != "undetermined" and _ambient_fallback_too_weak(weighted_evidence, cfg):
+        estimate = "undetermined"
     primary = _primary_evidence(weighted_evidence, field)
 
     return {
@@ -233,6 +240,7 @@ def detect_disagreements(
     *,
     season: dict[str, Any],
     diel: dict[str, Any],
+    observations: dict[str, Any],
     cfg: dict[str, Any],
 ) -> list[dict[str, Any]]:
     disagreements: list[dict[str, Any]] = []
@@ -256,6 +264,16 @@ def detect_disagreements(
                     "reason": reason,
                 }
             )
+        elif ambient and not events and result.get("estimate") != "undetermined":
+            disagreements.append(
+                {
+                    "field": field,
+                    "ambient": ambient["value"],
+                    "events": None,
+                    "resolution": "ambient_used_as_fallback",
+                    "reason": f"No stronger event evidence was available, so E-A provided the {field} estimate.",
+                }
+            )
         elif result.get("estimate") == "undetermined" and result.get("evidence"):
             disagreements.append(
                 {
@@ -266,6 +284,17 @@ def detect_disagreements(
                     "reason": f"{field} evidence was present but too weak or broad for a precise estimate.",
                 }
             )
+    weather = observations.get("weather") if isinstance(observations.get("weather"), dict) else {}
+    if _has_weather_observation(weather):
+        disagreements.append(
+            {
+                "field": "weather",
+                "ambient": None,
+                "events": None,
+                "resolution": "direct_observation_kept",
+                "reason": "Weather is kept from E-B as a direct acoustic observation and is not overwritten by E-A or E-C.",
+            }
+        )
     return disagreements
 
 
@@ -279,6 +308,17 @@ def _evidence_weight(item: dict[str, Any], cfg: dict[str, Any]) -> float:
     else:
         cap = 0.0
     return round(min(max(confidence, 0.0), cap), 6)
+
+
+def _ambient_fallback_too_weak(evidence: list[dict[str, Any]], cfg: dict[str, Any]) -> bool:
+    if not evidence:
+        return False
+    if any(item.get("source_head") == "events" for item in evidence):
+        return False
+    if not all(item.get("source_head") == "ambient" for item in evidence):
+        return False
+    min_conf = float(cfg["fusion"].get("ambient_fallback_min_confidence", 0.6))
+    return max(_safe_float(item.get("confidence")) for item in evidence) < min_conf
 
 
 def _primary_evidence(evidence: list[dict[str, Any]], field: str) -> str:
@@ -324,6 +364,23 @@ def _decision_weather(weather: dict[str, Any]) -> dict[str, Any]:
         "thunder": _weather_component(weather, "thunder"),
         "warnings": list(weather.get("warnings") or []),
     }
+
+
+def _has_weather_observation(weather: dict[str, Any]) -> bool:
+    if not weather:
+        return False
+    if _safe_float(weather.get("confidence")) > 0.0:
+        return True
+    if weather.get("derived_label") and weather.get("derived_label") != "none":
+        return True
+    for key in ("rain", "wind", "thunder"):
+        component = weather.get(key) if isinstance(weather.get(key), dict) else {}
+        summary = component.get("summary") if isinstance(component.get("summary"), dict) else {}
+        if _safe_float(summary.get("confidence")) > 0.0:
+            return True
+        if _safe_float(summary.get("intensity")) > 0.0:
+            return True
+    return False
 
 
 def _weather_component(weather: dict[str, Any], key: str) -> dict[str, Any]:
