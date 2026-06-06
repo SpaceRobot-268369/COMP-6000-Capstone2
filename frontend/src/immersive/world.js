@@ -171,6 +171,7 @@ export function buildWorld(scene, opts) {
   // plane so the foreground reads as broken-up brush instead of one big slab.
   const bush = track(makeBushTexture(101), WORLD._textures);
   const BUSH_BASE = 0x04060a;
+  WORLD.bushMats = [];   // tinted per-season toward the vegetation colour
   const BR = mulberry32(303);
   const placeBush = (x, z, w) => {
     const h = w * 0.34;                          // keep clumps low to the ground
@@ -180,7 +181,7 @@ export function buildWorld(scene, opts) {
       map: bush, transparent: true, depthWrite: false, fog: true, color: BUSH_BASE,
     }), WORLD._materials);
     const m = new THREE.Mesh(bgeo, bmat); m.position.set(x, 0, z); g.add(m);
-    WORLD.treeMats.push({ mat: bmat, base: new THREE.Color(BUSH_BASE), z });
+    WORLD.bushMats.push({ mat: bmat, base: new THREE.Color(BUSH_BASE), z });
   };
   // a near apron framing the lower edge, then a scattered mid layer that also
   // grounds the foreground tree bases so they don't look pasted onto the floor.

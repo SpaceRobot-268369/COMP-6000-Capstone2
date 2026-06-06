@@ -121,15 +121,19 @@ void main(){
   float openBand = smoothstep(2.0, 40.0, r) * (1.0 - smoothstep(120.0, 360.0, r));
   col += uFog * uSkyLift * (0.35 + 0.45 * openBand);
   float align = max(dot(pn, uSunAz), 0.0);         // 1 toward the sun
-  // mid-distance band so the wash sits in the scene, not under the camera
-  float band = smoothstep(2.0, 46.0, r) * (1.0 - smoothstep(120.0, 340.0, r));
+  // mid-distance band so the wash sits in the scene, not under the camera.
+  // kept gentle so it never concentrates into a bright horizontal bar at the
+  // treeline base (which a wide/short aspect ratio compresses into a hard line)
+  float band = smoothstep(2.0, 60.0, r) * (1.0 - smoothstep(140.0, 360.0, r));
   float pool = pow(align, 2.2) * band;
-  col += uSunColor * pool * (0.62 * uBrightness);
+  col += uSunColor * pool * (0.34 * uBrightness);
   // tight light streak under the sun, longest when the sun is low (dawn)
   float streak = pow(align, 34.0) * band;
-  col += uSunColor * streak * uShaftLow * 1.1;
-  // exponential fog to match the sky
-  float f = 1.0 - exp(-uFogDensity * uFogDensity * vDist * vDist);
+  col += uSunColor * streak * uShaftLow * 0.5;
+  // soft exponential fog — gentler than FogExp2 so the bright horizon fog fades
+  // into the darker foreground over a long vertical span (no hard line when the
+  // frame is vertically compressed), while still reaching full fog at infinity
+  float f = 1.0 - exp(-uFogDensity * 1.7 * vDist);
   col = mix(col, uFog, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;

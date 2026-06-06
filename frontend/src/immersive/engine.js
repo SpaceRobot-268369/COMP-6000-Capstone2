@@ -61,7 +61,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
   };
 
   // ---- param interpolation ----
-  const A = ['skyTop', 'skyHorizon', 'sunColor', 'sunDir', 'fog', 'ambient'];
+  const A = ['skyTop', 'skyHorizon', 'sunColor', 'sunDir', 'fog', 'ambient', 'vegColor'];
   const S = ['haze', 'brightness', 'stars', 'moon', 'sunSize', 'exposure', 'temp', 'saturation', 'foliage', 'contrast', 'shaft', 'sunEl'];
   function lerpParams(a, b, k) {
     const o = {
@@ -126,6 +126,17 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     } else {
       WORLD.treeMats.forEach(o => { o.mat.color.copy(o.base); });
     }
+
+    // undergrowth takes on the season's vegetation colour in daylight (green in
+    // spring/summer, amber in autumn, sparse grey in winter); at dawn/night the
+    // low light keeps it crushed to silhouette like the trees
+    const vegK = Math.min(0.9, Math.max(0, p.brightness - 0.96) * 1.6);
+    WORLD.bushMats.forEach(o => {
+      o.mat.color.setRGB(
+        o.base.r + (p.vegColor[0] - o.base.r) * vegK,
+        o.base.g + (p.vegColor[1] - o.base.g) * vegK,
+        o.base.b + (p.vegColor[2] - o.base.b) * vegK);
+    });
 
     // particles pick up the key light
     const kt = 0.5 * Math.max(p.shaft, p.moon);
