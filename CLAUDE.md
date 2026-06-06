@@ -35,7 +35,7 @@ Research prototype: ecoacoustic recordings + environmental data → AI-generated
 | layer-a (Ambient) | AudioLDM2 LoRA (base: `cvssp/audioldm2`) for ambient bed | smoke-1/2 ✓ · **prod-1 per-cell bank (16 season×diel) promoted** → `model/production/layer_a_ambient/` |
 | layer-b (Weather) | Curated wind/rain assets + parameter mixing | Placeholder |
 | layer-c (Events) | AudioGen LoRA per species (base: `facebook/audiogen-medium`, 16 kHz native) | smoke-1 (boobook) ✓ |
-| layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | Placeholder |
+| layer-d (Mixer) | Combine A+B+C → WAV + explanation JSON | MVP mixer + generation orchestration |
 | layer-e (Analysis) | Three detector heads (ambient similarity + weather + event) on the raw mixture → aggregator fuses latent context (season/diel) → report | Partial (layer-a working) |
 
 Each layer hosts independent attempts under
@@ -373,10 +373,10 @@ Current:
 - `GET  /api/health` — DB connectivity check
 - `POST /api/register` — user registration
 - `POST /api/login` — user login
+- `POST /api/generation` — orchestrate A+B+C and render final audio through D
 
 Planned (Stage 3):
 - `POST /api/analysis` — submit audio for soundscape analysis
-- `POST /api/generation` — generate soundscape from environmental params
 - `POST /api/transformation` — transform audio with new environmental conditions
 
 ---

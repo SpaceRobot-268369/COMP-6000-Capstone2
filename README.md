@@ -222,7 +222,7 @@ A deliberately honest snapshot — placeholders are marked as such.
 | A — Ambient | smoke-1/2 ✓ · **prod-1 per-cell bank (16 cells) promoted** → `model/production/layer_a_ambient/` |
 | B — Weather | Placeholder (curated-asset attempt in progress) |
 | C — Events | smoke-1 (southern boobook) ✓ |
-| D — Mixer | Placeholder |
+| D — Mixer | MVP mixer + A/B/C generation orchestration |
 | E — Analysis | Partial (Layer A path working; OSS-LLM summary planned) |
 
 The first production promotion is the **Layer A per-cell ambient bank**

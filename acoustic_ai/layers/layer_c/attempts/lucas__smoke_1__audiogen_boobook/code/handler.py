@@ -163,6 +163,7 @@ def generate(
     seed: Optional[int] = None,
     prompt: Optional[str] = None,
     duration: Optional[float] = None,
+    duration_s: Optional[float] = None,
     **_ignored,
 ) -> dict:
     """Generate one event clip.
@@ -172,7 +173,8 @@ def generate(
     """
     p = state.params
     prompt          = prompt or p.get("default_prompt", "a single boobook owl call")
-    duration        = float(duration if duration is not None else p.get("duration", 5.0))
+    duration_value  = duration_s if duration_s is not None else duration
+    duration        = float(duration_value if duration_value is not None else p.get("duration", 5.0))
     guidance_scale  = float(p.get("guidance_scale", 3.0))
     temperature     = float(p.get("temperature", 1.0))
     top_k           = int(p.get("top_k", 250))
