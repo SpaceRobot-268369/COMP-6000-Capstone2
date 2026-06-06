@@ -1,0 +1,28 @@
+{
+  "phase": 1,
+  "status": "real_rain_target_calibrated",
+  "training_pool_manifest": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/debug/murphy_layer_b_rain_smoke_training_pool_v0_20260606/caption_manifest.csv",
+  "real_rain_count": 72,
+  "sample_rate_hz": 22050,
+  "n_fft": 2048,
+  "hop_length": 512,
+  "anchor_bands": {
+    "mid_band_2_8khz": {
+      "mean_db": -69.61848741107517,
+      "std_db": 9.711602249839263,
+      "min_db": -86.8671646118164,
+      "max_db": -46.40319061279297
+    },
+    "high_band_8_11khz": {
+      "mean_db": -80.60382509231567,
+      "std_db": 10.113786939509867,
+      "min_db": -96.30157470703125,
+      "max_db": -54.63115310668945
+    }
+  },
+  "target_slope": {
+    "high_minus_mid_db": -10.985337681240505,
+    "std_db": 2.1076167545530784,
+    "interpretation": "BWE 8-11 kHz band should sit this many dB below the 2-8 kHz band."
+  }
+}

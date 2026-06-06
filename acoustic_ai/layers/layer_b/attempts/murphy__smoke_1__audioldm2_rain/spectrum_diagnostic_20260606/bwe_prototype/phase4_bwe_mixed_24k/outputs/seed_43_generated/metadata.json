@@ -1,0 +1,25 @@
+{
+  "seed": "seed_43_generated",
+  "phase": 4,
+  "sample_rate_hz": 24000,
+  "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+  "lowband_2_8khz_db": -63.73850631713867,
+  "target_high_8_11khz_db": -74.72384399837918,
+  "highband_8_11khz_before_db": -64.51771545410156,
+  "highband_gain_db": -10.206128544277618,
+  "highband_8_11khz_after_db": -74.75039672851562,
+  "mixed_2_8khz_db": -63.765892028808594,
+  "mixed_8_11khz_db": -74.76205444335938,
+  "mixed_drop_8_11_minus_2_8_db": -10.996162414550781,
+  "post_order": [
+    "BWE mix",
+    "80 Hz highpass",
+    "RMS match",
+    "20 ms fade",
+    "peak limit if needed"
+  ],
+  "limiter_gain": 1.0,
+  "input_lowband_path": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase2_lowband_24k/lowband_0_8k_24k/seed_43_generated/audio_lowband_0_8k_24k.wav",
+  "input_highband_path": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase3_highband_synthesis_24k/highband_candidate_8_12k/seed_43_generated/audio_highband_candidate_8_12k.wav",
+  "output_wav": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase4_bwe_mixed_24k/outputs/seed_43_generated/audio_bwe_24k.wav"
+}

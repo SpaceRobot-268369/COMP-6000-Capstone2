@@ -1,0 +1,28 @@
+{
+  "phase": 5,
+  "status": "bwe_retest_complete",
+  "real_count": 72,
+  "before_count": 10,
+  "after_count": 10,
+  "real_mean_8_11khz_db": -81.21565082338121,
+  "before_mean_8_11khz_db": -105.52883834838867,
+  "after_mean_8_11khz_db": -74.96435317993163,
+  "before_gap_vs_real_8_11_db": -24.313187525007464,
+  "after_gap_vs_real_8_11_db": 6.2512976434495755,
+  "absolute_gap_improvement_db": 18.06188988155789,
+  "passes_8_11_band_gate_pm5db": false,
+  "phase5_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest",
+  "figures": {
+    "mean_spectrum": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/figures/phase5_mean_spectrum_before_after_real.png",
+    "band_metrics": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/figures/phase5_band_metrics_before_after_real.png",
+    "per_seed_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/figures/per_seed"
+  },
+  "csv": {
+    "band_metrics": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/phase5_band_metrics.csv",
+    "per_seed_metrics": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/phase5_per_seed_metrics.csv"
+  },
+  "notes": [
+    "Subjective A/B listening is not automated in this phase.",
+    "No production pipeline files were modified."
+  ]
+}

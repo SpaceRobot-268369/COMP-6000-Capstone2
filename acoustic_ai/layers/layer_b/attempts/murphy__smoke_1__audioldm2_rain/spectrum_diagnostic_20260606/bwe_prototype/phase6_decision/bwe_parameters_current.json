@@ -1,0 +1,32 @@
+{
+  "cross_over_hz": 8000,
+  "output_sample_rate_hz": 24000,
+  "sbr_source_band_hz": [
+    4000,
+    7900
+  ],
+  "sbr_target_band_hz": [
+    8000,
+    11800
+  ],
+  "noise_band_hz": [
+    8000,
+    11800
+  ],
+  "envelope_source_band_hz": [
+    3000,
+    7900
+  ],
+  "envelope_smooth_ms": 35,
+  "noise_to_sbr_rms_ratio": 0.35,
+  "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+  "post_bwe_highband_trim_db": 0.0,
+  "post_order": [
+    "BWE mix",
+    "80 Hz highpass",
+    "RMS match",
+    "20 ms fade",
+    "peak limit if needed"
+  ],
+  "denoise_enabled": false
+}

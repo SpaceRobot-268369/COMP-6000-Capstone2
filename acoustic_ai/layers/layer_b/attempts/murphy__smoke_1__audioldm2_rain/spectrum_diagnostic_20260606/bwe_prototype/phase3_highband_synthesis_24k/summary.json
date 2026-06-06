@@ -1,0 +1,15 @@
+{
+  "phase": 3,
+  "status": "highband_candidates_synthesized",
+  "showcase_count": 10,
+  "sample_rate_hz": 24000,
+  "sbr_strategy": "4-8 kHz analytic frequency shift to 8-12 kHz",
+  "noise_strategy": "8-12 kHz shaped white noise modulated by 3-8 kHz envelope",
+  "noise_to_sbr_rms_ratio": 0.35,
+  "phase3_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase3_highband_synthesis_24k",
+  "manifest": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase3_highband_synthesis_24k/phase3_highband_manifest.csv",
+  "notes": [
+    "No final BWE mixing or target-slope gain matching is performed in phase 3.",
+    "Highband files are intermediate candidates for phase 4."
+  ]
+}

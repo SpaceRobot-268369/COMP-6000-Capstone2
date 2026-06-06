@@ -1,0 +1,19 @@
+{
+  "showcase_count": 10,
+  "training_pool_count": 72,
+  "target_band": "2-8 kHz",
+  "showcase_mean_2_8khz_db": -64.52216339111328,
+  "training_mean_2_8khz_db": -69.61849212646484,
+  "generated_minus_real_2_8khz_db": 5.0963287353515625,
+  "showcase_mean_2_8_minus_0_2_db": -7.671814918518066,
+  "training_mean_2_8_minus_0_2_db": -8.194629669189453,
+  "relative_ratio_diff_db": 0.5228147506713867,
+  "judgement": "NO CLEAR GAP: generated samples are not obviously lower than real rain in 2-8 kHz by mean PSD.",
+  "figures": {
+    "mean_spectrum": "debug/murphy_layer_b_rain_spectrum_diagnostic_20260606/figures/mean_spectrum_generated_vs_real.png",
+    "band_energy": "debug/murphy_layer_b_rain_spectrum_diagnostic_20260606/figures/band_energy_comparison.png",
+    "mel_examples_dir": "debug/murphy_layer_b_rain_spectrum_diagnostic_20260606/figures/mel_examples"
+  },
+  "metrics_csv": "debug/murphy_layer_b_rain_spectrum_diagnostic_20260606/band_energy_metrics.csv",
+  "per_file_csv": "debug/murphy_layer_b_rain_spectrum_diagnostic_20260606/per_file_2_8khz_metrics.csv"
+}

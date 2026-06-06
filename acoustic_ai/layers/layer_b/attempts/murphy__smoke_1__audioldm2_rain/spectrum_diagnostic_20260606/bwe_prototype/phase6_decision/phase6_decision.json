@@ -1,0 +1,101 @@
+{
+  "phase": 6,
+  "status": "decision_recorded",
+  "current_decision": "do_not_integrate_yet",
+  "reason": "8-11 kHz band improved but is still above real reference by more than +/-5 dB; subjective A/B gates are not yet evaluated.",
+  "phase5_summary": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest/summary.json",
+  "measured": {
+    "real_mean_8_11khz_db": -81.21565082338121,
+    "before_mean_8_11khz_db": -105.52883834838867,
+    "after_mean_8_11khz_db": -74.96435317993163,
+    "before_gap_vs_real_8_11_db": -24.313187525007464,
+    "after_gap_vs_real_8_11_db": 6.2512976434495755,
+    "absolute_gap_improvement_db": 18.06188988155789
+  },
+  "gates": {
+    "band_gate_pm5db": {
+      "required": true,
+      "metric": "after_gap_vs_real_8_11_db",
+      "value_db": 6.2512976434495755,
+      "pass": false,
+      "threshold": "abs(value) <= 5 dB"
+    },
+    "subjective_ab_gate": {
+      "required": true,
+      "metric": "manual A/B listening for seed_48 and seed_51",
+      "value": "not yet performed by script",
+      "pass": null
+    },
+    "artifact_gate": {
+      "required": true,
+      "metric": "no obvious metallic/electronic hiss",
+      "value": "not yet performed by script",
+      "pass": null
+    }
+  },
+  "current_parameters": {
+    "cross_over_hz": 8000,
+    "output_sample_rate_hz": 24000,
+    "sbr_source_band_hz": [
+      4000,
+      7900
+    ],
+    "sbr_target_band_hz": [
+      8000,
+      11800
+    ],
+    "noise_band_hz": [
+      8000,
+      11800
+    ],
+    "envelope_source_band_hz": [
+      3000,
+      7900
+    ],
+    "envelope_smooth_ms": 35,
+    "noise_to_sbr_rms_ratio": 0.35,
+    "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+    "post_bwe_highband_trim_db": 0.0,
+    "post_order": [
+      "BWE mix",
+      "80 Hz highpass",
+      "RMS match",
+      "20 ms fade",
+      "peak limit if needed"
+    ],
+    "denoise_enabled": false
+  },
+  "recommended_next_parameters": {
+    "cross_over_hz": 8000,
+    "output_sample_rate_hz": 24000,
+    "sbr_source_band_hz": [
+      4000,
+      7900
+    ],
+    "sbr_target_band_hz": [
+      8000,
+      11800
+    ],
+    "noise_band_hz": [
+      8000,
+      11800
+    ],
+    "envelope_source_band_hz": [
+      3000,
+      7900
+    ],
+    "envelope_smooth_ms": 35,
+    "noise_to_sbr_rms_ratio": 0.35,
+    "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+    "post_bwe_highband_trim_db": -2.75,
+    "post_order": [
+      "BWE mix",
+      "80 Hz highpass",
+      "RMS match",
+      "20 ms fade",
+      "peak limit if needed"
+    ],
+    "denoise_enabled": false
+  },
+  "recommended_next_action": "rerun phase 4 and phase 5 with a conservative highband trim, then manually A/B seed_48 and seed_51."
+}

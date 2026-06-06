@@ -1,0 +1,25 @@
+{
+  "phase": 0,
+  "status": "workspace_ready",
+  "showcase_count": 10,
+  "showcase_inputs": [
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_42_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_43_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_44_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_45_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_46_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_47_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_48_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_49_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_50_generated/audio.wav",
+    "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/showcase/seed_51_generated/audio.wav"
+  ],
+  "training_pool_manifest": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/debug/murphy_layer_b_rain_smoke_training_pool_v0_20260606/caption_manifest.csv",
+  "output_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/outputs",
+  "figures_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/figures",
+  "writes_pipeline_files": false,
+  "notes": [
+    "Phase 0 only validates isolated inputs and output locations.",
+    "BWE DSP is intentionally not implemented in this phase."
+  ]
+}

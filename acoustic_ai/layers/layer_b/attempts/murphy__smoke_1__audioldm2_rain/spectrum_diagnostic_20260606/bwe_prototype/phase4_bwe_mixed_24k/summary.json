@@ -1,0 +1,16 @@
+{
+  "phase": 4,
+  "status": "bwe_mixed_and_gain_matched",
+  "showcase_count": 10,
+  "sample_rate_hz": 24000,
+  "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+  "mean_mixed_drop_8_11_minus_2_8_db": -10.969734573364258,
+  "std_mixed_drop_db": 0.021990940675367925,
+  "phase4_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase4_bwe_mixed_24k",
+  "outputs_dir": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase4_bwe_mixed_24k/outputs",
+  "manifest": "/Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase4_bwe_mixed_24k/phase4_bwe_manifest.csv",
+  "notes": [
+    "This is still an offline prototype output.",
+    "Generation pipeline files and original showcase WAVs are unchanged."
+  ]
+}
