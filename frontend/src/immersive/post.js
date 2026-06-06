@@ -30,7 +30,7 @@ export class PostPipeline {
 
     this.matBright = new THREE.ShaderMaterial({
       vertexShader: FS_VERT, fragmentShader: BRIGHT_FRAG,
-      uniforms: { tDiffuse: { value: null }, uThreshold: { value: 0.62 } },
+      uniforms: { tDiffuse: { value: null }, uThreshold: { value: 0.68 } },
       depthTest: false, depthWrite: false,
     });
     this.matBlur = new THREE.ShaderMaterial({

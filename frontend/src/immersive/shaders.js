@@ -21,15 +21,24 @@ float hash(vec2 p){ p = fract(p*vec2(443.897,441.423)); p += dot(p,p+19.19); ret
 
 void main(){
   vec3 dir = normalize(vDir);
-  float up = clamp(dir.y, -0.2, 1.0);
-  float t  = pow(clamp(up, 0.0, 1.0), 0.42);
+  float t  = pow(clamp(dir.y, 0.0, 1.0), 0.42);
   vec3 col = mix(uSkyHorizon, uSkyTop, t);
 
-  // sun / moon
+  // haze rising up the dome
+  col = mix(col, uFog, (1.0 - t) * uHaze * 0.65);
+  col *= uBrightness;                       // exposure on the sky body
+
+  // horizon dissolve: reach FULL (unscaled) fog at the seam (dir.y -> 0 and
+  // below). The ground plane and distant trees both fog to this same colour,
+  // so the sky now meets them with a soft gradient instead of a hard line.
+  float horizonFog = 1.0 - smoothstep(0.0, 0.15, dir.y);
+  col = mix(col, uFog, horizonFog);
+
+  // sun / moon — added on top so a low key light still reads through the haze
   float sd = max(dot(dir, normalize(uSunDir)), 0.0);
   float disc = smoothstep(0.9990 + 0.0006*(1.0-uSunSize), 0.99985, sd);
-  float glow = pow(sd, 7.0)*0.45 + pow(sd, 90.0)*0.9;
-  float aura = pow(sd, 2.0)*0.12;
+  float glow = pow(sd, 7.0)*0.40 + pow(sd, 90.0)*0.9;
+  float aura = pow(sd, 2.0)*0.10;
   col += uSunColor * (glow + aura) * (0.6 + uHaze);
   vec3 discCol = mix(uSunColor, vec3(1.0), uMoon*0.4);
   col += discCol * disc * (uMoon > 0.5 ? 2.2 : 3.4);
@@ -43,10 +52,6 @@ void main(){
     col += vec3(0.9,0.95,1.0) * star * tw * (1.0 - smoothstep(0.0,0.4,sd));
   }
 
-  // horizon haze band
-  col = mix(col, uFog, (1.0 - t) * uHaze * 0.65);
-
-  col *= uBrightness;
   col += vec3(0.9, 0.94, 1.0) * uFlash;     // thunder lifts the whole sky
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -96,9 +101,19 @@ varying float vDist;
 uniform vec3  uBase, uSunColor, uFog;
 uniform vec2  uSunAz;          // normalised xz toward the sun
 uniform float uBrightness, uFogDensity, uShaftLow, uSkyLift;
+float ghash(vec2 p){ p = fract(p*vec2(443.897,441.423)); p += dot(p,p+19.19); return fract(p.x*p.y); }
+float gnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+  float a = ghash(i), b = ghash(i+vec2(1.0,0.0)), c = ghash(i+vec2(0.0,1.0)), d = ghash(i+vec2(1.0,1.0));
+  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+}
 void main(){
   vec3 col = uBase;
   vec2 p = vWorld.xz;
+  // gentle two-octave terrain mottle so the floor reads as uneven ground
+  // rather than a flat slab; fades into fog with distance like everything else
+  float mott = gnoise(p * 0.07) * 0.62 + gnoise(p * 0.21) * 0.38;
+  col *= 0.82 + 0.32 * mott;
   float r = length(p) + 1e-3;
   vec2 pn = p / r;
   // overall skylight wash — lifts the WHOLE floor on bright days so the
