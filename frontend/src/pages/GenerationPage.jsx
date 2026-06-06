@@ -49,7 +49,7 @@ export default function GenerationPage() {
         const resolvedState = { ...params, narration };
         const performNavigation = () => {
           navigate("/immersive", {
-            state: { resolved: resolvedState, fromDemo: true },
+            state: { resolved: resolvedState, fromDemo: true, backPath: "/analysis" },
           });
         };
 

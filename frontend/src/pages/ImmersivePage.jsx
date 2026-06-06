@@ -117,7 +117,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   function handleReset() {
     const performReset = () => {
-      navigate(location.state?.backPath || "/generation");
+      navigate(location.state?.backPath || "/analysis");
     };
 
     if (document.startViewTransition) {
@@ -204,4 +204,3 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     </div>
   );
 }
-
