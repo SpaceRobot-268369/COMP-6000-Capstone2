@@ -263,6 +263,76 @@ startup to serve `GET /layers` and route
 (`load()` + `generate()`). Exposing a model is a declarative edit — no server
 code change.
 
+### Carbon emissions estimate
+
+Carbon cost is mainly tied to **Server B runtime**, not Server A. Server A is
+the lightweight always-on control plane; Server B is the on-demand GPU worker
+that runs generation and training, then shuts down after outputs, logs, and DVC
+artifacts are durable.
+
+Use this project-level estimate until metered instance data is available:
+
+```text
+energy_kWh = active_power_kW * runtime_hours * PUE
+emissions_kgCO2e = energy_kWh * grid_intensity_kgCO2e_per_kWh
+```
+
+> **Project close-out TODO:** refresh these carbon estimates before final
+> submission using measured Server B runtimes, final cloud/provider power
+> assumptions, current PUE, and the reporting-period grid carbon intensity.
+
+Default assumptions for rough planning:
+
+| Parameter | Default | Note |
+|---|---:|---|
+| `active_power_kW` | `0.25` | Rough Tesla T4 worker + host estimate for Server B; replace with measured power/provider data when available. |
+| `PUE` | `1.2` | Datacentre overhead multiplier. |
+| `grid_intensity_kgCO2e_per_kWh` | `0.4` | Placeholder grid intensity; replace with the cloud region/reporting-period value. |
+
+With those assumptions, one active Server B hour is roughly:
+
+```text
+0.25 * 1.2 * 0.4 = 0.12 kgCO2e/hour
+```
+
+Training estimate:
+
+| Scope | Runtime basis | Runtime | Estimate |
+|---|---:|---:|---:|
+| Single Layer A LoRA cell | measured `mvp_1_1` diagnostic run on `shinypokemon` Tesla T4 | 156 s | ~0.005 kgCO2e |
+| 16-cell Layer A LoRA bank | 16 x same recipe | 2,496 s | ~0.083 kgCO2e |
+| Conservative training budget | Server B default budget | 60 min | ~0.120 kgCO2e |
+| Conservative long budget | Server B default upper budget | 120 min | ~0.240 kgCO2e |
+
+Generation estimate:
+
+| Scope | Runtime basis | Runtime | Estimate |
+|---|---:|---:|---:|
+| Warm generation request | Server A deployment note: warm Server B generation is about 30-90 s | 30 s | ~0.001 kgCO2e |
+| Warm generation request | same | 90 s | ~0.003 kgCO2e |
+| Idle tail after request | Server B idle timeout | 5 min | ~0.010 kgCO2e |
+| Idle tail after request | Server B idle timeout | 15 min | ~0.030 kgCO2e |
+
+Interpretation:
+
+- LoRA training is relatively low-carbon compared with full base-model
+  fine-tuning because only small adapter weights are trained while the base
+  model is frozen.
+- For generation, the idle tail after a request can cost more than the request
+  itself. Batching nearby generation jobs inside the idle window is better than
+  repeatedly starting/stopping Server B.
+- The current Server A/B design is carbon-aware by construction: Server B is
+  private, on-demand, monitored, and eligible for idle shutdown; generation
+  preempts training so a long epoch does not keep interactive work waiting.
+
+For a defensible future audit, each Server A job row should record
+`job_type`, `attempt_id`, `server_b_started_at`, `job_started_at`,
+`job_finished_at`, `server_b_stopped_at`, `runtime_seconds`, GPU name,
+power/PUE/grid-intensity assumptions, `estimated_energy_kWh`, and
+`estimated_kgCO2e`. Training jobs should also record `max_runtime_minutes`,
+checkpoint cadence, final checkpoint path, and whether DVC/S3 upload completed
+before shutdown.
+
 ---
 
 ## Repository layout
