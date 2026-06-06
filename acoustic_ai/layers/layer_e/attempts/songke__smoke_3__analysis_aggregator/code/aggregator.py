@@ -113,7 +113,7 @@ def aggregate_reports(
         "decision": decision,
         "llm_input": build_llm_input(decision),
         "disagreements": disagreements,
-        "confidence": confidence,
+        "overall_confidence": confidence,
         "limitations": limitations,
     }
 
@@ -269,7 +269,7 @@ def detect_disagreements(
                 {
                     "field": field,
                     "ambient": ambient["value"],
-                    "events": None,
+                    "events": "inconclusive",
                     "resolution": "ambient_used_as_fallback",
                     "reason": f"No stronger event evidence was available, so E-A provided the {field} estimate.",
                 }
@@ -278,8 +278,8 @@ def detect_disagreements(
             disagreements.append(
                 {
                     "field": field,
-                    "ambient": ambient["value"] if ambient else None,
-                    "events": events["value"] if events else None,
+                    "ambient": ambient["value"] if ambient else "inconclusive",
+                    "events": events["value"] if events else "inconclusive",
                     "resolution": "low_confidence_range_reported",
                     "reason": f"{field} evidence was present but too weak or broad for a precise estimate.",
                 }
@@ -289,8 +289,8 @@ def detect_disagreements(
         disagreements.append(
             {
                 "field": "weather",
-                "ambient": None,
-                "events": None,
+                "ambient": "not_applicable",
+                "events": "not_applicable",
                 "resolution": "direct_observation_kept",
                 "reason": "Weather is kept from E-B as a direct acoustic observation and is not overwritten by E-A or E-C.",
             }

@@ -30,7 +30,7 @@ It returns one fused report:
   "decision": {},
   "llm_input": {},
   "disagreements": [],
-  "confidence": 0.0,
+  "overall_confidence": 0.0,
   "limitations": []
 }
 ```
@@ -46,7 +46,7 @@ It returns one fused report:
 | `decision` | object | Compact machine-readable final decision for downstream narration. |
 | `llm_input` | object | Wrapper payload for a future LLM narration step. |
 | `disagreements` | array | Conflicts or weak evidence that affected the final answer. |
-| `confidence` | number | Overall fused confidence in `[0, 1]`. |
+| `overall_confidence` | number | Overall confidence in the fused analysis context and observations. |
 | `limitations` | array | Human-readable caveats. |
 
 ## Observations
@@ -351,6 +351,13 @@ or acoustic events were heard.
       "events": "night",
       "resolution": "events_preferred",
       "reason": "Event phenology is stronger context evidence than ambient texture."
+    },
+    {
+      "field": "season",
+      "ambient": "autumn",
+      "events": "inconclusive",
+      "resolution": "low_confidence_range_reported",
+      "reason": "Season evidence was present but too weak or broad for a precise estimate."
     }
   ],
   "overall_confidence": 0.72,
@@ -372,9 +379,11 @@ extra species, seasons, weather, or certainty.
 }
 ```
 
-## Confidence
+## Overall confidence
 
-`confidence` is a simple summary for v1. It should be conservative:
+`overall_confidence` is a conservative summary for v1. It combines context
+posterior strength with direct weather confidence. It is not the confidence of
+any single head.
 
 - high when E-C and E-A agree, or E-C has strong phenology evidence;
 - medium when only E-A contributes useful context;
@@ -440,7 +449,7 @@ Always include limitations. Common v1 limitations:
     }
   },
   "disagreements": [],
-  "confidence": 0.0,
+  "overall_confidence": 0.0,
   "limitations": [
     "No reliable context evidence was available."
   ]

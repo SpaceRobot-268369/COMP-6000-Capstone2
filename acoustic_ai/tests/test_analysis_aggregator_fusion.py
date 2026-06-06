@@ -38,6 +38,8 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
         self.assertEqual(result["decision"]["time_of_day"]["value"], "night")
         self.assertEqual(result["decision"]["detected_calls"][0]["common_name"], "Southern Boobook")
         self.assertEqual(result["llm_input"]["decision"]["time_of_day"]["value"], "night")
+        self.assertIn("overall_confidence", result)
+        self.assertNotIn("confidence", result)
         self.assertEqual(result["disagreements"][0]["field"], "diel")
         self.assertEqual(result["disagreements"][0]["resolution"], "events_preferred")
         self.assertEqual(result["decision"]["disagreements"][0]["resolution"], "events_preferred")
@@ -85,6 +87,8 @@ class AnalysisAggregatorFusionTest(unittest.TestCase):
 
         resolutions = {item["resolution"] for item in result["disagreements"]}
         self.assertIn("ambient_used_as_fallback", resolutions)
+        fallback = next(item for item in result["disagreements"] if item["resolution"] == "ambient_used_as_fallback")
+        self.assertEqual(fallback["events"], "inconclusive")
         self.assertEqual(result["decision"]["time_of_day"]["value"], "morning")
         self.assertEqual(result["decision"]["season"]["value"], "summer")
 

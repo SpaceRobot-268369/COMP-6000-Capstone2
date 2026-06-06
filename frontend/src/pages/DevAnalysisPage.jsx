@@ -316,7 +316,7 @@ function FullAnalysisResult({ result }) {
         <p>Events</p>
         <code>{events.length}</code>
       </div>
-      <ConfidenceBar value={report.confidence} label="Aggregator confidence" />
+      <ConfidenceBar value={report.overall_confidence ?? report.confidence} label="Aggregator confidence" />
 
       <ContextDistribution title="Diel distribution" distribution={context.diel?.distribution} />
       <ContextDistribution title="Season distribution" distribution={context.season?.distribution} />

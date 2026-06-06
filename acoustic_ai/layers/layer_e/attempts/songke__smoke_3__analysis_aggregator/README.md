@@ -97,3 +97,79 @@ The browser-facing Express proxy is:
 ```text
 POST /api/analysis
 ```
+
+## Sample contract
+
+Small input sketch:
+
+```json
+{
+  "ambient_report": {
+    "estimated_conditions": { "season": "autumn", "diel_bin": "afternoon" },
+    "confidence": 0.35,
+    "season_confidence": 0.35
+  },
+  "weather_report": {
+    "observations": {
+      "weather": { "derived_label": "none", "confidence": 0.8 }
+    }
+  },
+  "events_report": {
+    "events": [
+      {
+        "label": "ninox_boobook",
+        "confidence_mean": 0.91,
+        "phenology": {
+          "common_name": "Southern Boobook",
+          "diel_signal": "night",
+          "diel_confidence": 0.85,
+          "season_signal": "weak",
+          "season_confidence": 0.2
+        }
+      }
+    ]
+  }
+}
+```
+
+Expected output shape:
+
+```json
+{
+  "schema_version": "analysis_aggregator.v1",
+  "mode": "analysis",
+  "observations": {
+    "ambient": {},
+    "weather": {},
+    "events": []
+  },
+  "inferred_context": {
+    "diel": {
+      "estimate": "night",
+      "posterior": 0.88,
+      "distribution": {},
+      "primary_evidence": "E-C: Southern Boobook supports night",
+      "evidence": []
+    },
+    "season": {
+      "estimate": "undetermined",
+      "posterior": 0.0,
+      "distribution": {},
+      "primary_evidence": "E-A: ambient head estimated autumn",
+      "evidence": []
+    }
+  },
+  "disagreements": [
+    {
+      "field": "diel",
+      "ambient": "afternoon",
+      "events": "night",
+      "resolution": "events_preferred"
+    }
+  ],
+  "overall_confidence": 0.0,
+  "limitations": [],
+  "decision": {},
+  "llm_input": {}
+}
+```
