@@ -79,63 +79,6 @@ class AnalysisOrchestratorTest(unittest.TestCase):
         self.assertNotIn("head_reports", result)
         self.assertEqual(result["report"]["schema_version"], "analysis_aggregator.v1")
 
-    def test_head_failure_does_not_block_other_heads(self) -> None:
-        ambient_id = registry.default_layer_e_head_attempt("ambient")
-        weather_id = registry.default_layer_e_head_attempt("weather")
-        events_id = registry.default_layer_e_head_attempt("events")
-
-        def fake_analyze(_layer_id: str, attempt_id: str, _audio_path: str) -> dict:
-            if attempt_id == ambient_id:
-                raise FileNotFoundError("season_probe.pt")
-            if attempt_id == weather_id:
-                return {
-                    "report": {
-                        "observations": {
-                            "weather": {
-                                "derived_label": "none",
-                                "confidence": 0.21,
-                            }
-                        }
-                    },
-                    "attempt": {"id": attempt_id, "head": "weather"},
-                }
-            if attempt_id == events_id:
-                return {
-                    "report": {
-                        "events": [
-                            {
-                                "label": "oreoica_gutturalis",
-                                "confidence_mean": 0.94,
-                                "phenology": {
-                                    "common_name": "Crested Bellbird",
-                                    "diel_signal": "day",
-                                    "diel_confidence": 0.6,
-                                },
-                            }
-                        ]
-                    },
-                    "attempt": {"id": attempt_id, "head": "events"},
-                }
-            raise AssertionError(f"unexpected attempt: {attempt_id}")
-
-        with patch.object(registry, "analyze", side_effect=fake_analyze):
-            result = registry.orchestrate_analysis("clip.wav")
-
-        self.assertIn("head_errors", result)
-        self.assertEqual(result["head_errors"]["ambient"]["error_type"], "FileNotFoundError")
-        self.assertEqual(result["head_reports"]["ambient"], {})
-        self.assertEqual(
-            result["head_reports"]["weather"]["observations"]["weather"]["derived_label"],
-            "none",
-        )
-        self.assertEqual(len(result["head_reports"]["events"]["events"]), 1)
-        self.assertEqual(result["report"]["schema_version"], "analysis_aggregator.v1")
-        self.assertEqual(len(result["report"]["observations"]["events"]), 1)
-        self.assertIn(
-            result["report"]["inferred_context"]["diel"]["estimate"],
-            {"day", "undetermined"},
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

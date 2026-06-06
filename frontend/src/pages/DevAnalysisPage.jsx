@@ -297,28 +297,9 @@ function FullAnalysisResult({ result }) {
   const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
   const limitations = Array.isArray(report.limitations) ? report.limitations : [];
   const attempts = result?.attempts || {};
-  const headErrors = result?.head_errors && typeof result.head_errors === "object"
-    ? Object.entries(result.head_errors)
-    : [];
 
   return (
     <div className="dev-controls-meta">
-      {headErrors.length > 0 && (
-        <div className="analysis-report-summary">
-          <div className="analysis-report-head">
-            <p>Head errors</p>
-            <span>{headErrors.length} unavailable</span>
-          </div>
-          <div className="analysis-report-chips">
-            {headErrors.map(([head, error]) => (
-              <span key={head}>
-                {head}: {error?.error_type || "Error"}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="gen-info-block">
         <p>Diel</p>
         <code>{context.diel?.estimate || "undetermined"} · {fmtPct(context.diel?.posterior)}</code>
