@@ -57,12 +57,20 @@ function makeTreePair(seed) {
     gc.fillStyle = g; gc.beginPath(); gc.arc(x, y, r, 0, 7); gc.fill();
   }
   // feather the very bottom of both canvases so trunks/foliage dissolve into the
-  // ground contact instead of ending in a hard flat cut (the "fence post" look)
+  // ground contact instead of ending in a hard flat cut. The side feather keeps
+  // foreground planes from exposing their rectangular texture bounds on desktop.
   for (const ctx of [gb, gc]) {
     ctx.globalCompositeOperation = 'destination-out';
     const fade = ctx.createLinearGradient(0, H, 0, H - 58);
     fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = fade; ctx.fillRect(0, H - 58, W, 58);
+    const side = 72;
+    const fadeLeft = ctx.createLinearGradient(0, 0, side, 0);
+    fadeLeft.addColorStop(0, 'rgba(0,0,0,1)'); fadeLeft.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fadeLeft; ctx.fillRect(0, 0, side, H);
+    const fadeRight = ctx.createLinearGradient(W, 0, W - side, 0);
+    fadeRight.addColorStop(0, 'rgba(0,0,0,1)'); fadeRight.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fadeRight; ctx.fillRect(W - side, 0, side, H);
     ctx.globalCompositeOperation = 'source-over';
   }
   const mk = (cv) => new THREE.CanvasTexture(cv);
@@ -89,6 +97,13 @@ function makeBushTexture(seed) {
   const fadeTop = ctx.createLinearGradient(0, 0, 0, H * 0.5);
   fadeTop.addColorStop(0, 'rgba(0,0,0,1)'); fadeTop.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = fadeTop; ctx.fillRect(0, 0, W, H * 0.5);
+  const side = 140;
+  const fadeLeft = ctx.createLinearGradient(0, 0, side, 0);
+  fadeLeft.addColorStop(0, 'rgba(0,0,0,1)'); fadeLeft.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeLeft; ctx.fillRect(0, 0, side, H);
+  const fadeRight = ctx.createLinearGradient(W, 0, W - side, 0);
+  fadeRight.addColorStop(0, 'rgba(0,0,0,1)'); fadeRight.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeRight; ctx.fillRect(W - side, 0, side, H);
   ctx.globalCompositeOperation = 'source-over';
   const t = new THREE.CanvasTexture(g); return t;
 }
@@ -146,8 +161,8 @@ export function buildWorld(scene, opts) {
   const placeTree = (x, z, h, vi) => {
     const v = variants[vi % variants.length];
     const aspect = 220 / 520, w = h * aspect;
-    const bm = new THREE.MeshBasicMaterial({ map: v.bare, transparent: true, depthWrite: false, fog: true, color: BARE_BASE });
-    const cm = new THREE.MeshBasicMaterial({ map: v.canopy, transparent: true, depthWrite: false, fog: true, opacity: 0.5, color: CANOPY_BASE });
+    const bm = new THREE.MeshBasicMaterial({ map: v.bare, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, color: BARE_BASE });
+    const cm = new THREE.MeshBasicMaterial({ map: v.canopy, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, opacity: 0.5, color: CANOPY_BASE });
     track(bm, WORLD._materials); track(cm, WORLD._materials);
     const geo = track(new THREE.PlaneGeometry(w, h), WORLD._geometries); geo.translate(0, h / 2, 0);
     const bare = new THREE.Mesh(geo, bm); bare.position.set(x, 0, z);
@@ -178,7 +193,7 @@ export function buildWorld(scene, opts) {
     const bgeo = track(new THREE.PlaneGeometry(w, h), WORLD._geometries);
     bgeo.translate(0, h / 2, 0);
     const bmat = track(new THREE.MeshBasicMaterial({
-      map: bush, transparent: true, depthWrite: false, fog: true, color: BUSH_BASE,
+      map: bush, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, color: BUSH_BASE,
     }), WORLD._materials);
     const m = new THREE.Mesh(bgeo, bmat); m.position.set(x, 0, z); g.add(m);
     WORLD.bushMats.push({ mat: bmat, base: new THREE.Color(BUSH_BASE), z });

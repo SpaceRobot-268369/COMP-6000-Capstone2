@@ -131,13 +131,13 @@ void main(){
   float streak = pow(align, 34.0) * band;
   col += uSunColor * streak * uShaftLow * 0.3;
   // soft exponential fog — gentler than FogExp2 so the bright horizon fog fades
-  // into the darker foreground over a long vertical span (no hard line when the
-  // frame is vertically compressed). The far ground settles to a DARKER fog than
-  // the sky (ground is naturally darker than the sky it sits under), so the
-  // bright horizon shrinks to a thin strip behind the trees instead of a wide
-  // luminous band under the treeline.
-  vec3 groundFog = uFog * 0.44;
-  float f = 1.0 - exp(-uFogDensity * 1.7 * vDist);
+  // into the darker foreground over a long vertical span. The fog target now
+  // lifts with distance, which keeps the ground, treeline, and sky reading as
+  // one atmosphere instead of three stacked panels.
+  vec3 groundFogNear = uFog * 0.38;
+  vec3 groundFogFar = uFog * 0.66;
+  vec3 groundFog = mix(groundFogNear, groundFogFar, smoothstep(70.0, 260.0, vDist));
+  float f = 1.0 - exp(-uFogDensity * 1.45 * vDist);
   col = mix(col, groundFog, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -208,6 +208,8 @@ uniform sampler2D tBloom;     // blurred highlights
 uniform sampler2D tGod;       // light shafts
 uniform float uExposure, uTemp, uSaturation, uContrast;
 uniform float uBloom, uVignette, uGrain, uTime, uWet, uFlash, uShaft;
+uniform vec3 uFogColor, uSkyColor;
+uniform float uAtmosphere, uAspect;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
 
@@ -237,6 +239,19 @@ void main(){
 
   // thunder flash also lifts the frame
   col += uFlash * 0.6;
+
+  // Scene-coloured atmospheric veil. It sits in post so it blends across sky,
+  // trees, and ground together, hiding the two horizontal value jumps that make
+  // the woodland read as stacked panels on wide/short viewports.
+  float y = vUv.y;
+  float wide = smoothstep(1.18, 1.65, uAspect);
+  float upperD = (y - 0.70) / 0.24;
+  float lowerD = (y - 0.42) / 0.24;
+  float seamHaze = exp(-upperD * upperD) * 0.12 + exp(-lowerD * lowerD) * 0.14;
+  seamHaze *= 1.0 + wide * 1.05;
+  float broadHaze = smoothstep(0.10, 0.72, y) * (1.0 - smoothstep(0.94, 1.0, y)) * (0.035 + wide * 0.035);
+  vec3 veil = mix(uFogColor * 0.44, mix(uFogColor, uSkyColor, 0.38), smoothstep(0.18, 0.92, y));
+  col = mix(col, veil, clamp((seamHaze + broadHaze) * uAtmosphere, 0.0, 0.34));
 
   // vignette
   vec2 q = vUv - 0.5;

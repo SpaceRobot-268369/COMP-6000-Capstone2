@@ -134,10 +134,14 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     // low light keeps it crushed to silhouette like the trees
     const vegK = Math.min(0.9, Math.max(0, p.brightness - 0.96) * 1.6);
     WORLD.bushMats.forEach(o => {
+      const d = -o.z;
+      const aerial = Math.min(0.58, Math.max(0, (d - 18) / 78) * 0.58);
+      const k = Math.max(vegK, aerial);
+      const target = vegK >= aerial ? p.vegColor : p.fog;
       o.mat.color.setRGB(
-        o.base.r + (p.vegColor[0] - o.base.r) * vegK,
-        o.base.g + (p.vegColor[1] - o.base.g) * vegK,
-        o.base.b + (p.vegColor[2] - o.base.b) * vegK);
+        o.base.r + (target[0] - o.base.r) * k,
+        o.base.g + (target[1] - o.base.g) * k,
+        o.base.b + (target[2] - o.base.b) * k);
     });
 
     // particles pick up the key light
@@ -150,6 +154,9 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     const c = post.matComposite.uniforms;
     c.uExposure.value = p.exposure; c.uTemp.value = p.temp; c.uSaturation.value = p.saturation;
     c.uContrast.value = p.contrast;
+    c.uFogColor.value.setRGB(p.fog[0], p.fog[1], p.fog[2]);
+    c.uSkyColor.value.setRGB(p.skyHorizon[0], p.skyHorizon[1], p.skyHorizon[2]);
+    c.uAtmosphere.value = Math.min(1, 0.55 + p.haze * 0.45);
     // night leans on bloom + vignette for the moody read
     APP.baseBloom = 0.78 + p.moon * 0.35;
     APP.shaftBase = p.shaft;
