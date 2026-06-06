@@ -30,7 +30,7 @@ export class PostPipeline {
 
     this.matBright = new THREE.ShaderMaterial({
       vertexShader: FS_VERT, fragmentShader: BRIGHT_FRAG,
-      uniforms: { tDiffuse: { value: null }, uThreshold: { value: 0.62 } },
+      uniforms: { tDiffuse: { value: null }, uThreshold: { value: 0.68 } },
       depthTest: false, depthWrite: false,
     });
     this.matBlur = new THREE.ShaderMaterial({
@@ -52,6 +52,10 @@ export class PostPipeline {
         uContrast: { value: 1.06 }, uBloom: { value: 0.9 }, uVignette: { value: 0.35 },
         uGrain: { value: 0.05 }, uTime: { value: 0.0 }, uWet: { value: 0.0 }, uFlash: { value: 0.0 },
         uShaft: { value: 0.0 },
+        uFogColor: { value: new THREE.Color(0x111118) },
+        uSkyColor: { value: new THREE.Color(0x332840) },
+        uAtmosphere: { value: 0.75 },
+        uAspect: { value: w / h },
       },
       depthTest: false, depthWrite: false,
     });
@@ -63,6 +67,7 @@ export class PostPipeline {
     const bh = Math.max(2, Math.floor(h * this.opts.bloomScale));
     this.rtA.setSize(bw, bh); this.rtB.setSize(bw, bh); this.rtGod.setSize(bw, bh);
     this.bw = bw; this.bh = bh;
+    this.matComposite.uniforms.uAspect.value = w / h;
   }
 
   _draw(mat, target) {

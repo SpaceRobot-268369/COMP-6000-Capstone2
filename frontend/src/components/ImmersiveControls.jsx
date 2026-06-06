@@ -15,6 +15,8 @@ export default function ImmersiveControls({
   setRain,
   rainAmount,
   setRainAmount,
+  wind,
+  setWind,
   setAudioSrc,
   setAudioLabel,
   playing,
@@ -38,6 +40,10 @@ export default function ImmersiveControls({
   function changeRainAmount(v) {
     setRainAmount(v);
     api.setRainAmount(v);
+  }
+  function changeWind(v) {
+    setWind(v);
+    api.setWind(v);
   }
   function togglePlay() {
     api.togglePlay();
@@ -108,6 +114,7 @@ export default function ImmersiveControls({
               Thunder ⚡
             </button>
           </div>
+          <span className="lbl sub">Rain intensity</span>
           <input
             type="range"
             min="0.15"
@@ -115,6 +122,15 @@ export default function ImmersiveControls({
             step="0.05"
             value={rainAmount}
             onChange={(e) => changeRainAmount(parseFloat(e.target.value))}
+          />
+          <span className="lbl sub">Wind · {Math.round(wind * 100)}%</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={wind}
+            onChange={(e) => changeWind(parseFloat(e.target.value))}
           />
         </div>
 

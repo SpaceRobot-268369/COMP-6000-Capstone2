@@ -21,15 +21,24 @@ float hash(vec2 p){ p = fract(p*vec2(443.897,441.423)); p += dot(p,p+19.19); ret
 
 void main(){
   vec3 dir = normalize(vDir);
-  float up = clamp(dir.y, -0.2, 1.0);
-  float t  = pow(clamp(up, 0.0, 1.0), 0.42);
+  float t  = pow(clamp(dir.y, 0.0, 1.0), 0.42);
   vec3 col = mix(uSkyHorizon, uSkyTop, t);
 
-  // sun / moon
+  // haze rising up the dome
+  col = mix(col, uFog, (1.0 - t) * uHaze * 0.65);
+  col *= uBrightness;                       // exposure on the sky body
+
+  // horizon dissolve: reach FULL (unscaled) fog at the seam (dir.y -> 0 and
+  // below). The ground plane and distant trees both fog to this same colour,
+  // so the sky now meets them with a soft gradient instead of a hard line.
+  float horizonFog = 1.0 - smoothstep(0.0, 0.15, dir.y);
+  col = mix(col, uFog, horizonFog);
+
+  // sun / moon — added on top so a low key light still reads through the haze
   float sd = max(dot(dir, normalize(uSunDir)), 0.0);
   float disc = smoothstep(0.9990 + 0.0006*(1.0-uSunSize), 0.99985, sd);
-  float glow = pow(sd, 7.0)*0.45 + pow(sd, 90.0)*0.9;
-  float aura = pow(sd, 2.0)*0.12;
+  float glow = pow(sd, 7.0)*0.40 + pow(sd, 90.0)*0.9;
+  float aura = pow(sd, 2.0)*0.10;
   col += uSunColor * (glow + aura) * (0.6 + uHaze);
   vec3 discCol = mix(uSunColor, vec3(1.0), uMoon*0.4);
   col += discCol * disc * (uMoon > 0.5 ? 2.2 : 3.4);
@@ -43,10 +52,6 @@ void main(){
     col += vec3(0.9,0.95,1.0) * star * tw * (1.0 - smoothstep(0.0,0.4,sd));
   }
 
-  // horizon haze band
-  col = mix(col, uFog, (1.0 - t) * uHaze * 0.65);
-
-  col *= uBrightness;
   col += vec3(0.9, 0.94, 1.0) * uFlash;     // thunder lifts the whole sky
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -96,9 +101,19 @@ varying float vDist;
 uniform vec3  uBase, uSunColor, uFog;
 uniform vec2  uSunAz;          // normalised xz toward the sun
 uniform float uBrightness, uFogDensity, uShaftLow, uSkyLift;
+float ghash(vec2 p){ p = fract(p*vec2(443.897,441.423)); p += dot(p,p+19.19); return fract(p.x*p.y); }
+float gnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+  float a = ghash(i), b = ghash(i+vec2(1.0,0.0)), c = ghash(i+vec2(0.0,1.0)), d = ghash(i+vec2(1.0,1.0));
+  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+}
 void main(){
   vec3 col = uBase;
   vec2 p = vWorld.xz;
+  // gentle two-octave terrain mottle so the floor reads as uneven ground
+  // rather than a flat slab; fades into fog with distance like everything else
+  float mott = gnoise(p * 0.07) * 0.62 + gnoise(p * 0.21) * 0.38;
+  col *= 0.82 + 0.32 * mott;
   float r = length(p) + 1e-3;
   vec2 pn = p / r;
   // overall skylight wash — lifts the WHOLE floor on bright days so the
@@ -106,16 +121,24 @@ void main(){
   float openBand = smoothstep(2.0, 40.0, r) * (1.0 - smoothstep(120.0, 360.0, r));
   col += uFog * uSkyLift * (0.35 + 0.45 * openBand);
   float align = max(dot(pn, uSunAz), 0.0);         // 1 toward the sun
-  // mid-distance band so the wash sits in the scene, not under the camera
-  float band = smoothstep(2.0, 46.0, r) * (1.0 - smoothstep(120.0, 340.0, r));
+  // mid-distance band so the wash sits in the scene, not under the camera.
+  // kept gentle so it never concentrates into a bright horizontal bar at the
+  // treeline base (which a wide/short aspect ratio compresses into a hard line)
+  float band = smoothstep(2.0, 60.0, r) * (1.0 - smoothstep(140.0, 360.0, r));
   float pool = pow(align, 2.2) * band;
-  col += uSunColor * pool * (0.62 * uBrightness);
+  col += uSunColor * pool * (0.20 * uBrightness);
   // tight light streak under the sun, longest when the sun is low (dawn)
   float streak = pow(align, 34.0) * band;
-  col += uSunColor * streak * uShaftLow * 1.1;
-  // exponential fog to match the sky
-  float f = 1.0 - exp(-uFogDensity * uFogDensity * vDist * vDist);
-  col = mix(col, uFog, clamp(f, 0.0, 1.0));
+  col += uSunColor * streak * uShaftLow * 0.3;
+  // soft exponential fog — gentler than FogExp2 so the bright horizon fog fades
+  // into the darker foreground over a long vertical span. The fog target now
+  // lifts with distance, which keeps the ground, treeline, and sky reading as
+  // one atmosphere instead of three stacked panels.
+  vec3 groundFogNear = uFog * 0.38;
+  vec3 groundFogFar = uFog * 0.66;
+  vec3 groundFog = mix(groundFogNear, groundFogFar, smoothstep(70.0, 260.0, vDist));
+  float f = 1.0 - exp(-uFogDensity * 1.45 * vDist);
+  col = mix(col, groundFog, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -185,6 +208,8 @@ uniform sampler2D tBloom;     // blurred highlights
 uniform sampler2D tGod;       // light shafts
 uniform float uExposure, uTemp, uSaturation, uContrast;
 uniform float uBloom, uVignette, uGrain, uTime, uWet, uFlash, uShaft;
+uniform vec3 uFogColor, uSkyColor;
+uniform float uAtmosphere, uAspect;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
 
@@ -212,8 +237,21 @@ void main(){
   col = (col - 0.5) * uContrast + 0.5;
   col = max(col, 0.0);
 
-  // thunder flash also lifts the frame
-  col += uFlash * 0.6;
+  // thunder flash lifts the frame with a cool electric-blue cast
+  col += uFlash * vec3(0.50, 0.56, 0.68);
+
+  // Scene-coloured atmospheric veil. It sits in post so it blends across sky,
+  // trees, and ground together, hiding the two horizontal value jumps that make
+  // the woodland read as stacked panels on wide/short viewports.
+  float y = vUv.y;
+  float wide = smoothstep(1.18, 1.65, uAspect);
+  float upperD = (y - 0.70) / 0.24;
+  float lowerD = (y - 0.42) / 0.24;
+  float seamHaze = exp(-upperD * upperD) * 0.12 + exp(-lowerD * lowerD) * 0.14;
+  seamHaze *= 1.0 + wide * 1.05;
+  float broadHaze = smoothstep(0.10, 0.72, y) * (1.0 - smoothstep(0.94, 1.0, y)) * (0.035 + wide * 0.035);
+  vec3 veil = mix(uFogColor * 0.44, mix(uFogColor, uSkyColor, 0.38), smoothstep(0.18, 0.92, y));
+  col = mix(col, veil, clamp((seamHaze + broadHaze) * uAtmosphere, 0.0, 0.34));
 
   // vignette
   vec2 q = vUv - 0.5;

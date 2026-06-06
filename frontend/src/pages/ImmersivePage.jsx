@@ -38,6 +38,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const [time, setTime] = useState(() => activeInitial?.time || "dawn");
   const [rain, setRain] = useState(() => activeInitial?.rain || false);
   const [rainAmount, setRainAmount] = useState(() => activeInitial?.rainAmount || 0.6);
+  const [wind, setWind] = useState(() => activeInitial?.wind ?? 0);
   const [audioSrc, setAudioSrc] = useState(() => activeInitial?.audioUrl || "");
   const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
 
@@ -182,6 +183,8 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           setRain={setRain}
           rainAmount={rainAmount}
           setRainAmount={setRainAmount}
+          wind={wind}
+          setWind={setWind}
           setAudioSrc={setAudioSrc}
           setAudioLabel={setAudioLabel}
           playing={playing}
