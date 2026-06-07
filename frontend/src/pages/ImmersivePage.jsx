@@ -44,6 +44,10 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
 
   useEffect(() => {
+    const generatedObjectUrl = activeInitial?.generatedAudio &&
+      activeInitial?.audioUrl?.startsWith("blob:")
+      ? activeInitial.audioUrl
+      : null;
     const instance = createImmersive({
       sceneEl: sceneRef.current,
       boltEl: boltRef.current,
@@ -69,6 +73,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     return () => {
       setApi(null);
       instance.dispose();
+      if (generatedObjectUrl) {
+        URL.revokeObjectURL(generatedObjectUrl);
+      }
     };
     // activeInitial is read once at mount; remounting for a new scene is the caller's job.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +178,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
       {activeInitial?.sourceCaption && (
         <p className="immersive-source-caption">
-          <span className="immersive-source-tag">Source recording</span>
+          <span className="immersive-source-tag">
+            {activeInitial.generatedAudio ? "Generated audio" : "Source recording"}
+          </span>
           {activeInitial.sourceCaption}
         </p>
       )}
@@ -200,7 +209,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       )}
       {activeOverlay}
 
-      <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin="anonymous" />
+      <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin={activeInitial?.audioUrl?.startsWith("blob:") ? undefined : "anonymous"} />
 
       {audioSrc && (
         <AudioPlayer

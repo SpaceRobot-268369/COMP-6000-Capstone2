@@ -114,7 +114,13 @@ function composeSelections(sel) {
    "prompt") that becomes a thinking transcript while the scene resolves
    (phase "generating"). Presentational — DemoPage owns the phase, the echoed
    user message, and the staged status line. */
-export default function PromptChat({ phase, userMessage, statusLine, onSubmit }) {
+export default function PromptChat({
+  phase,
+  userMessage,
+  statusLine,
+  errorMessage = "",
+  onSubmit,
+}) {
   const [value, setValue] = useState("");
   const [sel, setSel] = useState(EMPTY_SEL);
   const inputRef = useRef(null);
@@ -189,6 +195,11 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
             <div className="demo-bubble assistant thinking">
               <span className="demo-dots" aria-hidden="true"><i /><i /><i /></span>
               <span className="demo-status">{statusLine}</span>
+            </div>
+          )}
+          {errorMessage && (
+            <div className="demo-bubble assistant">
+              <span>{errorMessage}</span>
             </div>
           )}
         </div>
