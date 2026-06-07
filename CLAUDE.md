@@ -115,7 +115,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 │   ├── commit_changes.md
 │   ├── draft_pr.md
 │   ├── dvc_push.md
-│   └── pre_pr_checklist.md
+│   ├── pre_pr_checklist.md
+│   └── resolve_conflicts.md
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
@@ -190,6 +191,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Draft PR (repo PR standard) skill | [.claude/skills/draft_pr.md](.claude/skills/draft_pr.md) |
 | DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
 | Pre-PR checklist skill | [.claude/skills/pre_pr_checklist.md](.claude/skills/pre_pr_checklist.md) |
+| Resolve conflicts (merge/rebase/cherry-pick) skill | [.claude/skills/resolve_conflicts.md](.claude/skills/resolve_conflicts.md) |
 
 ---
 
