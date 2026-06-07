@@ -69,6 +69,7 @@ COMP-6000-Capstone2/
 │
 ├── acoustic_ai/             # Python AI module (FastAPI app runs natively on serverB for inference)
 │   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
+│   ├── llm/                 # in-process LLM-OSS service (prompt parser + Layer E report writer); see .claude/context/ai/llm_layer_config.md
 │   ├── layers/              # per-layer attempts (layer_a, layer_b, layer_c, …)
 │   │                        #   layer_<X>/attempts/<member>__<stage>__<slug>/  — see conventions.md
 │   ├── scripts/             # extract_expected_samples.py, regenerate_samples.py
@@ -123,6 +124,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── pipeline_design.md
     │   ├── prompt_parser_policy.md          # Generation front-end: LLM-OSS parser — pre-fill defaults + validity gate + layer decoding
     │   ├── analysis_synthesis_policy.md    # Layer E: aggregator fusion + LLM-OSS report policy + per-head pass standards
+    │   ├── llm_layer_config.md             # LLM-OSS serving: in-process model choice + VRAM budget + guardrails (powers parser + report writer)
+    │   ├── llm_layer_implementation_plan.md # LLM-OSS build plan: phased serverB rollout + API surface (/generation/parse, analyze narrative)
     │   ├── distillation_strategy.md
     │   ├── runbooks/
     │   │   ├── layer_a_smoke_1_spring_night.md
@@ -161,6 +164,8 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Pipeline design (generation + analysis) | [.claude/context/ai/pipeline_design.md](.claude/context/ai/pipeline_design.md) |
 | **Prompt parser policy** (LLM-OSS generation front-end: pre-fill defaults, validity/coherence gate, layer-contract decoding) | [.claude/context/ai/prompt_parser_policy.md](.claude/context/ai/prompt_parser_policy.md) |
 | **Analysis synthesis policy** (Layer E aggregator fusion, LLM-OSS report registers, per-head pass standards, phenology table) | [.claude/context/ai/analysis_synthesis_policy.md](.claude/context/ai/analysis_synthesis_policy.md) |
+| **LLM-OSS layer config** (in-process model choice, serving stack, VRAM budget, guardrails, upgrade lever) | [.claude/context/ai/llm_layer_config.md](.claude/context/ai/llm_layer_config.md) |
+| **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [.claude/context/ai/llm_layer_implementation_plan.md](.claude/context/ai/llm_layer_implementation_plan.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
