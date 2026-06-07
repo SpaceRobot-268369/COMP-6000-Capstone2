@@ -21,35 +21,35 @@ acoustic_ai/llm/
 ├── __init__.py          # public API: get_service(), warm(), LLMService, LLMConfig
 ├── config.py            # env-driven config (model id, 4-bit, gen params)
 ├── service.py           # LLMService: lazy load + complete() / complete_json()
-├── prompts/
-│   ├── parser_system.py # system prompt for the Prompt Parser
-│   └── report_system.py # system prompt for the report writer (2 registers)
+├── gate.py              # deterministic validity-gate findings (parser)
+├── parser.py            # parse_prompt(): NL prompt -> parse-result contract
+├── report.py            # write_report(): fused JSON -> prose (2 registers)
+├── faithfulness.py      # guard: prose names no unobserved species
+├── skills/              # per-job instruction files (system messages)
+│   ├── __init__.py      #   load_skill() loader + cache
+│   ├── parser.md        #   parser skill (placeholder — author later)
+│   ├── report_analytical.md
+│   └── report_immersive.md
 └── README.md            # this file
 ```
 
 ## Usage
 
 ```python
-from llm import get_service
-from llm.prompts import parser_system_prompt, report_system_prompt
+from llm import parse_prompt, write_report
 
-svc = get_service()  # lazy singleton; first call loads the model
+# Prompt parser — NL prompt -> parse-result contract (JSON, grammar-constrained)
+contract = parse_prompt("a misty autumn dawn with light rain")
 
-# Prompt parser (JSON contract, greedy for reproducibility)
-contract = svc.complete_json([
-    {"role": "system", "content": parser_system_prompt()},
-    {"role": "user",   "content": "a misty autumn dawn"},
-])
-
-# Report writer (immersive register)
-prose = svc.complete(
-    [
-        {"role": "system", "content": report_system_prompt("immersive")},
-        {"role": "user",   "content": fused_json_str},
-    ],
-    temperature=0.6,
-)
+# Report writer — fused analysis JSON -> prose in a register
+narrative = write_report(fused_report_json, register="immersive")
+# -> {"register": "immersive", "text": "...", "faithful": True, "violations": []}
 ```
+
+The service is reached over HTTP via the FastAPI routes `POST /generation/parse`
+and `POST /analysis/narrative` (and inline on `/analyze` when
+`AI_LLM_NARRATIVE` is on). Skills load from `skills/*.md` as the system message;
+the job data is the user message (plan §2.1).
 
 ## Config (env vars)
 
@@ -70,15 +70,16 @@ Wire it into the server lifespan, **opt-in** via `AI_LLM_PREWARM` (default off)
 so existing boots are unaffected until the model is confirmed on serverB. See
 the decision doc §8.
 
-## Not done yet (scaffold)
+## Not done yet
 
-- **LLM job "skills" are placeholder stubs (deferred — owner: Lucas).** The
-  per-job instruction sets sent with each call (`prompts/parser_system.py`,
-  `prompts/report_system.py`) are placeholders; the real skills are authored
-  later. Wiring may proceed against the stubs and swap them in when ready.
-- `bitsandbytes` / `lm-format-enforcer` are **not** in `requirements.txt` yet
-  (deferred so this scaffold doesn't pull heavy deps into CI / the serverB
-  sync) — add them when wiring the service in.
+- **Skill content is placeholder (deferred — owner: Lucas).** `skills/*.md` are
+  working placeholders; the authored skills (instructions + few-shot) swap in
+  later with no code change.
+- **serverB-only steps:** install deps in `acoustic_ai/.venv`, pre-download the
+  HF model, validate 16 GB VRAM headroom, then flip `AI_LLM_PREWARM=on`. See
+  the implementation plan §5–§8.
+- Phenology table for the parser's fauna gate is a separate prerequisite
+  (plan §10).
 - `complete_json()` uses a tolerant JSON-extraction fallback. Replace with
   **grammar-constrained decoding** for a hard validity guarantee (see the
   `complete_json` TODO and decision doc §6).

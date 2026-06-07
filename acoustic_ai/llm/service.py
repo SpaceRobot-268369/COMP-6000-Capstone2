@@ -88,11 +88,13 @@ class LLMService:
         *,
         temperature: Optional[float] = None,
         max_new_tokens: Optional[int] = None,
+        prefix_allowed_tokens_fn=None,
     ) -> str:
         """Run a chat-style completion and return the assistant text only.
 
         `temperature` None -> use the model default; 0.0 -> greedy (use this
-        for the parser so contracts are reproducible).
+        for the parser so contracts are reproducible). `prefix_allowed_tokens_fn`
+        constrains decoding (e.g. grammar-enforced JSON); see `complete_json`.
         """
         self.load()
         import torch
@@ -110,12 +112,32 @@ class LLMService:
             gen_kwargs.update(do_sample=True, temperature=temp)
         else:
             gen_kwargs.update(do_sample=False)
+        if prefix_allowed_tokens_fn is not None:
+            gen_kwargs["prefix_allowed_tokens_fn"] = prefix_allowed_tokens_fn
 
         with torch.no_grad():
             out = self._model.generate(**inputs, **gen_kwargs)
         # Strip the prompt tokens; decode only the newly generated tail.
         new_tokens = out[0][inputs["input_ids"].shape[1]:]
         return self._tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+    def _json_prefix_fn(self, schema: Optional[dict]):
+        """Build a grammar-constrained decoding function for `schema` using
+        lm-format-enforcer, if installed. Returns None when unavailable (caller
+        falls back to tolerant extraction)."""
+        if not schema:
+            return None
+        try:
+            from lmformatenforcer import JsonSchemaParser
+            from lmformatenforcer.integrations.transformers import (
+                build_transformers_prefix_allowed_tokens_fn,
+            )
+        except ImportError:
+            log.warning("[llm] lm-format-enforcer not installed; JSON is not "
+                        "grammar-constrained (using tolerant extraction).")
+            return None
+        parser = JsonSchemaParser(schema)
+        return build_transformers_prefix_allowed_tokens_fn(self._tokenizer, parser)
 
     def complete_json(
         self,
@@ -128,12 +150,17 @@ class LLMService:
         output must validate against the parse-result schema
         (prompt_parser_policy.md §5).
 
-        TODO(llm): plug grammar-constrained decoding here (lm-format-enforcer /
-        outlines) keyed on `schema` so invalid JSON is impossible by
-        construction. Until then this uses a greedy completion + tolerant
-        extraction, which is good enough for a scaffold but NOT a guarantee.
+        When lm-format-enforcer is installed and `schema` is provided, decoding
+        is grammar-constrained so the output is valid JSON by construction.
+        Otherwise it falls back to a greedy completion + tolerant extraction
+        (good enough for a scaffold but not a hard guarantee).
         """
-        raw = self.complete(messages, temperature=0.0, max_new_tokens=max_new_tokens)
+        self.load()  # needed so the tokenizer exists before building the fn
+        prefix_fn = self._json_prefix_fn(schema)
+        raw = self.complete(
+            messages, temperature=0.0, max_new_tokens=max_new_tokens,
+            prefix_allowed_tokens_fn=prefix_fn,
+        )
         return _extract_json(raw)
 
 
