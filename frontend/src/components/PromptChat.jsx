@@ -112,13 +112,32 @@ function composeSelections(sel) {
 
 /* The demo entry interface: a calm, chatbot-style prompt screen (phase
    "prompt") that becomes a thinking transcript while the scene resolves
-   (phase "generating"). Presentational — DemoPage owns the phase, the echoed
-   user message, and the staged status line. */
-export default function PromptChat({ phase, userMessage, statusLine, onSubmit }) {
+   (phase "generating"). Presentational — GenerationPage owns the phase, the echoed
+   user message, and the staged status line.
+
+   Phases:
+     prompt      — the initial composer + rails + presets
+     parsing     — thinking dots while the LLM parses the prompt
+     confirm     — parser corrected the prompt; show note + accept/cancel
+     rejected    — parser rejected the prompt entirely; show note + try again
+     generating  — thinking dots while audio is being generated */
+export default function PromptChat({
+  phase,
+  userMessage,
+  statusLine,
+  errorMessage = "",
+  rejectionNote = "",
+  confirmNote = "",
+  confirmSummary = "",
+  onSubmit,
+  onConfirm,
+  onCancel,
+  onDismissRejection,
+}) {
   const [value, setValue] = useState("");
   const [sel, setSel] = useState(EMPTY_SEL);
   const inputRef = useRef(null);
-  const generating = phase === "generating";
+  const isBusy = phase === "generating" || phase === "parsing";
 
   useEffect(() => {
     if (phase === "prompt") inputRef.current?.focus();
@@ -154,7 +173,7 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
 
   function submit() {
     const text = value.trim();
-    if (!text || generating) return;
+    if (!text || isBusy) return;
     onSubmit(text);
   }
 
@@ -167,9 +186,11 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
   }
 
   const isPrompt = phase === "prompt";
+  const isConfirm = phase === "confirm";
+  const isRejected = phase === "rejected";
 
   return (
-    <div className={`demo-chat theme-generation${generating ? " generating" : ""}`}>
+    <div className={`demo-chat theme-generation${isBusy ? " generating" : ""}`}>
       <div className="demo-chat-inner">
         <header className="demo-chat-head">
           <p className="demo-eyebrow">SPECULATIVE SOUNDSCAPE</p>
@@ -185,10 +206,68 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
               <span>{userMessage}</span>
             </div>
           )}
-          {generating && (
+
+          {/* Parsing / generating: animated thinking dots + status text */}
+          {isBusy && (
             <div className="demo-bubble assistant thinking">
               <span className="demo-dots" aria-hidden="true"><i /><i /><i /></span>
               <span className="demo-status">{statusLine}</span>
+            </div>
+          )}
+
+          {/* Corrected prompt — show note and confirm/cancel buttons */}
+          {isConfirm && confirmNote && (
+            <div className="demo-bubble assistant demo-bubble-confirm">
+              <div className="demo-confirm-content">
+                <p className="demo-confirm-note">{confirmNote}</p>
+                {confirmSummary && (
+                  <p className="demo-confirm-summary">
+                    <span className="demo-confirm-summary-label">Adjusted scene:</span>{" "}
+                    {confirmSummary}
+                  </p>
+                )}
+                <div className="demo-confirm-actions">
+                  <button
+                    type="button"
+                    className="demo-confirm-btn demo-confirm-accept"
+                    onClick={onConfirm}
+                  >
+                    ✦ Generate this scene
+                  </button>
+                  <button
+                    type="button"
+                    className="demo-confirm-btn demo-confirm-cancel"
+                    onClick={onCancel}
+                  >
+                    ← Try a different prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rejected prompt — show note and try-again button */}
+          {isRejected && rejectionNote && (
+            <div className="demo-bubble assistant demo-bubble-rejected">
+              <div className="demo-confirm-content">
+                <p className="demo-confirm-note">{rejectionNote}</p>
+                <div className="demo-confirm-actions">
+                  <button
+                    type="button"
+                    className="demo-confirm-btn demo-confirm-cancel"
+                    onClick={onDismissRejection}
+                  >
+                    ← Try a different prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generic error (network / non-parser) */}
+          {errorMessage && (
+            <div className="demo-bubble assistant">
+              <span>{errorMessage}</span>
             </div>
           )}
         </div>
@@ -327,3 +406,4 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
     </div>
   );
 }
+

@@ -189,7 +189,7 @@ export default function HomePage() {
       setTimeout(() => {
         const performNavigation = () => {
           navigate("/immersive", {
-            state: { resolved: resolvedState, fromDemo: true, backPath: "/generation" },
+            state: { resolved: resolvedState, fromDemo: true, backPath: "/analysis" },
           });
         };
 
@@ -320,11 +320,10 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Hidden audio element for previewing preset tracks */}
       <audio
         ref={previewAudioRef}
         onEnded={() => setPreviewPlaying(false)}
-        crossOrigin="anonymous"
+        crossOrigin={previewUrl?.startsWith("blob:") ? undefined : "anonymous"}
       />
     </div>
   );

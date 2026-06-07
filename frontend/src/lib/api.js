@@ -178,6 +178,20 @@ export async function narrateReport(report, register = "analytical") {
   return res.json();
 }
 
+export async function parseGenerationPrompt(prompt) {
+  const res = await fetch(`${API_BASE}/api/generation/parse`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Prompt parsing failed (${res.status})`));
+  }
+  return res.json();
+}
+
 export async function generateSoundscape(conditions = {}) {
   const windSpeed = Number(conditions.wind_speed_ms) || 0;
   const precipitation = Number(conditions.precipitation_mm) || 0;
