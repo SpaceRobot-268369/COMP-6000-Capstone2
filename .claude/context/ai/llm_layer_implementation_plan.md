@@ -11,6 +11,16 @@
 > [`acoustic_ai/llm/`](../../../acoustic_ai/llm/) exists (config, service,
 > prompt stubs, README) but is **not wired into any endpoint** and its deps are
 > **not installed**. Nothing calls it yet.
+>
+> **Implementation status (updated):** code for Phases 1–7 is **landed and
+> tested model-free** — skills loader, constrained-JSON service, parser + gate,
+> report writer + faithfulness guard, the `/generation/parse` and
+> `/analysis/narrative` endpoints, opt-in `/analyze` narrative + LLM pre-warm,
+> backend proxies, the scene-page tone toggle, and 16 unit tests. **Remaining is
+> serverB-only** (Phase 8 + the model-dependent parts of Phases 1/5/6): install
+> deps in `.venv`, pre-download the HF model, validate 16 GB VRAM, flip
+> `AI_LLM_PREWARM=on`, deploy. **Deferred:** authoring the real skill files
+> (owner: Lucas) and the species phenology table (§10).
 
 ---
 
