@@ -136,8 +136,13 @@ class LLMService:
             log.warning("[llm] lm-format-enforcer not installed; JSON is not "
                         "grammar-constrained (using tolerant extraction).")
             return None
-        parser = JsonSchemaParser(schema)
-        return build_transformers_prefix_allowed_tokens_fn(self._tokenizer, parser)
+        try:
+            parser = JsonSchemaParser(schema)
+            return build_transformers_prefix_allowed_tokens_fn(self._tokenizer, parser)
+        except Exception as exc:  # noqa: BLE001 — schema not enforceable -> fall back
+            log.warning("[llm] could not build JSON grammar (%s); falling back "
+                        "to tolerant extraction.", exc)
+            return None
 
     def complete_json(
         self,

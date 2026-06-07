@@ -289,15 +289,24 @@ The LLM weights come from **HF Hub**, same as AudioLDM2/AudioGen — **not DVC**
 
 ## 6. VRAM validation
 
-Before enabling `AI_LLM_PREWARM` on serverB:
+**serverB validation done (2026-06-07, Tesla T4 15360 MiB).** Ran the real
+`llm/` module against the live model in an isolated clone:
 
-- [ ] Boot with `AI_PREWARM=all` (audio defaults) **+** load the LLM; capture
-      `nvidia-smi` peak during a Layer A generate.
-- [ ] Confirm total resident + diffusion activations stay under 16 GB with
-      headroom (target ≤ ~14 GB resident; expect ~13 GB per
-      [llm_layer_config.md §4](llm_layer_config.md)).
-- [ ] If tight: drop to `microsoft/Phi-3.5-mini` 4-bit, or apply the upgrade
-      lever pattern in reverse (selective `AI_PREWARM`).
+- `bitsandbytes 0.49.2` + `lm-format-enforcer` **install + import OK on CUDA 13** —
+  the 4-bit backend works on the T4 (a real compat risk, cleared).
+- **Qwen2.5-3B-Instruct 4-bit loads in ~2.0 GB (peak 2.1 GB)** — better than the
+  2.5 GB estimate. Co-resident with the ~10.5 GB audio stack → ~12.6 GB of
+  15.36 GB. **Headroom confirmed; primary model stands (no need for Phi-3.5).**
+- End-to-end OK: parser returned a valid JSON contract (out-of-domain "city"
+  correctly flagged `corrected`); report writer produced faithful immersive
+  prose. Model is now **pre-cached** in serverB's HF cache.
+- Load ~69 s included the one-time ~6 GB download; subsequent loads are faster.
+
+Remaining for the live service:
+
+- [ ] On a real deploy, capture `nvidia-smi` peak during a Layer A generate with
+      the LLM resident (full co-residency under diffusion load), then flip
+      `AI_LLM_PREWARM=on`.
 
 ---
 
@@ -357,6 +366,18 @@ calls it, and `AI_LLM_PREWARM` defaults off.
   `acoustic_ai/llm/skills/` (integration pattern in §2.1). Phases 3–4 wire
   against placeholder skill files and swap in the real ones when ready — not a
   blocker for wiring.
+- **Follow-up (found in serverB validation) — grammar-constrained JSON.**
+  `lmformatenforcer.integrations.transformers` fails to import on serverB
+  ("transformers is not installed" — a version-compat quirk; transformers is
+  present), so the parser falls back to tolerant extraction. It works (the 3B
+  emits valid JSON), but the hard guarantee is off until resolved (pin
+  compatible `lm-format-enforcer`/`transformers`, or switch to `outlines`).
+  `service._json_prefix_fn` already degrades gracefully.
+- **Follow-up — parser prompt-adherence (skill quality).** Validation showed the
+  placeholder parser skill dropped an explicitly-requested "light rain"
+  (`layer_b: null`) while correctly swapping out-of-domain "city". The authored
+  parser skill (owner: Lucas) should tighten retention of valid user-requested
+  weather/events.
 - **Independent of:** Layer A/B/C/D internals — the contracts already exist.
 - **Order:** Phase 1 → 2 → (3 ∥ 4) → 5 → 6 → 7 → 8. Phase 4 (report writer) can
   proceed in parallel with Phase 3 (parser) since they share only the service.
