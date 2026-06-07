@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 The frontend-facing Layer B MVP reads this index:
 
-`acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv`
+`acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv`
 
 Current site-only runtime index contents:
 
@@ -27,7 +27,7 @@ Runtime-usable and locally materialized rows after path cleanup:
 The old seed rows previously pointed at `acoustic_ai/data/weather/...`. They
 now point at the current attempt-local data root:
 
-`acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/...`
+`acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/...`
 
 ## DVC / S3 Backing
 
@@ -76,7 +76,7 @@ The Server A ready WAVs were found at:
 
 They are now staged locally under:
 
-`acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_mvp_002/`
+`acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/`
 
 Local staged counts: `rain_primary=6`, `rain_wind_mixed=7`, `wind_primary=88`.
 The runtime index now points to these local staged paths. The WAV folders remain

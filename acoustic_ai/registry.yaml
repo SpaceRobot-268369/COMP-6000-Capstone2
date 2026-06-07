@@ -169,15 +169,16 @@ layers:
         stage: mvp_1
         status: mvp_candidate
         uses_seed: true
+        uses_weather_controls: true
         checkpoint: null
         description: |
           Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-only retrieval pool from site_257 Bowra dry woodland is filtered by weather label and intensity, then retrieval_seed chooses a deterministic site asset and start offset.
 
-          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. The two thunder backup stems are intentionally not exposed in the frontend/API until the site thunder policy is reliable. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
 
-          Supported site weather types in this branch: rain, wind, and rain+wind, with thunder available only as a cautious backup pool. Site storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+          asset_index: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
@@ -191,7 +192,7 @@ layers:
           - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
           - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
 
-      lucas__smoke_1__curated_assets:
+      murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: lucas
         stage: smoke_1
