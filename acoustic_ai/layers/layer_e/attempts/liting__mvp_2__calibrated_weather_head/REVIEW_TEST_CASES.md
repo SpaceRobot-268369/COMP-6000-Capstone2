@@ -9,6 +9,19 @@ results. The current integration candidate is:
 liting__mvp_2__calibrated_weather_head
 ```
 
+For the cross-attempt reviewer matrix covering MVP1 through MVP5, see:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/MVP1_TO_MVP5_REVIEW_EVIDENCE.md
+```
+
+Generated evidence files:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_site257_fixed_review_matrix.csv
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json
+```
+
 ## Data Used
 
 The MVP2 calibrated weather head was trained and validated on the Site257
