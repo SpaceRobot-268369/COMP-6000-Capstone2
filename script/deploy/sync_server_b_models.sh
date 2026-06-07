@@ -200,6 +200,30 @@ PY
   log "Model/sample/media artifacts are materialised"
 }
 
+warn_large_media_banks() {
+  # Deploy policy is "pull ALL candidate banks" (simple and deliberate — see
+  # cicd_design.md). But retrieval media-asset banks are audio and can grow
+  # large, and every candidate bank is pulled on every deploy. Warn (never
+  # fail) when a single bank crosses the threshold so a dev can decide whether
+  # to prune superseded banks or revisit the pull policy. Per-bank threshold;
+  # override with SERVER_B_BANK_WARN_BYTES (default 2 GiB).
+  local threshold="${SERVER_B_BANK_WARN_BYTES:-2147483648}"
+  local bank=""
+  local bytes=0
+  local human_bank=""
+  local human_thr=""
+
+  [ -d model ] || return 0
+
+  while IFS= read -r -d '' bank; do
+    bytes="$(du -sb "$bank" 2>/dev/null | cut -f1 || echo 0)"
+    [ "${bytes:-0}" -gt "$threshold" ] || continue
+    human_bank="$(numfmt --to=iec "$bytes" 2>/dev/null || printf '%sB' "$bytes")"
+    human_thr="$(numfmt --to=iec "$threshold" 2>/dev/null || printf '%sB' "$threshold")"
+    warn "Large media asset bank: $bank is $human_bank (threshold $human_thr). Deploy still pulls ALL candidate banks; consider pruning superseded banks, or scoping pulls to registry-served attempts if serverB disk/deploy-time starts to hurt."
+  done < <(find model -type d -name 'media_asset_bank' -print0 2>/dev/null)
+}
+
 find_listener_pid() {
   local pid=""
   if command -v ss >/dev/null 2>&1; then
@@ -274,6 +298,7 @@ main() {
   sync_git
   install_python_deps
   pull_dvc_artifacts
+  warn_large_media_banks
   restart_service
   log "Server B deploy complete"
 }

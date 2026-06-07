@@ -77,8 +77,8 @@ COMP-6000-Capstone2/
 │   ├── requirements.txt
 │   └── .venv/               # gitignored — the ONLY Python interpreter for AI work (see "Python environment")
 │
-├── model/                   # trained checkpoints
-│   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
+├── model/                   # runnable artifact for every model attempt (generative weights OR retrieval bank)
+│   ├── candidates/<member>/<stage>__<slug>/   # generative: weights (DVC) | retrieval: index.json + media_asset_bank/ (DVC)
 │   └── production/<role>/                     # promoted slots (layer_a_ambient ✓)
 │
 ├── resources/               # source recordings + manifests (DVC-tracked)
@@ -115,7 +115,9 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 │   ├── commit_changes.md
 │   ├── draft_pr.md
 │   ├── dvc_push.md
-│   └── pre_pr_checklist.md
+│   ├── pre_pr_checklist.md
+│   ├── resolve_conflicts.md
+│   └── validate_model_attempt.md
 └── context/                               # Project context the agent loads on demand
     ├── conventions.md                     # Canonical doc: repo structure, naming, tracking, artifact tiers, attempt internals, model README
     ├── ai/                                # AI module design, runbooks, decision logs
@@ -125,7 +127,6 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── prompt_parser_policy.md          # Generation front-end: LLM-OSS parser — pre-fill defaults + validity gate + layer decoding
     │   ├── analysis_synthesis_policy.md    # Layer E: aggregator fusion + LLM-OSS report policy + per-head pass standards
     │   ├── llm_layer_config.md             # LLM-OSS serving: in-process model choice + VRAM budget + guardrails (powers parser + report writer)
-    │   ├── llm_layer_implementation_plan.md # LLM-OSS build plan: phased serverB rollout + API surface (/generation/parse, analyze narrative)
     │   ├── distillation_strategy.md
     │   ├── runbooks/
     │   │   ├── layer_a_smoke_1_spring_night.md
@@ -165,7 +166,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | **Prompt parser policy** (LLM-OSS generation front-end: pre-fill defaults, validity/coherence gate, layer-contract decoding) | [.claude/context/ai/prompt_parser_policy.md](.claude/context/ai/prompt_parser_policy.md) |
 | **Analysis synthesis policy** (Layer E aggregator fusion, LLM-OSS report registers, per-head pass standards, phenology table) | [.claude/context/ai/analysis_synthesis_policy.md](.claude/context/ai/analysis_synthesis_policy.md) |
 | **LLM-OSS layer config** (in-process model choice, serving stack, VRAM budget, guardrails, upgrade lever) | [.claude/context/ai/llm_layer_config.md](.claude/context/ai/llm_layer_config.md) |
-| **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [.claude/context/ai/llm_layer_implementation_plan.md](.claude/context/ai/llm_layer_implementation_plan.md) |
+| **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [acoustic_ai/llm/llm_layer_implementation_plan.md](acoustic_ai/llm/llm_layer_implementation_plan.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
@@ -190,6 +191,9 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | Draft PR (repo PR standard) skill | [.claude/skills/draft_pr.md](.claude/skills/draft_pr.md) |
 | DVC push to S3 skill | [.claude/skills/dvc_push.md](.claude/skills/dvc_push.md) |
 | Pre-PR checklist skill | [.claude/skills/pre_pr_checklist.md](.claude/skills/pre_pr_checklist.md) |
+| Resolve git conflicts skill | [.claude/skills/resolve_conflicts.md](.claude/skills/resolve_conflicts.md) |
+| Validate model attempt (generative/retrieval structure) skill | [.claude/skills/validate_model_attempt.md](.claude/skills/validate_model_attempt.md) |
+| Resolve conflicts (merge/rebase/cherry-pick) skill | [.claude/skills/resolve_conflicts.md](.claude/skills/resolve_conflicts.md) |
 
 ---
 
@@ -239,6 +243,15 @@ model/production/<role>/                                           # promoted sl
 
 `<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
 in [.claude/context/conventions.md](.claude/context/conventions.md).
+
+**Two model kinds.** Every attempt is either **generative** (trained weights
+— layer_a, layer_c) or **retrieval** (a *media asset bank* — layer_b, the
+layer_c retrieval library). Both put their runnable artifact under `model/`
+and expose the same `handler.py`; the kind is declared in `registry.yaml`
+(`kind: generative|retrieval`). A generative artifact is weights; a retrieval
+artifact is `index.json` (git, JSON only — no CSV) + a `media_asset_bank/`
+audio folder (DVC). The index is the retriever's query layer, not a dev doc.
+Full contract: [conventions §5.5](.claude/context/conventions.md#55-generative-vs-retrieval-attempts).
 
 First production promotion: **`model/production/layer_a_ambient/`** — the
 Layer A per-cell ambient bank, promoted from
