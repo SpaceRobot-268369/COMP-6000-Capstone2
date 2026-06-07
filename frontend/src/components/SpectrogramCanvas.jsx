@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
-const FFT_SIZE  = 256;   // must be power-of-2; 128 bins output
-const MAX_COLS  = 400;   // time frames to draw
+const FFT_SIZE  = 1024;  // must be power-of-2
+const HOP_SIZE  = 512;
+const N_MELS    = 128;
+const MAX_COLS  = 520;   // time frames to draw
 const MIN_DB    = -120;  // clamp floor before normalisation
-const DB_RANGE  = 70;    // visible dynamic range below the per-clip peak
+const DB_RANGE  = 80;    // visible dynamic range below the per-clip peak
+
+const HANN = Float32Array.from({ length: FFT_SIZE }, (_, i) =>
+  0.5 * (1 - Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)))
+);
+
+const melFilterCache = new Map();
 
 // ─── Radix-2 FFT (in-place) ───────────────────────────────────────────────────
 function fft(re, im) {
@@ -54,38 +62,109 @@ function intensityToRgb(t) {
   return [Math.round(s * 230), Math.round(240 + s * 15), Math.round(230 + s * 25)];
 }
 
-// ─── Build spectrogram matrix from raw PCM ────────────────────────────────────
-function buildSpectrogram(samples, sampleRate) {
-  const totalFrames = Math.floor(samples.length / FFT_SIZE);
-  const step        = Math.max(1, Math.floor(totalFrames / MAX_COLS));
-  const numCols     = Math.min(MAX_COLS, Math.ceil(totalFrames / step));
-  const numRows     = FFT_SIZE / 2;
+function hzToMel(hz) {
+  return 2595 * Math.log10(1 + hz / 700);
+}
 
-  // Hann window coefficients
-  const hann = Float32Array.from({ length: FFT_SIZE }, (_, i) =>
-    0.5 * (1 - Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)))
+function melToHz(mel) {
+  return 700 * (10 ** (mel / 2595) - 1);
+}
+
+function buildMelFilters(sampleRate) {
+  const cacheKey = `${sampleRate}:${FFT_SIZE}:${N_MELS}`;
+  if (melFilterCache.has(cacheKey)) return melFilterCache.get(cacheKey);
+
+  const numBins = FFT_SIZE / 2 + 1;
+  const maxMel = hzToMel(sampleRate / 2);
+  const melPoints = Array.from({ length: N_MELS + 2 }, (_, i) =>
+    (i / (N_MELS + 1)) * maxMel
+  );
+  const binPoints = melPoints.map((mel) =>
+    Math.max(0, Math.min(numBins - 1, Math.floor((FFT_SIZE + 1) * melToHz(mel) / sampleRate)))
   );
 
+  const filters = Array.from({ length: N_MELS }, () => new Float32Array(numBins));
+
+  for (let m = 1; m <= N_MELS; m++) {
+    const left   = binPoints[m - 1];
+    const center = binPoints[m];
+    const right  = binPoints[m + 1];
+    const filter = filters[m - 1];
+    let weightSum = 0;
+
+    if (center > left) {
+      for (let k = left; k < center; k++) {
+        filter[k] = (k - left) / (center - left);
+        weightSum += filter[k];
+      }
+    }
+    if (right > center) {
+      for (let k = center; k < right; k++) {
+        filter[k] = (right - k) / (right - center);
+        weightSum += filter[k];
+      }
+    }
+    if (weightSum > 0) {
+      for (let k = left; k < right; k++) filter[k] /= weightSum;
+    }
+  }
+
+  melFilterCache.set(cacheKey, filters);
+  return filters;
+}
+
+function mixToMono(audioBuffer) {
+  if (audioBuffer.numberOfChannels === 1) return audioBuffer.getChannelData(0);
+
+  const samples = new Float32Array(audioBuffer.length);
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const channel = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < samples.length; i++) {
+      samples[i] += channel[i] / audioBuffer.numberOfChannels;
+    }
+  }
+  return samples;
+}
+
+// ─── Build log-mel spectrogram matrix from raw PCM ────────────────────────────
+function buildMelSpectrogram(samples, sampleRate) {
+  const totalFrames = Math.max(1, Math.floor((samples.length - FFT_SIZE) / HOP_SIZE) + 1);
+  const frameStride = Math.max(1, Math.ceil(totalFrames / MAX_COLS));
+  const numCols     = Math.ceil(totalFrames / frameStride);
+  const numRows     = N_MELS;
+  const numBins     = FFT_SIZE / 2 + 1;
+  const filters     = buildMelFilters(sampleRate);
+
   const matrix = new Float32Array(numCols * numRows);
+  const re     = new Float32Array(FFT_SIZE);
+  const im     = new Float32Array(FFT_SIZE);
+  const power  = new Float32Array(numBins);
   let maxDb = MIN_DB;
 
   for (let col = 0; col < numCols; col++) {
-    const offset = col * step * FFT_SIZE;
-    const re = new Float32Array(FFT_SIZE);
-    const im = new Float32Array(FFT_SIZE);
+    const offset = col * frameStride * HOP_SIZE;
+    re.fill(0);
+    im.fill(0);
 
     for (let k = 0; k < FFT_SIZE; k++) {
-      re[k] = (samples[offset + k] ?? 0) * hann[k];
+      re[k] = (samples[offset + k] ?? 0) * HANN[k];
     }
 
     fft(re, im);
 
-    for (let row = 0; row < numRows; row++) {
-      const mag = Math.sqrt(re[row] * re[row] + im[row] * im[row]) / FFT_SIZE;
-      const db  = mag > 1e-10 ? Math.max(MIN_DB, 20 * Math.log10(mag)) : MIN_DB;
+    for (let bin = 0; bin < numBins; bin++) {
+      power[bin] = (re[bin] * re[bin] + im[bin] * im[bin]) / FFT_SIZE;
+    }
+
+    for (let mel = 0; mel < N_MELS; mel++) {
+      const filter = filters[mel];
+      let energy = 0;
+      for (let bin = 0; bin < numBins; bin++) energy += power[bin] * filter[bin];
+
+      const db = energy > 1e-20 ? Math.max(MIN_DB, 10 * Math.log10(energy)) : MIN_DB;
       if (db > maxDb) maxDb = db;
-      // store rows bottom-to-top (low freq at bottom)
-      matrix[(numRows - 1 - row) * numCols + col] = db;
+      // Store rows bottom-to-top so low mel bands render at the bottom.
+      matrix[(numRows - 1 - mel) * numCols + col] = db;
     }
   }
 
@@ -94,7 +173,7 @@ function buildSpectrogram(samples, sampleRate) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 /**
- * Renders a real log-mel-style spectrogram from an uploaded audio File.
+ * Renders a browser-side log-mel spectrogram from an uploaded audio File.
  * Falls back to the decorative static view when no file is provided.
  */
 export default function SpectrogramCanvas({ file }) {
@@ -110,14 +189,21 @@ export default function SpectrogramCanvas({ file }) {
     (async () => {
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const audioCtx    = new AudioContext();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        await audioCtx.close();
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) throw new Error("Web Audio API unavailable");
+
+        const audioCtx = new AudioContextCtor();
+        let audioBuffer;
+        try {
+          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        } finally {
+          await audioCtx.close().catch(() => {});
+        }
 
         if (cancelled) return;
 
-        const samples = audioBuffer.getChannelData(0);
-        const { matrix, numCols, numRows, maxDb } = buildSpectrogram(samples, audioBuffer.sampleRate);
+        const samples = mixToMono(audioBuffer);
+        const { matrix, numCols, numRows, maxDb } = buildMelSpectrogram(samples, audioBuffer.sampleRate);
 
         if (cancelled) return;
 
@@ -132,8 +218,9 @@ export default function SpectrogramCanvas({ file }) {
 
         // Normalise against the loudest bin in this clip so broadband field
         // recordings use the full colour range instead of rendering near-black.
+        const peakDb = maxDb > MIN_DB ? maxDb : MIN_DB + DB_RANGE;
         for (let i = 0; i < numCols * numRows; i++) {
-          const t = Math.max(0, Math.min(1, (matrix[i] - maxDb + DB_RANGE) / DB_RANGE));
+          const t = Math.max(0, Math.min(1, (matrix[i] - peakDb + DB_RANGE) / DB_RANGE));
           const [r, g, b] = intensityToRgb(t);
           const base = i * 4;
           px[base]     = r;
@@ -176,7 +263,7 @@ export default function SpectrogramCanvas({ file }) {
       <canvas
         ref={canvasRef}
         className="spectrogram-canvas"
-        aria-label="Frequency spectrogram"
+        aria-label="Mel spectrogram"
         style={{ opacity: status === "done" ? 1 : 0 }}
       />
     </div>

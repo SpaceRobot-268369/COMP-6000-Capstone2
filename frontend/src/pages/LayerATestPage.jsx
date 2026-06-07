@@ -115,7 +115,10 @@ export default function LayerATestPage({
   );
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
-  const usesWeatherStemControls = layerId === "layer_b" && attemptId === WEATHER_STEM_SELECTOR_ATTEMPT;
+  const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
+  const usesWeatherStemControls =
+    layerId === "layer_b" &&
+    (attemptId === WEATHER_STEM_SELECTOR_ATTEMPT || usesWeatherControls);
   const usesWindGeneratorControls = layerId === "layer_b" && WIND_GENERATOR_ATTEMPTS.has(attemptId);
   const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls;
   const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
@@ -299,7 +302,7 @@ export default function LayerATestPage({
       : "";
 
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-generation">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">{eyebrow}</p>

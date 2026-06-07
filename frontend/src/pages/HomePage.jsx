@@ -1,386 +1,330 @@
 import { useEffect, useRef, useState } from "react";
-import AudioPlayer from "../components/AudioPlayer.jsx";
-import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
-import { analyseAudio } from "../lib/api.js";
+import { useNavigate } from "react-router-dom";
+import { resolvePrompt } from "../demo/resolvePrompt.js";
+import { composeNarration } from "../demo/composeNarration.js";
+import { ambientForCell } from "../demo/sampleCatalog.js";
 
-const apiBase = import.meta.env.VITE_API_URL || "";
-
-// ---------------------------------------------------------------------------
-// Latent vector stats (secondary display only)
-// ---------------------------------------------------------------------------
-function latentStats(latent) {
-  const n    = latent.length;
-  const norm = Math.sqrt(latent.reduce((s, v) => s + v * v, 0));
-  const active = latent.filter(v => Math.abs(v) > 0.5).length;
-  const diversity = Math.min(active / (n * 0.6), 1.0);
+/* The presets are real Bowra dry-woodland recordings (Layer A `expected/` bank),
+   served by the backend straight from the repo checkout. Each card analyses a
+   genuine site recording for its season×diel cell — no placeholder audio. The
+   `audioUrl` + `sourceCaption` come from the sample catalog so the immersive
+   scene plays the real clip and shows where it came from. */
+function buildPreset({ title, tags, season, time, events }) {
+  const sample = ambientForCell(season, time);
   return {
-    norm:       parseFloat(norm.toFixed(2)),
-    active_dims: active,
-    latent_dim:  n,
-    diversity:   parseFloat(diversity.toFixed(3)),
-    complexity:  diversity > 0.65 ? "Rich" : diversity > 0.35 ? "Moderate" : "Sparse",
+    title,
+    tags,
+    audioUrl: sample.audioUrl,
+    sourceCaption: sample.sourceCaption,
+    resolved: { season, time, rain: false, rainAmount: 0, thunder: false, events },
   };
 }
 
-// ---------------------------------------------------------------------------
-// Env condition display config
-// ---------------------------------------------------------------------------
-const ENV_FIELDS = [
-  { key: "temperature_c",       label: "Temperature",      unit: "°C",   icon: "◈" },
-  { key: "humidity_pct",        label: "Humidity",         unit: "%",    icon: "◈" },
-  { key: "wind_speed_ms",       label: "Wind Speed",       unit: "m/s",  icon: "◈" },
-  { key: "wind_max_ms",         label: "Wind Gust",        unit: "m/s",  icon: "◈" },
-  { key: "precipitation_mm",    label: "Precipitation",    unit: "mm",   icon: "◈" },
-  { key: "days_since_rain",     label: "Days Since Rain",  unit: "days", icon: "◈" },
-  { key: "solar_radiation_wm2", label: "Solar Radiation",  unit: "W/m²", icon: "◈" },
-  { key: "surface_pressure_kpa",label: "Air Pressure",     unit: "kPa",  icon: "◈" },
-  { key: "daylight_hours",      label: "Daylight Hours",   unit: "hrs",  icon: "◈" },
-  { key: "hour_local",          label: "Time of Day",      unit: "hr",   icon: "◈",
-    format: v => {
-      const h = Math.round(v);
-      const ampm = h < 12 ? "AM" : "PM";
-      const hr   = h % 12 || 12;
-      return `${hr}:00 ${ampm}`;
-    }
-  },
+const PRESET_SAMPLES = [
+  buildPreset({
+    title: "Autumn Dawn",
+    tags: "Mild Air • Dry Woodland • Dawn Chorus",
+    season: "autumn",
+    time: "dawn",
+    events: ["birdsong"],
+  }),
+  buildPreset({
+    title: "Summer Night",
+    tags: "Warm Night • Dry Air • Insects",
+    season: "summer",
+    time: "night",
+    events: ["insects", "crickets"],
+  }),
+  buildPreset({
+    title: "Spring Afternoon",
+    tags: "Warm Light • Light Breeze • Birdsong",
+    season: "spring",
+    time: "afternoon",
+    events: ["birdsong"],
+  }),
+  buildPreset({
+    title: "Winter Morning",
+    tags: "Cold Air • Bare Branches • Sparse Calls",
+    season: "winter",
+    time: "morning",
+    events: ["birdsong"],
+  }),
 ];
 
-export default function HomePage() {
-  const fileInputRef = useRef(null);
+const STAGES = [
+  "Reading audio signal...",
+  "Extracting 256-d acoustic embeddings...",
+  "Mapping environmental season & diel cues...",
+  "Detecting precipitation & event parameters...",
+  "Synthesizing immersive 3D woodland scene...",
+];
+const STAGE_MS = 650;
 
-  const [health,     setHealth]     = useState({ loading: true });
-  const [file,       setFile]       = useState(null);
-  const [audioUrl,   setAudioUrl]   = useState(null);
-  const [status,     setStatus]     = useState("idle");
-  const [estimated,  setEstimated]  = useState(null);   // estimated_conditions from server
-  const [stats,      setStats]      = useState(null);   // latent stats
-  const [rawLatent,  setRawLatent]  = useState(null);
-  const [errorMsg,   setErrorMsg]   = useState("");
-  const [dragging,   setDragging]   = useState(false);
+export default function HomePage() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const previewAudioRef = useRef(null);
+  const timersRef = useRef([]);
+
+  const [phase, setPhase] = useState("idle"); // idle | analyzing
+  const [stageIndex, setStageIndex] = useState(0);
+  const [file, setFile] = useState(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Audio preview controls
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
 
   useEffect(() => {
-    fetch(`${apiBase}/api/health`)
-      .then(r => r.json())
-      .then(d => setHealth(d))
-      .catch(e => setHealth({ ok: false, message: String(e) }));
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+    };
   }, []);
 
-  const healthText = health.loading
-    ? "Scanning node telemetry…"
-    : health.ok
-      ? "Operational"
-      : "Attention required";
+  // Update preview element when URL changes
+  useEffect(() => {
+    if (previewUrl && previewAudioRef.current) {
+      previewAudioRef.current.src = previewUrl;
+      previewAudioRef.current.load();
+      previewAudioRef.current
+        .play()
+        .then(() => setPreviewPlaying(true))
+        .catch((err) => {
+          console.log("Audio preview play failed", err);
+          setPreviewPlaying(false);
+        });
+    }
+  }, [previewUrl]);
 
-  function acceptFile(f) {
-    if (!f) return;
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-    setFile(f);
-    setAudioUrl(URL.createObjectURL(f));
-    setEstimated(null);
-    setStats(null);
-    setRawLatent(null);
-    setStatus("idle");
-    setErrorMsg("");
-  }
-
-  function onFileChange(e)  { acceptFile(e.target.files?.[0] ?? null); }
-  function onDrop(e) {
-    e.preventDefault();
-    setDragging(false);
-    acceptFile(e.dataTransfer.files?.[0] ?? null);
-  }
-
-  async function runAnalysis() {
-    if (!file) return;
-    setStatus("analysing");
-    setErrorMsg("");
-    try {
-      const data = await analyseAudio(file);
-      setRawLatent(data);
-      setStats(latentStats(data.latent));
-      setEstimated(data.estimated_conditions ?? null);
-      setStatus("done");
-    } catch (err) {
-      const is401 = err.message.includes("401") || err.message.toLowerCase().includes("authenticated");
-      setErrorMsg(is401 ? "Login required — sign in to run analysis." : err.message);
-      setStatus("error");
+  function handleTogglePreview(url, e) {
+    e.stopPropagation(); // Avoid triggering card analysis
+    if (previewUrl === url) {
+      if (previewPlaying) {
+        previewAudioRef.current.pause();
+        setPreviewPlaying(false);
+      } else {
+        previewAudioRef.current
+          .play()
+          .then(() => setPreviewPlaying(true))
+          .catch(() => setPreviewPlaying(false));
+      }
+    } else {
+      setPreviewUrl(url);
     }
   }
 
-  const isAnalysing = status === "analysing";
-  const isDone      = status === "done";
+  function handleSelectPreset(preset) {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      setPreviewPlaying(false);
+    }
+
+    const narration = composeNarration(preset.resolved);
+    const resolvedState = {
+      ...preset.resolved,
+      narration,
+      audioUrl: preset.audioUrl,
+      sourceCaption: preset.sourceCaption,
+    };
+
+    startAnalysis(resolvedState);
+  }
+
+  function handleFileChange(e) {
+    const f = e.target.files?.[0];
+    if (f) setFile(f);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f && f.type.startsWith("audio/")) {
+      setFile(f);
+    }
+  }
+
+  function handleAnalyzeUploadedFile() {
+    if (!file) return;
+
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      setPreviewPlaying(false);
+    }
+
+    const audioUrl = URL.createObjectURL(file);
+    // Parse the file name for environmental keywords
+    const params = resolvePrompt(file.name);
+    const narration = composeNarration(params);
+    const resolvedState = {
+      ...params,
+      narration,
+      audioUrl,
+    };
+
+    startAnalysis(resolvedState);
+  }
+
+  function startAnalysis(resolvedState) {
+    setStageIndex(0);
+    setPhase("analyzing");
+
+    // Clear any active timers
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    // Cycle through analysis steps
+    STAGES.forEach((_, i) => {
+      if (i === 0) return;
+      timersRef.current.push(
+        setTimeout(() => setStageIndex(i), STAGE_MS * i)
+      );
+    });
+
+    // Navigate to immersive scene once finished
+    timersRef.current.push(
+      setTimeout(() => {
+        const performNavigation = () => {
+          navigate("/immersive", {
+            state: { resolved: resolvedState, fromDemo: true, backPath: "/analysis" },
+          });
+        };
+
+        if (document.startViewTransition) {
+          document.startViewTransition(performNavigation);
+        } else {
+          performNavigation();
+        }
+      }, STAGE_MS * STAGES.length + 300)
+    );
+  }
+
+  const isAnalyzing = phase === "analyzing";
 
   return (
-    <section className="dashboard-page">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">SONIC LABORATORY</p>
-          <h1>ANALYSIS PIPELINE</h1>
-          <div className="status-line">
-            <span className="status-accent" />
-            <p>System status: {healthText} / {apiBase || "Local node"}</p>
-          </div>
-        </div>
-        <div className="topbar-tools">
-          <label className="search-box">
-            <span>⌕</span>
-            <input type="text" placeholder="Search parameters…" />
-          </label>
-          <button type="button" className="icon-button" aria-label="Settings">⚙</button>
-        </div>
-      </header>
+    <div className={`demo-chat theme-analysis${isAnalyzing ? " generating" : ""}`}>
+      <div className="demo-chat-inner">
+        <header className="demo-chat-head">
+          <p className="demo-eyebrow">ACOUSTIC MAPPING</p>
+          <h1>Upload a soundscape to map its environment</h1>
+          <p className="demo-sub">
+            We will parse your recording's texture, season, weather, and active species, placing you inside its virtual 3D woodland reconstruction.
+          </p>
+        </header>
 
-      <div className="content-grid">
-        {/* ── Upload / analyse panel ── */}
-        <section
-          className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
-          onDragOver={e => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          onClick={() => !file && fileInputRef.current?.click()}
-          style={{ cursor: file ? "default" : "pointer" }}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".wav,.flac,.mp3,.webm"
-            onChange={onFileChange}
-            style={{ display: "none" }}
-          />
-
-          {!file ? (
-            <>
-              <div className="upload-icon">⇪</div>
-              <h2>DROP AUDIO FOR DEEP ANALYSIS</h2>
-              <p>FLAC, WAV, MP3 • click or drag to upload</p>
-            </>
-          ) : (
-            <div className="upload-loaded">
-              <div className="upload-icon">◫</div>
-              <div className="upload-file-info">
-                <strong>{file.name}</strong>
-                <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
-              </div>
-
-              <div className="upload-actions">
-                <button
-                  type="button"
-                  className="analyse-btn"
-                  onClick={runAnalysis}
-                  disabled={isAnalysing}
-                >
-                  {isAnalysing ? "Analysing…" : "✦ Run Analysis"}
-                </button>
-                <button
-                  type="button"
-                  className="upload-change-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Change file
-                </button>
-              </div>
-
-              {errorMsg && <p className="analysis-error">{errorMsg}</p>}
-            </div>
-          )}
-        </section>
-
-        {/* ── Spectrogram ── */}
-        <section className="panel spectral-panel">
-          <div className="panel-heading">
-            <h3>Spectral Mapping</h3>
-            <p>{file ? file.name : "No file loaded"}</p>
-          </div>
-          <SpectrogramCanvas file={file} />
-          <WaveBars active={isDone} />
-        </section>
-
-        {/* ── Estimated Environmental Conditions ── */}
-        <section className="panel metrics-panel">
-          <div className="panel-heading">
-            <h3>Estimated Environmental Conditions</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {isDone && estimated && (
-                <span className="pipeline-badge pipeline-badge--proxy">
-                  {Math.round((estimated.confidence ?? 0) * 100)}% confidence
-                </span>
-              )}
-              <p>{isDone ? "Nearest-neighbour inference from latent space" : "—"}</p>
+        {isAnalyzing ? (
+          <div className="demo-transcript" aria-live="polite">
+            <div className="demo-bubble assistant thinking">
+              <span className="demo-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="demo-status">{STAGES[stageIndex]}</span>
             </div>
           </div>
-
-          {isDone && estimated && Object.keys(estimated).length > 0 ? (
-            <>
-              {/* Season + time of day badges */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                {estimated.season && (
-                  <span className="pipeline-badge pipeline-badge--live" style={{ textTransform: "capitalize" }}>
-                    {estimated.season}
-                  </span>
-                )}
-                {estimated.sample_bin && (
-                  <span className="pipeline-badge pipeline-badge--live" style={{ textTransform: "capitalize" }}>
-                    {estimated.sample_bin}
-                  </span>
-                )}
-              </div>
-
-              {/* Numeric env fields */}
-              <div className="metric-list">
-                {ENV_FIELDS.map(({ key, label, unit, format }) => {
-                  const raw = estimated[key];
-                  if (raw === undefined) return null;
-                  const display = format ? format(raw) : `${raw} ${unit}`;
+        ) : (
+          <>
+            {/* Audio Presets Grid */}
+            <div className="analysis-presets-container">
+              <p className="analysis-presets-label">Select a Preset Nature Recording</p>
+              <div className="analysis-presets-grid">
+                {PRESET_SAMPLES.map((preset) => {
+                  const isCurrentPlaying =
+                    previewUrl === preset.audioUrl && previewPlaying;
                   return (
-                    <div key={key} className="metric-row" style={{ alignItems: "center" }}>
-                      <span className="metric-label-row" style={{ width: "100%", justifyContent: "space-between" }}>
-                        <span style={{ color: "var(--text-secondary, #888)", fontSize: "0.78rem" }}>{label}</span>
-                        <strong style={{ fontSize: "0.88rem" }}>{display}</strong>
-                      </span>
+                    <div
+                      key={preset.title}
+                      className="analysis-preset-card"
+                      onClick={() => handleSelectPreset(preset)}
+                    >
+                      <div>
+                        <h3 className="analysis-card-title">{preset.title}</h3>
+                        <p className="analysis-card-tags">{preset.tags}</p>
+                      </div>
+                      <div className="analysis-card-footer">
+                        <button
+                          type="button"
+                          className="analysis-card-play-btn"
+                          onClick={(e) => handleTogglePreview(preset.audioUrl, e)}
+                        >
+                          {isCurrentPlaying ? "⏸ Pause Preview" : "▶ Play Preview"}
+                        </button>
+                        <button type="button" className="analysis-card-action-btn">
+                          Analyze
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
+            </div>
 
-              <p className="metrics-proxy-note" style={{ marginTop: 12 }}>
-                Inferred from top-5 nearest clips in learned latent space.
-                Species labels pending Module B (Stage 3).
-              </p>
-            </>
-          ) : isDone ? (
-            <p className="metrics-proxy-note">
-              latent_clips.npy not found — re-run <code>precompute_latents.py</code> to enable env estimation.
-            </p>
-          ) : (
-            <p className="metrics-proxy-note" style={{ marginTop: 12 }}>
-              Upload an audio file and run analysis to estimate environmental conditions.
-            </p>
-          )}
-        </section>
+            {/* Custom File Upload Card */}
+            <div className="analysis-upload-container">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
 
-        {/* ── Stat cards ── */}
-        <section className="stats-split">
-          <article className="panel stat-card">
-            <p className="stat-label">Soundscape Structure</p>
-            <strong>{stats ? stats.complexity : "—"}</strong>
-            <span>{stats ? `${stats.active_dims} / ${stats.latent_dim} active latent dims` : "Upload audio to analyse"}</span>
-          </article>
-          <article className="panel stat-card">
-            <p className="stat-label">Latent Diversity</p>
-            <strong>{stats ? stats.diversity.toFixed(3) : "—"}</strong>
-            <span>{stats ? `‖z‖ = ${stats.norm}` : "Awaiting input"}</span>
-          </article>
-        </section>
-
-        {/* ── Neural Summary ── */}
-        <section className="panel summary-panel">
-          <div className="panel-heading">
-            <h3>Neural Summary</h3>
-            <p>{isDone ? `${rawLatent?.latent_dim ?? 256}-dim latent` : "—"}</p>
-          </div>
-          <p className="summary-text">
-            {isDone && estimated && Object.keys(estimated).length > 0
-              ? `Module A encoded the clip into a 256-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
-                `Nearest-neighbour lookup estimated ${estimated.season} ${estimated.sample_bin} conditions: ` +
-                `${estimated.temperature_c}°C, ${estimated.humidity_pct}% humidity, ` +
-                `${estimated.wind_speed_ms} m/s wind. ` +
-                `Confidence: ${Math.round((estimated.confidence ?? 0) * 100)}%. ` +
-                `Semantic species labels pending Module B training.`
-              : isDone
-              ? `Module A encoded the clip into a ${stats?.latent_dim ?? 256}-dim latent vector (‖z‖ = ${stats?.norm ?? "—"}). ` +
-                `Run precompute_latents.py to enable environmental condition inference.`
-              : "Upload an audio file and run analysis to generate a neural summary."}
-          </p>
-        </section>
-
-        {/* ── Pipeline Status ── */}
-        <section className="panel pipeline-status-panel">
-          <div className="panel-heading">
-            <h3>Pipeline Status</h3>
-            <p>What's working</p>
-          </div>
-          <div className="pipeline-stage-list">
-            <PipelineStage
-              state="live"
-              label="File upload + browser spectrogram"
-              detail="Client-side — no server needed"
-            />
-            <PipelineStage
-              state="live"
-              label="Audio player"
-              detail="Plays uploaded file immediately"
-            />
-            <PipelineStage
-              state="live"
-              label="VAE encode → latent vector (256-d)"
-              detail={`Module A · VAE · best.pt · ${rawLatent ? `last run: ${rawLatent.latent_dim}-dim` : "ready"}`}
-            />
-            <PipelineStage
-              state={isDone && estimated && Object.keys(estimated).length > 0 ? "live" : "proxy"}
-              label="Environmental condition inference"
-              detail={
-                isDone && estimated && Object.keys(estimated).length > 0
-                  ? `Top-5 nearest neighbours · confidence ${Math.round((estimated.confidence ?? 0) * 100)}%`
-                  : "Requires latent_clips.npy — run precompute_latents.py"
-              }
-            />
-            <PipelineStage
-              state="pending"
-              label="Bioacoustic species labels"
-              detail="Module B · ecological classifier · Stage 3"
-            />
-            <PipelineStage
-              state="pending"
-              label="Audio reconstruction output"
-              detail="Module C · conditioned generator · Stage 3"
-            />
-          </div>
-        </section>
+              {!file ? (
+                <div
+                  className={`analysis-upload-zone${dragging ? " drag-over" : ""}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <span className="analysis-upload-icon">⇪</span>
+                  <h3 className="analysis-upload-title">Drop your recording here</h3>
+                  <p className="analysis-upload-sub">WAV, FLAC, MP3 • CLICK OR DRAG</p>
+                </div>
+              ) : (
+                <div className="analysis-upload-zone" style={{ cursor: "default" }}>
+                  <span className="analysis-upload-icon">◫</span>
+                  <div className="analysis-upload-file-info">
+                    <h3 className="analysis-upload-file-name">{file.name}</h3>
+                    <p className="analysis-upload-file-size">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <div className="analysis-upload-actions">
+                    <button
+                      type="button"
+                      className="analysis-card-action-btn"
+                      onClick={handleAnalyzeUploadedFile}
+                    >
+                      ✦ Analyze Recording
+                    </button>
+                    <button
+                      type="button"
+                      className="analysis-card-play-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Change File
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      <AudioPlayer
-        src={audioUrl}
-        label={file ? file.name : "Media Controller"}
-        detail={file ? undefined : "No file loaded"}
+      <audio
+        ref={previewAudioRef}
+        onEnded={() => setPreviewPlaying(false)}
+        crossOrigin={previewUrl?.startsWith("blob:") ? undefined : "anonymous"}
       />
-    </section>
-  );
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-function WaveBars({ active }) {
-  const base = [10, 24, 44, 62, 51, 18, 37, 55, 29, 8, 40, 59, 32, 15, 48, 24, 11, 31, 57, 63, 54, 19, 29, 55, 36, 7, 24];
-  return (
-    <div className="wave-bars" aria-hidden="true">
-      {base.map((height, i) => (
-        <span
-          key={i}
-          className="wave-bar"
-          style={{ height: `${active ? height : 4}px`, transition: "height 0.6s ease" }}
-        />
-      ))}
-    </div>
-  );
-}
-
-const STAGE_META = {
-  live:    { icon: "✓", cls: "pipeline-stage--live",    label: "LIVE"    },
-  proxy:   { icon: "◑", cls: "pipeline-stage--proxy",   label: "PROXY"   },
-  blocked: { icon: "⊘", cls: "pipeline-stage--blocked", label: "BLOCKED" },
-  pending: { icon: "○", cls: "pipeline-stage--pending", label: "PENDING" },
-};
-
-function PipelineStage({ state, label, detail }) {
-  const meta = STAGE_META[state] ?? STAGE_META.pending;
-  return (
-    <div className={`pipeline-stage ${meta.cls}`}>
-      <span className="pipeline-stage-icon">{meta.icon}</span>
-      <div className="pipeline-stage-body">
-        <span className="pipeline-stage-label">{label}</span>
-        <span className="pipeline-stage-detail">{detail}</span>
-      </div>
-      <span className="pipeline-stage-pill">{meta.label}</span>
     </div>
   );
 }

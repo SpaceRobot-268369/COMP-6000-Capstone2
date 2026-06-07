@@ -275,15 +275,16 @@ layers:
         stage: mvp_1
         status: mvp_candidate
         uses_seed: true
+        uses_weather_controls: true
         checkpoint: null
         description: |
           Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-only retrieval pool from site_257 Bowra dry woodland is filtered by weather label and intensity, then retrieval_seed chooses a deterministic site asset and start offset.
 
-          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. The two thunder backup stems are intentionally not exposed in the frontend/API until the site thunder policy is reliable. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
 
-          Supported site weather types in this branch: rain, wind, and rain+wind, with thunder available only as a cautious backup pool. Site storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+          asset_index: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
@@ -297,7 +298,7 @@ layers:
           - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
           - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
 
-      lucas__smoke_1__curated_assets:
+      murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: lucas
         stage: smoke_1
@@ -376,17 +377,33 @@ layers:
 
   layer_d:
     label: "Layer D — Mixer"
-    default: lucas__smoke_1__layered_mix
+    default: songke__mvp_1__layered_mix
     attempts:
-      lucas__smoke_1__layered_mix:
-        label: "Layered mix (placeholder)"
-        author: lucas
-        stage: smoke_1
-        status: placeholder
+      songke__mvp_1__layered_mix:
+        label: "Layered mix"
+        author: songke
+        stage: mvp_1
+        status: mvp_candidate
         checkpoint: null
-        params: {}
+        description: |
+          Final Layer D mixer for the generation pipeline. Receives upstream
+          Layer A ambient, Layer B weather, and Layer C event WAV stems,
+          normalizes their technical format, aligns them to the target
+          duration, applies gain staging, weather smoothing, event fade
+          smoothing, event band-pass cleanup, and peak protection, then returns
+          the final mixed soundscape WAV with traceable mix metadata.
+        params:
+          default_duration_s: 30.0
+          weather_gain_db: -12.0
+          event_gain_db: -18.0
+          event_activity_envelope: true
+          event_boundary_fade_s: 1.0
+          event_bandpass_hz: [500.0, 8000.0]
+          peak_ceiling: 0.95
         notes:
           - Combines A+B+C outputs into final WAV + explanation JSON.
+          - Current preferred listening configuration is local mix attempt v5.
+          - Handler accepts upstream WAV bytes from a generation orchestrator.
 
   layer_e:
     label: "Layer E — Analysis"
@@ -448,6 +465,26 @@ layers:
           - Parked baseline trained on the original 1,982-segment pool.
           - Probe did not beat the k-NN season baseline on v0 data.
 
+      songke__prod_1__e_c_species_event_detector:
+        label: "Known species event detector - PRODUCTION"
+        author: songke
+        stage: prod_1
+        head: events
+        status: production
+        checkpoint: model/production/layer_e_c_species_event_detector
+        params:
+          threshold: 0.55
+          window_s: 5.0
+          hop_s: 1.0
+          merge_gap_s: 1.0
+          min_event_windows: 7
+        notes:
+          - Production E-C detector promoted from songke__smoke_2__known_species_clap_probe for the online Analysis Mode demo.
+          - Supports 13 known Australian species using frozen LAION-CLAP embeddings plus an MLP probe.
+          - Test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Returns event confidence, species matches, phenology metadata, and an aggregator-ready analysis_report.
+          - The production checkpoint is automatically materialised by the Server B model sync workflow.
+
       songke__smoke_2__known_species_clap_probe:
         label: "Known species events - CLAP probe"
         author: songke
@@ -485,6 +522,25 @@ layers:
           - Reports continuous rain / wind / thunder summaries through observations.weather.
           - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      songke__smoke_3__analysis_aggregator:
+        label: "Analysis Aggregator - deterministic fusion v1"
+        author: songke
+        stage: smoke_3
+        head: aggregator
+        status: smoke_test
+        checkpoint: null
+        params:
+          fusion:
+            ambient_weight_cap: 0.5
+            event_weight_cap: 1.0
+            ambient_fallback_min_confidence: 0.6
+            undetermined_threshold: 0.50
+            conflict_margin: 0.20
+        notes:
+          - Combines E-A ambient, E-B weather, and E-C events reports into analysis_aggregator.v1.
+          - Does not run audio inference or generation.
+          - Used by the orchestrated /analysis/run endpoint, not by the per-head dev picker.
 
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"

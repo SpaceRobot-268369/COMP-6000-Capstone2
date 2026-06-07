@@ -36,6 +36,40 @@ fail() {
   exit 1
 }
 
+move_known_stale_untracked_paths() {
+  # Repo renames can leave DVC-materialised, now-untracked attempt directories
+  # in the long-lived deploy checkout. Move only explicitly-known stale paths
+  # out of the checkout; any other dirty state still fails the deploy.
+  local stale_paths=(
+    "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets"
+  )
+  local backup_root=""
+  local rel_path=""
+  local status_for_path=""
+  local moved=0
+
+  for rel_path in "${stale_paths[@]}"; do
+    [ -e "$rel_path" ] || continue
+
+    status_for_path="$(git status --porcelain -- "$rel_path" || true)"
+    [ -n "$status_for_path" ] || continue
+
+    if printf '%s\n' "$status_for_path" | awk '$1 != "??" { exit 1 }'; then
+      if [ -z "$backup_root" ]; then
+        backup_root="/tmp/server-b-sync-stale-$(date +%Y%m%dT%H%M%S)-$$"
+      fi
+      mkdir -p "$backup_root/$(dirname "$rel_path")"
+      mv "$rel_path" "$backup_root/$rel_path"
+      moved=1
+      warn "Moved stale untracked deploy path to $backup_root/$rel_path"
+    fi
+  done
+
+  if [ "$moved" -eq 1 ]; then
+    log "Known stale untracked deploy paths moved out of checkout"
+  fi
+}
+
 find_dvc() {
   if [ -n "${SERVER_B_DVC_BIN:-}" ]; then
     [ -x "$SERVER_B_DVC_BIN" ] || fail "SERVER_B_DVC_BIN is not executable: $SERVER_B_DVC_BIN"
@@ -64,6 +98,8 @@ ensure_git_checkout() {
 
   current_branch="$(git branch --show-current)"
   [ "$current_branch" = "$main_branch" ] || fail "$deploy_dir is on '$current_branch', expected '$main_branch'"
+
+  move_known_stale_untracked_paths
 
   if [ -n "$(git status --porcelain)" ]; then
     git status --short

@@ -951,7 +951,9 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
-const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
+
+const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind"]);
+
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 const ALLOWED_WIND_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
@@ -1011,6 +1013,126 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
       operation,
       AI_REQUEST_TIMEOUT_MS,
       generationServerFor(layer, attempt),
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+app.post("/api/generation", requireAuth, async (req, res) => {
+  const operation = "orchestrated generation";
+  try {
+    const requestedSeed = Number(req.body?.seed);
+    const requestedDuration = Number(req.body?.duration_s);
+    const season = typeof req.body?.season === "string" ? req.body.season.toLowerCase() : null;
+    const diel = typeof req.body?.diel === "string" ? req.body.diel.toLowerCase() : null;
+    const weatherType = typeof req.body?.weather_type === "string"
+      ? req.body.weather_type.toLowerCase()
+      : "wind";
+    const intensity = typeof req.body?.intensity === "string"
+      ? req.body.intensity.toLowerCase()
+      : "light";
+    const payload = {
+      seed: Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null,
+      duration_s: Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30
+        ? requestedDuration
+        : 30,
+      include_weather: req.body?.include_weather !== false,
+      include_events: req.body?.include_events !== false,
+    };
+    if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
+      payload.season = season;
+      payload.diel = diel;
+    }
+    if (ALLOWED_WEATHER_TYPES.has(weatherType)) {
+      payload.weather_type = weatherType;
+    }
+    if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
+      payload.intensity = intensity;
+    }
+
+    const r = await fetchAi(
+      "/generation/render",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+// Prompt parser (generation front-end). Forwards a raw NL prompt to the
+// LLM-OSS parser and returns the parse-result contract; no audio generated.
+app.post("/api/generation/parse", requireAuth, async (req, res) => {
+  const operation = "prompt parse";
+  try {
+    const prompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
+    const r = await fetchAi(
+      "/generation/parse",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+// Full Analysis Mode orchestration. The backend forwards the uploaded audio to
+// FastAPI, which runs E-A/E-B/E-C and fuses the report through Layer E
+// Aggregator.
+app.post("/api/analysis", requireAuth, async (req, res) => {
+  const operation = "orchestrated analysis";
+  try {
+    const r = await fetchAi(
+      "/analysis/run",
+      {
+        method: "POST",
+        headers: { "content-type": req.headers["content-type"] || "application/octet-stream" },
+        body: req,
+        duplex: "half",
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+// Re-render an analysis report in a chosen tone register (backs the scene-page
+// tone toggle). No detectors re-run — the fused report is supplied by the client.
+app.post("/api/analysis/narrative", requireAuth, async (req, res) => {
+  const operation = "analysis narrative";
+  try {
+    const register = typeof req.body?.register === "string" ? req.body.register : "analytical";
+    const payload = { report: req.body?.report, register };
+    const r = await fetchAi(
+      "/analysis/narrative",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      operation,
     );
     const body = await readAiJson(r, operation);
     if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
