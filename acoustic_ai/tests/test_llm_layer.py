@@ -141,7 +141,7 @@ class ParserTest(unittest.TestCase):
     def test_detect_weather_priority_and_intensity(self):
         self.assertIsNone(_detect_weather("a still summer night"))
         self.assertEqual(_detect_weather("heavy rain")["intensity"], "heavy")
-        self.assertEqual(_detect_weather("a thunderstorm")["weather_type"], "thunder")
+        self.assertEqual(_detect_weather("a thunderstorm")["weather_type"], "rain+wind")
         self.assertEqual(_detect_weather("a gentle breeze")["weather_type"], "wind")
 
     def test_rejected_nulls_all_layers(self):

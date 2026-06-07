@@ -109,7 +109,7 @@ export default function LayerATestPage({
   );
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
-  const usesWeatherControls = layerId === "layer_b";
+  const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).

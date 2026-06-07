@@ -865,7 +865,9 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
-const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind", "thunder", "storm"]);
+
+const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind"]);
+
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
@@ -986,6 +988,30 @@ app.post("/api/generation/parse", requireAuth, async (req, res) => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt }),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+// Full Analysis Mode orchestration. The backend forwards the uploaded audio to
+// FastAPI, which runs E-A/E-B/E-C and fuses the report through Layer E
+// Aggregator.
+app.post("/api/analysis", requireAuth, async (req, res) => {
+  const operation = "orchestrated analysis";
+  try {
+    const r = await fetchAi(
+      "/analysis/run",
+      {
+        method: "POST",
+        headers: { "content-type": req.headers["content-type"] || "application/octet-stream" },
+        body: req,
+        duplex: "half",
       },
       operation,
     );

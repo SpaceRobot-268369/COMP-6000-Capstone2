@@ -127,7 +127,7 @@ def _retrieve_assets(query_text: str, weather_type: WeatherType, top_k: int) -> 
         try:
             from retriever import retrieve_weather_asset
         except ModuleNotFoundError:
-            from acoustic_ai.layers.layer_b.attempts.lucas__smoke_1__curated_assets.code.retriever import (
+            from acoustic_ai.layers.layer_b.attempts.murphy__smoke_1__curated_assets.code.retriever import (
                 retrieve_weather_asset,
             )
 

@@ -26,8 +26,10 @@ AUTHORITATIVE — apply every one; never ignore or contradict them. An empty
   default cell). Valid `season`: spring, summer, autumn, winter. Valid `diel`:
   dawn, morning, afternoon, night.
 - **Layer B (weather) — OFF unless explicitly requested.** If the user names
-  rain, wind, or thunder, KEEP it (this is a real request, not noise). Only the
-  default — when weather is unmentioned — is off.
+  rain, wind, or rain+wind/storm weather, KEEP it (this is a real request, not
+  noise). The current site weather pool exposes only rain, wind, and rain+wind;
+  map thunder/storm wording to rain+wind and mention the correction in `note`.
+  Only the default — when weather is unmentioned — is off.
 - **Layer C (events) — EMPTY unless a species is named or clearly implied.**
 
 Record every default you applied in `filled_defaults` (e.g. `"weather:none"`,
@@ -64,7 +66,7 @@ Emit ONLY this JSON object — no prose, no code fences:
 ```
 
 - `layer_b` is `null` when weather is off; otherwise
-  `{ "weather_type": "rain|wind|thunder", "intensity": "light|medium|heavy", "duration_s": <number, default 10> }`.
+  `{ "weather_type": "rain|wind|rain+wind", "intensity": "light|medium|heavy", "duration_s": <number, default 10> }`.
 - On `rejected`, `layer_a`, `layer_b`, and `layer_c` are all `null`.
 
 ## Examples

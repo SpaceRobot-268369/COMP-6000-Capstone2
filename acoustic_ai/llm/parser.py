@@ -19,7 +19,7 @@ from .skills import load_skill
 
 VALID_SEASONS = {"spring", "summer", "autumn", "winter"}
 VALID_DIELS = {"dawn", "morning", "afternoon", "night"}
-VALID_WEATHER = {"rain", "wind", "thunder"}
+VALID_WEATHER = {"rain", "wind", "rain+wind"}
 VALID_INTENSITIES = {"light", "medium", "heavy"}
 VALID_DENSITY = {"sparse", "medium", "dense"}
 
@@ -47,9 +47,11 @@ def _user_message(prompt: str, findings: list[dict]) -> str:
 # climatically-plausible weather is never dropped by a small model's slip
 # (validation showed a 3B writing the right note but nulling layer_b). Weather
 # type/intensity are trivial to detect by keyword; the LLM stays in charge of
-# the fuzzier coherence work. Priority thunder > rain > wind.
+# the fuzzier coherence work. Priority storm/rain+wind > rain > wind. The
+# current Layer B site pool does not expose thunder directly; thunder/storm
+# language is represented by the closest supported site weather type.
 _WEATHER_TERMS = [
-    ("thunder", ("thunder", "thunderstorm", "storm", "lightning")),
+    ("rain+wind", ("thunder", "thunderstorm", "storm", "lightning", "rain and wind", "wind and rain")),
     ("rain", ("rain", "raining", "rainy", "drizzle", "downpour", "pouring", "showers")),
     ("wind", ("wind", "windy", "breeze", "breezy", "gust", "gusty", "gale")),
 ]
