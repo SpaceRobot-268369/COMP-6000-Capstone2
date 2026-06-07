@@ -222,6 +222,10 @@ export async function generateSoundscape(conditions = {}) {
     include_weather: includeWeather,
     include_events: includeEvents,
     include_stems: conditions.include_stems === true,
+    layer_a_attempt: conditions.layer_a_attempt,
+    layer_b_attempt: conditions.layer_b_attempt,
+    layer_c_attempt: conditions.layer_c_attempt,
+    layer_d_attempt: conditions.layer_d_attempt,
   };
   const res = await fetch(`${API_BASE}/api/generation`, {
     method: "POST",

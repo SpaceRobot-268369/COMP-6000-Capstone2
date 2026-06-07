@@ -184,6 +184,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           {activeInitial.sourceCaption}
         </p>
       )}
+      {activeInitial?.generation?.attempts && (
+        <GenerationModelLine attempts={activeInitial.generation.attempts} />
+      )}
       <div className="immersive-title">
         <div className="immersive-title-words" ref={titleWordsRef} />
       </div>
@@ -228,5 +231,29 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
         initialText={activeInitial?.narration}
       />
     </div>
+  );
+}
+
+function GenerationModelLine({ attempts }) {
+  const rows = [
+    ["A", "Ambient", attempts.layer_a],
+    ["B", "Weather", attempts.layer_b],
+    ["C", "Events", attempts.layer_c],
+    ["D", "Mixer", attempts.layer_d],
+  ].filter(([, , attempt]) => attempt);
+  if (!rows.length) return null;
+  return (
+    <aside className="immersive-model-line" aria-label="Generation models used">
+      <strong>Models used</strong>
+      <div>
+        {rows.map(([letter, label, attempt]) => (
+          <span key={letter}>
+            <b>Layer {letter}</b>
+            <em>{label}</em>
+            <code>{attempt}</code>
+          </span>
+        ))}
+      </div>
+    </aside>
   );
 }

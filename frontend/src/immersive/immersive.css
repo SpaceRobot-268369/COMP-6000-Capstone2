@@ -83,6 +83,53 @@
   text-transform: uppercase; font-size: 10px; letter-spacing: 0.13em;
   font-weight: 600; color: rgba(244, 239, 228, 0.6);
 }
+
+.immersive-page .immersive-model-line {
+  position: absolute; top: 124px; left: 50%; transform: translateX(-50%);
+  z-index: 11; pointer-events: none;
+  max-width: min(860px, calc(100% - 36px));
+  padding: 10px 14px; border-radius: 18px;
+  background: rgba(14, 15, 18, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  color: rgba(244, 239, 228, 0.82);
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: 11px;
+}
+.immersive-page .immersive-model-line strong {
+  display: block;
+  margin-bottom: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: rgba(244, 239, 228, 0.62);
+}
+.immersive-page .immersive-model-line div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.immersive-page .immersive-model-line span {
+  display: grid;
+  gap: 2px;
+  min-width: 130px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.immersive-page .immersive-model-line b,
+.immersive-page .immersive-model-line em {
+  font-style: normal;
+  opacity: 0.72;
+}
+.immersive-page .immersive-model-line code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 [data-theme="light"] .immersive-page .immersive-source-caption {
   color: rgba(28, 26, 22, 0.82);
   background: rgba(248, 245, 238, 0.62);
@@ -90,6 +137,17 @@
   text-shadow: none;
 }
 [data-theme="light"] .immersive-page .immersive-source-tag { color: rgba(28, 26, 22, 0.55); }
+[data-theme="light"] .immersive-page .immersive-model-line {
+  color: rgba(28, 26, 22, 0.82);
+  background: rgba(248, 245, 238, 0.62);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .immersive-page .immersive-model-line strong {
+  color: rgba(28, 26, 22, 0.55);
+}
+[data-theme="light"] .immersive-page .immersive-model-line span {
+  background: rgba(0, 0, 0, 0.05);
+}
 
 /* ---- dev control panel ---- */
 .immersive-page .immersive-panel {

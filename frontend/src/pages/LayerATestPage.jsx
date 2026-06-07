@@ -52,6 +52,11 @@ export default function LayerATestPage({
   const [weatherDuration, setWeatherDuration] = useState(10);
   const [layerDIncludeWeather, setLayerDIncludeWeather] = useState(true);
   const [layerDIncludeEvents, setLayerDIncludeEvents] = useState(true);
+  const [layerDAttempts, setLayerDAttempts] = useState({
+    layer_a: "",
+    layer_b: "",
+    layer_c: "",
+  });
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -114,6 +119,29 @@ export default function LayerATestPage({
     () => currentLayer?.attempts.find((a) => a.id === attemptId),
     [currentLayer, attemptId],
   );
+  const generationLayersById = useMemo(() => {
+    const byId = {};
+    for (const layer of registry?.layers || []) {
+      byId[layer.id] = layer;
+    }
+    return byId;
+  }, [registry]);
+
+  useEffect(() => {
+    if (!registry) return;
+    setLayerDAttempts((current) => {
+      const next = { ...current };
+      for (const layerKey of ["layer_a", "layer_b", "layer_c"]) {
+        const layer = generationLayersById[layerKey];
+        const attempts = layer?.attempts || [];
+        if (!attempts.length) continue;
+        if (!attempts.some((attempt) => attempt.id === next[layerKey])) {
+          next[layerKey] = layer.default || attempts[0].id;
+        }
+      }
+      return next;
+    });
+  }, [registry, generationLayersById]);
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
@@ -257,6 +285,10 @@ export default function LayerATestPage({
             include_weather: layerDIncludeWeather,
             include_events: layerDIncludeEvents,
             include_stems: true,
+            layer_a_attempt: layerDAttempts.layer_a,
+            layer_b_attempt: layerDAttempts.layer_b,
+            layer_c_attempt: layerDAttempts.layer_c,
+            layer_d_attempt: attemptId,
           })
         : await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
@@ -429,6 +461,32 @@ export default function LayerATestPage({
                       step={1}
                       hint="seconds"
                       onChange={setWeatherDuration}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {isLayerD && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">Upstream models</p>
+                  <div className="dev-controls-section-grid three-col">
+                    <LabeledSelect
+                      label="Layer A attempt"
+                      value={layerDAttempts.layer_a}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_a: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_a)}
+                    />
+                    <LabeledSelect
+                      label="Layer B attempt"
+                      value={layerDAttempts.layer_b}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_b: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_b)}
+                    />
+                    <LabeledSelect
+                      label="Layer C attempt"
+                      value={layerDAttempts.layer_c}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_c: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_c)}
                     />
                   </div>
                 </section>
@@ -932,6 +990,14 @@ function LabeledSelect({ label, value, options, onChange }) {
       </select>
     </label>
   );
+}
+
+function attemptOptionsForLayer(layer) {
+  const attempts = layer?.attempts || [];
+  return attempts.map((attempt) => ({
+    value: attempt.id,
+    label: `${attempt.label} (${attempt.stage}, ${attempt.status})`,
+  }));
 }
 
 function getProgressText(progress, status) {
