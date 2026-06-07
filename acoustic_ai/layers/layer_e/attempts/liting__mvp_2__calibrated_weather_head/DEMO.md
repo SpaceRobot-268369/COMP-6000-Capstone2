@@ -52,6 +52,12 @@ debug/e_b_weather_mvp2/report.json
 debug/e_b_weather_mvp2/validation_predictions.csv
 ```
 
+Reviewer-facing sample clips and sample results:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/REVIEW_TEST_CASES.md
+```
+
 ## How To Explain It
 
 The system is not generating weather audio here. It is analysing an uploaded

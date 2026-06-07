@@ -26,11 +26,21 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SITE_ROOT = REPO_ROOT / "resources" / "site_257_bowra-dry-a"
-DEFAULT_QUOTA = SITE_ROOT / "layer_c_retrieval_event_library_v2" / "species_quota_v2.csv"
+LIB_ROOT = (
+    REPO_ROOT
+    / "acoustic_ai"
+    / "layers"
+    / "layer_c"
+    / "attempts"
+    / "burger__mvp_2__retrieval_v2_library"
+    / "data"
+    / "media_asset_bank"
+)
+DEFAULT_QUOTA = LIB_ROOT / "species_quota_v2.csv"
 DEFAULT_ANNOTATIONS = SITE_ROOT / "all_items_annotation"
 DEFAULT_ITEMS = SITE_ROOT / "site_257_filtered_items.csv"
 DEFAULT_ALL_ITEMS = SITE_ROOT / "site_257_all_items.csv"
-DEFAULT_OUT = SITE_ROOT / "layer_c_retrieval_event_library_v2"
+DEFAULT_OUT = LIB_ROOT
 PRIOR_LIBRARIES = (
     SITE_ROOT
     / "layer_c_retrieval_top8_species_candidates_v1"

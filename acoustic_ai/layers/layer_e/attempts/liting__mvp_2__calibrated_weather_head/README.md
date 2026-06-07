@@ -45,6 +45,9 @@ debug/e_b_weather_mvp2/
 Binary checkpoints are DVC-tracked after the run. Metrics and README metadata
 are git-tracked.
 
+Reviewer-facing sample clips and sample results are listed in
+`REVIEW_TEST_CASES.md`.
+
 ## Analysis Policy Output
 
 The registry handler returns both the older frontend-friendly `summary` block

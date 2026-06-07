@@ -1,5 +1,0 @@
-# Review-package media are generated locally and should be DVC-tracked only
-# when promoted to a retained dataset artifact.
-review_package_*/**/*.wav
-review_package_*/**/*.png
-review_package_*/**/*.webm

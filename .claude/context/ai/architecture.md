@@ -47,11 +47,18 @@ happens only after explicit sign-off.
 ## Generation Mode
 
 ```
-User env request
-    └── Module A: retrieve ambient bed clips (NN search in latent_clips.npy)
-    └── Module B: select + mix weather assets (wind/rain intensity → gain/EQ)
-    └── Module C: generate event clips with AudioGen LoRA (per-species/context LoRAs, conditioned by env/time → event timeline)
-    └── Module D: combine layers → WAV + spectrogram + explanation JSON
+User Env Request (Raw Prompt / Options)
+    └── [Prompt Parser] (LLM-OSS + policy: pre-fill defaults → validity gate → decode)
+            ├── Layer A parameters: Cell (season, diel) or ambient-focused prompt
+            ├── Layer B parameters: Structured JSON (weather type, intensity, duration)
+            └── Layer C parameters: Species checklist and density/timeline
+                    │
+                    ├──► Module A: Generate ambient bed clip (AudioLDM2 LoRA per-cell bank)
+                    ├──► Module B: Retrieve and normalize weather stems (wind/rain site assets)
+                    ├──► Module C: Generate/retrieve event timeline (AudioGen LoRA / audited bank)
+                    │
+                    ▼
+            Module D: Combine layers → WAV + spectrogram + explanation JSON
 ```
 
 ## Analysis Mode

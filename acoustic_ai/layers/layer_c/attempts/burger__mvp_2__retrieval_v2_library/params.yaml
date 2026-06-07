@@ -1,0 +1,30 @@
+method: retrieval
+species_common_name: Splendid Fairywren
+event_type: layer_c_retrieval_v2_library
+retrieval_index: acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv
+duration_s: 60.0
+count: 12
+default_cell: summer_morning
+default_season: summer
+default_diel: morning
+ecological_mode: true
+enable_variation: false
+ambient_gain_db: -26.0
+events_gain_db: -2.0
+cells:
+  spring_dawn: {}
+  spring_morning: {}
+  spring_afternoon: {}
+  spring_night: {}
+  summer_dawn: {}
+  summer_morning: {}
+  summer_afternoon: {}
+  summer_night: {}
+  autumn_dawn: {}
+  autumn_morning: {}
+  autumn_afternoon: {}
+  autumn_night: {}
+  winter_dawn: {}
+  winter_morning: {}
+  winter_afternoon: {}
+  winter_night: {}
