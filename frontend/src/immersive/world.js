@@ -56,20 +56,55 @@ function makeTreePair(seed) {
     g.addColorStop(1, 'rgba(255,255,255,0)');
     gc.fillStyle = g; gc.beginPath(); gc.arc(x, y, r, 0, 7); gc.fill();
   }
+  // feather the very bottom of both canvases so trunks/foliage dissolve into the
+  // ground contact instead of ending in a hard flat cut. The side feather keeps
+  // foreground planes from exposing their rectangular texture bounds on desktop.
+  for (const ctx of [gb, gc]) {
+    ctx.globalCompositeOperation = 'destination-out';
+    const fade = ctx.createLinearGradient(0, H, 0, H - 58);
+    fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fade; ctx.fillRect(0, H - 58, W, 58);
+    const side = 72;
+    const fadeLeft = ctx.createLinearGradient(0, 0, side, 0);
+    fadeLeft.addColorStop(0, 'rgba(0,0,0,1)'); fadeLeft.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fadeLeft; ctx.fillRect(0, 0, side, H);
+    const fadeRight = ctx.createLinearGradient(W, 0, W - side, 0);
+    fadeRight.addColorStop(0, 'rgba(0,0,0,1)'); fadeRight.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fadeRight; ctx.fillRect(W - side, 0, side, H);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   const mk = (cv) => new THREE.CanvasTexture(cv);
   return { bare: mk(cb), canopy: mk(cc) };
 }
 
 function makeBushTexture(seed) {
-  const W = 1024, H = 220, g = document.createElement('canvas');
+  const W = 1024, H = 256, g = document.createElement('canvas');
   g.width = W; g.height = H; const ctx = g.getContext('2d');
   const rnd = mulberry32(seed);
-  for (let i = 0; i < 90; i++) {
-    const x = rnd() * W, y = H - rnd() * 90, r = 18 + rnd() * 46;
+  // soft blob clumps forming an irregular brush silhouette
+  for (let i = 0; i < 120; i++) {
+    const x = rnd() * W, y = H * (0.32 + rnd() * 0.62), r = 16 + rnd() * 48;
     const rg = ctx.createRadialGradient(x, y, 1, x, y, r);
-    rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    rg.addColorStop(0, 'rgba(255,255,255,0.9)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
+  // feather the bottom and top edges so the strip dissolves into the ground and
+  // the air instead of ending in a hard horizontal cut at the plane edge
+  ctx.globalCompositeOperation = 'destination-out';
+  const fadeBottom = ctx.createLinearGradient(0, H, 0, H * 0.74);
+  fadeBottom.addColorStop(0, 'rgba(0,0,0,1)'); fadeBottom.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeBottom; ctx.fillRect(0, H * 0.74, W, H * 0.26);
+  const fadeTop = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+  fadeTop.addColorStop(0, 'rgba(0,0,0,1)'); fadeTop.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeTop; ctx.fillRect(0, 0, W, H * 0.5);
+  const side = 140;
+  const fadeLeft = ctx.createLinearGradient(0, 0, side, 0);
+  fadeLeft.addColorStop(0, 'rgba(0,0,0,1)'); fadeLeft.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeLeft; ctx.fillRect(0, 0, side, H);
+  const fadeRight = ctx.createLinearGradient(W, 0, W - side, 0);
+  fadeRight.addColorStop(0, 'rgba(0,0,0,1)'); fadeRight.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fadeRight; ctx.fillRect(W - side, 0, side, H);
+  ctx.globalCompositeOperation = 'source-over';
   const t = new THREE.CanvasTexture(g); return t;
 }
 
@@ -126,8 +161,8 @@ export function buildWorld(scene, opts) {
   const placeTree = (x, z, h, vi) => {
     const v = variants[vi % variants.length];
     const aspect = 220 / 520, w = h * aspect;
-    const bm = new THREE.MeshBasicMaterial({ map: v.bare, transparent: true, depthWrite: false, fog: true, color: BARE_BASE });
-    const cm = new THREE.MeshBasicMaterial({ map: v.canopy, transparent: true, depthWrite: false, fog: true, opacity: 0.5, color: CANOPY_BASE });
+    const bm = new THREE.MeshBasicMaterial({ map: v.bare, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, color: BARE_BASE });
+    const cm = new THREE.MeshBasicMaterial({ map: v.canopy, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, opacity: 0.5, color: CANOPY_BASE });
     track(bm, WORLD._materials); track(cm, WORLD._materials);
     const geo = track(new THREE.PlaneGeometry(w, h), WORLD._geometries); geo.translate(0, h / 2, 0);
     const bare = new THREE.Mesh(geo, bm); bare.position.set(x, 0, z);
@@ -142,22 +177,32 @@ export function buildWorld(scene, opts) {
   placeTree(33, -40, 21, 3); placeTree(48, -64, 17, 0);
   // mid band
   for (let i = 0; i < 8; i++) placeTree((R() - 0.5) * 80, -42 - R() * 36, 13 + R() * 5, i);
+  // transition band — bridges the mid->far gap so depth recedes continuously
+  for (let i = 0; i < 10; i++) placeTree((R() - 0.5) * 116, -74 - R() * 24, 10 + R() * 5, i);
   // far band, dissolving into fog
   for (let i = 0; i < 14; i++) placeTree((R() - 0.5) * 150, -90 - R() * 80, 9 + R() * 5, i);
 
-  // undergrowth strips
+  // undergrowth — low scattered clumps along the ground, each its own small
+  // plane so the foreground reads as broken-up brush instead of one big slab.
   const bush = track(makeBushTexture(101), WORLD._textures);
   const BUSH_BASE = 0x04060a;
-  const bushMat = new THREE.MeshBasicMaterial({ map: bush, transparent: true, depthWrite: false, fog: true, color: BUSH_BASE });
-  for (const z of [-14, -30, -52]) {
-    const bw = 220, bh = (220 / 1024) * 220 * 4;
-    const bgeo = track(new THREE.PlaneGeometry(bw, bh), WORLD._geometries);
-    const bmat = track(bushMat.clone(), WORLD._materials);
-    const m = new THREE.Mesh(bgeo, bmat);
-    m.geometry.translate(0, bh / 2, 0); m.position.set(0, 0, z); g.add(m);
-    WORLD.treeMats.push({ mat: m.material, base: new THREE.Color(BUSH_BASE), z });
-  }
-  bushMat.dispose();   // only its clones are used in the scene
+  WORLD.bushMats = [];   // tinted per-season toward the vegetation colour
+  const BR = mulberry32(303);
+  const placeBush = (x, z, w) => {
+    const h = w * 0.34;                          // keep clumps low to the ground
+    const bgeo = track(new THREE.PlaneGeometry(w, h), WORLD._geometries);
+    bgeo.translate(0, h / 2, 0);
+    const bmat = track(new THREE.MeshBasicMaterial({
+      map: bush, transparent: true, alphaTest: 0.01, depthWrite: false, fog: true, color: BUSH_BASE,
+    }), WORLD._materials);
+    const m = new THREE.Mesh(bgeo, bmat); m.position.set(x, 0, z); g.add(m);
+    WORLD.bushMats.push({ mat: bmat, base: new THREE.Color(BUSH_BASE), z });
+  };
+  // a near apron framing the lower edge, then a scattered mid layer that also
+  // grounds the foreground tree bases so they don't look pasted onto the floor.
+  // depth is heavily staggered so no row of clump bases ever lines up into a seam
+  for (let i = 0; i < 8; i++) placeBush((BR() - 0.5) * 78, -8 - BR() * 30, 28 + BR() * 30);
+  for (let i = 0; i < 10; i++) placeBush((BR() - 0.5) * 130, -30 - BR() * 38, 24 + BR() * 32);
 
   // AMBIENT PARTICLES -----------------------------------------------------
   const pgeo = track(new THREE.BufferGeometry(), WORLD._geometries);
@@ -188,6 +233,7 @@ export function buildWorld(scene, opts) {
   WORLD.rain.visible = false; scene.add(WORLD.rain);
   WORLD.rainGeo = rgeo;
 
+  WORLD.wind = 0;          // placeholder — control is wired but has no visual yet
   WORLD.curParticle = null;
   return WORLD;
 }
@@ -250,21 +296,33 @@ export function setRain(WORLD, on, intensity) {
   WORLD.rainIntensity = intensity;
   const count = on ? Math.floor(RAIN_MAX * intensity) : 0;
   WORLD.rainGeo.setDrawRange(0, count * 2);
+  // heavier rain isn't just denser — the streaks are bolder too, so a small
+  // slider move reads at a glance instead of only nudging the drop count
+  WORLD.rainMat.opacity = 0.16 + intensity * 0.4;
 }
 
 export function updateRain(WORLD, dt) {
   if (!WORLD.rain.visible) return;
-  const count = Math.floor(RAIN_MAX * (WORLD.rainIntensity || 0.6));
+  const intensity = WORLD.rainIntensity || 0.6;
+  const count = Math.floor(RAIN_MAX * intensity);
   const pos = WORLD.rPos;
+  const speedK = 0.7 + intensity * 0.6;        // heavier rain falls faster …
+  const lenK = 0.7 + intensity * 0.8;          // … in longer streaks
   for (let i = 0; i < count; i++) {
     const r = WORLD.rData[i];
-    r.y -= r.sp * dt;
+    r.y -= r.sp * speedK * dt;
     if (r.y < 0) { r.y = 55 + Math.random() * 8; r.x = (Math.random() - 0.5) * 90; r.z = -100 + Math.random() * 110; }
     const i6 = i * 6, slant = 1.4;
     pos[i6] = r.x; pos[i6 + 1] = r.y; pos[i6 + 2] = r.z;
-    pos[i6 + 3] = r.x - slant * 0.15; pos[i6 + 4] = r.y - r.len * 2.2; pos[i6 + 5] = r.z;
+    pos[i6 + 3] = r.x - slant * 0.15; pos[i6 + 4] = r.y - r.len * 2.2 * lenK; pos[i6 + 5] = r.z;
   }
   WORLD.rainGeo.attributes.position.needsUpdate = true;
+}
+
+// Placeholder: stores the intensity so the UI control stays wired, but wind has
+// no visual effect yet. Rain and the ambient particle field are unaffected.
+export function setWind(WORLD, intensity) {
+  WORLD.wind = Math.max(0, Math.min(1, intensity || 0));
 }
 
 // free all GPU resources this world created

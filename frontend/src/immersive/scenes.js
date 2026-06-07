@@ -55,22 +55,22 @@ const TIME_CFG = {
 const SEASON_CFG = {
   spring: {
     particle: 'pollen', pCount: 200, pColor: [1.00, 0.96, 0.82], pSize: 3.0,
-    fogTint: [0.62, 0.72, 0.66], foliage: 0.72,
+    fogTint: [0.62, 0.72, 0.66], foliage: 0.72, vegColor: [0.30, 0.46, 0.22],
     dBright: 0.02, dTemp: 0.00, dSat: 0.06,
   },
   summer: {
     particle: 'dust', pCount: 170, pColor: [1.00, 0.92, 0.72], pSize: 2.4, shimmer: 1.0,
-    fogTint: [0.74, 0.74, 0.58], foliage: 1.00,
+    fogTint: [0.74, 0.74, 0.58], foliage: 1.00, vegColor: [0.24, 0.40, 0.18],
     dBright: 0.06, dTemp: 0.07, dSat: 0.09,
   },
   autumn: {
     particle: 'leaves', pCount: 140, pColor: [0.90, 0.52, 0.24], pSize: 4.2,
-    fogTint: [0.66, 0.56, 0.44], foliage: 0.48,
+    fogTint: [0.66, 0.56, 0.44], foliage: 0.48, vegColor: [0.42, 0.30, 0.15],
     dBright: -0.02, dTemp: 0.06, dSat: 0.00,
   },
   winter: {
     particle: 'snow', pCount: 360, pColor: [0.92, 0.96, 1.00], pSize: 3.4,
-    fogTint: [0.70, 0.74, 0.82], foliage: 0.04,
+    fogTint: [0.70, 0.74, 0.82], foliage: 0.04, vegColor: [0.36, 0.38, 0.40],
     dBright: -0.11, dTemp: -0.13, dSat: -0.46,
   },
 };
@@ -109,6 +109,7 @@ export function buildScene(season, time) {
     shaft: t.shaft,
     sunEl: t.sunEl,
     // vegetation / particles
+    vegColor: s.vegColor.slice(),
     particle: s.particle,
     pCount: s.pCount,
     pColor: s.pColor.slice(),

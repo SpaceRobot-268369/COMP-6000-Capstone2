@@ -12,14 +12,14 @@
 import * as THREE from 'three';
 import { PostPipeline } from './post.js';
 import {
-  buildWorld, setupParticles, updateParticles, setRain, updateRain, disposeWorld,
+  buildWorld, setupParticles, updateParticles, setRain, updateRain, setWind, disposeWorld,
 } from './world.js';
 import { buildScene, SEASON_LABEL, TIME_LABEL } from './scenes.js';
 import { createTypography } from './typography.js';
 import { createAudio } from './audio.js';
 
 const DEFAULT_INITIAL = {
-  season: 'autumn', time: 'dawn', rain: false, rainAmount: 0.6, thunder: false, narration: null,
+  season: 'autumn', time: 'dawn', rain: false, rainAmount: 0.6, wind: 0, thunder: false, narration: null,
 };
 
 export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, audioEl, initial }) {
@@ -54,14 +54,14 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
 
   // ---- state ----
   const APP = {
-    state: { season: init.season, time: init.time, rain: init.rain, rainAmount: init.rainAmount },
+    state: { season: init.season, time: init.time, rain: init.rain, rainAmount: init.rainAmount, wind: init.wind },
     narration: init.narration,
     cur: null, from: null, to: null, tx: 1, txDur: 2.6,
     flashT: -10, boltShown: false, pendingParticle: false, particleSwapped: true,
   };
 
   // ---- param interpolation ----
-  const A = ['skyTop', 'skyHorizon', 'sunColor', 'sunDir', 'fog', 'ambient'];
+  const A = ['skyTop', 'skyHorizon', 'sunColor', 'sunDir', 'fog', 'ambient', 'vegColor'];
   const S = ['haze', 'brightness', 'stars', 'moon', 'sunSize', 'exposure', 'temp', 'saturation', 'foliage', 'contrast', 'shaft', 'sunEl'];
   function lerpParams(a, b, k) {
     const o = {
@@ -116,16 +116,33 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     // colour so the foreground isn't dead black under a luminous morning.
     // dawn / night keep brightness < 0.95 → atmo 0 → trees stay dramatically dark.
     const atmo = Math.min(0.6, Math.max(0, p.brightness - 0.95) * 0.7);
-    if (atmo > 0.001) {
-      WORLD.treeMats.forEach(o => {
-        o.mat.color.setRGB(
-          o.base.r + (p.fog[0] - o.base.r) * atmo,
-          o.base.g + (p.fog[1] - o.base.g) * atmo,
-          o.base.b + (p.fog[2] - o.base.b) * atmo);
-      });
-    } else {
-      WORLD.treeMats.forEach(o => { o.mat.color.copy(o.base); });
-    }
+    WORLD.treeMats.forEach(o => {
+      // aerial perspective: the distant treeline dissolves toward the horizon
+      // fog so it never reads as a hard dark band against the bright horizon
+      // (the "line"); the close hero trees keep their crushed-black drama.
+      const d = -o.z;
+      const aerial = Math.min(0.78, Math.max(0, (d - 46) / 82) * 0.78);
+      const k = Math.max(atmo, aerial);
+      o.mat.color.setRGB(
+        o.base.r + (p.fog[0] - o.base.r) * k,
+        o.base.g + (p.fog[1] - o.base.g) * k,
+        o.base.b + (p.fog[2] - o.base.b) * k);
+    });
+
+    // undergrowth takes on the season's vegetation colour in daylight (green in
+    // spring/summer, amber in autumn, sparse grey in winter); at dawn/night the
+    // low light keeps it crushed to silhouette like the trees
+    const vegK = Math.min(0.9, Math.max(0, p.brightness - 0.96) * 1.6);
+    WORLD.bushMats.forEach(o => {
+      const d = -o.z;
+      const aerial = Math.min(0.58, Math.max(0, (d - 18) / 78) * 0.58);
+      const k = Math.max(vegK, aerial);
+      const target = vegK >= aerial ? p.vegColor : p.fog;
+      o.mat.color.setRGB(
+        o.base.r + (target[0] - o.base.r) * k,
+        o.base.g + (target[1] - o.base.g) * k,
+        o.base.b + (target[2] - o.base.b) * k);
+    });
 
     // particles pick up the key light
     const kt = 0.5 * Math.max(p.shaft, p.moon);
@@ -137,6 +154,9 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     const c = post.matComposite.uniforms;
     c.uExposure.value = p.exposure; c.uTemp.value = p.temp; c.uSaturation.value = p.saturation;
     c.uContrast.value = p.contrast;
+    c.uFogColor.value.setRGB(p.fog[0], p.fog[1], p.fog[2]);
+    c.uSkyColor.value.setRGB(p.skyHorizon[0], p.skyHorizon[1], p.skyHorizon[2]);
+    c.uAtmosphere.value = Math.min(1, 0.55 + p.haze * 0.45);
     // night leans on bloom + vignette for the moody read
     APP.baseBloom = 0.78 + p.moon * 0.35;
     APP.shaftBase = p.shaft;
@@ -171,27 +191,71 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     if (e < 0 || e > 1.5) return 0;
     const gate = Math.min(e / 0.045, 1);
     const f = 0.95 * Math.exp(-e * 4.6) + 0.5 * Math.exp(-Math.max(e - 0.13, 0) * 6.5);
-    return gate * f;
+    // a fast electric shimmer that decays within the first ~0.25s gives the
+    // flash an unstable, alive quality instead of a flat exponential fade
+    const flicker = 1 + 0.16 * Math.sin(e * 95) * Math.exp(-e * 9);
+    return gate * f * flicker;
   }
 
-  // ---- lightning bolt (optional, ~half the time) ----
+  // ---- lightning bolt (optional, fired on ~60% of strikes) ----
   const bctx = boltEl.getContext('2d');
+  let boltTimers = [];
   function sizeBolt() { boltEl.width = VW; boltEl.height = VH; }
   sizeBolt();
   function drawBolt() {
     const W = boltEl.width, H = boltEl.height;
     bctx.clearRect(0, 0, W, H);
-    bctx.strokeStyle = 'rgba(220,235,255,0.92)';
-    bctx.shadowColor = 'rgba(180,210,255,0.9)'; bctx.shadowBlur = 26;
-    let x = W * (0.3 + Math.random() * 0.4), y = -20;
-    const seg = H / 14; bctx.lineWidth = 2.4; bctx.beginPath(); bctx.moveTo(x, y);
-    while (y < H * 0.62) { y += seg * (0.7 + Math.random() * 0.6); x += (Math.random() - 0.5) * W * 0.09; bctx.lineTo(x, y); }
-    bctx.stroke(); bctx.shadowBlur = 0;
+    bctx.lineCap = 'round'; bctx.lineJoin = 'round';
+
+    // jagged main channel from the top down into the treeline
+    const seg = H / 16;
+    const channel = [[W * (0.32 + Math.random() * 0.36), -20]];
+    const endY = H * (0.55 + Math.random() * 0.18);
+    let cx = channel[0][0], cy = channel[0][1];
+    while (cy < endY) {
+      cy += seg * (0.7 + Math.random() * 0.6);
+      cx += (Math.random() - 0.5) * W * 0.085;
+      channel.push([cx, cy]);
+    }
+
+    // short forks branching off interior nodes — what sells it as lightning
+    const forks = [];
+    for (let i = 2; i < channel.length - 1; i++) {
+      if (Math.random() < 0.3) {
+        let fx = channel[i][0], fy = channel[i][1];
+        const branch = [[fx, fy]];
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        const n = 2 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) {
+          fx += dir * W * (0.02 + Math.random() * 0.05);
+          fy += seg * (0.45 + Math.random() * 0.5);
+          branch.push([fx, fy]);
+        }
+        forks.push(branch);
+      }
+    }
+
+    const stroke = (pts, lw, color, blur) => {
+      bctx.strokeStyle = color; bctx.lineWidth = lw;
+      bctx.shadowColor = 'rgba(170,200,255,0.95)'; bctx.shadowBlur = blur;
+      bctx.beginPath(); bctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) bctx.lineTo(pts[i][0], pts[i][1]);
+      bctx.stroke();
+    };
+
+    // two passes: a wide soft-blue halo, then a thin hot-white core
+    stroke(channel, 8, 'rgba(150,190,255,0.28)', 38);
+    forks.forEach((f) => stroke(f, 4, 'rgba(150,190,255,0.22)', 26));
+    stroke(channel, 2.4, 'rgba(238,245,255,0.98)', 14);
+    forks.forEach((f) => stroke(f, 1.4, 'rgba(224,236,255,0.9)', 10));
+
+    bctx.shadowBlur = 0;
   }
 
   // ---- initial scene + title ----
   setScene(init.season, init.time, true);
   if (init.rain) setRain(WORLD, true, init.rainAmount);
+  setWind(WORLD, init.wind);
   const titleTimer = setTimeout(
     () => typo.play(SEASON_LABEL[APP.state.season], TIME_LABEL[APP.state.time], APP.narration),
     600,
@@ -256,10 +320,17 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     WORLD.skyMat.uniforms.uFlash.value = flash;
     WORLD.skyMat.uniforms.uTime.value = t;
     post.matComposite.uniforms.uFlash.value = flash * 0.5;
-    // bolt: fire once per strike, ~55% of strikes
+    // bolt: fire once per strike, ~60% of strikes
     if (e >= 0 && e < 0.05 && !APP.boltShown) {
       APP.boltShown = true;
-      if (Math.random() < 0.55) { drawBolt(); boltEl.style.opacity = '0.9'; setTimeout(() => { boltEl.style.opacity = '0'; }, 120); }
+      if (Math.random() < 0.6) {
+        drawBolt();
+        // multi-step flicker fade so the strike pulses like a real return
+        // stroke instead of a single hard on/off frame
+        boltTimers.forEach(clearTimeout); boltTimers = [];
+        [[0, 0.95], [45, 0.45], [80, 0.92], [140, 0.3], [210, 0]].forEach(
+          ([ms, op]) => boltTimers.push(setTimeout(() => { boltEl.style.opacity = String(op); }, ms)));
+      }
     }
 
     // camera breath (+ loose audio sway)
@@ -322,6 +393,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     cancelAnimationFrame(rafId);
     clearTimeout(titleTimer); clearTimeout(settle1); clearTimeout(settle2);
     if (thunderTimer) clearTimeout(thunderTimer);
+    boltTimers.forEach(clearTimeout);
     window.removeEventListener('resize', onResize);
     if (ro) ro.disconnect();
     typo.dispose();
@@ -339,6 +411,7 @@ export function createImmersive({ sceneEl, boltEl, titleWordsEl, titleScrimEl, a
     setTime: (t) => setScene(APP.state.season, t),
     setRain: (on) => { APP.state.rain = on; setRain(WORLD, on, APP.state.rainAmount); },
     setRainAmount: (v) => { APP.state.rainAmount = v; if (APP.state.rain) setRain(WORLD, true, v); },
+    setWind: (v) => { APP.state.wind = v; setWind(WORLD, v); },
     thunder: () => { APP.flashT = clock.getElapsedTime(); APP.boltShown = false; },
     replayTitle: () => typo.play(SEASON_LABEL[APP.state.season], TIME_LABEL[APP.state.time], APP.narration),
     setNarration: (text) => { APP.narration = text; },
