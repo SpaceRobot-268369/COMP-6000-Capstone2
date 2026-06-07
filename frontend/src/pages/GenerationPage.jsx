@@ -11,7 +11,6 @@ import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
 
 const LAYER_A = "layer_a";
-const DEFAULT_SEED = 42;
 
 function generatedWavUrl(audioB64) {
   if (!audioB64) return "";
@@ -100,10 +99,11 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
     }, 18000)
   );
 
+  const randomSeed = Math.floor(Math.random() * 2147483648);
   let generation;
   try {
     generation = await generateAttempt(LAYER_A, attemptId, {
-      seed: DEFAULT_SEED,
+      seed: randomSeed,
       season: layerA.season,
       diel: layerA.time,
     });
