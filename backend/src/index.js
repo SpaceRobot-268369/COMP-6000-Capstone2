@@ -947,6 +947,7 @@ app.post("/api/generation", requireAuth, async (req, res) => {
         : 30,
       include_weather: req.body?.include_weather !== false,
       include_events: req.body?.include_events !== false,
+      include_stems: req.body?.include_stems === true,
     };
     if (ALLOWED_SEASONS.has(season) && ALLOWED_DIELS.has(diel)) {
       payload.season = season;

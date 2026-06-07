@@ -2116,6 +2116,71 @@ textarea {
   min-width: 0;
 }
 
+.dev-layer-d-stem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.dev-layer-d-stem-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dev-layer-d-expected-note {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dev-layer-d-expected-note h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.dev-layer-d-expected-note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0.78;
+}
+
+.dev-layer-d-stem-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dev-layer-d-model-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.dev-layer-d-model-line small {
+  opacity: 0.7;
+}
+
+.dev-layer-d-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.dev-layer-d-chip-row code {
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .dev-result-body {
   display: grid;
   gap: 20px;

@@ -543,6 +543,7 @@ def orchestrate_generation(
     layer_b_attempt: str | None = None,
     layer_c_attempt: str | None = None,
     layer_d_attempt: str | None = None,
+    include_stems: bool = False,
 ) -> dict:
     """Run generation layers A/B/C and hand their in-memory WAVs to Layer D."""
 
@@ -618,6 +619,12 @@ def orchestrate_generation(
             "layer_c": layer_c.get("metadata", {}) if layer_c else None,
         },
     }
+    if include_stems:
+        final["_stems"] = {
+            "layer_a": layer_a,
+            "layer_b": layer_b,
+            "layer_c": layer_c,
+        }
     return final
 
 

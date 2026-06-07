@@ -2,15 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PromptChat from "../components/PromptChat.jsx";
 import {
-  fetchLayerRegistry,
-  generateAttempt,
+  generateSoundscape,
   parseGenerationPrompt,
 } from "../lib/api.js";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
-
-const LAYER_A = "layer_a";
 
 function generatedWavUrl(audioB64) {
   if (!audioB64) return "";
@@ -30,32 +27,27 @@ function normalizeLayerA(parseResult, fallback) {
   };
 }
 
-function layerASourceCaption({ metadata, parseResult }) {
-  const cell = metadata?.cell || [metadata?.season, metadata?.diel].filter(Boolean).join("_");
-  const prompt = metadata?.prompt;
+function layerDSourceCaption({ metadata, parseResult }) {
+  const attempts = metadata?.orchestration?.attempts || {};
+  const attemptSummary = [
+    attempts.layer_a ? `A ${attempts.layer_a}` : "",
+    attempts.layer_b ? `B ${attempts.layer_b}` : "",
+    attempts.layer_c ? `C ${attempts.layer_c}` : "",
+    attempts.layer_d ? `D ${attempts.layer_d}` : "",
+  ].filter(Boolean).join(", ");
   const note = parseResult?.note;
   return [
-    "Layer A generated ambient bed",
-    cell ? `cell ${cell}` : "",
-    prompt ? `locked prompt: ${prompt}` : "",
+    "Layer D final mix",
+    attemptSummary ? `attempts: ${attemptSummary}` : "",
     note ? `parser note: ${note}` : "",
-  ].filter(Boolean).join(" · ");
+  ].filter(Boolean).join(" - ");
 }
 
 function composeGenerationNarration(resolved) {
   return composeNarration(resolved).replace(
     " This is what the recording remembers.",
-    " This is the ambient bed Layer A imagines for the scene.",
+    " This is the layered soundscape the system composes for the scene.",
   );
-}
-
-async function defaultLayerAAttempt() {
-  const registry = await fetchLayerRegistry();
-  const layerA = registry.layers?.find((layer) => layer.id === LAYER_A);
-  if (!layerA?.default) {
-    throw new Error("Layer A default attempt is not available.");
-  }
-  return layerA.default;
 }
 
 /** Build a concise human-readable summary of the parsed scene from the layer contracts. */
@@ -78,34 +70,41 @@ function summarizeParsedScene(parseResult) {
 }
 
 async function generateFromParsed(parseResult, localParams, onStatus, registerTimer) {
-  onStatus("Choosing the Layer A season and light…");
+  onStatus("Choosing the Layer A/B/C contracts...");
   const layerA = normalizeLayerA(parseResult, localParams);
-  const attemptId = await defaultLayerAAttempt();
+  const layerB = parseResult?.layer_b || null;
+  const layerC = parseResult?.layer_c || null;
 
-  onStatus("Generating the ambient bed…");
+  onStatus("Generating A/B/C stems...");
   const genTimer1 = registerTimer(
     setTimeout(() => {
-      onStatus("Generating the ambient bed (running model inference, this takes time)…");
+      onStatus("Generating A/B/C stems (running model inference, this takes time)...");
     }, 3500)
   );
   const genTimer2 = registerTimer(
     setTimeout(() => {
-      onStatus("Still generating the ambient bed, please wait…");
+      onStatus("Mixing the final soundscape through Layer D...");
     }, 9000)
   );
   const genTimer3 = registerTimer(
     setTimeout(() => {
-      onStatus("Almost done, finalizing the audio render…");
+      onStatus("Almost done, finalizing the audio render...");
     }, 18000)
   );
 
   const randomSeed = Math.floor(Math.random() * 2147483648);
   let generation;
   try {
-    generation = await generateAttempt(LAYER_A, attemptId, {
+    generation = await generateSoundscape({
       seed: randomSeed,
+      duration_s: Number(layerB?.duration_s) || 30,
       season: layerA.season,
       diel: layerA.time,
+      layer_a: { season: layerA.season, diel: layerA.time },
+      layer_b: layerB,
+      layer_c: layerC,
+      include_weather: Boolean(layerB),
+      include_events: Boolean(layerC?.species?.length),
     });
   } finally {
     clearTimeout(genTimer1);
@@ -113,10 +112,10 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
     clearTimeout(genTimer3);
   }
 
-  onStatus("Preparing the immersive scene…");
+  onStatus("Preparing the immersive scene...");
   const audioUrl = generatedWavUrl(generation.audio_b64);
   if (!audioUrl) {
-    throw new Error("Layer A returned no audio.");
+    throw new Error("Layer D generation returned no audio.");
   }
 
   const resolved = {
@@ -129,19 +128,19 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
     narration: composeGenerationNarration(resolved),
     audioUrl,
     generatedAudio: true,
-    resolvedPrompt: `${layerA.season} ${layerA.time} Layer A ambient bed`,
-    sourceCaption: layerASourceCaption({
+    resolvedPrompt: summarizeParsedScene(parseResult) || `${layerA.season} ${layerA.time} Layer D mix`,
+    sourceCaption: layerDSourceCaption({
       metadata: generation.metadata,
       parseResult,
     }),
     generation: {
-      mode: "layer_a_ambient_until_layer_d",
-      layer: LAYER_A,
-      attempt: attemptId,
+      mode: "abc_layer_d_mix",
+      layer: "layer_d",
       parser: parseResult,
       metadata: generation.metadata,
       sampleRate: generation.sample_rate,
       durationS: generation.duration_s,
+      attempts: generation.metadata?.orchestration?.attempts,
     },
   };
 }
@@ -161,12 +160,12 @@ function fallbackResolvedScene(text, localParams, reason) {
 }
 
 /* The generation page flow:
-   1. User types a prompt → submit
+   1. User types a prompt -> submit
    2. Prompt is parsed by the LLM parser
    3a. If "ok": proceed directly to generation
    3b. If "corrected": show the parser's note and let user confirm or cancel
    3c. If "rejected": show the rejection message and return to prompt
-   4. After confirmation → generate Layer A audio → navigate to immersive scene */
+   4. After confirmation -> generate A/B/C stems and Layer D mix -> navigate to immersive scene */
 export default function GenerationPage() {
   const navigate = useNavigate();
   // prompt | parsing | confirm | generating | rejected
@@ -205,14 +204,14 @@ export default function GenerationPage() {
     setConfirmNote("");
     setConfirmSummary("");
     setPendingParse(null);
-    setStatusText("Reading your scene with the prompt parser…");
+    setStatusText("Reading your scene with the prompt parser...");
     setPhase("parsing");
 
     clearTimers();
 
     const parseTimer = registerTimer(
       setTimeout(() => {
-        setStatusText("Reading your scene with the prompt parser (interpreting description)…");
+        setStatusText("Reading your scene with the prompt parser (interpreting description)...");
       }, 2000)
     );
 
@@ -246,7 +245,7 @@ export default function GenerationPage() {
       return;
     }
 
-    // status === "ok" — proceed directly to generation
+    // status === "ok" -> proceed directly to generation
     await runGeneration(parseResult, params);
   }
 
@@ -272,7 +271,7 @@ export default function GenerationPage() {
   }
 
   async function runGeneration(parseResult, params) {
-    setStatusText("Choosing the Layer A season and light…");
+    setStatusText("Choosing the Layer A/B/C contracts...");
     setPhase("generating");
 
     try {
@@ -293,8 +292,8 @@ export default function GenerationPage() {
         }, 450)
       );
     } catch (err) {
-      const message = err.message || "Layer A generation failed.";
-      setStatusText("Generation encountered an issue. Loading fallback scene…");
+      const message = err.message || "Layer D generation failed.";
+      setStatusText("Generation encountered an issue. Loading fallback scene...");
       const resolvedState = fallbackResolvedScene(userMessage, params, message);
       registerTimer(
         setTimeout(() => {
