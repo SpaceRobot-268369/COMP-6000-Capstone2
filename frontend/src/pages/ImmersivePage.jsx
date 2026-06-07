@@ -168,6 +168,13 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     <div className="immersive-page">
       <div className="immersive-scene" ref={sceneRef} />
       <div className="immersive-scrim" ref={titleScrimRef} />
+
+      {activeInitial?.sourceCaption && (
+        <p className="immersive-source-caption">
+          <span className="immersive-source-tag">Source recording</span>
+          {activeInitial.sourceCaption}
+        </p>
+      )}
       <div className="immersive-title">
         <div className="immersive-title-words" ref={titleWordsRef} />
       </div>

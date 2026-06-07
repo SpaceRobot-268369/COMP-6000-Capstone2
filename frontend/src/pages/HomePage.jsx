@@ -2,60 +2,53 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
+import { ambientForCell } from "../demo/sampleCatalog.js";
+
+/* The presets are real Bowra dry-woodland recordings (Layer A `expected/` bank),
+   served by the backend straight from the repo checkout. Each card analyses a
+   genuine site recording for its season×diel cell — no placeholder audio. The
+   `audioUrl` + `sourceCaption` come from the sample catalog so the immersive
+   scene plays the real clip and shows where it came from. */
+function buildPreset({ title, tags, season, time, events }) {
+  const sample = ambientForCell(season, time);
+  return {
+    title,
+    tags,
+    audioUrl: sample.audioUrl,
+    sourceCaption: sample.sourceCaption,
+    resolved: { season, time, rain: false, rainAmount: 0, thunder: false, events },
+  };
+}
 
 const PRESET_SAMPLES = [
-  {
-    title: "Misty Autumn Dawn",
-    tags: "Cool Mist • Light Rain • Birdsong",
-    audioUrl: "https://actions.google.com/sounds/v1/ambient/morning_birds.ogg",
-    resolved: {
-      season: "autumn",
-      time: "dawn",
-      rain: true,
-      rainAmount: 0.4,
-      thunder: false,
-      events: ["birdsong", "rain"],
-    },
-  },
-  {
-    title: "Still Summer Night",
-    tags: "Dense Heat • Soft Breeze • Crickets",
-    audioUrl: "https://actions.google.com/sounds/v1/ambient/crickets_chirping.ogg",
-    resolved: {
-      season: "summer",
-      time: "night",
-      rain: false,
-      rainAmount: 0,
-      thunder: false,
-      events: ["crickets", "insects"],
-    },
-  },
-  {
-    title: "Gusty Winter Afternoon",
-    tags: "Low Sun • Howling Wind • Thunder",
-    audioUrl: "https://actions.google.com/sounds/v1/weather/wind_constant_howling.ogg",
-    resolved: {
-      season: "winter",
-      time: "afternoon",
-      rain: false,
-      rainAmount: 0,
-      thunder: true,
-      events: ["wind", "thunder"],
-    },
-  },
-  {
-    title: "Heavy Summer Downpour",
-    tags: "Warm Night • Torrential Rain • Storm",
-    audioUrl: "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
-    resolved: {
-      season: "summer",
-      time: "night",
-      rain: true,
-      rainAmount: 0.9,
-      thunder: true,
-      events: ["rain", "thunder"],
-    },
-  },
+  buildPreset({
+    title: "Autumn Dawn",
+    tags: "Mild Air • Dry Woodland • Dawn Chorus",
+    season: "autumn",
+    time: "dawn",
+    events: ["birdsong"],
+  }),
+  buildPreset({
+    title: "Summer Night",
+    tags: "Warm Night • Dry Air • Insects",
+    season: "summer",
+    time: "night",
+    events: ["insects", "crickets"],
+  }),
+  buildPreset({
+    title: "Spring Afternoon",
+    tags: "Warm Light • Light Breeze • Birdsong",
+    season: "spring",
+    time: "afternoon",
+    events: ["birdsong"],
+  }),
+  buildPreset({
+    title: "Winter Morning",
+    tags: "Cold Air • Bare Branches • Sparse Calls",
+    season: "winter",
+    time: "morning",
+    events: ["birdsong"],
+  }),
 ];
 
 const STAGES = [
@@ -134,6 +127,7 @@ export default function HomePage() {
       ...preset.resolved,
       narration,
       audioUrl: preset.audioUrl,
+      sourceCaption: preset.sourceCaption,
     };
 
     startAnalysis(resolvedState);

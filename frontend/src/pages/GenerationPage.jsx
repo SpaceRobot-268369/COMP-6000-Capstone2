@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PromptChat from "../components/PromptChat.jsx";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
+import { ambientForCell } from "../demo/sampleCatalog.js";
 
 // Staged "thinking" lines shown while the scene resolves, in order.
 const GEN_STAGES = [
@@ -33,8 +34,12 @@ export default function GenerationPage() {
   function handleSubmit(text) {
     const params = resolvePrompt(text);
     const narration = composeNarration(params);
+    // Layer D (mixing) and the LLM-OSS scene writer aren't built yet, so stand
+    // in with the real Layer A recording for the resolved season×diel cell: it
+    // gives the immersive scene actual audio + a sample-grounded source caption.
+    const sample = ambientForCell(params.season, params.time);
     setUserMessage(text);
-    setResolved({ ...params, narration });
+    setResolved({ ...params, narration, ...sample });
     setStageIndex(0);
     setPhase("generating");
 
@@ -46,7 +51,7 @@ export default function GenerationPage() {
     });
     timersRef.current.push(
       setTimeout(() => {
-        const resolvedState = { ...params, narration };
+        const resolvedState = { ...params, narration, ...sample };
         const performNavigation = () => {
           navigate("/immersive", {
             state: { resolved: resolvedState, fromDemo: true, backPath: "/analysis" },
