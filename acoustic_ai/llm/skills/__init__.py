@@ -4,7 +4,7 @@ Skills are the per-job instruction sets, authored as **separate markdown
 files** in this directory (the static system message for each LLM job). The
 dynamic job payload (raw prompt / fused JSON / gate findings) is passed as the
 user message at call time — never baked into the file. See
-.claude/context/ai/llm_layer_implementation_plan.md §2.1.
+../llm_layer_implementation_plan.md §2.1.
 
 The current `*.md` files are PLACEHOLDER stubs (owner: Lucas authors the real
 skills later). Wiring runs against these stubs and swaps in the authored

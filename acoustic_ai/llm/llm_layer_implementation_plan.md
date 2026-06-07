@@ -3,12 +3,12 @@
 > **Scope:** stand up the in-process LLM-OSS service on serverB and expose the
 > APIs the generation/analysis workflows need. This is the **how/sequence**;
 > the **what/why** (model choice, VRAM budget, rationale) lives in
-> [llm_layer_config.md](llm_layer_config.md). Policies that govern behavior:
-> [prompt_parser_policy.md](prompt_parser_policy.md) (parser) and
-> [analysis_synthesis_policy.md](analysis_synthesis_policy.md) (report writer).
+> [llm_layer_config.md](../../.claude/context/ai/llm_layer_config.md). Policies that govern behavior:
+> [prompt_parser_policy.md](../../.claude/context/ai/prompt_parser_policy.md) (parser) and
+> [analysis_synthesis_policy.md](../../.claude/context/ai/analysis_synthesis_policy.md) (report writer).
 >
 > **Status at start of plan:** the module scaffold
-> [`acoustic_ai/llm/`](../../../acoustic_ai/llm/) exists (config, service,
+> [`acoustic_ai/llm/`](./) exists (config, service,
 > prompt stubs, README) but is **not wired into any endpoint** and its deps are
 > **not installed**. Nothing calls it yet.
 >
@@ -43,12 +43,12 @@
 
 | Constraint | Source | Consequence |
 |---|---|---|
-| In-process, no new port | [llm_layer_config.md §3](llm_layer_config.md) | LLM is a Python module call, not an HTTP service. APIs ride the existing `:8000` app. |
+| In-process, no new port | [llm_layer_config.md §3](../../.claude/context/ai/llm_layer_config.md) | LLM is a Python module call, not an HTTP service. APIs ride the existing `:8000` app. |
 | One model serves both consumers | parser + report policies | Single `LLMService` singleton; parser and report writer share it. |
-| 16 GB GPU, shared with audio | [llm_layer_config.md §4](llm_layer_config.md) | 4-bit 3B resident (~2.5 GB). Validate headroom before enabling pre-warm. |
+| 16 GB GPU, shared with audio | [llm_layer_config.md §4](../../.claude/context/ai/llm_layer_config.md) | 4-bit 3B resident (~2.5 GB). Validate headroom before enabling pre-warm. |
 | Base models load from HF Hub, not DVC | confirmed in `layer_a .../handler.py` (`from_pretrained("cvssp/audioldm2")`) | The Qwen/Phi weights are pulled from HF Hub and cached — **not** DVC-tracked. Only trained checkpoints are DVC. |
-| LLM does no reasoning | [analysis_synthesis_policy.md §3](analysis_synthesis_policy.md) | Aggregator fusion + phenology checks stay deterministic. LLM only extracts/encodes/renders. |
-| Parse must precede (and gate) generation | [prompt_parser_policy.md §3,§5](prompt_parser_policy.md) | A standalone parse step is required so reject/correct happens before the GPU runs. |
+| LLM does no reasoning | [analysis_synthesis_policy.md §3](../../.claude/context/ai/analysis_synthesis_policy.md) | Aggregator fusion + phenology checks stay deterministic. LLM only extracts/encodes/renders. |
+| Parse must precede (and gate) generation | [prompt_parser_policy.md §3,§5](../../.claude/context/ai/prompt_parser_policy.md) | A standalone parse step is required so reject/correct happens before the GPU runs. |
 
 ---
 
@@ -117,7 +117,7 @@ Skills are versionable as files (`skills/parser/v1.md`, …) for A/B iteration.
 
 ### 3.1 `POST /generation/parse` — NEW (FastAPI `:8000`)
 
-Runs the three-stage parser ([prompt_parser_policy.md](prompt_parser_policy.md)).
+Runs the three-stage parser ([prompt_parser_policy.md](../../.claude/context/ai/prompt_parser_policy.md)).
 **No audio generated.**
 
 ```jsonc
@@ -161,7 +161,7 @@ aggregator produces the fused JSON, call the report writer to attach prose.
 ```
 
 - Faithfulness guard: validate the narrative introduces no species/number
-  absent from `report`; reject + retry on a miss ([llm_layer_config.md §6](llm_layer_config.md)).
+  absent from `report`; reject + retry on a miss ([llm_layer_config.md §6](../../.claude/context/ai/llm_layer_config.md)).
 - `register` is driven by the **scene-page tone toggle** (§3.5). Default
   analytical (dev) / immersive (demo) per policy.
 
@@ -230,7 +230,7 @@ scene page.
       file** under `acoustic_ai/llm/skills/` (§2.1). The real skills — parser
       skill (3-stage contract) and report skill (two registers, few-shotting the
       canonical samples from
-      [analysis_synthesis_policy.md §5](analysis_synthesis_policy.md)) — are
+      [analysis_synthesis_policy.md §5](../../.claude/context/ai/analysis_synthesis_policy.md)) — are
       written later. Wiring (Phases 3–4) can proceed against placeholder skill
       files and swap in the authored ones when ready.
 
@@ -326,7 +326,7 @@ Keep model-dependent tests serverB-only (local Mac is MPS, not the deploy target
 
 ## 8. Deploy
 
-Standard serverB flow ([on_demand_ai_worker.md](../setup/server/on_demand_ai_worker.md)):
+Standard serverB flow ([on_demand_ai_worker.md](../../.claude/context/setup/server/on_demand_ai_worker.md)):
 
 - [ ] Merge to `main` → CICD `sync-server-b-models` runs `pip install -r
       acoustic_ai/requirements.txt` (picks up `bitsandbytes` etc.), `dvc pull`,
@@ -356,7 +356,7 @@ calls it, and `AI_LLM_PREWARM` defaults off.
 ## 10. Dependencies & sequencing
 
 - **Hard prerequisite for the full validity gate:** the **species phenology
-  table** ([analysis_synthesis_policy.md §7](analysis_synthesis_policy.md)) does
+  table** ([analysis_synthesis_policy.md §7](../../.claude/context/ai/analysis_synthesis_policy.md)) does
   not exist yet. Parser Stages 1 + 3 and the report writer do **not** need it;
   Stage 2's fauna-plausibility check does. Sequence: ship parse with
   domain/biome + coarse season checks, then tighten the gate once the table

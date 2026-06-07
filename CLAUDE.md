@@ -127,7 +127,6 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
     │   ├── prompt_parser_policy.md          # Generation front-end: LLM-OSS parser — pre-fill defaults + validity gate + layer decoding
     │   ├── analysis_synthesis_policy.md    # Layer E: aggregator fusion + LLM-OSS report policy + per-head pass standards
     │   ├── llm_layer_config.md             # LLM-OSS serving: in-process model choice + VRAM budget + guardrails (powers parser + report writer)
-    │   ├── llm_layer_implementation_plan.md # LLM-OSS build plan: phased serverB rollout + API surface (/generation/parse, analyze narrative)
     │   ├── distillation_strategy.md
     │   ├── runbooks/
     │   │   ├── layer_a_smoke_1_spring_night.md
@@ -167,7 +166,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | **Prompt parser policy** (LLM-OSS generation front-end: pre-fill defaults, validity/coherence gate, layer-contract decoding) | [.claude/context/ai/prompt_parser_policy.md](.claude/context/ai/prompt_parser_policy.md) |
 | **Analysis synthesis policy** (Layer E aggregator fusion, LLM-OSS report registers, per-head pass standards, phenology table) | [.claude/context/ai/analysis_synthesis_policy.md](.claude/context/ai/analysis_synthesis_policy.md) |
 | **LLM-OSS layer config** (in-process model choice, serving stack, VRAM budget, guardrails, upgrade lever) | [.claude/context/ai/llm_layer_config.md](.claude/context/ai/llm_layer_config.md) |
-| **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [.claude/context/ai/llm_layer_implementation_plan.md](.claude/context/ai/llm_layer_implementation_plan.md) |
+| **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [acoustic_ai/llm/llm_layer_implementation_plan.md](acoustic_ai/llm/llm_layer_implementation_plan.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
