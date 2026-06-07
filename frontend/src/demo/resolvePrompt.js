@@ -10,6 +10,7 @@
    - time   ∈ {dawn, morning, afternoon, night}  (default dawn)
    - rain        : boolean
    - rainAmount  : 0.15–1   (light → heavy)
+   - wind        : 0–1      (calm → gale)
    - thunder     : boolean
    - events      : string[] — natural-language noun phrases for the narration
 */
@@ -42,6 +43,7 @@ const EVENT_WORDS = [
 
 const RAIN_WORDS = ['rain', 'rainy', 'raining', 'drizzle', 'shower', 'showers', 'downpour', 'wet', 'storm', 'stormy', 'thunderstorm'];
 const THUNDER_WORDS = ['thunder', 'thundery', 'lightning', 'storm', 'stormy', 'thunderstorm'];
+const WIND_WORDS = ['wind', 'windy', 'breeze', 'breezy', 'gust', 'gusts', 'gusty', 'blustery', 'blowing'];
 
 // Match on whole words so e.g. autumn's "fall" doesn't fire inside "falling"
 // (which is a winter/snow cue), and "light" doesn't fire inside "first light".
@@ -88,10 +90,17 @@ export function resolvePrompt(raw) {
     else if (has(text, ['drizzle', 'faint', 'gentle', 'soft'])) rainAmount = 0.35;
   }
 
+  let wind = 0;
+  if (has(text, WIND_WORDS)) {
+    wind = 0.5;
+    if (has(text, ['gale', 'gusty', 'gusts', 'blustery', 'howling', 'strong', 'fierce'])) wind = 0.85;
+    else if (has(text, ['breeze', 'breezy', 'gentle', 'soft', 'light', 'faint'])) wind = 0.3;
+  }
+
   const events = [];
   for (const [words, phrase] of EVENT_WORDS) {
     if (has(text, words) && !events.includes(phrase)) events.push(phrase);
   }
 
-  return { season, time, rain, rainAmount, thunder, events, raw: String(raw || '').trim() };
+  return { season, time, rain, rainAmount, wind, thunder, events, raw: String(raw || '').trim() };
 }

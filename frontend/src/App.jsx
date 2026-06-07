@@ -56,9 +56,9 @@ export default function App() {
   useEffect(() => {
     const path = location.pathname;
     document.body.classList.remove("theme-analysis", "theme-generation");
-    if (path === "/analysis" || path === "/dev/analysis") {
+    if (path === "/generation" || path === "/dev/analysis") {
       document.body.classList.add("theme-analysis");
-    } else if (path === "/generation" || path === "/dev/layers") {
+    } else if (path === "/analysis" || path === "/dev/layers") {
       document.body.classList.add("theme-generation");
     }
     return () => {
@@ -197,11 +197,11 @@ export default function App() {
               </NavLink>
               <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 <span className="nav-icon">◫</span>
-                <span>Analysis</span>
+                <span>Generation</span>
               </NavLink>
               <NavLink to="/generation" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 <span className="nav-icon">✦</span>
-                <span>Generation</span>
+                <span>Analysis</span>
               </NavLink>
             </div>
 
@@ -304,8 +304,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/about" replace />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how-it-works" element={<PipelinePage />} />
-          <Route path="/analysis" element={<HomePage />} />
-          <Route path="/generation" element={<GenerationPage />} />
+          <Route path="/analysis" element={<GenerationPage />} />
+          <Route path="/generation" element={<HomePage />} />
           {/* Transformation is out of scope for the demo — redirect any stale links. */}
           <Route path="/transformation" element={<Navigate to="/about" replace />} />
           <Route path="/immersive" element={<ImmersivePage />} />

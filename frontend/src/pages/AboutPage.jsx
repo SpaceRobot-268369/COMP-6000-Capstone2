@@ -13,7 +13,7 @@ const workflows = [
   {
     icon: "◫",
     title: "Analysis",
-    to: "/",
+    to: "/generation",
     tagline: "Decode what's in a recording",
     description:
       "Upload any ecoacoustic recording. Three detector heads run in parallel on the raw mixture — ambient context (k-NN against the learned latent index), weather intensity, and species/event onsets — then aggregate into a single report. The raw spectrogram is computed in-browser from the audio file without needing a server.",
@@ -27,7 +27,7 @@ const workflows = [
   {
     icon: "✦",
     title: "Generation",
-    to: "/generation",
+    to: "/analysis",
     tagline: "Synthesise a soundscape from conditions",
     description:
       "Set environmental conditions and the model composes a speculative soundscape layer by layer: an ambient bed (Layer A), weather sounds (Layer B), and species events (Layer C), combined by a mixer (Layer D). Today the ambient bed is fully generative; the remaining layers are being built out.",
@@ -55,7 +55,7 @@ const layers = [
   { step: "A", label: "Ambient bed", detail: "AudioLDM2 LoRA · per-cell bank (16 season×diel)", status: "live" },
   { step: "B", label: "Weather", detail: "Curated wind/rain assets · parameter mixing", status: "placeholder" },
   { step: "C", label: "Events", detail: "AudioGen LoRA per species · 16 kHz native", status: "smoke" },
-  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "placeholder" },
+  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "smoke" },
   { step: "E", label: "Analysis", detail: "Ambient similarity + weather + event detectors", status: "partial" },
 ];
 
@@ -76,8 +76,8 @@ export default function AboutPage() {
             Queensland, Australia.
           </p>
           <div className="intro-hero-links">
-            <Link to="/" className="intro-cta-primary">Start Analysis →</Link>
-            <Link to="/generation" className="intro-cta-ghost">Try Generation →</Link>
+            <Link to="/generation" className="intro-cta-primary">Start Analysis →</Link>
+            <Link to="/analysis" className="intro-cta-ghost">Try Generation →</Link>
           </div>
         </div>
         <div className="intro-hero-art" aria-hidden="true">

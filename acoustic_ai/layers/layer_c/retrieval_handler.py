@@ -118,6 +118,7 @@ def generate(
     season: str | None = None,
     diel: str | None = None,
     species_common_name: str | None = None,
+    duration_s: float | None = None,
     **_: object,
 ) -> dict:
     """Generate a frontend-ready 60s Layer C retrieval demo."""
@@ -125,7 +126,9 @@ def generate(
     params = state.params
     run_seed = int(seed if seed is not None else params.get("seed", 42))
     species = str(species_common_name or params["species_common_name"])
-    duration_s = float(params.get("duration_s", 60.0))
+    duration_s = float(
+        duration_s if duration_s is not None else params.get("duration_s", 60.0)
+    )
     count = int(params.get("count", 10))
     season = season or params.get("default_season", "summer")
     diel = diel or params.get("default_diel", "morning")

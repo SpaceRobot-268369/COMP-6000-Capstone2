@@ -195,7 +195,7 @@ export default function HomePage() {
       setTimeout(() => {
         const performNavigation = () => {
           navigate("/immersive", {
-            state: { resolved: resolvedState, fromDemo: true, backPath: "/analysis" },
+            state: { resolved: resolvedState, fromDemo: true, backPath: "/generation" },
           });
         };
 

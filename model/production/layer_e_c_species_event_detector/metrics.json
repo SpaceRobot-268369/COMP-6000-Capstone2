@@ -1,0 +1,675 @@
+{
+  "best_epoch": 460,
+  "train_counts": {
+    "ninox_boobook": 159,
+    "laughing_kookaburra": 160,
+    "rhipidura_leucophrys": 154,
+    "psophodes_cristatus": 164,
+    "cincloramphus_mathewsi": 164,
+    "podargus_strigoides": 154,
+    "red_capped_robin": 154,
+    "anas_superciliosa": 129,
+    "australian_raven": 154,
+    "peaceful_dove": 164,
+    "galah": 154,
+    "crested_bellbird": 154,
+    "rainbow_bee_eater": 154
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 2.5698482990264893,
+      "train_accuracy": 0.08176412433385849,
+      "val_accuracy": 0.07746478873239436,
+      "val_macro_f1": 0.011060834590246354
+    },
+    {
+      "epoch": 10,
+      "train_loss": 2.492669105529785,
+      "train_accuracy": 0.4207135736942291,
+      "val_accuracy": 0.33568075117370894,
+      "val_macro_f1": 0.26228272925105506
+    },
+    {
+      "epoch": 20,
+      "train_loss": 2.3663132190704346,
+      "train_accuracy": 0.5282458066940308,
+      "val_accuracy": 0.45305164319248825,
+      "val_macro_f1": 0.3942241307977667
+    },
+    {
+      "epoch": 30,
+      "train_loss": 2.1892988681793213,
+      "train_accuracy": 0.5867195129394531,
+      "val_accuracy": 0.48826291079812206,
+      "val_macro_f1": 0.4531785280059132
+    },
+    {
+      "epoch": 40,
+      "train_loss": 1.9763277769088745,
+      "train_accuracy": 0.6392467617988586,
+      "val_accuracy": 0.5469483568075117,
+      "val_macro_f1": 0.521158542569037
+    },
+    {
+      "epoch": 50,
+      "train_loss": 1.7476093769073486,
+      "train_accuracy": 0.7115956544876099,
+      "val_accuracy": 0.6173708920187794,
+      "val_macro_f1": 0.6043158615633446
+    },
+    {
+      "epoch": 60,
+      "train_loss": 1.5370043516159058,
+      "train_accuracy": 0.7651139497756958,
+      "val_accuracy": 0.6666666666666666,
+      "val_macro_f1": 0.6535297801269875
+    },
+    {
+      "epoch": 70,
+      "train_loss": 1.3484593629837036,
+      "train_accuracy": 0.792864203453064,
+      "val_accuracy": 0.6807511737089202,
+      "val_macro_f1": 0.6676752620741991
+    },
+    {
+      "epoch": 80,
+      "train_loss": 1.192750334739685,
+      "train_accuracy": 0.8007928729057312,
+      "val_accuracy": 0.687793427230047,
+      "val_macro_f1": 0.6734881931196575
+    },
+    {
+      "epoch": 90,
+      "train_loss": 1.0646328926086426,
+      "train_accuracy": 0.8161545991897583,
+      "val_accuracy": 0.6971830985915493,
+      "val_macro_f1": 0.6865000553505352
+    },
+    {
+      "epoch": 100,
+      "train_loss": 0.9671211242675781,
+      "train_accuracy": 0.8171457052230835,
+      "val_accuracy": 0.7065727699530516,
+      "val_macro_f1": 0.6960983495156594
+    },
+    {
+      "epoch": 110,
+      "train_loss": 0.8820099830627441,
+      "train_accuracy": 0.8325074315071106,
+      "val_accuracy": 0.7112676056338029,
+      "val_macro_f1": 0.7022677828746424
+    },
+    {
+      "epoch": 120,
+      "train_loss": 0.8015287518501282,
+      "train_accuracy": 0.8379583954811096,
+      "val_accuracy": 0.7206572769953051,
+      "val_macro_f1": 0.7117214224921036
+    },
+    {
+      "epoch": 130,
+      "train_loss": 0.7412910461425781,
+      "train_accuracy": 0.8444004058837891,
+      "val_accuracy": 0.7253521126760564,
+      "val_macro_f1": 0.717719441330735
+    },
+    {
+      "epoch": 140,
+      "train_loss": 0.6901453733444214,
+      "train_accuracy": 0.8518335223197937,
+      "val_accuracy": 0.7323943661971831,
+      "val_macro_f1": 0.7221703720064927
+    },
+    {
+      "epoch": 150,
+      "train_loss": 0.6396714448928833,
+      "train_accuracy": 0.8671952486038208,
+      "val_accuracy": 0.7323943661971831,
+      "val_macro_f1": 0.7212568873778479
+    },
+    {
+      "epoch": 160,
+      "train_loss": 0.6066185235977173,
+      "train_accuracy": 0.8746283650398254,
+      "val_accuracy": 0.7276995305164319,
+      "val_macro_f1": 0.7190608142092927
+    },
+    {
+      "epoch": 170,
+      "train_loss": 0.5607856512069702,
+      "train_accuracy": 0.8830525279045105,
+      "val_accuracy": 0.7276995305164319,
+      "val_macro_f1": 0.7180522936373064
+    },
+    {
+      "epoch": 180,
+      "train_loss": 0.5400117635726929,
+      "train_accuracy": 0.8865212798118591,
+      "val_accuracy": 0.7253521126760564,
+      "val_macro_f1": 0.7153927775398715
+    },
+    {
+      "epoch": 190,
+      "train_loss": 0.507337212562561,
+      "train_accuracy": 0.8929633498191833,
+      "val_accuracy": 0.7230046948356808,
+      "val_macro_f1": 0.7135685246359336
+    },
+    {
+      "epoch": 200,
+      "train_loss": 0.48329371213912964,
+      "train_accuracy": 0.8999009132385254,
+      "val_accuracy": 0.7206572769953051,
+      "val_macro_f1": 0.7079192508335297
+    },
+    {
+      "epoch": 210,
+      "train_loss": 0.4498777389526367,
+      "train_accuracy": 0.9028741121292114,
+      "val_accuracy": 0.7230046948356808,
+      "val_macro_f1": 0.7101904617449455
+    },
+    {
+      "epoch": 220,
+      "train_loss": 0.43509986996650696,
+      "train_accuracy": 0.9108027815818787,
+      "val_accuracy": 0.7206572769953051,
+      "val_macro_f1": 0.7074588238058541
+    },
+    {
+      "epoch": 230,
+      "train_loss": 0.41368547081947327,
+      "train_accuracy": 0.9152626395225525,
+      "val_accuracy": 0.7230046948356808,
+      "val_macro_f1": 0.709159944063344
+    },
+    {
+      "epoch": 240,
+      "train_loss": 0.39922961592674255,
+      "train_accuracy": 0.9207136034965515,
+      "val_accuracy": 0.7206572769953051,
+      "val_macro_f1": 0.7064750641112644
+    },
+    {
+      "epoch": 250,
+      "train_loss": 0.38089579343795776,
+      "train_accuracy": 0.9241823554039001,
+      "val_accuracy": 0.7230046948356808,
+      "val_macro_f1": 0.7089162380749183
+    },
+    {
+      "epoch": 260,
+      "train_loss": 0.3634070158004761,
+      "train_accuracy": 0.9276511669158936,
+      "val_accuracy": 0.7276995305164319,
+      "val_macro_f1": 0.7127989564789002
+    },
+    {
+      "epoch": 270,
+      "train_loss": 0.3546152114868164,
+      "train_accuracy": 0.9306243658065796,
+      "val_accuracy": 0.7300469483568075,
+      "val_macro_f1": 0.7155075155254875
+    },
+    {
+      "epoch": 280,
+      "train_loss": 0.3353079557418823,
+      "train_accuracy": 0.934093177318573,
+      "val_accuracy": 0.7323943661971831,
+      "val_macro_f1": 0.7178812925705164
+    },
+    {
+      "epoch": 290,
+      "train_loss": 0.32763350009918213,
+      "train_accuracy": 0.9350842237472534,
+      "val_accuracy": 0.7347417840375586,
+      "val_macro_f1": 0.7207994503430056
+    },
+    {
+      "epoch": 300,
+      "train_loss": 0.30866608023643494,
+      "train_accuracy": 0.937066376209259,
+      "val_accuracy": 0.7370892018779343,
+      "val_macro_f1": 0.7228831047343522
+    },
+    {
+      "epoch": 310,
+      "train_loss": 0.3004993796348572,
+      "train_accuracy": 0.9380574822425842,
+      "val_accuracy": 0.7347417840375586,
+      "val_macro_f1": 0.7200743392598885
+    },
+    {
+      "epoch": 320,
+      "train_loss": 0.2841965854167938,
+      "train_accuracy": 0.9400396347045898,
+      "val_accuracy": 0.7394366197183099,
+      "val_macro_f1": 0.7245390491080363
+    },
+    {
+      "epoch": 330,
+      "train_loss": 0.27826231718063354,
+      "train_accuracy": 0.9400396347045898,
+      "val_accuracy": 0.7394366197183099,
+      "val_macro_f1": 0.7247972830504809
+    },
+    {
+      "epoch": 340,
+      "train_loss": 0.27077487111091614,
+      "train_accuracy": 0.9415262341499329,
+      "val_accuracy": 0.7464788732394366,
+      "val_macro_f1": 0.7319733483003675
+    },
+    {
+      "epoch": 350,
+      "train_loss": 0.25863245129585266,
+      "train_accuracy": 0.9444994926452637,
+      "val_accuracy": 0.7464788732394366,
+      "val_macro_f1": 0.7317448049139293
+    },
+    {
+      "epoch": 360,
+      "train_loss": 0.25430724024772644,
+      "train_accuracy": 0.9459861516952515,
+      "val_accuracy": 0.7417840375586855,
+      "val_macro_f1": 0.7272506632903636
+    },
+    {
+      "epoch": 370,
+      "train_loss": 0.24147532880306244,
+      "train_accuracy": 0.9484637975692749,
+      "val_accuracy": 0.744131455399061,
+      "val_macro_f1": 0.7293522229627735
+    },
+    {
+      "epoch": 380,
+      "train_loss": 0.22962342202663422,
+      "train_accuracy": 0.9494549036026001,
+      "val_accuracy": 0.7417840375586855,
+      "val_macro_f1": 0.7270165020035707
+    },
+    {
+      "epoch": 390,
+      "train_loss": 0.22750847041606903,
+      "train_accuracy": 0.9524281620979309,
+      "val_accuracy": 0.7488262910798122,
+      "val_macro_f1": 0.7341565414513026
+    },
+    {
+      "epoch": 400,
+      "train_loss": 0.21408240497112274,
+      "train_accuracy": 0.9534192085266113,
+      "val_accuracy": 0.7511737089201878,
+      "val_macro_f1": 0.736717015866764
+    },
+    {
+      "epoch": 410,
+      "train_loss": 0.21586363017559052,
+      "train_accuracy": 0.9554013609886169,
+      "val_accuracy": 0.7535211267605634,
+      "val_macro_f1": 0.7380740042458321
+    },
+    {
+      "epoch": 420,
+      "train_loss": 0.20838771760463715,
+      "train_accuracy": 0.9568880200386047,
+      "val_accuracy": 0.755868544600939,
+      "val_macro_f1": 0.7410528802738802
+    },
+    {
+      "epoch": 430,
+      "train_loss": 0.19892191886901855,
+      "train_accuracy": 0.9573835730552673,
+      "val_accuracy": 0.7535211267605634,
+      "val_macro_f1": 0.7384705311686663
+    },
+    {
+      "epoch": 440,
+      "train_loss": 0.19463303685188293,
+      "train_accuracy": 0.9598612785339355,
+      "val_accuracy": 0.755868544600939,
+      "val_macro_f1": 0.7410528802738802
+    },
+    {
+      "epoch": 450,
+      "train_loss": 0.1886877715587616,
+      "train_accuracy": 0.9618434309959412,
+      "val_accuracy": 0.7605633802816901,
+      "val_macro_f1": 0.7458734449168164
+    },
+    {
+      "epoch": 460,
+      "train_loss": 0.18382148444652557,
+      "train_accuracy": 0.9633300304412842,
+      "val_accuracy": 0.7652582159624414,
+      "val_macro_f1": 0.7516290492643803
+    },
+    {
+      "epoch": 470,
+      "train_loss": 0.17156435549259186,
+      "train_accuracy": 0.9643211364746094,
+      "val_accuracy": 0.7629107981220657,
+      "val_macro_f1": 0.747069964511243
+    },
+    {
+      "epoch": 480,
+      "train_loss": 0.16635602712631226,
+      "train_accuracy": 0.9667987823486328,
+      "val_accuracy": 0.7652582159624414,
+      "val_macro_f1": 0.7489740679885041
+    },
+    {
+      "epoch": 490,
+      "train_loss": 0.1640772670507431,
+      "train_accuracy": 0.9667987823486328,
+      "val_accuracy": 0.7652582159624414,
+      "val_macro_f1": 0.7509739160239702
+    },
+    {
+      "epoch": 500,
+      "train_loss": 0.16302892565727234,
+      "train_accuracy": 0.969276487827301,
+      "val_accuracy": 0.7629107981220657,
+      "val_macro_f1": 0.7470220182695504
+    }
+  ],
+  "test_metrics": {
+    "accuracy": 0.8165829145728644,
+    "macro_f1": 0.8113823859413178,
+    "per_class": {
+      "ninox_boobook": {
+        "precision": 0.7857142857142857,
+        "recall": 0.5238095238095238,
+        "f1": 0.6285714285714286,
+        "support": 21
+      },
+      "laughing_kookaburra": {
+        "precision": 0.9047619047619048,
+        "recall": 0.7037037037037037,
+        "f1": 0.7916666666666667,
+        "support": 27
+      },
+      "rhipidura_leucophrys": {
+        "precision": 0.575,
+        "recall": 0.696969696969697,
+        "f1": 0.6301369863013698,
+        "support": 33
+      },
+      "psophodes_cristatus": {
+        "precision": 0.8888888888888888,
+        "recall": 0.8888888888888888,
+        "f1": 0.8888888888888888,
+        "support": 27
+      },
+      "cincloramphus_mathewsi": {
+        "precision": 0.95,
+        "recall": 0.8260869565217391,
+        "f1": 0.8837209302325583,
+        "support": 23
+      },
+      "podargus_strigoides": {
+        "precision": 0.9428571428571428,
+        "recall": 1.0,
+        "f1": 0.9705882352941176,
+        "support": 33
+      },
+      "red_capped_robin": {
+        "precision": 0.7419354838709677,
+        "recall": 0.696969696969697,
+        "f1": 0.71875,
+        "support": 33
+      },
+      "anas_superciliosa": {
+        "precision": 0.9142857142857143,
+        "recall": 0.9696969696969697,
+        "f1": 0.9411764705882354,
+        "support": 33
+      },
+      "australian_raven": {
+        "precision": 0.896551724137931,
+        "recall": 0.7878787878787878,
+        "f1": 0.8387096774193549,
+        "support": 33
+      },
+      "peaceful_dove": {
+        "precision": 0.6888888888888889,
+        "recall": 0.8611111111111112,
+        "f1": 0.7654320987654321,
+        "support": 36
+      },
+      "galah": {
+        "precision": 0.868421052631579,
+        "recall": 1.0,
+        "f1": 0.9295774647887324,
+        "support": 33
+      },
+      "crested_bellbird": {
+        "precision": 0.9428571428571428,
+        "recall": 1.0,
+        "f1": 0.9705882352941176,
+        "support": 33
+      },
+      "rainbow_bee_eater": {
+        "precision": 0.6428571428571429,
+        "recall": 0.5454545454545454,
+        "f1": 0.5901639344262296,
+        "support": 33
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "ninox_boobook",
+        "laughing_kookaburra",
+        "rhipidura_leucophrys",
+        "psophodes_cristatus",
+        "cincloramphus_mathewsi",
+        "podargus_strigoides",
+        "red_capped_robin",
+        "anas_superciliosa",
+        "australian_raven",
+        "peaceful_dove",
+        "galah",
+        "crested_bellbird",
+        "rainbow_bee_eater"
+      ],
+      "rows_true_cols_pred": [
+        [
+          11,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          1,
+          0,
+          6,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          19,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          2,
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          23,
+          2,
+          0,
+          0,
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          4,
+          0,
+          19,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          33,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          23,
+          0,
+          0,
+          0,
+          1,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          32,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          26,
+          0,
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          31,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          33,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          33,
+          0
+        ],
+        [
+          1,
+          0,
+          8,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          4,
+          1,
+          0,
+          18
+        ]
+      ]
+    }
+  }
+}
