@@ -246,9 +246,10 @@ Analysis heads are graded on **calibration + role-appropriate usefulness**,
 
 ## 7. Required artifact: species phenology table
 
-E-C's "strong evidence" for season/diel is only quantifiable with a lookup
-table mapping each species to its activity niche. **This table does not exist
-yet** and is a prerequisite for Rule 1 fusion.
+E-C's "strong evidence" for season/diel is quantified with the shared lookup
+table at `acoustic_ai/layers/layer_e/shared/species_phenology.csv`, mapping each
+species to its activity niche. This table is the single source of truth for
+E-C handler metadata and aggregator fallback enrichment.
 
 ```
 species_id → {
@@ -259,9 +260,10 @@ species_id → {
 }
 ```
 
-- **Scope:** ideally site-257-specific (most accurate, manual) — e.g. validate
+- **Scope:** currently coarse/general-source metadata. Ideally replace or refine
+  entries with site-257-specific manual validation — e.g. validate
   the "cicada → summer afternoon" assumption against the actual recordings
-  before hard-coding it. A general source (Xeno-canto / A2O seasonal
-  histograms) is the fallback for species lacking site data.
+  before increasing any specificity. A general source (Xeno-canto / A2O seasonal
+  histograms) remains the fallback for species lacking site data.
 - A year-round generalist resident gets wide windows and ~0 specificity, so it
   contributes ~no season/diel evidence — correct behaviour.

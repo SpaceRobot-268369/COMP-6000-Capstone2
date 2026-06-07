@@ -109,6 +109,23 @@ class AnalysisAggregatorAdaptersTest(unittest.TestCase):
         self.assertEqual(adapted["evidence"]["season"][0]["candidates"], ["spring", "summer", "autumn"])
         self.assertEqual(adapted["evidence"]["season"][0]["confidence"], 0.4)
 
+    def test_enriches_events_from_shared_phenology_table(self) -> None:
+        adapted = adapt_head_reports(
+            events_report={
+                "events": [
+                    {
+                        "label": "rainbow_bee_eater",
+                        "confidence_mean": 0.8,
+                    }
+                ]
+            }
+        )
+
+        event = adapted["observations"]["events"][0]
+        self.assertEqual(event["common_name"], "Rainbow Bee-eater")
+        self.assertEqual(event["phenology"]["season_signal"], "warm_season")
+        self.assertEqual(adapted["evidence"]["season"][0]["confidence"], 0.4)
+
 
 if __name__ == "__main__":
     unittest.main()

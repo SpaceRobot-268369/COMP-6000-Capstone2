@@ -31,7 +31,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Make `layers.*` importable.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -96,6 +96,22 @@ def _env_truthy(name: str, default: bool = False) -> bool:
 def _llm_narrative_enabled() -> bool:
     """Whether /analyze attaches an inline narrative. Off by default."""
     return _env_truthy("AI_LLM_NARRATIVE", False)
+
+
+def _fallback_narrative(report: dict, register: str = "immersive") -> dict:
+    narration = (report or {}).get("narration") if isinstance(report, dict) else {}
+    text = ""
+    if isinstance(narration, dict):
+        text = str(narration.get("summary") or "")
+    if not text:
+        text = "The analysis completed, but no narrative summary was available."
+    return {
+        "register": register,
+        "text": text,
+        "source": "deterministic_fallback",
+        "faithful": True,
+        "violations": [],
+    }
 
 
 def _run_llm_prewarm() -> None:
@@ -182,7 +198,7 @@ class NarrativeRequest(BaseModel):
     """Re-render prose from an already-computed fused report in a chosen
     register (backs the scene-page tone toggle). No detectors re-run."""
     report: dict
-    register: str = "analytical"
+    narrative_register: str = Field(default="analytical", alias="register")
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +312,7 @@ def analysis_narrative(body: NarrativeRequest) -> dict:
         raise HTTPException(status_code=400, detail="report JSON is required")
     try:
         from llm import write_report
-        narrative = write_report(body.report, body.register)
+        narrative = write_report(body.report, body.narrative_register)
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"report writer unavailable: {exc}")
     return {"ok": True, "narrative": narrative}
@@ -305,6 +321,7 @@ def analysis_narrative(body: NarrativeRequest) -> dict:
 @app.post("/analysis/run")
 async def orchestrated_analysis(
     file: UploadFile = File(...),
+    narrative_register: str = Form(default="immersive", alias="register"),
     ambient_attempt: str | None = Form(default=None),
     weather_attempt: str | None = Form(default=None),
     events_attempt: str | None = Form(default=None),
@@ -374,7 +391,20 @@ async def orchestrated_analysis(
             except OSError:
                 pass
 
-    return {"ok": True, **result}
+    register = (narrative_register or "immersive").strip().lower() or "immersive"
+    report = result.get("report") or {}
+    response = {"ok": True, **result}
+    try:
+        from llm import write_report
+        narrative = write_report(report, register)
+        if not narrative.get("faithful", True):
+            response["narrative_violations"] = narrative.get("violations", [])
+            narrative = _fallback_narrative(report, narrative.get("register") or register)
+        response["narrative"] = narrative
+    except Exception as exc:  # product mode should still return the fused report
+        response["narrative"] = _fallback_narrative(report, register)
+        response["narrative_error"] = str(exc)
+    return response
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")

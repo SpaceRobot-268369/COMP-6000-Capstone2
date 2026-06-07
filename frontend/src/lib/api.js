@@ -101,9 +101,10 @@ const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio(file, attempts = {}) {
+export async function analyseAudio(file, attempts = {}, register = "immersive") {
   const form = new FormData();
   form.append("file", file);
+  form.append("register", register);
   for (const [key, value] of Object.entries(attempts)) {
     if (value) form.append(`${key}_attempt`, value);
   }

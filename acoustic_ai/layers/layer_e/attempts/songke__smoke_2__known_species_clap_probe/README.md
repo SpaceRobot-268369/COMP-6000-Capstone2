@@ -212,7 +212,7 @@ is reserved for future E-A/E-B/E-C fusion.
 Phenology metadata lives in:
 
 ```text
-data/species_phenology.csv
+acoustic_ai/layers/layer_e/shared/species_phenology.csv
 ```
 
 Each row provides:
