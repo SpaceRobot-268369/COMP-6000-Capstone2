@@ -167,6 +167,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | **Analysis synthesis policy** (Layer E aggregator fusion, LLM-OSS report registers, per-head pass standards, phenology table) | [.claude/context/ai/analysis_synthesis_policy.md](.claude/context/ai/analysis_synthesis_policy.md) |
 | **LLM-OSS layer config** (in-process model choice, serving stack, VRAM budget, guardrails, upgrade lever) | [.claude/context/ai/llm_layer_config.md](.claude/context/ai/llm_layer_config.md) |
 | **LLM-OSS implementation plan** (phased serverB rollout, API surface, model provisioning, VRAM validation) | [acoustic_ai/llm/llm_layer_implementation_plan.md](acoustic_ai/llm/llm_layer_implementation_plan.md) |
+| **Analysis mode implementation plan** (end-to-end wiring: inline narrative on `/analysis/run`, real HomePage upload+presets, immersive scene, phenology follow-up) | [acoustic_ai/llm/analysis_mode_implementation_plan.md](acoustic_ai/llm/analysis_mode_implementation_plan.md) |
 | Distillation strategy | [.claude/context/ai/distillation_strategy.md](.claude/context/ai/distillation_strategy.md) |
 | Smoke-test runbooks | [.claude/context/ai/runbooks/](.claude/context/ai/runbooks/) |
 | MVP decision log | [.claude/context/ai/logs/mvp_decision_log.md](.claude/context/ai/logs/mvp_decision_log.md) |
