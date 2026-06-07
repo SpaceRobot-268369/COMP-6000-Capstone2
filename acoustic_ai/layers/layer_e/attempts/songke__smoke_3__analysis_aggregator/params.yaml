@@ -1,0 +1,23 @@
+fusion:
+  ambient_weight_cap: 0.5
+  event_weight_cap: 1.0
+  ambient_fallback_min_confidence: 0.6
+  undetermined_threshold: 0.50
+  conflict_margin: 0.20
+
+defaults:
+  season_distribution:
+    spring: 0.25
+    summer: 0.25
+    autumn: 0.25
+    winter: 0.25
+  diel_distribution:
+    dawn: 0.25
+    morning: 0.25
+    afternoon: 0.25
+    night: 0.25
+
+limitations:
+  - Season is difficult to infer from audio alone at this site.
+  - Ambient context is a weak prior, not ground truth.
+  - The species detector only covers the known species in its checkpoint.
