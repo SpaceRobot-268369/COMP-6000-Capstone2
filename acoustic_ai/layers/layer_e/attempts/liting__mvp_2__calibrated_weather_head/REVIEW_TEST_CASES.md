@@ -1,0 +1,238 @@
+# E-B MVP2 Review Test Cases
+
+Owner: `liting`
+
+This file answers the PR review request for explicit sample clips and sample
+results. The current integration candidate is:
+
+```text
+liting__mvp_2__calibrated_weather_head
+```
+
+For the cross-attempt reviewer matrix covering MVP1 through MVP5, see:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/MVP1_TO_MVP5_REVIEW_EVIDENCE.md
+```
+
+Generated evidence files:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_site257_fixed_review_matrix.csv
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json
+```
+
+## Data Used
+
+The MVP2 calibrated weather head was trained and validated on the Site257
+weather policy snapshot:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_1__panns_weather_baseline/data/site257_weather_policy_snapshot.csv
+```
+
+The policy snapshot was produced before the Layer B asset folder was renamed,
+so some `clip_path` values inside that CSV still contain the historical
+`lucas__smoke_1__curated_assets` folder name. In the current main-aligned tree,
+the materialised / DVC-tracked weather assets live here:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/
+```
+
+To materialise the clips for listening review:
+
+```bash
+dvc pull acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002.dvc
+dvc pull acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001.dvc
+dvc pull model/candidates/liting/mvp_2__calibrated_weather_head/weather_head.pt.dvc
+```
+
+Snapshot coverage:
+
+| Scene | Count in policy snapshot | Notes |
+|---|---:|---|
+| Rain primary | 6 | Site257-only rain clips. |
+| Rain + wind mixed | 12 | Site257 mixed weather clips. |
+| Wind primary | 93 | Main validated coverage for wind. |
+| Thunder backup | 2 | Kept as backup only; not exposed as a supported MVP2 prediction. |
+
+Intensity coverage:
+
+| Target | Available Site257 clips | Review note |
+|---|---:|---|
+| Light rain | 1 | Not enough for the requested two-case review bar yet. |
+| Moderate rain | 16 | Includes rain-primary and rain+wind rows. |
+| Heavy rain | 1 | Not enough for the requested two-case review bar yet. |
+| Light/breezing wind | 3 | Enough for spot checks, but only one landed in the MVP2 held-out split. |
+| Moderate wind | 71 | Strongest coverage. |
+| Strong/heavy wind | 31 | Strong coverage. |
+| Thunder | 2 | Backup pool only; detector suppresses thunder until more Site257 evidence is validated. |
+
+## Validation Split
+
+Latest Server B MVP2 run:
+
+| Metric | Value |
+|---|---:|
+| Total materialised Site257 clips | 101 |
+| Train split | 75 |
+| Validation split | 26 |
+| Rain validation accuracy | 0.769 |
+| Wind validation accuracy | 0.731 |
+| Joint validation accuracy | 0.615 |
+| Single-component joint accuracy | 0.818 |
+| Calibration-head training time | 1.45 s |
+| Total run time including feature extraction | 18.26 s |
+
+Full validation rows are in:
+
+```text
+model/candidates/liting/mvp_2__calibrated_weather_head/metrics.json
+```
+
+## Sample Results
+
+### Rain Primary
+
+| Clip ID | Expected | Predicted | Confidence | Status |
+|---|---|---|---:|---|
+| `site_mvp002_site257_1313196_000778_000793` | rain=moderate, wind=none | rain=moderate, wind=none | rain 0.995, wind 1.000 | pass |
+| `site_mvp002_site257_1313196_001630_001645` | rain=moderate, wind=none | rain=moderate, wind=none | rain 0.990, wind 1.000 | pass |
+
+Source paths:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000778_000793.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_001630_001645.wav
+```
+
+Original Site257 S3 clips:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313196/site_257_item_1313196_clip_003.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313196/site_257_item_1313196_clip_006.webm
+```
+
+### Wind: Breezing / Light
+
+| Clip ID | Expected | Predicted | Confidence | Status |
+|---|---|---|---:|---|
+| `site_mvp002_site257_5495_003676_003691` | rain=none, wind=light | rain=none, wind=light | rain 0.911, wind 0.979 | pass |
+
+The policy snapshot has three light-wind clips, but only one landed in the
+held-out MVP2 validation split. Two additional light-wind policy rows are
+available for future fixed-scene spot testing:
+
+```text
+site_mvp002_site257_5299_002749_002764
+site_mvp002_site257_214837_001286_001301
+```
+
+Current main-aligned clip paths:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_5495_003676_003691.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_5299_002749_002764.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_214837_001286_001301.wav
+```
+
+Original Site257 S3 clips:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_5495/site_257_item_5495_clip_013.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_5299/site_257_item_5299_clip_010.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214837/site_257_item_214837_clip_005.webm
+```
+
+### Wind: Strong / Heavy
+
+| Clip ID | Expected | Predicted | Confidence | Status |
+|---|---|---|---:|---|
+| `site_mvp002_site257_5493_000879_000894` | rain=none, wind=strong | rain=none, wind=strong | rain 1.000, wind 0.526 | pass |
+| `site_mvp002_site257_216466_002726_002741` | rain=none, wind=strong | rain=none, wind=strong | rain 0.956, wind 0.820 | pass |
+
+Current main-aligned clip paths:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_5493_000879_000894.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_216466_002726_002741.wav
+```
+
+Original Site257 S3 clips:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_5493/site_257_item_5493_clip_003.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_216466/site_257_item_216466_clip_010.webm
+```
+
+### Mixed Rain + Wind
+
+These are currently hard cases and are not claimed as solved by MVP2:
+
+| Clip ID | Expected | Predicted | Status |
+|---|---|---|---|
+| `site_mvp002_site257_214659_006775_006790` | rain=moderate, wind=moderate | rain=none, wind=strong | fail |
+| `site_mvp002_site257_214659_001523_001538` | rain=moderate, wind=moderate | rain=none, wind=strong | fail |
+
+Current main-aligned clip paths:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_214659_006775_006790.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_214659_001523_001538.wav
+```
+
+Original Site257 S3 clips:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214659/site_257_item_214659_clip_023.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214659/site_257_item_214659_clip_006.webm
+```
+
+This is why the PR marks MVP2 as a safe demo/integration candidate for
+single-component weather, while mixed rain+wind remains a next-iteration target.
+
+### Thunder
+
+Thunder is intentionally suppressed in MVP2. The current Site257 pool has only
+two backup thunder candidates:
+
+```text
+site_nov2019_storm001_site257_214872_001700_001730
+site_nov2019_storm001_site257_214707_000781_000811
+```
+
+Current main-aligned clip paths:
+
+```text
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214872_001700_001730.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214707_000781_000811.wav
+```
+
+Original Site257 S3 clips:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214872/site_257_item_214872_clip_006.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214707/site_257_item_214707_clip_003.webm
+```
+
+Because these are backup-only and not enough to calibrate a robust thunder
+detector, the MVP2 output contract returns:
+
+```json
+{
+  "thunder_intensity": "none",
+  "thunder_status": "suppressed_until_site257_evidence_is_validated"
+}
+```
+
+## Review Interpretation
+
+The current E-B PR should be read as:
+
+- MVP2 is the safest current integration candidate.
+- MVP2 passes the rain/wind validation gate for single-component weather.
+- MVP2 does not yet satisfy the requested two-case review bar for light rain,
+  heavy rain, or thunder because Site257 validated evidence is too small.
+- The next data task is to build a fixed review matrix with at least two
+  validated examples per scene before promoting a production E-B detector.
