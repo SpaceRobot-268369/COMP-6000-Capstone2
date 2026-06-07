@@ -11,12 +11,24 @@ Tracking markers used throughout this doc:
 - 🔵 **DVC** — content lives in S3; only the `.dvc` pointer is in git.
 - ⚪ **gitignored** — never committed (local-only scratch).
 
+Inside an **attempt** folder or a **model artifact** folder, each leaf also
+carries a presence marker:
+
+- ✓ **required** — must exist for that kind of attempt; CI/review expects it.
+- · **optional** — present only when the attempt actually uses it.
+
+Kind-specific leaves are tagged **generative-only** / **retrieval-only**
+(see [§ 5.5](#55-generative-vs-retrieval-attempts)); untagged leaves are
+shared by both kinds. The presence markers do **not** apply to top-level
+repo dirs (those simply exist) — only within an attempt / model artifact.
+
 ---
 
 ## 1. Repo structure
 
 The whole tree from project root down to a single per-case artifact file.
-Every leaf carries one of the three tracking markers above.
+Every leaf carries a tracking marker; attempt and model-artifact leaves also
+carry a ✓/· presence marker.
 
 ```
 COMP-6000-Capstone2/
@@ -44,30 +56,34 @@ COMP-6000-Capstone2/
 │       └── layer_<X>/                          (layer_a | layer_b | layer_c | layer_d | layer_e)
 │           └── attempts/
 │               └── <member>__<stage>__<slug>/  ── one folder per attempt (see § Naming)
-│                   ├── README.md               🟢   model card + run log (see § Model README)
-│                   ├── params.yaml             🟢   per-attempt hyperparameters
-│                   ├── __init__.py             🟢
-│                   ├── .gitignore              🟢   *.wav, showcase PNG/JSON, dev-artifacts/* except .gitkeep
+│                   ├── README.md               🟢 ✓  model card + run log (see § Model README)
+│                   ├── params.yaml             🟢 ✓  per-attempt hyperparameters (training:/inference: or retrieval)
+│                   ├── __init__.py             🟢 ✓  makes the attempt importable
+│                   ├── .gitignore              🟢 ✓  *.wav, showcase PNG/JSON, dev-artifacts/* except .gitkeep
 │                   │
-│                   ├── code/                   🟢   ALL Python source for this attempt
-│                   │   ├── handler.py          🟢   required: load() + generate(seed, **kw)
-│                   │   ├── train.py            🟢   optional: training entrypoint
-│                   │   ├── sample.py           🟢   optional: standalone sampling
-│                   │   ├── preprocess.py       🟢   optional
-│                   │   ├── dataset.py          🟢   optional
-│                   │   └── <layer>_visualization.py 🟢   optional: PNG renderer + metadata bakers
+│                   ├── code/                   🟢 ✓  ALL Python source for this attempt (import root)
+│                   │   ├── handler.py          🟢 ✓  load() + generate(seed, **kw) — registry entrypoint
+│                   │   │   ── generative-only:
+│                   │   ├── train.py            🟢 ·  training entrypoint
+│                   │   ├── dataset.py          🟢 ·  data loading
+│                   │   ├── preprocess.py       🟢 ·  preprocessing
+│                   │   ├── sample.py           🟢 ·  standalone sampling
+│                   │   ├── <layer>_visualization.py 🟢 ·  PNG renderer + metadata bakers
+│                   │   │   ── retrieval-only:
+│                   │   ├── build_index.py      🟢 ·  builds the bank's index.json from the asset pool
+│                   │   └── retriever.py        🟢 ·  query logic over index.json
 │                   │
-│                   ├── data/                   🔵   attempt-local derived data (per .dvc pointers)
-│                   ├── precompute/             🟢   attempt-local precompute scripts (optional)
+│                   ├── data/                   🔵 ·  attempt-local training inputs / derived data (per .dvc)
+│                   ├── precompute/             🟢 ·  attempt-local precompute scripts
 │                   │
-│                   ├── expected/               ── real-audio ground truth (2–3 cases per attempt)
+│                   ├── expected/               ── real-audio ground truth — ✓ generative (2–3 cases) · empty for retrieval (§4.7)
 │                   │   └── real_<source_clip_id>/    ── one subdir per source clip
-│                   │       ├── audio.wav      🔵 (via .dvc)
-│                   │       ├── audio.wav.dvc  🟢   pointer → S3 blob
-│                   │       ├── spectrogram.png 🟢   renders inline on GitHub PR review
-│                   │       └── metadata.json   🟢   source manifest ref + audio stats
+│                   │       ├── audio.wav      🔵 ✓  (via .dvc)
+│                   │       ├── audio.wav.dvc  🟢 ✓  pointer → S3 blob
+│                   │       ├── spectrogram.png 🟢 ✓  renders inline on GitHub PR review
+│                   │       └── metadata.json   🟢 ✓  source manifest ref + audio stats
 │                   │
-│                   ├── showcase/               ── author-curated generated samples (any count)
+│                   ├── showcase/               ── · author-curated generated samples (any count)
 │                   │   └── seed_<N>_<short_label>/   ── one subdir per seed
 │                   │       ├── audio.wav            🔵 (via .dvc)
 │                   │       ├── audio.wav.dvc        🟢
@@ -76,22 +92,23 @@ COMP-6000-Capstone2/
 │                   │       ├── metadata.json        🔵 (via .dvc)
 │                   │       └── metadata.json.dvc    🟢
 │                   │
-│                   └── dev-artifacts-self-testing/  ── ad-hoc developer scratch
-│                       ├── .gitkeep           🟢   keeps the folder around
-│                       └── (anything else)    ⚪   gitignored, never committed
+│                   └── dev-artifacts-self-testing/  ── ✓ folder kept via .gitkeep (contents are scratch)
+│                       ├── .gitkeep           🟢 ✓  keeps the folder around
+│                       └── (anything else)    ⚪    gitignored, never committed
 │
-├── model/                                      ── runnable artifact for EVERY model attempt (generative weights OR retrieval bank — see § 5.5)
+├── model/                                      ── runnable artifact for EVERY model attempt (one folder is EITHER generative OR retrieval — see § 5.5)
 │   ├── candidates/<member>/<stage>__<slug>/    ── all current candidates
-│   │   ├── README.md                           🟢   required (see § Model README)
-│   │   ├── metrics.json                        🟢   once evals exist
-│   │   │   ── GENERATIVE kind:
-│   │   ├── params.yaml                         🟢   frozen training params
-│   │   ├── *.pt | *.safetensors | *.bin        🔵 (via matching .dvc files)
-│   │   ├── *.dvc                               🟢   pointers
-│   │   │   ── RETRIEVAL kind:
-│   │   ├── index.json                          🟢   the query index (JSON only — § 5.5)
-│   │   └── media_asset_bank/                   🔵   curated audio, DVC-tracked (+ *.dvc pointers 🟢)
-│   └── production/<role>/                      ── promoted slot (layer_a_ambient: per-cell bank ✓)
+│   │   ├── README.md                           🟢 ✓  required, both kinds (see § Model README)
+│   │   ├── metrics.json                        🟢 ·  both kinds, once evals exist
+│   │   │   ──── if GENERATIVE — trained weights:
+│   │   ├── params.yaml                         🟢 ✓  frozen training params
+│   │   ├── *.pt | *.safetensors | *.bin        🔵 ✓  weights (via matching .dvc files)
+│   │   ├── *.dvc                               🟢 ✓  pointers
+│   │   │   ──── if RETRIEVAL — media asset bank:
+│   │   ├── index.json                          🟢 ✓  the query index (JSON only — § 5.5)
+│   │   ├── media_asset_bank/                   🔵 ✓  curated audio, DVC-tracked
+│   │   └── media_asset_bank/*.dvc              🟢 ✓  pointers
+│   └── production/<role>/                      ── promoted slot, same per-kind layout (layer_a_ambient: per-cell bank ✓)
 │
 ├── resources/
 │   └── site_257_bowra-dry-a/                   🔵   source recordings + manifests (DVC-tracked)
@@ -508,10 +525,15 @@ models keyed by `head:`) are not generation models and carry **no `kind`**.
 
 | | Generative | Retrieval |
 |---|---|---|
-| Artifact | trained weights (LoRA / checkpoint) | a **media asset bank** = index + curated audio |
+| Artifact (under `model/`) | trained weights (LoRA / checkpoint) | a **media asset bank** = `index.json` + `media_asset_bank/` |
 | Runtime job | synthesize a waveform from noise + prompt | select matching clip(s) for a request |
 | `registry.yaml` artifact key | `checkpoint:` | `asset_bank:` |
+| Attempt `code/` (besides `handler.py`) | `train.py`, `dataset.py`, `preprocess.py`, … | `build_index.py`, `retriever.py` |
+| `expected/` tier | required (real-audio ground truth) | empty (§4.7) |
 | Examples | layer_a (AudioLDM2), layer_c (AudioGen) | layer_b (weather), layer_c retrieval library |
+
+The required/optional layout of each kind — at both the attempt level and the
+`model/` artifact level — is marked leaf-by-leaf in the [§ 1 repo tree](#1-repo-structure).
 
 **Generative artifact** — weights, as in §1: `*.safetensors|*.pt` 🔵 +
 `README.md` / `params.yaml` / `metrics.json` 🟢.
