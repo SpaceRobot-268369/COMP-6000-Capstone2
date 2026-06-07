@@ -28,7 +28,7 @@ from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -99,6 +99,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Soundscape Inference API", version="0.2.0", lifespan=lifespan)
+
+
+def _clean_form_value(value: str | None) -> str | None:
+    value = value.strip() if isinstance(value, str) else ""
+    return value or None
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],
@@ -214,6 +219,81 @@ def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
     attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
     return _generation_response("layer_d", attempt_id, result)
+
+
+@app.post("/analysis/run")
+async def orchestrated_analysis(
+    file: UploadFile = File(...),
+    ambient_attempt: str | None = Form(default=None),
+    weather_attempt: str | None = Form(default=None),
+    events_attempt: str | None = Form(default=None),
+    aggregator_attempt: str | None = Form(default=None),
+) -> dict:
+    """Run the full Layer E analysis stack over one uploaded audio clip."""
+    suffix = Path(file.filename or "upload.wav").suffix or ".wav"
+    try:
+        data = await file.read()
+    finally:
+        await file.close()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty upload")
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    analysis_path = tmp_path
+    converted_path = None
+    try:
+        with os.fdopen(tmp_fd, "wb") as fh:
+            fh.write(data)
+        if suffix.lower() != ".wav":
+            converted_fd, converted_path = tempfile.mkstemp(suffix=".wav")
+            os.close(converted_fd)
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    tmp_path,
+                    "-ar",
+                    "22050",
+                    "-ac",
+                    "1",
+                    converted_path,
+                ],
+                check=True,
+            )
+            analysis_path = converted_path
+        result = registry.orchestrate_analysis(
+            analysis_path,
+            ambient_attempt=_clean_form_value(ambient_attempt),
+            weather_attempt=_clean_form_value(weather_attempt),
+            events_attempt=_clean_form_value(events_attempt),
+            aggregator_attempt=_clean_form_value(aggregator_attempt),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(status_code=400, detail=f"audio conversion failed: {exc}")
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"orchestrated analysis failed: {exc}")
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        if converted_path:
+            try:
+                os.unlink(converted_path)
+            except OSError:
+                pass
+
+    return {"ok": True, **result}
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")

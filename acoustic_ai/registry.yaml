@@ -590,6 +590,25 @@ layers:
           - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
 
+      songke__smoke_3__analysis_aggregator:
+        label: "Analysis Aggregator - deterministic fusion v1"
+        author: songke
+        stage: smoke_3
+        head: aggregator
+        status: smoke_test
+        checkpoint: null
+        params:
+          fusion:
+            ambient_weight_cap: 0.5
+            event_weight_cap: 1.0
+            ambient_fallback_min_confidence: 0.6
+            undetermined_threshold: 0.50
+            conflict_margin: 0.20
+        notes:
+          - Combines E-A ambient, E-B weather, and E-C events reports into analysis_aggregator.v1.
+          - Does not run audio inference or generation.
+          - Used by the orchestrated /analysis/run endpoint, not by the per-head dev picker.
+
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
         author: lucas

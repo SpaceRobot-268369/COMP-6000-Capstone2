@@ -102,14 +102,31 @@ export function sampleWavUrl(sample) {
 }
 
 // ─── Stage-3 product endpoints ──────────────────────────────────────────────────
-// Generation is implemented through the A/B/C → D orchestrator. Analysis and
-// Transformation remain placeholders.
+// Generation is implemented through the A/B/C -> D orchestrator. Analysis uses
+// the Layer E head orchestrator + aggregator. Transformation remains a
+// placeholder.
 
 const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
+export async function analyseAudio(file, attempts = {}) {
+  const form = new FormData();
+  form.append("file", file);
+  for (const [key, value] of Object.entries(attempts)) {
+    if (value) form.append(`${key}_attempt`, value);
+  }
+  const res = await fetch(`${API_BASE}/api/analysis`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
+  }
+  return res.json();
+}
 
 /**
  * Run one Layer E analysis head on an uploaded audio file. Analysis is
