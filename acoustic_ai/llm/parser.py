@@ -10,6 +10,7 @@ into the user message and are authoritative. Returns the parse-result schema
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Optional
 
 from .gate import gate_findings
@@ -40,6 +41,36 @@ PARSE_RESULT_SCHEMA: dict = {
 
 def _user_message(prompt: str, findings: list[dict]) -> str:
     return json.dumps({"prompt": prompt, "gate_findings": findings}, ensure_ascii=False)
+
+
+# Deterministic weather detection — a backstop so an explicitly-requested,
+# climatically-plausible weather is never dropped by a small model's slip
+# (validation showed a 3B writing the right note but nulling layer_b). Weather
+# type/intensity are trivial to detect by keyword; the LLM stays in charge of
+# the fuzzier coherence work. Priority thunder > rain > wind.
+_WEATHER_TERMS = [
+    ("thunder", ("thunder", "thunderstorm", "storm", "lightning")),
+    ("rain", ("rain", "raining", "rainy", "drizzle", "downpour", "pouring", "showers")),
+    ("wind", ("wind", "windy", "breeze", "breezy", "gust", "gusty", "gale")),
+]
+_INTENSITY_TERMS = [
+    ("light", ("light", "gentle", "soft", "faint", "drizzle", "breeze", "slight")),
+    ("heavy", ("heavy", "strong", "pouring", "downpour", "torrential", "fierce", "gale", "howling")),
+    ("medium", ("medium", "moderate", "steady")),
+]
+
+
+def _detect_weather(prompt: str) -> Optional[dict]:
+    text = (prompt or "").lower()
+
+    def _hit(terms: tuple[str, ...]) -> bool:
+        return any(re.search(rf"\b{re.escape(t)}\b", text) for t in terms)
+
+    wtype = next((wt for wt, terms in _WEATHER_TERMS if _hit(terms)), None)
+    if not wtype:
+        return None
+    intensity = next((i for i, terms in _INTENSITY_TERMS if _hit(terms)), "medium")
+    return {"weather_type": wtype, "intensity": intensity, "duration_s": 10.0}
 
 
 def _norm_enum(value: Any, allowed: set[str]) -> Optional[str]:
@@ -109,7 +140,20 @@ def parse_prompt(prompt: str) -> dict:
         {"role": "user", "content": _user_message(prompt, findings)},
     ]
     raw = get_service().complete_json(messages, schema=PARSE_RESULT_SCHEMA)
-    return _normalize(raw, had_findings=bool(findings))
+    result = _normalize(raw, had_findings=bool(findings))
+
+    # Deterministic weather backstop: if the prompt plainly requests a plausible
+    # weather the model dropped, restore it. Skip when the request was rejected,
+    # the model already set weather, or the gate flagged the weather implausible
+    # (the model owns that swap).
+    if result["status"] != "rejected" and result.get("layer_b") is None:
+        implausible = any(f.get("type") == "implausible_weather" for f in findings)
+        detected = _detect_weather(prompt)
+        if detected and not implausible:
+            result["layer_b"] = detected
+            result["filled_defaults"] = [d for d in result["filled_defaults"]
+                                         if d != "weather:none"]
+    return result
 
 
 __all__ = ["parse_prompt", "PARSE_RESULT_SCHEMA"]

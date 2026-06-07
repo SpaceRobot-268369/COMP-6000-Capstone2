@@ -14,6 +14,7 @@ import acoustic_ai.llm.service as svc_mod
 from acoustic_ai.llm import parse_prompt, write_report
 from acoustic_ai.llm.faithfulness import validate_narrative
 from acoustic_ai.llm.gate import gate_findings
+from acoustic_ai.llm.parser import _detect_weather
 from acoustic_ai.llm.service import _extract_json
 from acoustic_ai.llm.skills import available_skills, load_skill, report_skill_name
 
@@ -123,6 +124,25 @@ class ParserTest(unittest.TestCase):
         self.assertIsNone(r["layer_a"]["season"])
         self.assertIsNone(r["layer_a"]["diel"])
         self.assertEqual(r["layer_c"]["density"], "sparse")
+
+    def test_weather_backstop_restores_dropped_rain(self):
+        # Model slips and nulls layer_b, but the prompt clearly asks for rain.
+        svc_mod._service = _FakeService(json_out={
+            "status": "ok", "note": "", "filled_defaults": [],
+            "layer_a": {"season": None, "diel": None},
+            "layer_b": None, "layer_c": {"species": [], "density": "sparse"},
+        })
+        r = parse_prompt("a quiet dawn with light rain")
+        self.assertIsNotNone(r["layer_b"])
+        self.assertEqual(r["layer_b"]["weather_type"], "rain")
+        self.assertEqual(r["layer_b"]["intensity"], "light")
+        self.assertNotIn("weather:none", r["filled_defaults"])
+
+    def test_detect_weather_priority_and_intensity(self):
+        self.assertIsNone(_detect_weather("a still summer night"))
+        self.assertEqual(_detect_weather("heavy rain")["intensity"], "heavy")
+        self.assertEqual(_detect_weather("a thunderstorm")["weather_type"], "thunder")
+        self.assertEqual(_detect_weather("a gentle breeze")["weather_type"], "wind")
 
     def test_rejected_nulls_all_layers(self):
         svc_mod._service = _FakeService(json_out={
