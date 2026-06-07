@@ -974,6 +974,53 @@ app.post("/api/generation", requireAuth, async (req, res) => {
   }
 });
 
+// Prompt parser (generation front-end). Forwards a raw NL prompt to the
+// LLM-OSS parser and returns the parse-result contract; no audio generated.
+app.post("/api/generation/parse", requireAuth, async (req, res) => {
+  const operation = "prompt parse";
+  try {
+    const prompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
+    const r = await fetchAi(
+      "/generation/parse",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+// Re-render an analysis report in a chosen tone register (backs the scene-page
+// tone toggle). No detectors re-run — the fused report is supplied by the client.
+app.post("/api/analysis/narrative", requireAuth, async (req, res) => {
+  const operation = "analysis narrative";
+  try {
+    const register = typeof req.body?.register === "string" ? req.body.register : "analytical";
+    const payload = { report: req.body?.report, register };
+    const r = await fetchAi(
+      "/analysis/narrative",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      operation,
+    );
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    res.status(r.status).json(body);
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
 // Per-attempt upload analysis (Layer E). Unlike /generate (JSON seed), this
 // forwards a multipart audio upload. `express.json()` ignores non-JSON bodies,
 // so the raw multipart stream is still intact on `req` and we pipe it straight
