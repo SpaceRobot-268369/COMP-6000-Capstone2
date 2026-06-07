@@ -77,8 +77,8 @@ COMP-6000-Capstone2/
 │   ├── requirements.txt
 │   └── .venv/               # gitignored — the ONLY Python interpreter for AI work (see "Python environment")
 │
-├── model/                   # trained checkpoints
-│   ├── candidates/<member>/<stage>__<slug>/   # all current checkpoints (binaries DVC-tracked)
+├── model/                   # runnable artifact for every model attempt (generative weights OR retrieval bank)
+│   ├── candidates/<member>/<stage>__<slug>/   # generative: weights (DVC) | retrieval: index.json + media_asset_bank/ (DVC)
 │   └── production/<role>/                     # promoted slots (layer_a_ambient ✓)
 │
 ├── resources/               # source recordings + manifests (DVC-tracked)
@@ -241,6 +241,15 @@ model/production/<role>/                                           # promoted sl
 
 `<stage>` is one of `smoke-N`, `mvp-N`, `prod-N`. Full rules and examples are
 in [.claude/context/conventions.md](.claude/context/conventions.md).
+
+**Two model kinds.** Every attempt is either **generative** (trained weights
+— layer_a, layer_c) or **retrieval** (a *media asset bank* — layer_b, the
+layer_c retrieval library). Both put their runnable artifact under `model/`
+and expose the same `handler.py`; the kind is declared in `registry.yaml`
+(`kind: generative|retrieval`). A generative artifact is weights; a retrieval
+artifact is `index.json` (git, JSON only — no CSV) + a `media_asset_bank/`
+audio folder (DVC). The index is the retriever's query layer, not a dev doc.
+Full contract: [conventions §5.5](.claude/context/conventions.md#55-generative-vs-retrieval-attempts).
 
 First production promotion: **`model/production/layer_a_ambient/`** — the
 Layer A per-cell ambient bank, promoted from

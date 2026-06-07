@@ -80,13 +80,17 @@ COMP-6000-Capstone2/
 │                       ├── .gitkeep           🟢   keeps the folder around
 │                       └── (anything else)    ⚪   gitignored, never committed
 │
-├── model/
-│   ├── candidates/<member>/<stage>__<slug>/    ── all current checkpoints
+├── model/                                      ── runnable artifact for EVERY model attempt (generative weights OR retrieval bank — see § 5.5)
+│   ├── candidates/<member>/<stage>__<slug>/    ── all current candidates
 │   │   ├── README.md                           🟢   required (see § Model README)
-│   │   ├── params.yaml                         🟢   frozen training params
 │   │   ├── metrics.json                        🟢   once evals exist
+│   │   │   ── GENERATIVE kind:
+│   │   ├── params.yaml                         🟢   frozen training params
 │   │   ├── *.pt | *.safetensors | *.bin        🔵 (via matching .dvc files)
-│   │   └── *.dvc                               🟢   pointers
+│   │   ├── *.dvc                               🟢   pointers
+│   │   │   ── RETRIEVAL kind:
+│   │   ├── index.json                          🟢   the query index (JSON only — § 5.5)
+│   │   └── media_asset_bank/                   🔵   curated audio, DVC-tracked (+ *.dvc pointers 🟢)
 │   └── production/<role>/                      ── promoted slot (layer_a_ambient: per-cell bank ✓)
 │
 ├── resources/
@@ -211,6 +215,10 @@ The `<role>` slot is independent of the attempt slug — name it for the
 production role the model serves (e.g. `layer_a_ambient`,
 `layer_c_boobook`).
 
+These same paths hold the artifact for **both** model kinds: generative
+weights or a retrieval media asset bank (the bank *is* the artifact). See
+[§ 5.5](#55-generative-vs-retrieval-attempts).
+
 ### 2.6 Artifact case dirs
 
 Each "case" (one source clip or one generated seed) is its **own
@@ -260,6 +268,8 @@ Same string in **four** places — they must stay in sync:
 | `metadata.json` in `expected/` | 🟢 git | Reviewers see source provenance inline. |
 | `metadata.json` in `showcase/` | 🔵 DVC | Same churn argument as showcase PNGs. |
 | Checkpoint binaries (`*.pt`, `*.safetensors`, `*.bin`, `*.ckpt`) | 🔵 DVC | Always. |
+| `model/.../index.json` (retrieval bank index) | 🟢 git | The query index — **JSON only, no CSV** (§ 5.5). |
+| `model/.../media_asset_bank/**` audio | 🔵 DVC | Curated retrieval audio; the index references it by path. |
 | Source recordings under `resources/` | 🔵 DVC | Always. |
 | `dev-artifacts-self-testing/.gitkeep` | 🟢 git | Keeps the folder around for teammates. |
 | `dev-artifacts-self-testing/*` (everything else) | ⚪ gitignored | Pure local scratch. |
@@ -423,6 +433,9 @@ audio (`layer_e` outputs detector JSON), use curated assets that *are*
 the expected output (`layer_b`), or consume other layers' output
 (`layer_d`). Document this in the attempt's `README.md`.
 
+A **retrieval** attempt (`kind: retrieval`, e.g. `layer_b`) ships a media
+asset bank as its artifact under `model/` — see [§ 5.5](#55-generative-vs-retrieval-attempts).
+
 ---
 
 ## 5. Per-attempt internals
@@ -477,6 +490,85 @@ Lifecycle moves are explicit folder copies, never renames:
 
 The registry's `default:` key for a layer is what the frontend dropdown
 selects on first load. Bumping it is part of promotion.
+
+### 5.5 Generative vs. retrieval attempts
+
+Every **generation-layer** model attempt (layers A / B / C) is exactly one
+of two **kinds**, declared in `registry.yaml` as `kind: generative |
+retrieval`. Both ship their runnable artifact under `model/` (candidate,
+then `model/production/<role>/` once promoted) and expose the same
+`handler.py` `load()` + `generate()` interface (§5.1). The kind changes only
+*what the artifact is*, never how the server calls it. Attempt **code**
+always stays in `acoustic_ai/layers/.../attempts/<id>/code/`; only the
+artifact lives in `model/`.
+
+The generative/retrieval axis is a **generation** concept. Layer D (mixer,
+a deterministic processor) and Layer E (analysis detectors, discriminative
+models keyed by `head:`) are not generation models and carry **no `kind`**.
+
+| | Generative | Retrieval |
+|---|---|---|
+| Artifact | trained weights (LoRA / checkpoint) | a **media asset bank** = index + curated audio |
+| Runtime job | synthesize a waveform from noise + prompt | select matching clip(s) for a request |
+| `registry.yaml` artifact key | `checkpoint:` | `asset_bank:` |
+| Examples | layer_a (AudioLDM2), layer_c (AudioGen) | layer_b (weather), layer_c retrieval library |
+
+**Generative artifact** — weights, as in §1: `*.safetensors|*.pt` 🔵 +
+`README.md` / `params.yaml` / `metrics.json` 🟢.
+
+**Retrieval artifact** — the media asset bank:
+
+```
+model/candidates/<member>/<stage>__<slug>/
+├── README.md              🟢   model card (same standard, §6)
+├── index.json             🟢   THE query layer — JSON only (below)
+├── media_asset_bank/      🔵   curated audio, DVC-tracked
+│   └── *.dvc              🟢   pointers
+└── metrics.json           🟢   once evals exist
+```
+
+The audio folder is named **`media_asset_bank/`** (not `audio/`).
+
+**The index (`index.json`) — required, git-tracked.** It is the retriever's
+lookup table, *queried at generation time* — not a dev-only document.
+Without it the retriever has fetchable files but no way to choose among
+them. Each record carries a required **core** plus a free per-attempt
+`attributes` object (tiny-required-core schema):
+
+```json
+{
+  "bank_id": "layer_b_weather_v0",
+  "assets": [
+    { "id": "lib_rain_004",
+      "audio_path": "media_asset_bank/rain/steady_rain_med.wav",
+      "attributes": { "primary_weather": "rain", "rain_intensity": "medium", "clap_rain_score": 0.88 } }
+  ]
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `id` | ✅ | Stable asset id, unique within the bank. |
+| `audio_path` | ✅ | Path **relative to the bank root**, resolving to a DVC-tracked file under `media_asset_bank/`. |
+| `attributes` | ✅ (object) | Per-attempt retrieval keys + QC metadata. Contents are free-form — layer_b keys on weather/intensity, layer_c on species/season/diel. |
+
+`id`, `audio_path`, `attributes` are uniform across every bank so a generic
+check (and the pre-PR audit) can confirm each `audio_path` resolves to a
+DVC-tracked file **without knowing the layer**. Everything meaningful *for
+retrieval* lives inside `attributes`.
+
+**Index format policy — JSON only:**
+
+| Index format | Status | Notes |
+|---|---|---|
+| `index.json` | ✅ required going forward | The only permitted index format. Git-tracked. |
+| `*.csv` index / manifest | ❌ disallowed | Pre-existing CSV banks (layer_b, layer_c) must migrate to `index.json`. Migration is owned by each bank's author — out of scope here. |
+
+Audio bytes are **always** DVC (`media_asset_bank/**`), never git. The index
+references them by path; it never inlines audio. A `.dvc` pointer is a
+storage receipt (which bytes, what hash) — it carries no retrieval metadata,
+which is why the index is a separate, required file rather than "just the
+DVC pointers."
 
 ---
 

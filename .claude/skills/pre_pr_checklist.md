@@ -75,6 +75,14 @@ Stop at the first failure, fix, then resume.
       (+ `params.yaml` for candidates).
 - [ ] ⚠️ Attempt `params.yaml` matches the frozen model `params.yaml` snapshot.
 - [ ] ⚠️ Model README audit/experiment log updated.
+- [ ] ⚠️ **Model attempt matches its `kind`** (registry `kind: generative|retrieval`,
+      [conventions §5.5](../context/conventions.md#55-generative-vs-retrieval-attempts)).
+      The runnable artifact lives under `model/`, not inside the attempt:
+  - **generative** → `checkpoint:` points at weights (`.dvc`) + `README.md` (+ `params.yaml`).
+  - **retrieval** → `asset_bank:` points at `index.json` (git) + `media_asset_bank/` (DVC) + `README.md`.
+- [ ] ⚠️ **Retrieval index is `index.json`, not CSV** — JSON only going forward;
+      every record has `id` + `audio_path` + `attributes`, and each `audio_path`
+      resolves to a DVC-tracked file under `media_asset_bank/`.
 - [ ] ⚠️ If `registry.yaml`, a handler, or a frontend control changed →
       `GET /layers` + the affected generation path tested, not just imported.
 
