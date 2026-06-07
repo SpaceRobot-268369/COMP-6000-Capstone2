@@ -44,10 +44,6 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
 
   useEffect(() => {
-    const generatedObjectUrl = activeInitial?.generatedAudio &&
-      activeInitial?.audioUrl?.startsWith("blob:")
-      ? activeInitial.audioUrl
-      : null;
     const instance = createImmersive({
       sceneEl: sceneRef.current,
       boltEl: boltRef.current,
@@ -58,9 +54,13 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     });
     setApi(instance);
 
-    // If there is an audioUrl, attempt autoplay once Three.js and WebAudio are bootstrapped
-    if (activeInitial?.audioUrl && audioRef.current) {
-      const playPromise = audioRef.current.play();
+    // Ensure the audio element loads the source (blob URLs need an explicit
+    // load() call when set before the element is connected to the DOM).
+    const a = audioRef.current;
+    if (a && activeInitial?.audioUrl) {
+      a.src = activeInitial.audioUrl;
+      a.load();
+      const playPromise = a.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => setPlaying(true))
@@ -73,9 +73,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     return () => {
       setApi(null);
       instance.dispose();
-      if (generatedObjectUrl) {
-        URL.revokeObjectURL(generatedObjectUrl);
-      }
+      // Do NOT revoke blob URLs here — React StrictMode double-mounts effects
+      // in dev, so the first cleanup would kill the URL before the second mount
+      // can use it. The browser GCs blob URLs when the document unloads.
     };
     // activeInitial is read once at mount; remounting for a new scene is the caller's job.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -209,7 +209,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       )}
       {activeOverlay}
 
-      <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin={activeInitial?.audioUrl?.startsWith("blob:") ? undefined : "anonymous"} />
+      <audio ref={audioRef} src={audioSrc} loop crossOrigin={audioSrc && !audioSrc.startsWith("blob:") ? "anonymous" : undefined} />
 
       {audioSrc && (
         <AudioPlayer

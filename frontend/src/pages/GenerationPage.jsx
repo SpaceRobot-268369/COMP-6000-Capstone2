@@ -10,14 +10,6 @@ import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
 
-// Staged "thinking" lines shown while the scene resolves, in order.
-const GEN_STAGES = [
-  "Reading your scene with the prompt parser…",
-  "Choosing the Layer A season and light…",
-  "Generating the ambient bed…",
-  "Preparing the immersive scene…",
-];
-const STAGE_MS = 650;
 const LAYER_A = "layer_a";
 const DEFAULT_SEED = 42;
 
@@ -67,26 +59,26 @@ async function defaultLayerAAttempt() {
   return layerA.default;
 }
 
-async function resolveWithLayerA(text, localParams, onStatus, registerTimer) {
-  onStatus("Reading your scene with the prompt parser…");
-  
-  const parseTimer = registerTimer(
-    setTimeout(() => {
-      onStatus("Reading your scene with the prompt parser (interpreting description)…");
-    }, 2000)
-  );
-
-  let parseResult;
-  try {
-    parseResult = await parseGenerationPrompt(text);
-  } finally {
-    clearTimeout(parseTimer);
+/** Build a concise human-readable summary of the parsed scene from the layer contracts. */
+function summarizeParsedScene(parseResult) {
+  const parts = [];
+  const la = parseResult?.layer_a;
+  if (la?.season || la?.diel) {
+    parts.push([la.season, la.diel].filter(Boolean).join(" "));
   }
-
-  if (parseResult.status === "rejected") {
-    throw new Error(parseResult.note || "This prompt is outside the current Bowra dry-woodland generation scope.");
+  const lb = parseResult?.layer_b;
+  if (lb) {
+    const weatherDesc = [lb.intensity, lb.weather_type].filter(Boolean).join(" ");
+    if (weatherDesc) parts.push(weatherDesc);
   }
+  const lc = parseResult?.layer_c;
+  if (lc?.species?.length) {
+    parts.push(lc.species.join(", "));
+  }
+  return parts.length ? parts.join(", ") : null;
+}
 
+async function generateFromParsed(parseResult, localParams, onStatus, registerTimer) {
   onStatus("Choosing the Layer A season and light…");
   const layerA = normalizeLayerA(parseResult, localParams);
   const attemptId = await defaultLayerAAttempt();
@@ -168,15 +160,26 @@ function fallbackResolvedScene(text, localParams, reason) {
   };
 }
 
-/* The generation page flow: a chatbot-style prompt → a staged generating
-   transition → navigating to the immersive woodland placed on the resolved scene,
-   with a second-person narration as its centre text. */
+/* The generation page flow:
+   1. User types a prompt → submit
+   2. Prompt is parsed by the LLM parser
+   3a. If "ok": proceed directly to generation
+   3b. If "corrected": show the parser's note and let user confirm or cancel
+   3c. If "rejected": show the rejection message and return to prompt
+   4. After confirmation → generate Layer A audio → navigate to immersive scene */
 export default function GenerationPage() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState("prompt"); // prompt | generating
+  // prompt | parsing | confirm | generating | rejected
+  const [phase, setPhase] = useState("prompt");
   const [userMessage, setUserMessage] = useState("");
   const [statusText, setStatusText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  // For the confirm phase: the parser result + local params to resume generation
+  const [pendingParse, setPendingParse] = useState(null);
+  const [confirmNote, setConfirmNote] = useState("");
+  const [confirmSummary, setConfirmSummary] = useState("");
+  // For rejection: the rejection note from the parser
+  const [rejectionNote, setRejectionNote] = useState("");
   const timersRef = useRef([]);
 
   function clearTimers() {
@@ -189,21 +192,91 @@ export default function GenerationPage() {
     };
   }, []);
 
+  function registerTimer(t) {
+    timersRef.current.push(t);
+    return t;
+  }
+
   async function handleSubmit(text) {
     const params = resolvePrompt(text);
     setUserMessage(text);
     setErrorMsg("");
+    setRejectionNote("");
+    setConfirmNote("");
+    setConfirmSummary("");
+    setPendingParse(null);
     setStatusText("Reading your scene with the prompt parser…");
-    setPhase("generating");
+    setPhase("parsing");
 
     clearTimers();
-    const registerTimer = (t) => {
-      timersRef.current.push(t);
-      return t;
-    };
+
+    const parseTimer = registerTimer(
+      setTimeout(() => {
+        setStatusText("Reading your scene with the prompt parser (interpreting description)…");
+      }, 2000)
+    );
+
+    let parseResult;
+    try {
+      parseResult = await parseGenerationPrompt(text);
+    } catch (err) {
+      clearTimeout(parseTimer);
+      setErrorMsg(err.message || "Prompt parsing failed.");
+      setPhase("prompt");
+      return;
+    }
+    clearTimeout(parseTimer);
+
+    // Handle the three parser statuses
+    if (parseResult.status === "rejected") {
+      setRejectionNote(
+        parseResult.note ||
+        "This prompt is outside the current Bowra dry-woodland generation scope."
+      );
+      setPhase("rejected");
+      return;
+    }
+
+    if (parseResult.status === "corrected") {
+      // Show the correction and let the user confirm
+      setConfirmNote(parseResult.note || "The parser adjusted your prompt to fit the site's soundscape.");
+      setConfirmSummary(summarizeParsedScene(parseResult) || "");
+      setPendingParse({ parseResult, params });
+      setPhase("confirm");
+      return;
+    }
+
+    // status === "ok" — proceed directly to generation
+    await runGeneration(parseResult, params);
+  }
+
+  async function handleConfirm() {
+    if (!pendingParse) return;
+    const { parseResult, params } = pendingParse;
+    setPendingParse(null);
+    setConfirmNote("");
+    setConfirmSummary("");
+    await runGeneration(parseResult, params);
+  }
+
+  function handleCancel() {
+    setPendingParse(null);
+    setConfirmNote("");
+    setConfirmSummary("");
+    setPhase("prompt");
+  }
+
+  function handleDismissRejection() {
+    setRejectionNote("");
+    setPhase("prompt");
+  }
+
+  async function runGeneration(parseResult, params) {
+    setStatusText("Choosing the Layer A season and light…");
+    setPhase("generating");
 
     try {
-      const resolvedState = await resolveWithLayerA(text, params, setStatusText, registerTimer);
+      const resolvedState = await generateFromParsed(parseResult, params, setStatusText, registerTimer);
       registerTimer(
         setTimeout(() => {
           const performNavigation = () => {
@@ -221,15 +294,8 @@ export default function GenerationPage() {
       );
     } catch (err) {
       const message = err.message || "Layer A generation failed.";
-      if (message.includes("outside") || message.includes("scope")) {
-        clearTimers();
-        setErrorMsg(message);
-        setPhase("prompt");
-        return;
-      }
-
-      setStatusText("Generation failed. Loading fallback woodland scene…");
-      const resolvedState = fallbackResolvedScene(text, params, message);
+      setStatusText("Generation encountered an issue. Loading fallback scene…");
+      const resolvedState = fallbackResolvedScene(userMessage, params, message);
       registerTimer(
         setTimeout(() => {
           navigate("/immersive", {
@@ -246,7 +312,13 @@ export default function GenerationPage() {
       userMessage={userMessage}
       statusLine={statusText}
       errorMessage={errorMsg}
+      rejectionNote={rejectionNote}
+      confirmNote={confirmNote}
+      confirmSummary={confirmSummary}
       onSubmit={handleSubmit}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+      onDismissRejection={handleDismissRejection}
     />
   );
 }
