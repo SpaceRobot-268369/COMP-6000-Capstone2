@@ -4,6 +4,7 @@ import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
 import ToneToggle from "../components/ToneToggle.jsx";
+import { sceneStateFromAnalysis } from "../lib/analysisScene.js";
 import "../immersive/immersive.css";
 
 /* The eco-acoustic immersive experience screen — a procedural Three.js woodland
@@ -23,9 +24,11 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const location = useLocation();
   const navigate = useNavigate();
 
+  const analysisInitial = sceneStateFromAnalysis(location.state);
   const isFromDemo = Boolean(location.state?.fromDemo);
-  const activeInitial = location.state?.resolved || initial;
-  const activeShowDevPanel = isFromDemo ? false : showDevPanel;
+  const isFromAnalysis = Boolean(location.state?.fromAnalysis);
+  const activeInitial = location.state?.resolved || analysisInitial || initial;
+  const activeShowDevPanel = isFromDemo || isFromAnalysis ? false : showDevPanel;
 
   const sceneRef = useRef(null);
   const boltRef = useRef(null);
@@ -154,7 +157,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   const activeOverlay = overlay || (
     <>
-      {isFromDemo && (
+      {(isFromDemo || isFromAnalysis) && (
         <button
           type="button"
           className={`demo-reset ${audioSrc ? "has-audio" : ""}`}
@@ -227,7 +230,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           the LLM-OSS report writer without re-running detectors. */}
       <ToneToggle
         report={activeInitial?.report}
-        defaultRegister="immersive"
+        defaultRegister={activeInitial?.register || "immersive"}
         initialText={activeInitial?.narration}
       />
     </div>

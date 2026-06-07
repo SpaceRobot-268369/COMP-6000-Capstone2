@@ -33,13 +33,38 @@ KNOWN_SPECIES = [
 ]
 
 
+def _norm(value: object) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"[_-]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _add_event_aliases(out: set[str], items: object) -> None:
+    if not isinstance(items, list):
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for key in ("label", "common_name"):
+            alias = _norm(item.get(key))
+            if alias:
+                out.add(alias)
+
+
 def _allowed_species(report: dict) -> set[str]:
-    events = (report or {}).get("observations", {}).get("events", []) or []
     out: set[str] = set()
-    for e in events:
-        label = str(e.get("label", "")).strip().lower()
-        if label:
-            out.add(label)
+    source = report or {}
+    observations = source.get("observations") if isinstance(source, dict) else {}
+    decision = source.get("decision") if isinstance(source, dict) else {}
+    llm_input = source.get("llm_input") if isinstance(source, dict) else {}
+    llm_decision = llm_input.get("decision") if isinstance(llm_input, dict) else {}
+
+    if isinstance(observations, dict):
+        _add_event_aliases(out, observations.get("events"))
+    if isinstance(decision, dict):
+        _add_event_aliases(out, decision.get("detected_calls"))
+    if isinstance(llm_decision, dict):
+        _add_event_aliases(out, llm_decision.get("detected_calls"))
     return out
 
 
@@ -49,13 +74,16 @@ def validate_narrative(narrative: str, report: dict) -> tuple[bool, list[str]]:
     A violation = a known species named in the prose that the report did not
     observe. ``ok`` is True when there are no violations.
     """
-    text = (narrative or "").lower()
+    text = _norm(narrative)
     allowed = _allowed_species(report)
     violations: list[str] = []
     for sp in KNOWN_SPECIES:
+        species = _norm(sp)
         # word-ish boundary match so "galah" doesn't fire inside another word
-        if re.search(rf"\b{re.escape(sp)}\b", text) and not any(sp in a or a in sp for a in allowed):
-            violations.append(sp)
+        if re.search(rf"\b{re.escape(species)}\b", text) and not any(
+            species in a or a in species for a in allowed
+        ):
+            violations.append(species)
     # de-dup while preserving order
     seen: set[str] = set()
     deduped = [v for v in violations if not (v in seen or seen.add(v))]
