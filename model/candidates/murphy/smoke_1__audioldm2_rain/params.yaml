@@ -1,0 +1,66 @@
+training:
+  base_model: cvssp/audioldm2
+  manifest: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/data/rain_manifest.csv
+  val_manifest: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/data/rain_manifest_val.csv
+  num_epochs: 4
+  batch_size: 4
+  learning_rate: 1.0e-5
+  lr_scheduler: constant
+  lr_warmup_steps: 100
+  mixed_precision: fp16
+  max_duration_s: 5.0
+  input_sample_rate: 16000
+  normalize_audio: false
+  target_rms: 0.005
+  seed: 42
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+inference:
+  prompt: >-
+    steady rain over dry eucalyptus woodland,
+    Bowra, Australia
+  negative_prompt: >-
+    hiss, static noise, background hum, tape noise, birds, insects,
+    wind gusts, reverb, music, machinery, low quality, distortion
+  guidance_scale: 3.0
+  num_inference_steps: 200
+  audio_length_in_s: 5.0
+  output_target_rms: 0.05
+  highpass_hz: 80.0
+  seed_mode: curated
+  uses_intensity: true
+  intensities: [light, heavy]
+  default_intensity: light
+  good_seeds_by_intensity:
+    light: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687]
+    heavy: [46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+  good_seeds: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687, 46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+  bwe_enabled: true
+  bwe:
+    cross_over_hz: 8000.0
+    output_sr: 24000
+    output_sample_rate_hz: 24000
+    sbr_source_low_hz: 4000.0
+    sbr_source_high_hz: 7900.0
+    sbr_shift_hz: 4000.0
+    sbr_target_low_hz: 8000.0
+    sbr_target_high_hz: 11800.0
+    noise_low_hz: 8000.0
+    noise_high_hz: 11800.0
+    envelope_source_low_hz: 3000.0
+    envelope_source_high_hz: 7900.0
+    envelope_smooth_ms: 35.0
+    noise_to_sbr_rms_ratio: 0.35
+    target_drop_8_11_minus_2_8_db: -10.985337681240505
+    post_bwe_highband_trim_db: -2.75
+    denoise_enabled: false
+  denoise_enabled: false
+  denoise_strength: 0.15
+  denoise_noise_quantile: 0.2
+  denoise_floor_ratio: 0.38
+  denoise_hop_length: 512
+  fade_ms: 20.0
