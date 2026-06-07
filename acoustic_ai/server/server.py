@@ -86,6 +86,27 @@ def _run_prewarm(selection: Optional[set[str]]) -> None:
     log.info("[prewarm] done")
 
 
+def _env_truthy(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _llm_narrative_enabled() -> bool:
+    """Whether /analyze attaches an inline narrative. Off by default."""
+    return _env_truthy("AI_LLM_NARRATIVE", False)
+
+
+def _run_llm_prewarm() -> None:
+    try:
+        from llm import warm
+        warm()
+        log.info("[prewarm] ready: llm")
+    except Exception as exc:  # noqa: BLE001 — boot must survive LLM load failure
+        log.warning("[prewarm] skipped llm: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     selection = _prewarm_selection()
@@ -94,6 +115,12 @@ async def lifespan(_app: FastAPI):
     else:
         threading.Thread(
             target=_run_prewarm, args=(selection,), name="prewarm", daemon=True,
+        ).start()
+    # LLM-OSS pre-warm is opt-in (AI_LLM_PREWARM, default off) so existing boots
+    # are unchanged until the model is validated on serverB (plan Phase 5).
+    if _env_truthy("AI_LLM_PREWARM", False):
+        threading.Thread(
+            target=_run_llm_prewarm, name="prewarm-llm", daemon=True,
         ).start()
     yield
 
@@ -143,6 +170,18 @@ class OrchestratedGenerationRequest(BaseModel):
     layer_b_attempt: Optional[str] = None
     layer_c_attempt: Optional[str] = None
     layer_d_attempt: Optional[str] = None
+
+
+class ParseRequest(BaseModel):
+    """Raw NL prompt for the generation Prompt Parser (LLM-OSS)."""
+    prompt: str
+
+
+class NarrativeRequest(BaseModel):
+    """Re-render prose from an already-computed fused report in a chosen
+    register (backs the scene-page tone toggle). No detectors re-run."""
+    report: dict
+    register: str = "analytical"
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +256,37 @@ def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
     attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
     return _generation_response("layer_d", attempt_id, result)
+
+
+@app.post("/generation/parse")
+def generation_parse(body: ParseRequest) -> dict:
+    """Run the LLM-OSS Prompt Parser on a raw NL prompt and return the
+    parse-result contract (prompt_parser_policy.md §5). Generates no audio."""
+    prompt = (body.prompt or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+    try:
+        from llm import parse_prompt
+        result = parse_prompt(prompt)
+    except HTTPException:
+        raise
+    except Exception as exc:  # model/dep unavailable, etc.
+        raise HTTPException(status_code=503, detail=f"prompt parser unavailable: {exc}")
+    return {"ok": True, **result}
+
+
+@app.post("/analysis/narrative")
+def analysis_narrative(body: NarrativeRequest) -> dict:
+    """Re-render prose from a prior fused report in a chosen register, without
+    re-running detectors. Backs the scene-page tone toggle (plan §3.4/§3.5)."""
+    if not isinstance(body.report, dict) or not body.report:
+        raise HTTPException(status_code=400, detail="report JSON is required")
+    try:
+        from llm import write_report
+        narrative = write_report(body.report, body.register)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"report writer unavailable: {exc}")
+    return {"ok": True, "narrative": narrative}
 
 
 @app.post("/analysis/run")
@@ -295,7 +365,8 @@ async def orchestrated_analysis(
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
-async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) -> dict:
+async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...),
+                  register: str = "analytical") -> dict:
     """Dispatch an upload-based analysis call to the attempt's handler.
 
     Layer E analysis is upload-based (not seed-based): the client posts an
@@ -359,7 +430,18 @@ async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) 
             except OSError:
                 pass
 
-    return {"ok": True, **result}
+    response = {"ok": True, **result}
+    # Opt-in inline narrative (AI_LLM_NARRATIVE). Off by default so analysis
+    # never pays a cold LLM load on the request path; the scene-page toggle uses
+    # the dedicated /analysis/narrative endpoint instead.
+    if _llm_narrative_enabled():
+        try:
+            from llm import write_report
+            response["narrative"] = write_report(result.get("report") or {}, register)
+        except Exception as exc:  # never break analysis if the LLM is down
+            response["narrative"] = None
+            response["narrative_error"] = str(exc)
+    return response
 
 
 @app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")
