@@ -6,8 +6,8 @@ This file consolidates the prior rain-generation planning notes so the attempt d
 
 # Layer B Generate Rain — Smoke-1 Implementation Plan
 
-Date: 2026-06-06  
-Owner: murphy  
+Date: 2026-06-06
+Owner: murphy
 Status: planned (step-by-step execution)
 
 ## 0. Goal and boundaries

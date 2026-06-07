@@ -153,18 +153,18 @@ def _postprocess_audio(audio: np.ndarray, sample_rate: int, args: argparse.Names
 
 def main():
     args = parse_args()
-    
+
     device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
-    
+
     from transformers import GPT2LMHeadModel
 
     print(f"Loading base pipeline from {args.pretrained_model_name}...")
     pipeline = AudioLDM2Pipeline.from_pretrained(
-        args.pretrained_model_name, 
+        args.pretrained_model_name,
         torch_dtype=torch_dtype
     )
-    
+
     pipeline.language_model = GPT2LMHeadModel.from_pretrained(
         args.pretrained_model_name,
         subfolder="language_model",
@@ -172,14 +172,14 @@ def main():
     )
 
     pipeline = pipeline.to(device)
-    
+
     print(f"Loading LoRA weights from {args.lora_dir}...")
     # Inject LoRA weights into the UNet
     pipeline.unet = PeftModel.from_pretrained(pipeline.unet, args.lora_dir)
-    
+
     print(f"Generating audio for prompt: '{args.prompt}'")
     generator = torch.Generator(device).manual_seed(args.seed)
-    
+
     # Generate the audio
     raw_audio = pipeline(
         args.prompt,
@@ -188,7 +188,7 @@ def main():
         guidance_scale=args.guidance_scale,
         generator=generator,
     ).audios[0]
-    
+
     # Save the output bundle
     output_path = _resolve_output_path(args)
     output_dir = output_path.parent

@@ -20,7 +20,7 @@ class AudioLDM2Dataset(Dataset):
     """
     Loads audio and captions for AudioLDM2 training.
     """
-    
+
     def __init__(
         self,
         manifest_path: str | Path,
@@ -48,7 +48,7 @@ class AudioLDM2Dataset(Dataset):
         self.normalize_audio = normalize_audio
         self.target_rms = target_rms
         self.min_rms = min_rms
-        
+
         # Load manifest
         self.items = []
         with open(self.manifest_path, encoding='utf-8') as f:
@@ -59,7 +59,7 @@ class AudioLDM2Dataset(Dataset):
                         'audio_path': self.base_dir / row['audio_path'],
                         'caption': row['caption']
                     })
-                    
+
         if not self.items:
             raise ValueError(f"No valid items found in {self.manifest_path}")
 
@@ -68,20 +68,20 @@ class AudioLDM2Dataset(Dataset):
 
     def __getitem__(self, idx: int):
         item = self.items[idx]
-        
+
         # 1. Load and process audio
         waveform_np, sr = sf.read(str(item['audio_path']), dtype="float32", always_2d=True)
         waveform = torch.from_numpy(np.ascontiguousarray(waveform_np.T))
-        
+
         # Convert to mono if stereo
         if waveform.shape[0] > 1:
             waveform = torch.mean(waveform, dim=0, keepdim=True)
-            
+
         # Resample if needed
         if sr != self.target_sample_rate:
             resampler = torchaudio.transforms.Resample(sr, self.target_sample_rate)
             waveform = resampler(waveform)
-            
+
         # Crop or pad to exact length
         if waveform.shape[1] > self.max_length:
             # Random crop
