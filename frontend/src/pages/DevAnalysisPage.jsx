@@ -142,7 +142,7 @@ export default function DevAnalysisPage() {
   }
 
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-analysis">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS — ANALYSIS</p>
@@ -150,8 +150,8 @@ export default function DevAnalysisPage() {
         </div>
       </header>
 
-      {/* ── Row 1: uploader (holds the clip only — no global run) ─────────── */}
-      <div className="dev-controls-row">
+      {/* ── Row 1: uploader + uploaded-clip spectrogram ───────────────────── */}
+      <div className="dev-controls-row analysis-upload-stack">
         <FileUploader
           file={file}
           audioUrl={audioUrl}
@@ -160,29 +160,13 @@ export default function DevAnalysisPage() {
           onFile={acceptFile}
           onDrop={onDrop}
         />
+
+        <SpectrogramPanel file={file} />
       </div>
 
-      {/* ── Row 2: spectrogram + per-head analysis ──────────────────────── */}
-      <div className="dev-results-row">
-        <main className="panel dev-result-card">
-          <div className="generation-card-head">
-            <h2>Mel-Spectrogram</h2>
-            <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
-          </div>
-          <div className="dev-result-body">
-            <ReviewSection title="▤ Spectral Mapping">
-              {file ? (
-                <SpectrogramCanvas file={file} />
-              ) : (
-                <Placeholder kind="image">
-                  Spectrogram appears once an audio file is loaded.
-                </Placeholder>
-              )}
-            </ReviewSection>
-          </div>
-        </main>
-
-        <aside className="panel dev-result-card">
+      {/* ── Row 2: per-head analysis ─────────────────────────────────────── */}
+      <div className="dev-results-row analysis-heads-row">
+        <aside className="panel dev-result-card analysis-heads-card">
           <div className="generation-card-head">
             <h2>Analysis Heads</h2>
             <p>Each head picks its own model and runs on its own button</p>
@@ -207,13 +191,35 @@ export default function DevAnalysisPage() {
   );
 }
 
+function SpectrogramPanel({ file }) {
+  return (
+    <main className="panel dev-result-card analysis-spectrogram-card">
+      <div className="generation-card-head">
+        <h2>Mel-Spectrogram</h2>
+        <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
+      </div>
+      <div className="dev-result-body">
+        <ReviewSection title="▤ Spectral Mapping">
+          {file ? (
+            <SpectrogramCanvas file={file} />
+          ) : (
+            <Placeholder kind="image">
+              Spectrogram appears once an audio file is loaded.
+            </Placeholder>
+          )}
+        </ReviewSection>
+      </div>
+    </main>
+  );
+}
+
 // ─── Uploader ────────────────────────────────────────────────────────────────
 
 function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop }) {
   const inputId = "dev-analysis-file";
   return (
     <section
-      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
+      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}${file ? " has-file" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
@@ -245,7 +251,7 @@ function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop })
             </label>
           </div>
           {audioUrl && (
-            <audio controls src={audioUrl} style={{ width: "100%", marginTop: 12 }} />
+            <audio className="upload-audio-preview" controls src={audioUrl} />
           )}
         </div>
       )}
@@ -260,6 +266,7 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
   const { attemptId, status, report, error } = state;
   const analysing = status === "analysing";
   const done = status === "done";
+  const selected = attempts.find((a) => a.id === attemptId);
 
   return (
     <ReviewSection title={`${head.icon} ${head.code} — ${head.label}`}>
@@ -277,6 +284,8 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
             attempts={attempts}
             onChange={onAttemptChange}
           />
+
+          <ModelDescription attempt={selected} />
 
           <div className="upload-actions" style={{ marginBottom: 8 }}>
             <button
@@ -315,6 +324,47 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
         </>
       )}
     </ReviewSection>
+  );
+}
+
+// "About this model" panel — documents the selected attempt straight from the
+// registry `description`. Scoped to lucas's models for now (other authors show
+// a muted not-yet-documented note); split this gate out once teammates add
+// documented Layer E attempts.
+function ModelDescription({ attempt }) {
+  if (!attempt) return null;
+
+  const isLucas = attempt.author === "lucas";
+  const text = (attempt.description || "").trim();
+
+  return (
+    <div
+      className="dev-model-doc"
+      style={{
+        margin: "0 0 10px",
+        padding: "10px 12px",
+        borderRadius: 8,
+        background: "rgba(127,127,127,0.08)",
+        border: "1px solid rgba(127,127,127,0.18)",
+      }}
+    >
+      <p style={{ margin: "0 0 6px", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
+        About this model · {attempt.stage} · {attempt.status}
+      </p>
+      {isLucas && text ? (
+        text.split(/\n{2,}/).map((para, i) => (
+          <p key={i} style={{ margin: i === 0 ? 0 : "8px 0 0", fontSize: 13, lineHeight: 1.5, opacity: 0.85 }}>
+            {para}
+          </p>
+        ))
+      ) : (
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
+          {isLucas
+            ? "No description provided for this model yet."
+            : `Not yet documented (author: ${attempt.author || "unknown"}).`}
+        </p>
+      )}
+    </div>
   );
 }
 

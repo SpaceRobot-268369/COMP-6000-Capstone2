@@ -27,7 +27,7 @@ Target sample count is derived from `local_annotation_audio_count`.
 | < 50 | 10 |
 
 The generated quota table lives at:
-`resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/species_quota_v2.csv`.
+`acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/species_quota_v2.csv`.
 
 ## Old Sample Reuse
 
@@ -129,7 +129,7 @@ bandpass_reason
 Each species gets one folder. Each sample gets one subfolder.
 
 ```text
-resources/site_257_bowra-dry-a/layer_c_retrieval_event_library_v2/
+acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/
   <species_slug>/
     samples/
       <NNN>_audioevent_<audio_event_id>/

@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import os
 import subprocess
 import sys
 import tempfile
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -35,8 +38,67 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server import registry  # noqa: E402
 
+log = logging.getLogger("soundscape.server")
 
-app = FastAPI(title="Soundscape Inference API", version="0.2.0")
+
+# ---------------------------------------------------------------------------
+# Model pre-warming
+# ---------------------------------------------------------------------------
+#
+# Handler state loads lazily on first use (registry._get_state). For heavy
+# generative layers (Layer A = AudioLDM2 + 16 LoRA adapters, Layer C =
+# AudioGen) that cold load runs *inside* the first request and can take
+# minutes — long enough to blow past the backend's AI_REQUEST_TIMEOUT_MS, so
+# the user sees "AI request timed out" instead of audio. Pre-warming on
+# startup moves the load off the request path: the first generate then pays
+# only inference. serverB is a disposable worker that reboots fresh, so this
+# runs on every boot.
+#
+# Controlled by the AI_PREWARM env var:
+#   unset / "1" / "all"   -> warm every layer's default attempt
+#   "0" / "false" / "none"-> disabled (pure lazy loading)
+#   "layer_a,layer_c"     -> warm only these layers' defaults
+#
+# Warming runs in a daemon thread so uvicorn binds the port immediately (the
+# SSH-tunnel health check stays green while models load). Concurrent requests
+# share the same cached state via registry's state lock.
+
+
+def _prewarm_selection() -> Optional[set[str]]:
+    """Parse AI_PREWARM into a layer-id filter. None => warm all defaults;
+    empty set => disabled."""
+    raw = os.environ.get("AI_PREWARM", "all").strip().lower()
+    if raw in {"0", "false", "none", "off"}:
+        return set()
+    if raw in {"1", "all", "true", "on", ""}:
+        return None
+    return {tok.strip() for tok in raw.split(",") if tok.strip()}
+
+
+def _run_prewarm(selection: Optional[set[str]]) -> None:
+    log.info("[prewarm] starting (selection=%s)", "all" if selection is None else selection)
+    for row in registry.prewarm_defaults(layers=selection):
+        if row["ok"]:
+            log.info("[prewarm] ready: %s/%s", row["layer"], row["attempt"])
+        else:
+            log.warning("[prewarm] skipped %s/%s: %s",
+                        row["layer"], row["attempt"], row["error"])
+    log.info("[prewarm] done")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    selection = _prewarm_selection()
+    if selection == set():
+        log.info("[prewarm] disabled via AI_PREWARM")
+    else:
+        threading.Thread(
+            target=_run_prewarm, args=(selection,), name="prewarm", daemon=True,
+        ).start()
+    yield
+
+
+app = FastAPI(title="Soundscape Inference API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],
@@ -61,6 +123,21 @@ class GenerateRequest(BaseModel):
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
     duration_s: Optional[float] = None
+
+
+class OrchestratedGenerationRequest(BaseModel):
+    seed: Optional[int] = None
+    duration_s: float = 30.0
+    season: Optional[str] = None
+    diel: Optional[str] = None
+    weather_type: str = "wind"
+    intensity: str = "light"
+    include_weather: bool = True
+    include_events: bool = True
+    layer_a_attempt: Optional[str] = None
+    layer_b_attempt: Optional[str] = None
+    layer_c_attempt: Optional[str] = None
+    layer_d_attempt: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -117,22 +194,24 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
-    wav_bytes = result.get("wav_bytes", b"")
-    mel_db = result.get("mel_db")
-    metadata = result.get("metadata", {})
-    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
-    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return _generation_response(layer_id, attempt_id, result)
 
-    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s)
 
-    return {
-        "ok":          True,
-        "audio_b64":   base64.b64encode(wav_bytes).decode("utf-8"),
-        "image_b64":   png_b64,
-        "metadata":    metadata,
-        "sample_rate": sample_rate,
-        "duration_s":  duration_s,
-    }
+@app.post("/generation/render")
+def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
+    """Generate A/B/C stems and render the final soundscape through Layer D."""
+    try:
+        result = registry.orchestrate_generation(**body.model_dump())
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
+    attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
+    return _generation_response("layer_d", attempt_id, result)
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
@@ -241,6 +320,22 @@ def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _generation_response(layer_id: str, attempt_id: str, result: dict) -> dict:
+    wav_bytes = result.get("wav_bytes", b"")
+    mel_db = result.get("mel_db")
+    metadata = result.get("metadata", {})
+    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
+    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return {
+        "ok": True,
+        "audio_b64": base64.b64encode(wav_bytes).decode("utf-8"),
+        "image_b64": _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s),
+        "metadata": metadata,
+        "sample_rate": sample_rate,
+        "duration_s": duration_s,
+    }
 
 
 def _mel_to_png_b64(layer_id: str, attempt_id: str,

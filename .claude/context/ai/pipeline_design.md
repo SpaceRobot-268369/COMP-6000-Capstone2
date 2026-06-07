@@ -25,6 +25,35 @@ speculative soundscape = ambient site bed
 
 ---
 
+### Prompt Parsing Layer (Parser)
+
+**Purpose:** Turn a raw user prompt into complete, validated, layer-specific inputs before routing them to individual layers.
+
+> Canonical policy: [prompt_parser_policy.md](prompt_parser_policy.md). This
+> section is the overview; the policy owns the default table, the
+> block/suggest gate rules, and the parse-result schema.
+
+The **Prompt Parser** is **LLM-OSS powered** (the generation-side mirror of the Layer E report writer) and governed by a written policy — not a single regex pass. A lightweight rule-based fast-path may short-circuit trivially unambiguous prompts, but the LLM + policy is the source of truth. It runs **three stages**:
+
+1. **Pre-process & default-fill** — normalise the prompt and supply explicit defaults for anything left unspecified. Ambient (Layer A) is always on; **weather (Layer B) is off by default — no rain unless requested**; events (Layer C) start as an empty checklist. Silence is a recorded decision, not a gap.
+2. **Validity / coherence gate** — reject requests our site/models can't voice (e.g. dense city noise over a remote dry-woodland site, climatically implausible weather, fauna that doesn't occur in the requested season). Wherever possible the parser *corrects and continues* — it rewrites the prompt and explains the swap — rather than hard-failing.
+3. **Decode into layer contracts** — only a complete, validated request is translated into the three aligned inputs below.
+
+Because we divide soundscape generation into independent, modular layers, we cannot feed a raw user prompt directly into the model of each layer. After Stage 3 each downstream model receives exactly what its API expects:
+
+1. **Layer A (Ambient Bed) Input**:
+   - For cell-based generative banks: Resolves keywords/context to a valid `(season, diel)` cell tuple (e.g., `"autumn_dawn"`).
+   - For open-prompt generative models: Rewrites the prompt to focus strictly on background texture (e.g. insects, low-level wind/foliage, distant birds) while stripping out specific dynamic foreground events (like loud vehicles or specific bird calls).
+2. **Layer B (Weather) Input**:
+   - Because Layer B is a retrieval-based asset mixing engine, it requires structured JSON query parameters: `weather_type` (`rain`, `wind`, etc.), `intensity` (`light`, `medium`, `heavy`), and `duration_s`. The decoder extracts these from weather descriptors in the user prompt (e.g. `"pouring rain"` -> `weather_type: rain, intensity: heavy`).
+3. **Layer C (Events/Species) Input**:
+   - Resolves mentions of fauna or specific events into species common names (`"splendid fairywren"`, `"boobook owl"`) and timeline density parameters.
+   - Maps species to their respective generative LoRA weights or queries the audited retrieval database using structured JSON specifying species labels and target diel/season boundaries.
+
+This parsing layer acts as the orchestrator at the front of the generation workflow, guaranteeing that each downstream model receives inputs that are complete, in-domain, and matching its specific API contract.
+
+---
+
 ### Layer A — Ambient Site Bed
 
 **Purpose:** continuous ecoacoustic background texture (insects, low-level ambience, site tone). **Must not contain events** — bird calls, vehicles, helicopters belong in Layer C, weather in Layer B. Mixing events into the bed double-counts them and breaks layer separation.

@@ -215,6 +215,16 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
     )
 
 
+def default_attempt_id(layer_id: str) -> str:
+    layers = _registry_doc().get("layers", {})
+    if layer_id not in layers:
+        raise KeyError(f"unknown layer: {layer_id!r}")
+    attempt_id = layers[layer_id].get("default")
+    if not attempt_id:
+        raise KeyError(f"layer has no default attempt: {layer_id!r}")
+    return str(attempt_id)
+
+
 # --- handler dispatch ------------------------------------------------------
 
 # --- samples ---------------------------------------------------------------
@@ -441,6 +451,44 @@ def _get_state(spec: AttemptSpec):
         return state
 
 
+def warm(layer_id: str, attempt_id: str) -> None:
+    """Eager-load and cache an attempt's handler state (no generation).
+
+    This is the same lazy ``_get_state`` the first request would otherwise
+    trigger inside the request path — calling it up front (see
+    ``server.prewarm``) keeps the heavy cold load (e.g. the Layer A 16-adapter
+    AudioLDM2 bank) out of the request, so the first user generate no longer
+    blows past the backend ``AI_REQUEST_TIMEOUT_MS``.
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    _get_state(spec)
+
+
+def prewarm_defaults(layers: set[str] | None = None) -> list[dict]:
+    """Eager-load each layer's ``default`` attempt. Resilient: a failure for
+    one attempt (un-installed dep, un-pulled checkpoint, …) is captured and
+    skipped, never raised — one broken head must not stop the server booting.
+
+    ``layers`` restricts which layer defaults are warmed (None => all).
+    Returns one result row per warmed layer default, for the caller to log.
+    """
+    results: list[dict] = []
+    for layer_id, layer_block in _registry_doc()["layers"].items():
+        if layers is not None and layer_id not in layers:
+            continue
+        default = layer_block.get("default")
+        if not default:
+            continue
+        row = {"layer": layer_id, "attempt": default, "ok": True, "error": None}
+        try:
+            warm(layer_id, default)
+        except Exception as exc:  # noqa: BLE001 — boot must survive any handler failure
+            row["ok"] = False
+            row["error"] = str(exc)
+        results.append(row)
+    return results
+
+
 def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params) -> dict:
     """Dispatch to the attempt's handler.generate().
 
@@ -455,6 +503,98 @@ def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params)
     md = result.setdefault("metadata", {})
     md.setdefault("attempt", _attempt_snapshot(spec))
     return result
+
+
+def orchestrate_generation(
+    *,
+    seed: int | None,
+    duration_s: float,
+    season: str | None = None,
+    diel: str | None = None,
+    weather_type: str = "wind",
+    intensity: str = "light",
+    include_weather: bool = True,
+    include_events: bool = True,
+    layer_a_attempt: str | None = None,
+    layer_b_attempt: str | None = None,
+    layer_c_attempt: str | None = None,
+    layer_d_attempt: str | None = None,
+) -> dict:
+    """Run generation layers A/B/C and hand their in-memory WAVs to Layer D."""
+
+    duration_s = float(duration_s)
+    if not 0.0 < duration_s <= 30.0:
+        raise ValueError("duration_s must be greater than 0 and at most 30 seconds")
+    attempts = {
+        "layer_a": layer_a_attempt or default_attempt_id("layer_a"),
+        "layer_b": layer_b_attempt or default_attempt_id("layer_b"),
+        "layer_c": layer_c_attempt or default_attempt_id("layer_c"),
+        "layer_d": layer_d_attempt or default_attempt_id("layer_d"),
+    }
+
+    layer_a = generate(
+        "layer_a",
+        attempts["layer_a"],
+        seed=seed,
+        season=season,
+        diel=diel,
+    )
+    layer_b = (
+        generate(
+            "layer_b",
+            attempts["layer_b"],
+            seed=seed,
+            weather_type=weather_type,
+            intensity=intensity,
+            duration_s=duration_s,
+        )
+        if include_weather
+        else None
+    )
+    layer_c = (
+        generate(
+            "layer_c",
+            attempts["layer_c"],
+            seed=seed,
+            season=season,
+            diel=diel,
+            duration_s=duration_s,
+        )
+        if include_events
+        else None
+    )
+    final = generate(
+        "layer_d",
+        attempts["layer_d"],
+        seed=None,
+        ambient_wav_bytes=layer_a.get("wav_bytes"),
+        weather_wav_bytes=layer_b.get("wav_bytes") if layer_b else None,
+        event_wav_bytes=layer_c.get("wav_bytes") if layer_c else None,
+        duration_s=duration_s,
+    )
+    final.setdefault("metadata", {})["orchestration"] = {
+        "seed": seed,
+        "duration_s": duration_s,
+        "season": season,
+        "diel": diel,
+        "weather_type": weather_type if include_weather else None,
+        "intensity": intensity if include_weather else None,
+        "include_weather": include_weather,
+        "include_events": include_events,
+        "attempts": attempts,
+        "parameter_routing": {
+            "layer_a": ["seed", "season", "diel"],
+            "layer_b": ["seed", "weather_type", "intensity", "duration_s"],
+            "layer_c": ["seed", "season", "diel", "duration_s"],
+            "layer_d": ["ambient_wav_bytes", "weather_wav_bytes", "event_wav_bytes", "duration_s"],
+        },
+        "upstream": {
+            "layer_a": layer_a.get("metadata", {}),
+            "layer_b": layer_b.get("metadata", {}) if layer_b else None,
+            "layer_c": layer_c.get("metadata", {}) if layer_c else None,
+        },
+    }
+    return final
 
 
 def _attempt_snapshot(spec: AttemptSpec) -> dict:

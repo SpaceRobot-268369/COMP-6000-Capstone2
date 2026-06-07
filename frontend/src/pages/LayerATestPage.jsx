@@ -278,7 +278,7 @@ export default function LayerATestPage({
       : "";
 
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-generation">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">{eyebrow}</p>

@@ -3,3 +3,4 @@
 review_package_*/**/*.wav
 review_package_*/**/*.png
 review_package_*/**/*.webm
+review_package_*/**/*.json

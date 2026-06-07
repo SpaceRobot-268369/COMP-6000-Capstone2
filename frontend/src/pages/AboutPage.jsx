@@ -13,7 +13,7 @@ const workflows = [
   {
     icon: "◫",
     title: "Analysis",
-    to: "/",
+    to: "/generation",
     tagline: "Decode what's in a recording",
     description:
       "Upload any ecoacoustic recording. Three detector heads run in parallel on the raw mixture — ambient context (k-NN against the learned latent index), weather intensity, and species/event onsets — then aggregate into a single report. The raw spectrogram is computed in-browser from the audio file without needing a server.",
@@ -27,7 +27,7 @@ const workflows = [
   {
     icon: "✦",
     title: "Generation",
-    to: "/generation",
+    to: "/analysis",
     tagline: "Synthesise a soundscape from conditions",
     description:
       "Set environmental conditions and the model composes a speculative soundscape layer by layer: an ambient bed (Layer A), weather sounds (Layer B), and species events (Layer C), combined by a mixer (Layer D). Today the ambient bed is fully generative; the remaining layers are being built out.",
@@ -38,20 +38,6 @@ const workflows = [
     ],
     status: "partial",
     featured: true,
-  },
-  {
-    icon: "≋",
-    title: "Transformation",
-    to: "/transformation",
-    tagline: "Shift an existing recording to new conditions",
-    description:
-      "Upload a source recording then dial in a new set of environmental conditions. The model encodes the source into the VAE latent space, adjusts it toward the target conditions, and decodes a transformed soundscape. Hear what the same site might sound like in a different season or under a changing climate.",
-    steps: [
-      "Upload source audio",
-      "Set target env conditions",
-      "Encode → adjust z → decode → output audio",
-    ],
-    status: "planned",
   },
 ];
 
@@ -69,7 +55,7 @@ const layers = [
   { step: "A", label: "Ambient bed", detail: "AudioLDM2 LoRA · per-cell bank (16 season×diel)", status: "live" },
   { step: "B", label: "Weather", detail: "Curated wind/rain assets · parameter mixing", status: "placeholder" },
   { step: "C", label: "Events", detail: "AudioGen LoRA per species · 16 kHz native", status: "smoke" },
-  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "placeholder" },
+  { step: "D", label: "Mixer", detail: "Combine A+B+C → WAV + explanation JSON", status: "smoke" },
   { step: "E", label: "Analysis", detail: "Ambient similarity + weather + event detectors", status: "partial" },
 ];
 
@@ -83,14 +69,15 @@ export default function AboutPage() {
           <h1 className="intro-hero-title">Speculative Soundscape Generation</h1>
           <p className="intro-hero-lead">
             An AI system that learns relationships between environmental conditions and
-            ecoacoustic recordings, then generates or transforms soundscapes under new
-            ecological conditions. Built as a <strong>layered composition</strong> — ambient
-            bed, weather, and events mixed separately rather than one generated waveform — on
-            510 hours of field recordings from a single semi-arid site in Queensland, Australia.
+            ecoacoustic recordings, then analyses recordings or generates speculative
+            soundscapes from ecological conditions. Built as a <strong>layered composition</strong>
+            — ambient bed, weather, and events mixed separately rather than one generated
+            waveform — on 510 hours of field recordings from a single semi-arid site in
+            Queensland, Australia.
           </p>
           <div className="intro-hero-links">
-            <Link to="/" className="intro-cta-primary">Start Analysis →</Link>
-            <Link to="/generation" className="intro-cta-ghost">Try Generation →</Link>
+            <Link to="/generation" className="intro-cta-primary">Start Analysis →</Link>
+            <Link to="/analysis" className="intro-cta-ghost">Try Generation →</Link>
           </div>
         </div>
         <div className="intro-hero-art" aria-hidden="true">
@@ -98,15 +85,15 @@ export default function AboutPage() {
           <div className="intro-wave intro-wave-b" />
           <div className="intro-wave intro-wave-c" />
           <span className="intro-node intro-node-1">● env conditioning</span>
-          <span className="intro-node intro-node-2">● latent z = 256 dim</span>
+          <span className="intro-node intro-node-2">● layer contracts</span>
         </div>
       </header>
 
-      {/* ── Three workflows ── */}
+      {/* ── Current workflows ── */}
       <section className="intro-section">
         <div className="intro-section-head">
-          <p className="eyebrow">THREE MODES</p>
-          <p className="intro-section-sub">Each mode orchestrates the same five-layer model stack in a different direction.</p>
+          <p className="eyebrow">CURRENT MODES</p>
+          <p className="intro-section-sub">The demo focuses on analysis and generation, both grounded in the same layered model stack.</p>
         </div>
         <div className="intro-workflow-grid">
           {workflows.map((w) => {

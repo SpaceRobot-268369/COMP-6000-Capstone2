@@ -15,8 +15,9 @@ function formatTime(seconds) {
  *   label  — filename / description shown in the player
  *   detail — secondary line (e.g. "Generated soundscape")
  */
-export default function AudioPlayer({ src, label = "No file loaded", detail = "" }) {
-  const audioRef    = useRef(null);
+export default function AudioPlayer({ src, label = "No file loaded", detail = "", audioRef: externalAudioRef }) {
+  const localAudioRef = useRef(null);
+  const audioRef = externalAudioRef || localAudioRef;
   const [playing,  setPlaying]  = useState(false);
   const [current,  setCurrent]  = useState(0);
   const [duration, setDuration] = useState(0);
@@ -28,22 +29,73 @@ export default function AudioPlayer({ src, label = "No file loaded", detail = ""
     setDuration(0);
   }, [src]);
 
+  // Synchronize with external audio element events
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a || !externalAudioRef) return;
+
+    function handleTimeUpdate() {
+      setCurrent(a.currentTime);
+    }
+    function handleLoadedMetadata() {
+      setDuration(a.duration);
+    }
+    function handleEnded() {
+      setPlaying(false);
+      setCurrent(0);
+    }
+    function handlePlay() {
+      setPlaying(true);
+    }
+    function handlePause() {
+      setPlaying(false);
+    }
+
+    a.addEventListener("timeupdate", handleTimeUpdate);
+    a.addEventListener("loadedmetadata", handleLoadedMetadata);
+    a.addEventListener("ended", handleEnded);
+    a.addEventListener("play", handlePlay);
+    a.addEventListener("pause", handlePause);
+
+    // Initial state sync
+    setPlaying(!a.paused);
+    setCurrent(a.currentTime);
+    if (a.duration) setDuration(a.duration);
+
+    return () => {
+      a.removeEventListener("timeupdate", handleTimeUpdate);
+      a.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      a.removeEventListener("ended", handleEnded);
+      a.removeEventListener("play", handlePlay);
+      a.removeEventListener("pause", handlePause);
+    };
+  }, [src, externalAudioRef, audioRef]);
+
   function toggle() {
     const a = audioRef.current;
     if (!a || !src) return;
-    if (playing) { a.pause(); } else { a.play(); }
-    setPlaying((p) => !p);
+    if (a.paused) {
+      a.play().catch((e) => console.log("Play interrupted:", e));
+    } else {
+      a.pause();
+    }
+    if (!externalAudioRef) {
+      setPlaying((p) => !p);
+    }
   }
 
   function onTimeUpdate() {
+    if (externalAudioRef) return;
     setCurrent(audioRef.current?.currentTime ?? 0);
   }
 
   function onLoadedMetadata() {
+    if (externalAudioRef) return;
     setDuration(audioRef.current?.duration ?? 0);
   }
 
   function onEnded() {
+    if (externalAudioRef) return;
     setPlaying(false);
     setCurrent(0);
     if (audioRef.current) audioRef.current.currentTime = 0;
@@ -61,7 +113,7 @@ export default function AudioPlayer({ src, label = "No file loaded", detail = ""
 
   return (
     <footer className="player-bar panel">
-      {src && (
+      {src && !externalAudioRef && (
         <audio
           ref={audioRef}
           src={src}

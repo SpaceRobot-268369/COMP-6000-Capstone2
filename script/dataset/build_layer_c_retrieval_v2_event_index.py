@@ -9,7 +9,16 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LIB_ROOT = REPO_ROOT / "resources" / "site_257_bowra-dry-a" / "layer_c_retrieval_event_library_v2"
+LIB_ROOT = (
+    REPO_ROOT
+    / "acoustic_ai"
+    / "layers"
+    / "layer_c"
+    / "attempts"
+    / "burger__mvp_2__retrieval_v2_library"
+    / "data"
+    / "media_asset_bank"
+)
 DEFAULT_MANIFEST = LIB_ROOT / "layer_c_retrieval_v2_pass_manifest.csv"
 DEFAULT_OUTPUT = LIB_ROOT / "layer_c_retrieval_v2_event_index.csv"
 

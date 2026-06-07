@@ -19,6 +19,9 @@ AI_TUNNEL_BIND_HOST="${AI_TUNNEL_BIND_HOST:-127.0.0.1}"
 AI_TUNNEL_LOCAL_PORT="${AI_TUNNEL_LOCAL_PORT:-8000}"
 AI_TUNNEL_REMOTE_HOST="${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}"
 AI_TUNNEL_REMOTE_PORT="${AI_TUNNEL_REMOTE_PORT:-8000}"
+AI_SERVICE_START_COMMAND="${AI_SERVICE_START_COMMAND:-}"
+AI_SERVICE_START_TIMEOUT_SEC="${AI_SERVICE_START_TIMEOUT_SEC:-60}"
+AI_SERVICE_START_POLL_SEC="${AI_SERVICE_START_POLL_SEC:-3}"
 
 case "$AI_SSH_KEY_PATH" in
   "~/"*) AI_SSH_KEY_PATH="$HOME/${AI_SSH_KEY_PATH#~/}" ;;
@@ -52,6 +55,36 @@ ssh_options="
   -i $AI_SSH_KEY_PATH
 "
 
+remote_health_cmd="if command -v curl >/dev/null 2>&1; then curl -fsS http://$AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT/health >/dev/null; else wget -qO- http://$AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT/health >/dev/null; fi"
+
+check_remote_health() {
+  ssh $ssh_options "$AI_SSH_USER@$AI_SSH_HOST" "$remote_health_cmd" 2>&1
+}
+
+fail_remote_health() {
+  health_output="$1"
+  case "$health_output" in
+    *"Connection refused"*|*"Failed to connect"*)
+      fail "ai-service-not-running" "$AI_SERVER_LABEL is reachable over SSH, but the AI service is not listening on $AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT." "$health_output"
+      ;;
+    *"Connection timed out"*|*"Operation timed out"*)
+      fail "ai-service-timeout" "$AI_SERVER_LABEL is reachable over SSH, but the AI service health check timed out." "$health_output"
+      ;;
+    *)
+      fail "ai-service-health" "$AI_SERVER_LABEL is reachable over SSH, but the AI service /health check failed." "$health_output"
+      ;;
+  esac
+}
+
+wait_for_remote_health() {
+  deadline=$(( $(date +%s) + AI_SERVICE_START_TIMEOUT_SEC ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    health_output=$(check_remote_health) && return 0
+    sleep "$AI_SERVICE_START_POLL_SEC"
+  done
+  return 1
+}
+
 printf 'Checking SSH login: %s@%s\n' "$AI_SSH_USER" "$AI_SSH_HOST"
 ssh_output=$(ssh $ssh_options "$AI_SSH_USER@$AI_SSH_HOST" "true" 2>&1) || {
   case "$ssh_output" in
@@ -74,19 +107,19 @@ ssh_output=$(ssh $ssh_options "$AI_SSH_USER@$AI_SSH_HOST" "true" 2>&1) || {
 }
 
 printf 'Checking remote AI service: %s:%s\n' "$AI_TUNNEL_REMOTE_HOST" "$AI_TUNNEL_REMOTE_PORT"
-remote_health_cmd="if command -v curl >/dev/null 2>&1; then curl -fsS http://$AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT/health >/dev/null; else wget -qO- http://$AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT/health >/dev/null; fi"
-health_output=$(ssh $ssh_options "$AI_SSH_USER@$AI_SSH_HOST" "$remote_health_cmd" 2>&1) || {
-  case "$health_output" in
-    *"Connection refused"*|*"Failed to connect"*)
-      fail "ai-service-not-running" "$AI_SERVER_LABEL is reachable over SSH, but the AI service is not listening on $AI_TUNNEL_REMOTE_HOST:$AI_TUNNEL_REMOTE_PORT." "$health_output"
-      ;;
-    *"Connection timed out"*|*"Operation timed out"*)
-      fail "ai-service-timeout" "$AI_SERVER_LABEL is reachable over SSH, but the AI service health check timed out." "$health_output"
-      ;;
-    *)
-      fail "ai-service-health" "$AI_SERVER_LABEL is reachable over SSH, but the AI service /health check failed." "$health_output"
-      ;;
-  esac
+health_output=$(check_remote_health) || {
+  if [ -n "$AI_SERVICE_START_COMMAND" ]; then
+    printf 'Remote AI service unavailable; attempting configured start command.\n'
+    start_output=$(ssh $ssh_options "$AI_SSH_USER@$AI_SSH_HOST" "$AI_SERVICE_START_COMMAND" 2>&1) || {
+      fail "ai-service-start-failed" "$AI_SERVER_LABEL is reachable over SSH, but the AI service start command failed." "$start_output"
+    }
+    printf 'AI service start command completed; waiting for /health.\n'
+    wait_for_remote_health || {
+      fail "ai-service-start-health" "$AI_SERVER_LABEL is reachable over SSH and the start command ran, but /health did not recover within ${AI_SERVICE_START_TIMEOUT_SEC}s." "$health_output"
+    }
+  else
+    fail_remote_health "$health_output"
+  fi
 }
 
 printf 'Starting tunnel: localhost:%s -> %s:%s via %s@%s\n' \
