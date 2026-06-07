@@ -19,8 +19,8 @@
 > backend proxies, the scene-page tone toggle, and 16 unit tests. **Remaining is
 > serverB-only** (Phase 8 + the model-dependent parts of Phases 1/5/6): install
 > deps in `.venv`, pre-download the HF model, validate 16 GB VRAM, flip
-> `AI_LLM_PREWARM=on`, deploy. **Deferred:** authoring the real skill files
-> (owner: Lucas) and the species phenology table (§10).
+> `AI_LLM_PREWARM=on`, deploy. Skills are **authored (v1)** and validated on the
+> real model. **Deferred:** the species phenology table (§10).
 
 ---
 
@@ -361,11 +361,10 @@ calls it, and `AI_LLM_PREWARM` defaults off.
   Stage 2's fauna-plausibility check does. Sequence: ship parse with
   domain/biome + coarse season checks, then tighten the gate once the table
   lands. Track as its own task.
-- **Deferred (owner: Lucas) — LLM job skills.** The per-job instruction sets
-  ("skills") are authored later as **separate files** under
-  `acoustic_ai/llm/skills/` (integration pattern in §2.1). Phases 3–4 wire
-  against placeholder skill files and swap in the real ones when ready — not a
-  blocker for wiring.
+- **LLM job skills — authored (v1).** The per-job skills are written as
+  **separate files** under `acoustic_ai/llm/skills/` (parser + report
+  analytical/immersive), validated against the real model on serverB. Further
+  prompt refinement is optional and needs no code change (loader-driven, §2.1).
 - **Follow-up (found in serverB validation) — grammar-constrained JSON.**
   `lmformatenforcer.integrations.transformers` fails to import on serverB
   ("transformers is not installed" — a version-compat quirk; transformers is
@@ -373,11 +372,12 @@ calls it, and `AI_LLM_PREWARM` defaults off.
   emits valid JSON), but the hard guarantee is off until resolved (pin
   compatible `lm-format-enforcer`/`transformers`, or switch to `outlines`).
   `service._json_prefix_fn` already degrades gracefully.
-- **Follow-up — parser prompt-adherence (skill quality).** Validation showed the
-  placeholder parser skill dropped an explicitly-requested "light rain"
-  (`layer_b: null`) while correctly swapping out-of-domain "city". The authored
-  parser skill (owner: Lucas) should tighten retention of valid user-requested
-  weather/events.
+- **Resolved — parser prompt-adherence.** Validation showed a 3B writing the
+  right correction note while nulling `layer_b`. Fixed by authoring the parser
+  skill **and** adding a deterministic weather backstop in `parser.py`
+  (keyword type/intensity detection restores an explicitly-requested, plausible
+  weather the model drops). Re-validated on the real model — "city … with light
+  rain" now drops the city and keeps rain.
 - **Independent of:** Layer A/B/C/D internals — the contracts already exist.
 - **Order:** Phase 1 → 2 → (3 ∥ 4) → 5 → 6 → 7 → 8. Phase 4 (report writer) can
   proceed in parallel with Phase 3 (parser) since they share only the service.
