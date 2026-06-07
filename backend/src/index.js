@@ -959,6 +959,11 @@ app.post("/api/generation", requireAuth, async (req, res) => {
     if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
       payload.intensity = intensity;
     }
+    for (const key of ["layer_a_attempt", "layer_b_attempt", "layer_c_attempt", "layer_d_attempt"]) {
+      if (typeof req.body?.[key] === "string" && req.body[key].trim()) {
+        payload[key] = req.body[key].trim();
+      }
+    }
 
     const r = await fetchAi(
       "/generation/render",
