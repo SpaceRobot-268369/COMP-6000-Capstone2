@@ -170,6 +170,7 @@ class OrchestratedGenerationRequest(BaseModel):
     layer_b_attempt: Optional[str] = None
     layer_c_attempt: Optional[str] = None
     layer_d_attempt: Optional[str] = None
+    include_stems: bool = False
 
 
 class ParseRequest(BaseModel):
@@ -255,7 +256,19 @@ def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
     attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
-    return _generation_response("layer_d", attempt_id, result)
+    response = _generation_response("layer_d", attempt_id, result)
+    if body.include_stems:
+        stems = result.get("_stems") or {}
+        response["stems"] = {
+            layer_id: _generation_response(
+                layer_id,
+                body_layer_attempt(layer_id, body),
+                stem_result,
+            )
+            for layer_id, stem_result in stems.items()
+            if stem_result is not None
+        }
+    return response
 
 
 @app.post("/generation/parse")
@@ -498,6 +511,16 @@ def _generation_response(layer_id: str, attempt_id: str, result: dict) -> dict:
         "sample_rate": sample_rate,
         "duration_s": duration_s,
     }
+
+
+def body_layer_attempt(layer_id: str, body: OrchestratedGenerationRequest) -> str:
+    explicit = {
+        "layer_a": body.layer_a_attempt,
+        "layer_b": body.layer_b_attempt,
+        "layer_c": body.layer_c_attempt,
+        "layer_d": body.layer_d_attempt,
+    }.get(layer_id)
+    return explicit or registry.default_attempt_id(layer_id)
 
 
 def _mel_to_png_b64(layer_id: str, attempt_id: str,
