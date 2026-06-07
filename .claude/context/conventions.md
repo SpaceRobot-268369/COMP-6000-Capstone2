@@ -76,14 +76,14 @@ COMP-6000-Capstone2/
 │                   ├── data/                   🔵 ·  attempt-local training inputs / derived data (per .dvc)
 │                   ├── precompute/             🟢 ·  attempt-local precompute scripts
 │                   │
-│                   ├── expected/               ── real-audio ground truth — ✓ generative (2–3 cases) · empty for retrieval (§4.7)
+│                   ├── expected/               ── real-audio ground truth, 2–3 cases — ✓ required for generative AND retrieval (§4.7)
 │                   │   └── real_<source_clip_id>/    ── one subdir per source clip
 │                   │       ├── audio.wav      🔵 ✓  (via .dvc)
 │                   │       ├── audio.wav.dvc  🟢 ✓  pointer → S3 blob
 │                   │       ├── spectrogram.png 🟢 ✓  renders inline on GitHub PR review
 │                   │       └── metadata.json   🟢 ✓  source manifest ref + audio stats
 │                   │
-│                   ├── showcase/               ── · author-curated generated samples (any count)
+│                   ├── showcase/               ── output samples — ✓ seed_42 baseline (gen + retrieval) · extra seeds optional
 │                   │   └── seed_<N>_<short_label>/   ── one subdir per seed
 │                   │       ├── audio.wav            🔵 (via .dvc)
 │                   │       ├── audio.wav.dvc        🟢
@@ -442,16 +442,27 @@ in the JSON for after-the-fact spotting of stale showcase samples.
 - Source recordings / training data → those live under `<attempt>/data/` (DVC-tracked).
 - Generated audio that doesn't pair with a `metadata.json` — if it can't be reproduced, it shouldn't be a showcase sample.
 
-### 4.7 Placeholder layers
+### 4.7 Placeholder vs. real attempts
 
-Layers whose registry status is `placeholder` (currently `layer_b`,
-`layer_d`, `layer_e`) leave `expected/` empty — they either produce no
-audio (`layer_e` outputs detector JSON), use curated assets that *are*
-the expected output (`layer_b`), or consume other layers' output
-(`layer_d`). Document this in the attempt's `README.md`.
+A **placeholder** attempt (registry `status: placeholder`, no trained model or
+built bank yet) may leave `expected/` and `showcase/` empty — but only
+temporarily, until its artifact exists. `layer_e` (analysis — emits detector
+JSON, no audio) and `layer_d` (mixer — consumes other layers' output) are
+exempt by nature and stay empty; note this in their `README.md`.
 
-A **retrieval** attempt (`kind: retrieval`, e.g. `layer_b`) ships a media
-asset bank as its artifact under `model/` — see [§ 5.5](#55-generative-vs-retrieval-attempts).
+Every **real model attempt** — generative **and retrieval** — must populate
+both tiers following the standard per-case pattern (§2.6); a built retrieval
+bank is **not** exempt:
+
+- `expected/` — 2–3 **real-audio** reference cases (for a weather bank, real
+  site recordings of the target conditions). Required.
+- `showcase/` — at least the canonical `seed_42_baseline/`. For a retrieval
+  attempt this is the deterministic retrieved (and rendered) stem at
+  `retrieval_seed=42`; its `metadata.json` records the retrieval params and the
+  chosen `asset_id` instead of generation params.
+
+A retrieval attempt's bank (its `kind: retrieval` artifact) lives under
+`model/` — see [§ 5.5](#55-generative-vs-retrieval-attempts).
 
 ---
 
@@ -486,6 +497,11 @@ def generate(state, seed: int | None, **runtime_params) -> dict:
 `state` is the value returned by `load()`. The server caches it per
 attempt-id so `load()` runs once.
 
+For a **retrieval** attempt the server passes the **`asset_bank` root** as
+`checkpoint_dir` (the artifact directory under `model/`); `load()` reads
+`index.json` + `media_asset_bank/` from there. The first argument is the
+artifact root regardless of kind — the name predates the retrieval kind.
+
 ### 5.2 The `code/` import root
 
 The handler is loaded by the server as
@@ -495,7 +511,7 @@ root for an attempt's Python sources.
 ### 5.3 Pipeline vs. attempt hyperparameters
 
 - **Root `params.yaml`** → only contains hyperparameters for stages declared in `dvc.yaml`. Changes here trigger `dvc repro` re-runs.
-- **`<attempt>/params.yaml`** → per-attempt experiment hyperparameters, sectioned `training:` and `inference:`.
+- **`<attempt>/params.yaml`** → per-attempt experiment hyperparameters, sectioned `training:` and `inference:`. A **retrieval** attempt has no `training:`; it uses `retrieval:` (defaults, gains, thresholds, `retrieval_seed` behaviour) + optional `inference:`, mirroring the `params:` block the registry carries for the attempt.
 - **`model/candidates/<member>/<stage>__<slug>/params.yaml`** → frozen snapshot of the params used to train the checkpoint (matches the attempt's `params.yaml` at training time).
 
 ### 5.4 Promoting an attempt
@@ -503,7 +519,7 @@ root for an attempt's Python sources.
 Lifecycle moves are explicit folder copies, never renames:
 
 - **`smoke_N` → `mvp_N`:** create a new `<member>__mvp_N__<slug>/`. Don't rename the smoke folder — it stays as a historical record.
-- **`mvp_N` → `prod_N`:** create `<member>__prod_N__<slug>/` and, in the same PR, promote the checkpoint to `model/production/<role>/` with sign-off recorded in the README audit section.
+- **`mvp_N` → `prod_N`:** create `<member>__prod_N__<slug>/` and, in the same PR, promote the artifact to `model/production/<role>/` — generative weights, or a retrieval bank's `index.json` + `media_asset_bank/` — with sign-off recorded in the README audit section.
 
 The registry's `default:` key for a layer is what the frontend dropdown
 selects on first load. Bumping it is part of promotion.
@@ -529,7 +545,8 @@ models keyed by `head:`) are not generation models and carry **no `kind`**.
 | Runtime job | synthesize a waveform from noise + prompt | select matching clip(s) for a request |
 | `registry.yaml` artifact key | `checkpoint:` | `asset_bank:` |
 | Attempt `code/` (besides `handler.py`) | `train.py`, `dataset.py`, `preprocess.py`, … | `build_index.py`, `retriever.py` |
-| `expected/` tier | required (real-audio ground truth) | empty (§4.7) |
+| `expected/` tier | required (real-audio ground truth) | required (real-audio reference, §4.7) |
+| `showcase/` tier | canonical `seed_42_baseline` (+ extras) | canonical `seed_42_baseline` (deterministic retrieved stem) |
 | Examples | layer_a (AudioLDM2), layer_c (AudioGen) | layer_b (weather), layer_c retrieval library |
 
 The required/optional layout of each kind — at both the attempt level and the
@@ -559,25 +576,42 @@ them. Each record carries a required **core** plus a free per-attempt
 
 ```json
 {
+  "schema_version": 1,
   "bank_id": "layer_b_weather_v0",
   "assets": [
     { "id": "lib_rain_004",
       "audio_path": "media_asset_bank/rain/steady_rain_med.wav",
-      "attributes": { "primary_weather": "rain", "rain_intensity": "medium", "clap_rain_score": 0.88 } }
+      "attributes": { "primary_weather": "rain", "rain_intensity": "medium", "source": "site_257", "clap_rain_score": 0.88 } }
   ]
 }
 ```
+
+**Top-level fields:**
+
+| Field | Required | Meaning |
+|---|---|---|
+| `schema_version` | ✅ | Index schema version; start at `1`. Lets a future format change migrate cleanly. |
+| `bank_id` | ✅ | Stable bank identifier, e.g. `layer_b_weather_v0`. |
+| `assets` | ✅ | Array of asset records (below). |
+
+**Per-asset fields** (`assets[]`):
 
 | Field | Required | Meaning |
 |---|---|---|
 | `id` | ✅ | Stable asset id, unique within the bank. |
 | `audio_path` | ✅ | Path **relative to the bank root**, resolving to a DVC-tracked file under `media_asset_bank/`. |
-| `attributes` | ✅ (object) | Per-attempt retrieval keys + QC metadata. Contents are free-form — layer_b keys on weather/intensity, layer_c on species/season/diel. |
+| `attributes` | ✅ (object) | Per-attempt retrieval keys + QC metadata + provenance. Retrieval keys are free-form (layer_b keys on weather/intensity, layer_c on species/season/diel); provenance is not (below). |
 
 `id`, `audio_path`, `attributes` are uniform across every bank so a generic
 check (and the pre-PR audit) can confirm each `audio_path` resolves to a
 DVC-tracked file **without knowing the layer**. Everything meaningful *for
 retrieval* lives inside `attributes`.
+
+**Provenance is required.** Each asset's `attributes` must include a `source`
+(e.g. `site_257`, `freesound`, `xeno_canto`); any asset **not** recorded at the
+project site must also carry a `license` string. Redistribution of curated
+external audio depends on it — `source` (and `license` where applicable) is the
+one part of `attributes` that is **not** free-form.
 
 **Index format policy — JSON only:**
 
@@ -591,6 +625,30 @@ references them by path; it never inlines audio. A `.dvc` pointer is a
 storage receipt (which bytes, what hash) — it carries no retrieval metadata,
 which is why the index is a separate, required file rather than "just the
 DVC pointers."
+
+**Bank internal layout.** The retriever resolves `audio_path` and never
+inspects the folder shape, so the tree *under* `media_asset_bank/` is **free**
+— organise it by whatever your retrieval key suggests (Layer B by weather
+type: `rain/`, `wind/`; Layer C by species). Two rules constrain it:
+
+- **Required invariant:** every audio file under `media_asset_bank/` is covered
+  by a `.dvc` (folder-level or per-file) and **no raw audio is git-tracked**.
+  `index.json` is the only place a file's *meaning* lives; a stray un-DVC'd
+  `.wav` either bloats git or never reaches serverB.
+- **DVC granularity (recommended):** prefer **folder-level `.dvc`** — one
+  pointer per top-level subgroup (e.g. `media_asset_bank/rain.dvc` covering
+  `rain/`). Fewer pointer files, and the deploy pulls the whole bank anyway
+  (pull-all policy), so per-file granularity buys nothing. Use per-file `.dvc`
+  only when a bank genuinely needs fine-grained incremental updates.
+
+**Deployment is automatic.** Because the bank lives under `model/`, the Server
+B sync (`script/deploy/sync_server_b_models.sh`) `dvc pull`s it via the same
+`model/**/*.dvc` rule it uses for generative weights — no `deploy_dvc:` entry
+and no manual SSH. The author's only obligation is to `dvc push` the bank
+before merge (gated by the [pre-PR checklist](../skills/pre_pr_checklist.md)).
+`deploy_dvc:` in `registry.yaml` is a **legacy override** for banks kept
+outside `model/`; drop it once a bank is migrated. See
+[cicd_design.md § Server B Production Model Sync](dev/cicd_design.md#server-b-production-model-sync).
 
 ---
 
@@ -697,6 +755,35 @@ _Empty until developer evaluation notes are provided._
 - Keep entries factual and timestamped when possible.
 - Link to runbooks, metrics, sample outputs, and issue logs instead of copying long analysis into the README.
 - If a checkpoint is deprecated, keep its README and explain why it should not be used.
+
+### 6.5 Retrieval-bank README
+
+A `kind: retrieval` artifact reuses the §6.3 skeleton but swaps the
+weights-specific fields for bank fields:
+
+- **Summary** — replace *Base model* with the bank's retrieval method; drop
+  *Hardware* / *Runtime* if they don't apply.
+- **Dataset / inputs** — describe the asset pool and its audio **sources +
+  licenses** (site vs external).
+- **Training or promotion context** — give the index **build command**
+  (`code/build_index.py …`), not a training command.
+- **Artifacts** — list `index.json` + `media_asset_bank/` (with the bank's
+  `.dvc` granularity) instead of checkpoint binaries.
+
+Add a **Bank stats** block (the numbers a reviewer and the deploy care about):
+
+```markdown
+## Bank stats
+
+- Assets: <N>            <!-- count of index.json assets[] -->
+- Bank size: <e.g. 1.4 GiB>   <!-- du -sh media_asset_bank/ — what the deploy pulls -->
+- Retrieval key(s): <e.g. primary_weather + intensity>
+- Attributes vocabulary: <keys used in assets[].attributes>
+- Audio sources: <e.g. site_257 (95%), freesound (5%, CC-BY)>
+- Index: index.json (schema_version <N>)
+```
+
+`Results analysis / audit` stays empty until evaluated (§6.2).
 
 ---
 
