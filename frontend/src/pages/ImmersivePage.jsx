@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
+import ToneToggle from "../components/ToneToggle.jsx";
 import "../immersive/immersive.css";
 
 /* The eco-acoustic immersive experience screen — a procedural Three.js woodland
@@ -201,6 +202,15 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           audioRef={audioRef}
         />
       )}
+
+      {/* Top-center tone toggle (plan §3.5). Renders only when an analysis
+          report is present in page state; switches the narrative register via
+          the LLM-OSS report writer without re-running detectors. */}
+      <ToneToggle
+        report={activeInitial?.report}
+        defaultRegister="immersive"
+        initialText={activeInitial?.narration}
+      />
     </div>
   );
 }

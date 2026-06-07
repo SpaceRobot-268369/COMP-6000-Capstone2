@@ -1,0 +1,71 @@
+/* Top-center narration tone toggle for the immersive scene (plan §3.5).
+   Self-contained styles so this never collides with immersive.css edits. */
+
+.tone-toggle {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: max-content;
+  max-width: min(48rem, 92vw);
+  pointer-events: none; /* let the scene receive clicks except on the controls */
+}
+
+.tone-toggle-switch {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+
+.tone-toggle-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 0.4rem 1.1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.tone-toggle-btn.is-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: #14110d;
+}
+
+.tone-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tone-toggle-narrative {
+  margin: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 0.8rem 1.1rem;
+  border-radius: 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  pointer-events: auto;
+}
+
+.tone-toggle-narrative.is-error {
+  color: #ffd5d5;
+  background: rgba(90, 0, 0, 0.4);
+}

@@ -138,6 +138,29 @@ export async function analyseUpload(layerId, attemptId, file) {
   return res.json();
 }
 
+/**
+ * Re-render an analysis report in a chosen tone register through the LLM-OSS
+ * report writer (POST /api/analysis/narrative). No detectors re-run — the
+ * caller supplies the already-computed fused report. Backs the scene-page tone
+ * toggle.
+ * @param {object} report   fused analysis report JSON (e.g. from analyseUpload)
+ * @param {"analytical"|"immersive"} register
+ * @returns {Promise<{ok:boolean, narrative:{register:string, text:string, faithful:boolean, violations:string[]}}>}
+ */
+export async function narrateReport(report, register = "analytical") {
+  const res = await fetch(`${API_BASE}/api/analysis/narrative`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify({ report, register }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Narrative failed (${res.status})`));
+  }
+  return res.json();
+}
+
 export async function generateSoundscape(conditions = {}) {
   const windSpeed = Number(conditions.wind_speed_ms) || 0;
   const precipitation = Number(conditions.precipitation_mm) || 0;
