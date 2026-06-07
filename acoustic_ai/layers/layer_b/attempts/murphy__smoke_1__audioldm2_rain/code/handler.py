@@ -19,6 +19,7 @@ from typing import Optional
 import numpy as np
 import torch
 
+from .bwe import apply_bwe, linear_phase_highpass, params_from_dict
 from .layer_a_visualization import waveform_to_layer_a_mel_db
 
 
@@ -91,9 +92,7 @@ def _audio_stats(audio: np.ndarray, sample_rate: int) -> dict:
 def _highpass(audio: np.ndarray, sample_rate: int, cutoff_hz: float) -> np.ndarray:
     if cutoff_hz <= 0:
         return audio.astype(np.float32, copy=False)
-    from scipy import signal
-    sos = signal.butter(4, cutoff_hz, btype="highpass", fs=sample_rate, output="sos")
-    return signal.sosfiltfilt(sos, audio).astype(np.float32)
+    return linear_phase_highpass(audio, sample_rate, cutoff_hz, numtaps=513)
 
 
 def _spectral_denoise(
@@ -183,11 +182,16 @@ def _match_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
     rms = float(np.sqrt(np.mean(np.square(audio))))
     if not np.isfinite(rms) or rms <= 1e-8:
         return audio
-    audio = audio * (target_rms / rms)
+    return (audio * (target_rms / rms)).astype(np.float32)
+
+
+def _peak_limit(audio: np.ndarray, ceiling: float = 0.98) -> tuple[np.ndarray, float]:
+    audio = audio.astype(np.float32, copy=False)
     peak = float(np.max(np.abs(audio)))
-    if np.isfinite(peak) and peak > 0.95:
-        audio = audio * (0.95 / peak)
-    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+    if not np.isfinite(peak) or peak <= ceiling:
+        return audio, 1.0
+    gain = ceiling / peak
+    return (audio * gain).astype(np.float32), gain
 
 
 def _wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
@@ -218,7 +222,9 @@ def generate(state: _State, seed: Optional[int] = None, **_ignored) -> dict:
     denoise_quantile    = float(p.get("denoise_noise_quantile", 0.2))
     denoise_floor_ratio = float(p.get("denoise_floor_ratio", 0.15))
     denoise_hop_length  = int(p.get("denoise_hop_length", 512))
-    fade_ms             = float(p.get("fade_ms", 80.0))
+    fade_ms             = float(p.get("fade_ms", 20.0))
+    bwe_enabled         = bool(p.get("bwe_enabled", True))
+    bwe_params          = params_from_dict(p.get("bwe"))
 
     device = _get_device()
     rng = torch.Generator(device)
@@ -239,7 +245,13 @@ def generate(state: _State, seed: Optional[int] = None, **_ignored) -> dict:
 
     sr = state.sample_rate
     before = _audio_stats(raw, sr)
-    audio = _highpass(raw, sr, highpass_hz)
+    bwe_metadata = {"enabled": False}
+    if bwe_enabled:
+        audio, sr, bwe_metadata = apply_bwe(raw, sr, seed=seed, params=bwe_params)
+    else:
+        audio = raw.astype(np.float32, copy=False)
+    after_bwe = _audio_stats(audio, sr)
+    audio = _highpass(audio, sr, highpass_hz)
     after_highpass = _audio_stats(audio, sr)
     if denoise_enabled:
         audio = _spectral_denoise(
@@ -251,9 +263,12 @@ def generate(state: _State, seed: Optional[int] = None, **_ignored) -> dict:
             hop_length=denoise_hop_length,
         )
     after_denoise = _audio_stats(audio, sr)
+    audio = _match_rms(audio, output_target_rms)
+    after_rms = _audio_stats(audio, sr)
     audio = _apply_fade(audio, sr, fade_ms=fade_ms)
     after_fade = _audio_stats(audio, sr)
-    audio = _match_rms(audio, output_target_rms)
+    audio, limiter_gain = _peak_limit(audio, ceiling=0.98)
+    after_limiter = _audio_stats(audio, sr)
     mel_db = waveform_to_layer_a_mel_db(audio, sr)
 
     metadata = {
@@ -268,9 +283,12 @@ def generate(state: _State, seed: Optional[int] = None, **_ignored) -> dict:
         "guidance_scale":        guidance_scale,
         "audio": _audio_stats(audio, sr),
         "postprocess": {
+            "post_order": ["BWE mix", "80 Hz highpass", "RMS match", "20 ms fade", "peak limit if needed"],
             "highpass_hz":       highpass_hz,
             "output_target_rms": output_target_rms,
             "before":            before,
+            "bwe":               bwe_metadata,
+            "after_bwe":         after_bwe,
             "after_highpass":    after_highpass,
             "denoise": {
                 "enabled":      denoise_enabled,
@@ -281,7 +299,13 @@ def generate(state: _State, seed: Optional[int] = None, **_ignored) -> dict:
                 "after_denoise": after_denoise,
             },
             "fade_ms": fade_ms,
+            "after_rms": after_rms,
             "after_fade": after_fade,
+            "limiter": {
+                "ceiling": 0.98,
+                "gain": limiter_gain,
+                "after_limiter": after_limiter,
+            },
         },
         "layer_b": {
             "weather_type": "rain",

@@ -1,0 +1,60 @@
+{
+  "tier": "expected",
+  "sample_label": "Site pool rain - heavy",
+  "expected_weather_type": "rain",
+  "expected_intensity": "heavy",
+  "expected_notes": "Real site-derived Layer B rain reference from the curated site pool, used as a non-generated comparison for the rain generator.",
+  "source": "site_pool",
+  "source_pool": "murphy__smoke_1__curated_assets/site_mvp_002/rain_primary",
+  "source_asset_id": "site_mvp002_site257_1401640_003387_003402",
+  "source_clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1401640_003387_003402.wav",
+  "source_site_id": "257",
+  "source_recording_id": "1401640",
+  "source_start_s": 3387.0,
+  "source_end_s": 3402.0,
+  "audio": {
+    "duration_s": 15.0,
+    "sample_rate": 22050,
+    "channels": 1,
+    "rms": 0.04483171924948692,
+    "peak": 0.902069091796875
+  },
+  "layer_b": {
+    "requested": {
+      "weather_type": "rain",
+      "intensity": "heavy",
+      "duration_s": 15.0
+    },
+    "selected": {
+      "asset_id": "site_mvp002_site257_1401640_003387_003402",
+      "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1401640_003387_003402.wav",
+      "source_type": "site",
+      "primary_weather": "rain",
+      "layer_d_role": "rain_primary",
+      "layer_d_use": "primary",
+      "human_audit_status": "site_ready;light_rain_audit001",
+      "components": {
+        "rain": true,
+        "wind": false,
+        "thunder": false
+      },
+      "intensity": {
+        "rain": "heavy",
+        "wind": "none",
+        "thunder": "none"
+      },
+      "asset_duration_s": 15.0
+    }
+  },
+  "source_metadata": {
+    "source_clip_id": "site_mvp002_site257_1401640_003387_003402",
+    "env": {
+      "sample_local_date": null,
+      "wind_speed_ms": "3.2",
+      "temperature_c": null,
+      "env_bucket": "wind_env_prior",
+      "rain_mm": "0.42",
+      "daily_rain_mm": "0.23"
+    }
+  }
+}

@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import random
 import threading
 from dataclasses import dataclass
 from functools import lru_cache
@@ -199,6 +200,10 @@ def list_layers() -> list[dict]:
                 "uses_cells":       bool(att.get("uses_cells", False)),
                 "cells":            cells,
                 "default_cell":     params.get("default_cell"),
+                "seed_mode":        params.get("seed_mode"),
+                "uses_intensity":   bool(params.get("uses_intensity", False)),
+                "intensities":      params.get("intensities") or [],
+                "default_intensity": params.get("default_intensity"),
             })
         out.append({
             "id":      layer_id,
@@ -509,13 +514,77 @@ def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params)
     mel_db, metadata).
     """
     spec = get_attempt(layer_id, attempt_id)
+    requested_intensity = runtime_params.get("intensity")
+    resolved_seed, resolved_intensity = _resolve_seed(
+        spec,
+        seed,
+        requested_intensity=requested_intensity,
+    )
+    if resolved_intensity is not None:
+        runtime_params = dict(runtime_params)
+        runtime_params["intensity"] = resolved_intensity
     mod = _get_handler_module(spec)
     state = _get_state(spec)
-    result = mod.generate(state, seed=seed, **runtime_params)
+    result = mod.generate(state, seed=resolved_seed, **runtime_params)
     # Always attach the spec snapshot for traceability.
     md = result.setdefault("metadata", {})
+    if spec.params.get("seed_mode") == "curated":
+        md["seed"] = resolved_seed
+        md["seed_mode"] = "curated"
+        md["requested_seed"] = seed
+        md["requested_intensity"] = requested_intensity
+        md["resolved_intensity"] = resolved_intensity
     md.setdefault("attempt", _attempt_snapshot(spec))
     return result
+
+
+def _resolve_seed(
+    spec: AttemptSpec,
+    seed: int | None,
+    *,
+    requested_intensity: Any = None,
+) -> tuple[int | None, str | None]:
+    """Resolve runtime seed policy before dispatching to an attempt handler."""
+    if spec.params.get("seed_mode") != "curated":
+        return seed, None
+
+    good_seeds = [int(value) for value in spec.params.get("good_seeds") or []]
+    seeds_by_intensity = {
+        str(name).lower(): [int(value) for value in values or []]
+        for name, values in (spec.params.get("good_seeds_by_intensity") or {}).items()
+    }
+    if not good_seeds and seeds_by_intensity:
+        good_seeds = sorted({seed for seeds in seeds_by_intensity.values() for seed in seeds})
+    if not good_seeds:
+        raise ValueError(f"{spec.layer}/{spec.id} is curated but has no good_seeds")
+
+    seed_to_intensity = {
+        seed_value: intensity
+        for intensity, seeds in seeds_by_intensity.items()
+        for seed_value in seeds
+    }
+    if seed is not None:
+        requested = int(seed)
+        if requested in set(good_seeds):
+            return requested, seed_to_intensity.get(requested)
+
+    requested_bin = str(requested_intensity or "").strip().lower()
+    configured_intensities = [
+        str(value).lower()
+        for value in spec.params.get("intensities") or seeds_by_intensity.keys()
+    ]
+    default_intensity = str(
+        spec.params.get("default_intensity")
+        or (configured_intensities[0] if configured_intensities else "")
+    ).lower()
+    resolved_intensity = (
+        requested_bin
+        if requested_bin in configured_intensities and seeds_by_intensity.get(requested_bin)
+        else default_intensity
+    )
+
+    bucket = seeds_by_intensity.get(resolved_intensity) or good_seeds
+    return random.choice(bucket), resolved_intensity or None
 
 
 def _attempt_snapshot(spec: AttemptSpec) -> dict:

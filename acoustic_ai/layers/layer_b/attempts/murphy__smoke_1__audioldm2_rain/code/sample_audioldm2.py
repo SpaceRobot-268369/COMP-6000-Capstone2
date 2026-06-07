@@ -10,7 +10,6 @@ import numpy as np
 import torch
 from diffusers import AudioLDM2Pipeline
 from peft import PeftModel
-from scipy import signal
 from scipy.io import wavfile
 
 ACOUSTIC_AI_ROOT = Path(__file__).resolve().parents[5]
@@ -18,11 +17,13 @@ sys.path.insert(0, str(ACOUSTIC_AI_ROOT))
 
 from debug_paths import DEBUG_ROOT  # noqa: E402
 try:  # noqa: E402
+    from .bwe import apply_bwe, linear_phase_highpass
     from .layer_a_visualization import (
         render_layer_a_mel_png_bytes,
         waveform_to_layer_a_mel_db,
     )
 except ImportError:  # direct script execution fallback
+    from bwe import apply_bwe, linear_phase_highpass  # type: ignore
     from layer_a_visualization import (  # type: ignore
         render_layer_a_mel_png_bytes,
         waveform_to_layer_a_mel_db,
@@ -85,6 +86,17 @@ def parse_args():
         default=80.0,
         help="High-pass cutoff for sub-bass rumble cleanup. Use <=0 to disable.",
     )
+    parser.add_argument(
+        "--fade_ms",
+        type=float,
+        default=20.0,
+        help="Final fade-in/out after BWE, high-pass, and RMS matching.",
+    )
+    parser.add_argument(
+        "--disable_bwe",
+        action="store_true",
+        help="Disable the validated 24 kHz BWE postprocess.",
+    )
     return parser.parse_args()
 
 
@@ -132,8 +144,7 @@ def _highpass(audio: np.ndarray, sample_rate: int, cutoff_hz: float) -> np.ndarr
     if cutoff_hz <= 0:
         return audio.astype(np.float32, copy=False)
 
-    sos = signal.butter(4, cutoff_hz, btype="highpass", fs=sample_rate, output="sos")
-    return signal.sosfiltfilt(sos, audio).astype(np.float32)
+    return linear_phase_highpass(audio, sample_rate, cutoff_hz, numtaps=513)
 
 
 def _match_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
@@ -145,21 +156,67 @@ def _match_rms(audio: np.ndarray, target_rms: float) -> np.ndarray:
     if not np.isfinite(rms) or rms <= 1e-8:
         return audio
 
-    audio = audio * (target_rms / rms)
+    return (audio * (target_rms / rms)).astype(np.float32)
+
+
+def _apply_fade(audio: np.ndarray, sample_rate: int, fade_ms: float) -> np.ndarray:
+    if fade_ms <= 0:
+        return audio.astype(np.float32, copy=False)
+    audio = audio.astype(np.float32, copy=False)
+    n = int(sample_rate * (fade_ms / 1000.0))
+    n = max(1, min(n, audio.shape[0] // 2))
+    if n <= 1:
+        return audio
+    ramp = np.linspace(0.0, 1.0, n, dtype=np.float32)
+    out = audio.copy()
+    out[:n] *= ramp
+    out[-n:] *= ramp[::-1]
+    return out
+
+
+def _peak_limit(audio: np.ndarray, ceiling: float = 0.98) -> tuple[np.ndarray, float]:
+    audio = audio.astype(np.float32, copy=False)
     peak = float(np.max(np.abs(audio)))
-    if np.isfinite(peak) and peak > 0.95:
-        audio = audio * (0.95 / peak)
-    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+    if not np.isfinite(peak) or peak <= ceiling:
+        return audio, 1.0
+    gain = ceiling / peak
+    return (audio * gain).astype(np.float32), gain
 
 
 def _postprocess_audio(audio: np.ndarray, sample_rate: int, args: argparse.Namespace) -> tuple[np.ndarray, dict]:
     before = _audio_stats(audio, sample_rate)
-    processed = _highpass(audio, sample_rate, args.highpass_hz)
+    bwe_metadata = {"enabled": False}
+    if not args.disable_bwe:
+        processed, sample_rate, bwe_metadata = apply_bwe(
+            audio, sample_rate, seed=args.seed
+        )
+    else:
+        processed = audio.astype(np.float32, copy=False)
+    after_bwe = _audio_stats(processed, sample_rate)
+    processed = _highpass(processed, sample_rate, args.highpass_hz)
+    after_highpass = _audio_stats(processed, sample_rate)
     processed = _match_rms(processed, args.output_target_rms)
+    after_rms = _audio_stats(processed, sample_rate)
+    processed = _apply_fade(processed, sample_rate, args.fade_ms)
+    after_fade = _audio_stats(processed, sample_rate)
+    processed, limiter_gain = _peak_limit(processed, ceiling=0.98)
     return processed, {
+        "sample_rate": sample_rate,
+        "post_order": ["BWE mix", "80 Hz highpass", "RMS match", "20 ms fade", "peak limit if needed"],
         "highpass_hz": args.highpass_hz if args.highpass_hz > 0 else None,
         "output_target_rms": args.output_target_rms if args.output_target_rms > 0 else None,
+        "fade_ms": args.fade_ms,
         "before": before,
+        "bwe": bwe_metadata,
+        "after_bwe": after_bwe,
+        "after_highpass": after_highpass,
+        "after_rms": after_rms,
+        "after_fade": after_fade,
+        "limiter": {
+            "ceiling": 0.98,
+            "gain": limiter_gain,
+            "after_limiter": _audio_stats(processed, sample_rate),
+        },
         "after": _audio_stats(processed, sample_rate),
     }
 
@@ -209,10 +266,15 @@ def main():
 
     sample_rate = pipeline.vocoder.config.sampling_rate
     audio, postprocess = _postprocess_audio(raw_audio, sample_rate, args)
+    sample_rate = int(postprocess["sample_rate"])
     wavfile.write(output_path, rate=sample_rate, data=audio.astype(np.float32))
 
-    spec_path = output_path.with_name(f"{output_path.stem}_spectrogram.png")
-    meta_path = output_path.with_name(f"{output_path.stem}_metadata.json")
+    if output_path.name == "audio.wav":
+        spec_path = output_path.with_name("spectrogram.png")
+        meta_path = output_path.with_name("metadata.json")
+    else:
+        spec_path = output_path.with_name(f"{output_path.stem}_spectrogram.png")
+        meta_path = output_path.with_name(f"{output_path.stem}_metadata.json")
     _render_spectrogram(audio, sample_rate, spec_path)
     meta_path.write_text(
         json.dumps(

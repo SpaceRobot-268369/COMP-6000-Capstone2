@@ -1,0 +1,168 @@
+{
+  "prompt": "steady rain over dry eucalyptus woodland, Bowra, Australia",
+  "negative_prompt": "hiss, static noise, background hum, tape noise, birds, insects, wind gusts, reverb, music, machinery, low quality, distortion",
+  "pretrained_model_name": "cvssp/audioldm2",
+  "lora_dir": "model/candidates/murphy/smoke_1__audioldm2_rain",
+  "num_inference_steps": 200,
+  "audio_length_in_s": 5.0,
+  "guidance_scale": 3.0,
+  "seed": 3549697,
+  "spectrogram_renderer": "acoustic_ai.layers.layer_b.attempts.murphy__smoke_1__audioldm2_rain.code.layer_a_visualization",
+  "spectrogram_type": "log_mel",
+  "layer_b": {
+    "weather_type": "rain",
+    "mode": "generate",
+    "attempt": "murphy__smoke_1__audioldm2_rain"
+  },
+  "audio": {
+    "sample_rate": 24000,
+    "duration_s": 5.0,
+    "min": -0.303554505109787,
+    "max": 0.21974767744541168,
+    "mean": 7.091959464133879e-09,
+    "rms": 0.04963069036602974,
+    "peak": 0.303554505109787,
+    "clip_pct": 0.0
+  },
+  "postprocess": {
+    "sample_rate": 24000,
+    "post_order": [
+      "BWE mix",
+      "80 Hz highpass",
+      "RMS match",
+      "20 ms fade",
+      "peak limit if needed"
+    ],
+    "highpass_hz": 80.0,
+    "output_target_rms": 0.05,
+    "fade_ms": 20.0,
+    "before": {
+      "sample_rate": 16000,
+      "duration_s": 5.0,
+      "min": -0.6416015625,
+      "max": 0.517578125,
+      "mean": 0.000192653649719432,
+      "rms": 0.11516906321048737,
+      "peak": 0.6416015625,
+      "clip_pct": 0.0
+    },
+    "bwe": {
+      "enabled": true,
+      "parameters": {
+        "cross_over_hz": 8000.0,
+        "output_sample_rate_hz": 24000,
+        "sbr_source_low_hz": 4000.0,
+        "sbr_source_high_hz": 7900.0,
+        "sbr_shift_hz": 4000.0,
+        "sbr_target_low_hz": 8000.0,
+        "sbr_target_high_hz": 11800.0,
+        "noise_low_hz": 8000.0,
+        "noise_high_hz": 11800.0,
+        "envelope_source_low_hz": 3000.0,
+        "envelope_source_high_hz": 7900.0,
+        "envelope_smooth_ms": 35.0,
+        "noise_to_sbr_rms_ratio": 0.35,
+        "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+        "post_bwe_highband_trim_db": -2.75,
+        "denoise_enabled": false
+      },
+      "input_sample_rate_hz": 16000,
+      "output_sample_rate_hz": 24000,
+      "target_drop_8_11_minus_2_8_db": -10.985337681240505,
+      "input_2_8khz_db": -61.277034759521484,
+      "input_8_11khz_db": -103.29097747802734,
+      "lowband_2_8khz_db": -61.29597854614258,
+      "target_high_8_11khz_db": -72.28131622738309,
+      "highband_8_11khz_before_db": -61.14762878417969,
+      "highband_gain_db": -13.8836874432034,
+      "post_bwe_highband_trim_db": -2.75,
+      "highband_8_11khz_after_db": -75.05988311767578,
+      "mixed_2_8khz_db": -61.29597473144531,
+      "mixed_8_11khz_db": -74.99615478515625,
+      "mixed_drop_8_11_minus_2_8_db": -13.700180053710938,
+      "band_energy": {
+        "before_bwe": {
+          "2_8khz_db": -61.277034759521484,
+          "8_11khz_db": -103.29097747802734,
+          "drop_8_11_minus_2_8_db": -42.01394271850586
+        },
+        "after_bwe": {
+          "2_8khz_db": -61.29597473144531,
+          "8_11khz_db": -74.99615478515625,
+          "drop_8_11_minus_2_8_db": -13.700180053710938
+        }
+      },
+      "sbr_rms": 0.01669933607337668,
+      "noise_rms": 0.005844767701965022,
+      "highband_rms": 0.017716615319161803
+    },
+    "after_bwe": {
+      "sample_rate": 24000,
+      "duration_s": 5.0,
+      "min": -0.6625373959541321,
+      "max": 0.5173979997634888,
+      "mean": 0.00019276990497019142,
+      "rms": 0.11520979553461075,
+      "peak": 0.6625373959541321,
+      "clip_pct": 0.0
+    },
+    "after_highpass": {
+      "sample_rate": 24000,
+      "duration_s": 5.0,
+      "min": -0.6500047445297241,
+      "max": 0.47054821252822876,
+      "mean": -1.9075408999924548e-05,
+      "rms": 0.10706557333469391,
+      "peak": 0.6500047445297241,
+      "clip_pct": 0.0
+    },
+    "after_rms": {
+      "sample_rate": 24000,
+      "duration_s": 5.0,
+      "min": -0.303554505109787,
+      "max": 0.21974767744541168,
+      "mean": -8.908279596653301e-06,
+      "rms": 0.05000000074505806,
+      "peak": 0.303554505109787,
+      "clip_pct": 0.0
+    },
+    "after_fade": {
+      "sample_rate": 24000,
+      "duration_s": 5.0,
+      "min": -0.303554505109787,
+      "max": 0.21974767744541168,
+      "mean": 7.091959464133879e-09,
+      "rms": 0.04963069036602974,
+      "peak": 0.303554505109787,
+      "clip_pct": 0.0
+    },
+    "limiter": {
+      "ceiling": 0.98,
+      "gain": 1.0,
+      "after_limiter": {
+        "sample_rate": 24000,
+        "duration_s": 5.0,
+        "min": -0.303554505109787,
+        "max": 0.21974767744541168,
+        "mean": 7.091959464133879e-09,
+        "rms": 0.04963069036602974,
+        "peak": 0.303554505109787,
+        "clip_pct": 0.0
+      }
+    },
+    "after": {
+      "sample_rate": 24000,
+      "duration_s": 5.0,
+      "min": -0.303554505109787,
+      "max": 0.21974767744541168,
+      "mean": 7.091959464133879e-09,
+      "rms": 0.04963069036602974,
+      "peak": 0.303554505109787,
+      "clip_pct": 0.0
+    }
+  },
+  "artifacts": {
+    "wav": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/good_seed_supplement_batch_20260607/outputs/seed_3549697_generated/audio.wav",
+    "spectrogram": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/good_seed_supplement_batch_20260607/outputs/seed_3549697_generated/spectrogram.png"
+  }
+}

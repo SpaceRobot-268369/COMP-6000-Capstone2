@@ -97,5 +97,26 @@
     ],
     "denoise_enabled": false
   },
-  "recommended_next_action": "rerun phase 4 and phase 5 with a conservative highband trim, then manually A/B seed_48 and seed_51."
+  "recommended_next_action": "rerun phase 4 and phase 5 with a conservative highband trim, then manually A/B seed_48 and seed_51.",
+  "next_trial_manual_audit": {
+    "phase4_dir": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase4_bwe_mixed_24k_next_trial_m2p75",
+    "phase5_dir": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__audioldm2_rain/spectrum_diagnostic_20260606/bwe_prototype/phase5_retest_next_trial_m2p75",
+    "preferred_after_bwe_for_reviewed_samples": true,
+    "good_seeds": [
+      "seed_46",
+      "seed_48",
+      "seed_51"
+    ],
+    "artifact_gate": {
+      "metallic_or_electronic_hiss_observed": false,
+      "comb_like_sbr_coloration_observed": false,
+      "pass": true
+    },
+    "parameter_decision": {
+      "keep_current_next_trial_parameters": true,
+      "post_bwe_highband_trim_db": -2.75,
+      "noise_to_sbr_rms_ratio": 0.35,
+      "envelope_smooth_ms": 35
+    }
+  }
 }

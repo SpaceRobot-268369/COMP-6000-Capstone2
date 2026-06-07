@@ -227,12 +227,39 @@ layers:
           audio_length_in_s: 5.0
           output_target_rms: 0.05
           highpass_hz: 80.0
-          denoise_enabled: true
+          seed_mode: curated
+          uses_intensity: true
+          intensities: [light, heavy]
+          default_intensity: light
+          good_seeds_by_intensity:
+            light: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687]
+            heavy: [46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+          good_seeds: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687, 46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+          bwe_enabled: true
+          bwe:
+            cross_over_hz: 8000.0
+            output_sr: 24000
+            output_sample_rate_hz: 24000
+            sbr_source_low_hz: 4000.0
+            sbr_source_high_hz: 7900.0
+            sbr_shift_hz: 4000.0
+            sbr_target_low_hz: 8000.0
+            sbr_target_high_hz: 11800.0
+            noise_low_hz: 8000.0
+            noise_high_hz: 11800.0
+            envelope_source_low_hz: 3000.0
+            envelope_source_high_hz: 7900.0
+            envelope_smooth_ms: 35.0
+            noise_to_sbr_rms_ratio: 0.35
+            target_drop_8_11_minus_2_8_db: -10.985337681240505
+            post_bwe_highband_trim_db: -2.75
+            denoise_enabled: false
+          denoise_enabled: false
           denoise_strength: 0.15
           denoise_noise_quantile: 0.2
           denoise_floor_ratio: 0.38
           denoise_hop_length: 512
-          fade_ms: 80.0
+          fade_ms: 20.0
         notes:
           - Layer B generate-path smoke for rain only.
           - Runtime accepts seed only; prompt and generation params are server-locked.

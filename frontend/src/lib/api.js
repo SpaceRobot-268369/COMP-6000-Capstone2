@@ -59,7 +59,7 @@ export async function fetchLayerRegistry() {
  *   season?: string,
  *   diel?: string,
  *   weather_type?: string,
- *   intensity?: string,
+ *   intensity?: string,       // weather intensity or curated rain bin
  *   wind_intensity?: string,
  *   duration_s?: number
  * }} params

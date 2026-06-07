@@ -78,6 +78,18 @@ def parse_args() -> argparse.Namespace:
             "phase 5 reruns before/after/real spectrum diagnostics."
         ),
     )
+    parser.add_argument(
+        "--bwe-parameters",
+        type=Path,
+        default=None,
+        help="Optional BWE parameter JSON for phase 4 trial settings.",
+    )
+    parser.add_argument(
+        "--trial-suffix",
+        type=str,
+        default="",
+        help="Optional suffix for phase 4/5 output dirs, e.g. _next_trial_m2p75.",
+    )
     return parser.parse_args()
 
 
@@ -542,7 +554,7 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
         if not required.exists():
             raise SystemExit(f"missing prerequisite for phase 4: {required}")
 
-    phase4_dir = bwe_dir / "phase4_bwe_mixed_24k"
+    phase4_dir = bwe_dir / f"phase4_bwe_mixed_24k{args.trial_suffix}"
     if phase4_dir.exists():
         raise SystemExit(f"output dir already exists, refusing to overwrite: {phase4_dir}")
     output_dir = phase4_dir / "outputs"
@@ -550,6 +562,14 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
 
     target = json.loads(phase1_target_path.read_text())
     target_drop_db = float(target["target_slope"]["high_minus_mid_db"])
+    bwe_parameters = {}
+    if args.bwe_parameters is not None:
+        if not args.bwe_parameters.exists():
+            raise SystemExit(f"BWE parameter file not found: {args.bwe_parameters}")
+        bwe_parameters = json.loads(args.bwe_parameters.read_text())
+    post_bwe_highband_trim_db = float(
+        bwe_parameters.get("post_bwe_highband_trim_db", 0.0)
+    )
 
     with phase2_manifest.open(newline="") as f:
         phase2_rows = {row["seed"]: row for row in csv.DictReader(f)}
@@ -576,7 +596,7 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
         low_mid_db = band_power_db_from_audio(lowband, sr, 2000.0, 8000.0)
         high_db_before = band_power_db_from_audio(highband, sr, 8000.0, 11025.0)
         target_high_db = low_mid_db + target_drop_db
-        high_gain_db = target_high_db - high_db_before
+        high_gain_db = target_high_db - high_db_before + post_bwe_highband_trim_db
         high_gain = float(10.0 ** (high_gain_db / 20.0))
 
         highband_matched = linear_phase_highpass(highband * high_gain, sr, 8000.0)
@@ -605,6 +625,7 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
             "target_high_8_11khz_db": target_high_db,
             "highband_8_11khz_before_db": high_db_before,
             "highband_gain_db": high_gain_db,
+            "post_bwe_highband_trim_db": post_bwe_highband_trim_db,
             "highband_8_11khz_after_db": high_db_after,
             "mixed_2_8khz_db": mixed_mid_db,
             "mixed_8_11khz_db": mixed_high_db,
@@ -626,6 +647,7 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
                 "target_high_8_11khz_db": target_high_db,
                 "highband_8_11khz_before_db": high_db_before,
                 "highband_gain_db": high_gain_db,
+                "post_bwe_highband_trim_db": post_bwe_highband_trim_db,
                 "highband_8_11khz_after_db": high_db_after,
                 "mixed_2_8khz_db": mixed_mid_db,
                 "mixed_8_11khz_db": mixed_high_db,
@@ -647,6 +669,8 @@ def run_phase4(args: argparse.Namespace, bwe_dir: Path) -> dict:
         "showcase_count": len(rows),
         "sample_rate_hz": PHASE2_SR,
         "target_drop_8_11_minus_2_8_db": target_drop_db,
+        "bwe_parameters": str(args.bwe_parameters) if args.bwe_parameters else None,
+        "post_bwe_highband_trim_db": post_bwe_highband_trim_db,
         "mean_mixed_drop_8_11_minus_2_8_db": float(mixed_drop.mean()),
         "std_mixed_drop_db": float(mixed_drop.std()),
         "phase4_dir": str(phase4_dir),
@@ -699,11 +723,11 @@ def collect_psd(paths: list[Path], target_sr: int) -> tuple[np.ndarray, np.ndarr
 def run_phase5(
     args: argparse.Namespace, bwe_dir: Path, showcase_wavs: list[Path]
 ) -> dict:
-    phase4_outputs = bwe_dir / "phase4_bwe_mixed_24k/outputs"
+    phase4_outputs = bwe_dir / f"phase4_bwe_mixed_24k{args.trial_suffix}/outputs"
     if not phase4_outputs.exists():
         raise SystemExit(f"Run phase 4 first; missing {phase4_outputs}")
 
-    phase5_dir = bwe_dir / "phase5_retest"
+    phase5_dir = bwe_dir / f"phase5_retest{args.trial_suffix}"
     if phase5_dir.exists():
         raise SystemExit(f"output dir already exists, refusing to overwrite: {phase5_dir}")
     figures_dir = phase5_dir / "figures"

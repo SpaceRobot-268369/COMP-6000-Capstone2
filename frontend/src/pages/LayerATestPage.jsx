@@ -50,6 +50,7 @@ export default function LayerATestPage({
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
   const [windIntensity, setWindIntensity] = useState("medium");
+  const [curatedIntensity, setCuratedIntensity] = useState("light");
   const [weatherDuration, setWeatherDuration] = useState(10);
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
@@ -114,12 +115,26 @@ export default function LayerATestPage({
     [currentLayer, attemptId],
   );
   const usesSeed = currentAttempt?.uses_seed === true;
+  const usesCuratedSeed = currentAttempt?.seed_mode === "curated";
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherStemControls = layerId === "layer_b" && attemptId === WEATHER_STEM_SELECTOR_ATTEMPT;
   const usesWindGeneratorControls = layerId === "layer_b" && WIND_GENERATOR_ATTEMPTS.has(attemptId);
-  const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls;
   const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+  const curatedIntensityValues = useMemo(() => {
+    const values = currentAttempt?.intensities || [];
+    return values.length ? values : ["light", "heavy"];
+  }, [currentAttempt]);
+  const usesCuratedIntensity = (
+    usesCuratedSeed &&
+    currentAttempt?.uses_intensity === true &&
+    curatedIntensityValues.length > 0
+  );
+  const curatedIntensityOptions = useMemo(
+    () => curatedIntensityValues.map((value) => ({ value, label: value })),
+    [curatedIntensityValues],
+  );
+  const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls || usesCuratedIntensity;
 
   // Derive the season / diel axes from the cell list (handles partial banks).
   const seasonOptions = useMemo(() => {
@@ -159,18 +174,23 @@ export default function LayerATestPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [season, usesCells]);
 
-  // Flatten cached samples in display order (expected first, then showcase).
+  useEffect(() => {
+    if (!usesCuratedIntensity) return;
+    if (curatedIntensityValues.includes(curatedIntensity)) return;
+    const fallback = curatedIntensityValues.includes(currentAttempt?.default_intensity)
+      ? currentAttempt.default_intensity
+      : curatedIntensityValues[0];
+    setCuratedIntensity(fallback);
+  }, [usesCuratedIntensity, curatedIntensityValues, curatedIntensity, currentAttempt]);
+
+  // Flatten expected samples only. Showcase artefacts stay on disk but are not
+  // mixed into the Expected Results reference panel.
   // For bank attempts (uses_cells), filter to entries whose `cell` matches the
   // currently selected (season, diel) so the Expected panel mirrors the run.
   const expectedEntries = useMemo(() => {
     if (!samples) return [];
     const activeCell = usesCells && season && diel ? `${season}_${diel}` : null;
-    const tiers = [
-      { tier: "expected", entries: samples.expected || [] },
-      { tier: "showcase", entries: samples.showcase || [] },
-    ];
-    return tiers.flatMap((t) =>
-      t.entries
+    return (samples.expected || [])
         .filter((s) => {
           if (!activeCell) return true;
           // Cell-grouped entries match the active cell; cell-less entries
@@ -178,11 +198,10 @@ export default function LayerATestPage({
           return !s.cell || s.cell === activeCell;
         })
         .map((s) => ({
-          tier: t.tier,
+          tier: "expected",
           sample: s,
-          key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
-        })),
-    );
+          key: `expected/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
+        }));
   }, [samples, usesCells, season, diel]);
 
   // Auto-select the first expected sample when entries change.
@@ -228,7 +247,7 @@ export default function LayerATestPage({
     setResult(null);
     try {
       const runParams = {};
-      if (usesSeed) {
+      if (usesSeed && !usesCuratedSeed) {
         if (usesWeatherStemControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
         else runParams.seed = Number(seed) || DEFAULT_SEED;
       }
@@ -247,6 +266,9 @@ export default function LayerATestPage({
           runParams.intensity = windIntensity;
           runParams.wind_intensity = windIntensity;
         }
+      }
+      if (usesCuratedIntensity) {
+        runParams.intensity = curatedIntensity;
       }
       const data = await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
@@ -280,6 +302,8 @@ export default function LayerATestPage({
     ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__retrieval_seed`
     : usesWindGeneratorControls
       ? `__wind${isWindIntensityBank ? `_${windIntensity}` : ""}__seed`
+      : usesCuratedIntensity
+        ? `__rain_${curatedIntensity}__curated_seed`
       : "__seed";
   const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesLayerBControls ? layerBTag : "__seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
@@ -464,24 +488,62 @@ export default function LayerATestPage({
                 </section>
               )}
 
+              {usesCuratedIntensity && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Rain generator
+                    <span className="dev-controls-section-pill">
+                      rain · {curatedIntensity}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="rain" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Rain intensity"
+                      value={curatedIntensity}
+                      onChange={setCuratedIntensity}
+                      options={curatedIntensityOptions}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Duration</span>
+                      <input className="layer-a-input" type="text" value="server locked" disabled />
+                      <small>Owned by registry / handler.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
-                  <SeedField
-                    label={usesWeatherStemControls ? "Retrieval seed" : "Seed"}
-                    value={seed}
-                    onChange={setSeed}
-                    disabled={!usesSeed}
-                    hint={
-                      usesWeatherStemControls
-                        ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
-                        : usesWindGeneratorControls
-                          ? "Same seed + same wind generator settings = same model sample."
-                        : usesSeed
-                          ? "Same seed + same attempt = same audio."
-                        : "This model does not use a seed."
-                    }
-                  />
+                  {usesCuratedSeed ? (
+                    <CuratedSeedField
+                      resolvedSeed={result?.metadata?.seed}
+                      intensity={usesCuratedIntensity ? curatedIntensity : ""}
+                      onRun={handleRun}
+                      disabled={isLoading || !attemptId || !registryReady || currentAttempt?.available === false}
+                    />
+                  ) : (
+                    <SeedField
+                      label={usesWeatherStemControls ? "Retrieval seed" : "Seed"}
+                      value={seed}
+                      onChange={setSeed}
+                      disabled={!usesSeed}
+                      hint={
+                        usesWeatherStemControls
+                          ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                          : usesWindGeneratorControls
+                            ? "Same seed + same wind generator settings = same model sample."
+                          : usesSeed
+                            ? "Same seed + same attempt = same audio."
+                          : "This model does not use a seed."
+                      }
+                    />
+                  )}
                   <button
                     type="button"
                     className="gen-primary-btn dev-run-btn"
@@ -568,8 +630,8 @@ export default function LayerATestPage({
             <h2>Expected Results</h2>
             <p>
               {samples?.canonical_seed != null
-                ? `Cached samples · canonical seed ${samples.canonical_seed}`
-                : "Cached expected / showcase samples"}
+                ? `Cached expected samples · canonical seed ${samples.canonical_seed}`
+                : "Cached expected samples"}
             </p>
           </div>
 
@@ -799,6 +861,36 @@ function Placeholder({ kind, loading, children }) {
       </div>
       <p className="dev-placeholder-caption">{children}</p>
     </div>
+  );
+}
+
+function CuratedSeedField({ resolvedSeed, intensity, onRun, disabled }) {
+  return (
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
+      <span>Curated seed</span>
+      <div className="dev-seed-input-row">
+        <button
+          type="button"
+          className="dev-seed-random-btn"
+          onClick={onRun}
+          disabled={disabled}
+          title="Generate with a server-selected curated seed"
+          aria-label="Generate with a server-selected curated seed"
+        >
+          🎲
+        </button>
+        <input
+          className="layer-a-input"
+          type="text"
+          value={resolvedSeed != null ? `seed ${resolvedSeed}` : "server random"}
+          disabled
+          readOnly
+        />
+      </div>
+      <small>
+        Server selects from the reviewed{intensity ? ` ${intensity}` : ""} rain seed whitelist and returns the resolved seed.
+      </small>
+    </label>
   );
 }
 

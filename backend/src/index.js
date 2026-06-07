@@ -955,22 +955,27 @@ const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "thunder", "storm"]);
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 const ALLOWED_WIND_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
+function parseNonNegativeInteger(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
   const operation = `generate ${layer}/${attempt}`;
   try {
-    const requestedSeed = Number(req.body?.seed);
-    const requestedRetrievalSeed = Number(req.body?.retrieval_seed);
-    const seed = Number.isInteger(requestedSeed) && requestedSeed >= 0 ? requestedSeed : null;
-    const retrievalSeed = Number.isInteger(requestedRetrievalSeed) && requestedRetrievalSeed >= 0
-      ? requestedRetrievalSeed
-      : null;
+    const seed = parseNonNegativeInteger(req.body?.seed);
+    const retrievalSeed = parseNonNegativeInteger(req.body?.retrieval_seed);
 
     // Cell selector — only forwarded if both are valid; otherwise omitted
     // (server falls back to the attempt's default_cell).
     const season = typeof req.body?.season === "string" ? req.body.season.toLowerCase() : null;
     const diel = typeof req.body?.diel === "string" ? req.body.diel.toLowerCase() : null;
-    const payload = { seed };
+    const payload = {};
+    if (seed !== null) {
+      payload.seed = seed;
+    }
     if (retrievalSeed !== null) {
       payload.retrieval_seed = retrievalSeed;
     }
