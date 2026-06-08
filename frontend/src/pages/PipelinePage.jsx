@@ -17,7 +17,7 @@ const GENERATION = {
   },
   // What the parser does — shown beside the Prompt Parser node.
   decoder: {
-    why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — a request our site can't voice, like dense city traffic in a remote dry woodland, is blocked and a sensible alternative is suggested rather than generated; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist.",
+    why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — a request our site can't voice, like dense city traffic in a remote dry woodland, is blocked and a sensible alternative is suggested rather than generated; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist. The parser also resolves the arrangement: cadence like “a boobook every few seconds” is expanded into an explicit list of onset times so the mixer never has to reason about frequency — it just places clips where it's told.",
     example: "“A misty autumn dawn, light rain, with a boobook owl calling in the distance.”",
   },
   parallelHeading: "Three independent layers compose in parallel",
@@ -43,7 +43,7 @@ const GENERATION = {
       status: "placeholder",
       sample: {
         input: '{ "weather_type": "rain", "intensity": "medium", "duration_s": 10, "retrieval_seed": 42 }',
-        output: "Rain-only weather stem selected from the curated asset index, loudness-normalised. WAV.",
+        output: "Weather clips for the mixer — continuous beds (wind, steady rain) loop to length; discrete claps (thunder) carry onset times. Loudness-normalised WAV.",
       },
     },
     {
@@ -54,7 +54,7 @@ const GENERATION = {
       status: "smoke",
       sample: {
         input: '{ "seed": 42 }  // boobook LoRA — one species, server owns the caption',
-        output: "Isolated species events — two-note boobook calls placed on a timeline. WAV (16 kHz, resampled at the mixer).",
+        output: "Isolated species call(s) — each species hands the mixer one clip plus the onset times it should be placed at. WAV (16 kHz, resampled at the mixer).",
       },
     },
   ],
@@ -66,9 +66,9 @@ const GENERATION = {
   merge: {
     step: "D",
     label: "Mixer",
-    role: "Stacks A+B+C — sample-rate match, gain staging, fades.",
-    model: "Algorithmic combiner",
-    status: "placeholder",
+    role: "Arranges A+B+C on one timeline. The ambient bed (and any continuous weather) loops to length; discrete clips — thunder claps, each species call — drop at the explicit onset times the parser computed. Overlaps are summed, never resolved. Per-layer gain staging (ambient 0 / weather −2 / event −8 dB) with optional per-clip overrides, 0.95 peak ceiling, then export. A null onset list falls back to a seeded random placement.",
+    model: "Multi-clip algorithmic combiner · seeded onset fallback · implemented + tested",
+    status: "live",
     modelLabel: "Method",
   },
   output: {
