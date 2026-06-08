@@ -129,11 +129,13 @@ Why AudioGen over AudioLDM2 here, per-species selection policy, smoke-test hyper
 
 ### Layer D — Mixer (layers/layer_d/)
 
-| File | Role |
+| Attempt | Role |
 |---|---|
-| `audio_mixer.py` | Combine A+B+C → WAV + spectrogram + explanation JSON [PLACEHOLDER] |
+| `songke__mvp_1__layered_mix/code/audio_mixer.py` | Single-stem MVP: combine one A + one B + one C → WAV + mel + explanation JSON (implemented) |
+| `songke__mvp_2__multi_clip_mix/` | Multi-clip contract: lists of placed weather/event clips with explicit onsets + seeded random fallback (design only) |
 
-No training data. Pure algorithmic combiner.
+No training data. Pure algorithmic combiner. Multi-clip arrangement contract:
+[pipeline_design.md § Layer D](pipeline_design.md#layer-d--mixer-and-output-explanation).
 
 ### Layer E — Analysis Explainer (layers/layer_e/)
 

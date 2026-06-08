@@ -49,7 +49,9 @@ export async function fetchLayerRegistry() {
 /**
  * Generate audio with a specific layer/attempt. Most model behavior stays
  * registry/handler-owned; the dev UI only forwards the small runtime selector
- * set needed by each attempt.
+ * set needed by each attempt. `seed` is always supported; bank attempts may
+ * also use `(season, diel)`, Layer B uses weather/generator controls, and
+ * Layer C retrieval can use `species_common_name`.
  *
  * @param {string} layerId    e.g. "layer_a"
  * @param {string} attemptId  e.g. "lucas__smoke_1__audioldm2_spring_night"
@@ -61,6 +63,8 @@ export async function fetchLayerRegistry() {
  *   weather_type?: string,
  *   intensity?: string,
  *   wind_intensity?: string,
+ *   rain_intensity?: string,
+ *   species_common_name?: string,
  *   duration_s?: number
  * }} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, sample_rate:number, duration_s:number}>}
@@ -254,7 +258,18 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, wind_intensity, duration_s } = {},
+  {
+    seed,
+    retrieval_seed,
+    season,
+    diel,
+    weather_type,
+    intensity,
+    wind_intensity,
+    rain_intensity,
+    duration_s,
+    species_common_name: speciesCommonName,
+  } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -266,7 +281,9 @@ export async function generateAttempt(
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
   if (wind_intensity) payload.wind_intensity = wind_intensity;
+  if (rain_intensity) payload.rain_intensity = rain_intensity;
   if (duration_s) payload.duration_s = duration_s;
+  if (speciesCommonName) payload.species_common_name = speciesCommonName;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {

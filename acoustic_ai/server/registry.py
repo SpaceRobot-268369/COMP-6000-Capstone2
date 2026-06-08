@@ -54,6 +54,7 @@ class AttemptSpec:
     stage:   str           # "smoke_1" | "mvp_1" | "prod_1" | ...
     head:    str | None    # Layer E only: "ambient" | "weather" | "events"
     status:  str
+    kind:    str | None
     checkpoint: Path | None
     asset_bank: Path | None
     extra_checkpoints: dict[str, Path]
@@ -63,6 +64,12 @@ class AttemptSpec:
     @property
     def handler_module(self) -> str:
         return f"layers.{self.layer}.attempts.{self.id}.code.handler"
+
+    @property
+    def artifact_root(self) -> Path | None:
+        if self.kind == "retrieval" and self.asset_bank is not None:
+            return self.asset_bank
+        return self.checkpoint
 
 
 # --- loading ---------------------------------------------------------------
@@ -224,6 +231,28 @@ def _asset_bank_availability(bank_dir: Path | None) -> dict:
             "missing": ["index.json"],
         }
 
+    if not any(media_dir.rglob("*.wav")):
+        pointers = sorted(
+            str(p.relative_to(bank_dir))
+            for p in media_dir.rglob("*.dvc")
+            if p.is_file()
+        )
+        if pointers:
+            return {
+                "available": False,
+                "reason": (
+                    "Asset bank is DVC-tracked but audio is not on disk locally. "
+                    f"Run `dvc pull` for: {', '.join(pointers[:3])}"
+                    + (" ..." if len(pointers) > 3 else "")
+                ),
+                "missing": pointers,
+            }
+        return {
+            "available": False,
+            "reason": "retrieval asset bank not materialized: media_asset_bank audio.",
+            "missing": ["media_asset_bank audio"],
+        }
+
     missing_audio = [
         str(asset.get("audio_path", ""))
         for asset in doc.get("assets", [])
@@ -254,7 +283,7 @@ def list_layers() -> list[dict]:
             cells = sorted((params.get("cells") or {}).keys())
             avail = (
                 _asset_bank_availability(asset_bank)
-                if kind == "retrieval" and asset_bank is not None
+                if kind == "retrieval"
                 else _ckpt_availability(ckpt, cell_names=cells)
             )
             attempts.append({
@@ -309,6 +338,7 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         head=att.get("head"),
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
+        kind=att.get("kind"),
         asset_bank=_resolve_asset_bank(att.get("asset_bank")),
         extra_checkpoints=extras,
         params=dict(att.get("params") or {}),
@@ -567,8 +597,7 @@ def _get_state(spec: AttemptSpec):
         if cache_key in _state_cache:
             return _state_cache[cache_key]
         mod = _get_handler_module(spec)
-        load_root = spec.asset_bank if spec.asset_bank is not None else spec.checkpoint
-        state = mod.load(load_root, dict(spec.params), extra=spec.extra_checkpoints)
+        state = mod.load(spec.artifact_root, dict(spec.params), extra=spec.extra_checkpoints)
         _state_cache[cache_key] = state
         return state
 
