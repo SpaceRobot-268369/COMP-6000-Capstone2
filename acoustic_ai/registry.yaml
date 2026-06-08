@@ -161,8 +161,35 @@ layers:
 
   layer_b:
     label: "Layer B — Weather"
-    default: murphy__smoke_1__curated_assets
+    default: murphy__mvp_1__weather_stem_selector
     attempts:
+      murphy__mvp_1__weather_stem_selector:
+        label: "Weather stem selector — site-only MVP"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Selects a short weather-only stem for a chosen weather type,
+          intensity, and duration from a site-only retrieval bank.
+          The retrieval seed chooses a deterministic site asset and start
+          offset; Layer D owns final timeline placement and full soundscape
+          mixing.
+        params:
+          asset_bank: model/candidates/murphy/mvp_1__weather_stem_selector
+          default_weather_type: rain
+          default_intensity: medium
+          default_duration_s: 10.0
+          target_rms:
+            light: 0.035
+            medium: 0.050
+            heavy: 0.070
+          peak_ceiling: 0.95
+        notes:
+          - First frontend-facing Layer B MVP.
+          - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
+
       murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: murphy

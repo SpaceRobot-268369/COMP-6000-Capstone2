@@ -1,0 +1,54 @@
+{
+  "seed": 42,
+  "retrieval_seed": 42,
+  "prompt": "10-second Layer B weather stem retrieval, target rain / medium, selected site rain_primary asset site_mvp002_site257_1313196_000778_000793, components rain, asset intensity medium, retrieval_seed 42, start 4.161s",
+  "prompt_locked": false,
+  "audio": {
+    "duration_s": 10.0,
+    "sample_rate": 22050,
+    "channels": 1,
+    "rms": 0.022576555609703064,
+    "peak": 0.949999988079071,
+    "gain": 1.0646602140976094
+  },
+  "layer_b": {
+    "requested": {
+      "weather_type": "rain",
+      "intensity": "medium",
+      "duration_s": 10.0
+    },
+    "selected": {
+      "asset_id": "site_mvp002_site257_1313196_000778_000793",
+      "clip_path": "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000778_000793.wav",
+      "source_type": "site",
+      "primary_weather": "rain",
+      "layer_d_role": "rain_primary",
+      "layer_d_use": "primary",
+      "human_audit_status": "site_ready",
+      "components": {
+        "rain": true,
+        "wind": false,
+        "thunder": false
+      },
+      "intensity": {
+        "rain": "medium",
+        "wind": "none",
+        "thunder": "none"
+      },
+      "segment_start_s": 4.161,
+      "segment_end_s": 14.161,
+      "asset_duration_s": 15.0,
+      "looped_to_duration": false
+    },
+    "fallback": {
+      "used": false,
+      "reason": "",
+      "candidate_count": 4
+    }
+  },
+  "tier": "expected",
+  "sample_label": "Rain / medium - site example",
+  "expected_weather_type": "rain",
+  "expected_intensity": "medium",
+  "expected_notes": "Canonical site-only expected sample for Layer B frontend preview."
+}
