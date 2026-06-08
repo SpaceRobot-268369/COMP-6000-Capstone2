@@ -2,7 +2,7 @@
   "summary": {
     "asset_index": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv",
     "case_count": 12,
-    "available_locally_count": 7,
+    "available_locally_count": 12,
     "scene_counts": {
       "light_rain": 1,
       "heavy_rain": 1,
@@ -22,7 +22,7 @@
     "checkpoint_state": {
       "liting__mvp_1__panns_weather_baseline": "no_checkpoint_required",
       "liting__mvp_2__calibrated_weather_head": "checkpoint_materialized",
-      "liting__mvp_3__balanced_weather_head": "checkpoint_pointer_only:weather_head.pt.dvc",
+      "liting__mvp_3__balanced_weather_head": "checkpoint_materialized",
       "liting__mvp_4__data_expanded_weather_head": "checkpoint_materialized",
       "liting__mvp_5__clap_weather_probe": "checkpoint_materialized"
     }
@@ -40,10 +40,76 @@
       "human_weather_label": "rain",
       "human_notes": "clear_rain_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_214665_001923_001938.wav",
-      "local_wav_path": "",
-      "available_locally": false,
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_214665_001923_001938.wav",
+      "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214665/site_257_item_214665_clip_007.webm",
-      "attempt_results": {}
+      "attempt_results": {
+        "liting__mvp_1__panns_weather_baseline": {
+          "status": "run",
+          "reason": "no_checkpoint_required",
+          "rain": "heavy",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.816,
+          "wind_confidence": 0.561,
+          "thunder_confidence": 0.679,
+          "method": "panns_unavailable__spectral_heuristic",
+          "primary_model": "PANNs CNN14 AudioSet tagger",
+          "pass_status": "partial"
+        },
+        "liting__mvp_2__calibrated_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 0.863,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__calibrated_linear_head",
+          "primary_model": "PANNs CNN14 frozen + calibrated E-B weather head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_3__balanced_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.998,
+          "wind_confidence": 0.997,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_4__data_expanded_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.353,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__data_expanded_weather_head",
+          "primary_model": "PANNs CNN14 frozen + data-expanded E-B weather head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_5__clap_weather_probe": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.994,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
+        }
+      }
     },
     {
       "review_scene": "heavy_rain",
@@ -57,7 +123,7 @@
       "human_weather_label": "rain",
       "human_notes": "light rain audit001: changed rain intensity from light to heavy",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1401640_003387_003402.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/rain_primary/rain_primary__rain__site257_1401640_003387_003402.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1401640_003387_003402.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1401640/site_257_item_1401640_clip_012.webm",
       "attempt_results": {
@@ -66,11 +132,11 @@
           "reason": "no_checkpoint_required",
           "rain": "light",
           "wind": "strong",
-          "thunder": "none",
-          "rain_confidence": 0.923,
-          "wind_confidence": 0.596,
-          "thunder_confidence": 0.794,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "thunder": "heavy",
+          "rain_confidence": 0.632,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
           "pass_status": "partial"
         },
@@ -88,15 +154,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "strong",
+          "thunder": "none",
+          "rain_confidence": 0.811,
+          "wind_confidence": 0.828,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -112,15 +180,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "heavy",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.972,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -136,22 +206,22 @@
       "human_weather_label": "rain",
       "human_notes": "clear_rain_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000202_000217.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/rain_primary/rain_primary__rain__site257_1313196_000202_000217.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000202_000217.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313196/site_257_item_1313196_clip_001.webm",
       "attempt_results": {
         "liting__mvp_1__panns_weather_baseline": {
           "status": "run",
           "reason": "no_checkpoint_required",
-          "rain": "moderate",
+          "rain": "heavy",
           "wind": "none",
           "thunder": "none",
-          "rain_confidence": 0.489,
-          "wind_confidence": 0.95,
-          "thunder_confidence": 0.556,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "rain_confidence": 0.9,
+          "wind_confidence": 0.565,
+          "thunder_confidence": 0.656,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
-          "pass_status": "pass"
+          "pass_status": "partial"
         },
         "liting__mvp_2__calibrated_weather_head": {
           "status": "run",
@@ -167,15 +237,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -191,15 +263,17 @@
           "pass_status": "pass"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.978,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -215,22 +289,22 @@
       "human_weather_label": "rain",
       "human_notes": "clear_rain_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000778_000793.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/rain_primary/rain_primary__rain__site257_1313196_000778_000793.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_primary/rain_primary__rain__site257_1313196_000778_000793.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313196/site_257_item_1313196_clip_003.webm",
       "attempt_results": {
         "liting__mvp_1__panns_weather_baseline": {
           "status": "run",
           "reason": "no_checkpoint_required",
-          "rain": "moderate",
+          "rain": "heavy",
           "wind": "none",
           "thunder": "none",
-          "rain_confidence": 0.477,
-          "wind_confidence": 0.95,
-          "thunder_confidence": 0.556,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "rain_confidence": 0.9,
+          "wind_confidence": 0.553,
+          "thunder_confidence": 0.631,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
-          "pass_status": "pass"
+          "pass_status": "partial"
         },
         "liting__mvp_2__calibrated_weather_head": {
           "status": "run",
@@ -246,15 +320,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -270,15 +346,17 @@
           "pass_status": "pass"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 0.858,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -294,7 +372,7 @@
       "human_weather_label": "rain+wind",
       "human_notes": "usable_rain_with_wind_overlap",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1313184_006689_006704.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1313184_006689_006704.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1313184_006689_006704.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313184/site_257_item_1313184_clip_023.webm",
       "attempt_results": {
@@ -302,12 +380,12 @@
           "status": "run",
           "reason": "no_checkpoint_required",
           "rain": "none",
-          "wind": "moderate",
-          "thunder": "none",
-          "rain_confidence": 0.862,
-          "wind_confidence": 0.691,
-          "thunder_confidence": 0.794,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.727,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.864,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
           "pass_status": "partial"
         },
@@ -325,15 +403,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.963,
+          "wind_confidence": 0.665,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -349,15 +429,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "moderate",
+          "thunder": "none",
+          "rain_confidence": 0.793,
+          "wind_confidence": 0.959,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -373,7 +455,7 @@
       "human_weather_label": "rain+wind",
       "human_notes": "usable_rain_with_wind_overlap",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1539525_006050_006065.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1539525_006050_006065.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1539525_006050_006065.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1539525/site_257_item_1539525_clip_021.webm",
       "attempt_results": {
@@ -381,12 +463,12 @@
           "status": "run",
           "reason": "no_checkpoint_required",
           "rain": "none",
-          "wind": "light",
-          "thunder": "none",
-          "rain_confidence": 0.95,
-          "wind_confidence": 0.711,
-          "thunder_confidence": 0.794,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.729,
+          "wind_confidence": 0.85,
+          "thunder_confidence": 0.821,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
           "pass_status": "partial"
         },
@@ -404,15 +486,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "moderate",
+          "thunder": "none",
+          "rain_confidence": 0.924,
+          "wind_confidence": 0.643,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "pass"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -428,15 +512,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "moderate",
+          "wind": "moderate",
+          "thunder": "none",
+          "rain_confidence": 0.858,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -452,7 +538,7 @@
       "human_weather_label": "wind",
       "human_notes": "clear_wind_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_214837_001286_001301.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/wind_primary/wind_primary__wind__site257_214837_001286_001301.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_214837_001286_001301.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214837/site_257_item_214837_clip_005.webm",
       "attempt_results": {
@@ -460,14 +546,14 @@
           "status": "run",
           "reason": "no_checkpoint_required",
           "rain": "none",
-          "wind": "light",
-          "thunder": "none",
-          "rain_confidence": 0.941,
-          "wind_confidence": 0.849,
-          "thunder_confidence": 0.794,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.719,
+          "wind_confidence": 0.892,
+          "thunder_confidence": 0.735,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
-          "pass_status": "pass"
+          "pass_status": "partial"
         },
         "liting__mvp_2__calibrated_weather_head": {
           "status": "run",
@@ -483,15 +569,17 @@
           "pass_status": "pass"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.805,
+          "wind_confidence": 0.724,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "pass"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -507,15 +595,17 @@
           "pass_status": "pass"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.992,
+          "wind_confidence": 0.994,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -531,10 +621,76 @@
       "human_weather_label": "wind",
       "human_notes": "clear_wind_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_5299_002749_002764.wav",
-      "local_wav_path": "",
-      "available_locally": false,
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_5299_002749_002764.wav",
+      "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_5299/site_257_item_5299_clip_010.webm",
-      "attempt_results": {}
+      "attempt_results": {
+        "liting__mvp_1__panns_weather_baseline": {
+          "status": "run",
+          "reason": "no_checkpoint_required",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.753,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
+          "primary_model": "PANNs CNN14 AudioSet tagger",
+          "pass_status": "partial"
+        },
+        "liting__mvp_2__calibrated_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.989,
+          "wind_confidence": 0.727,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__calibrated_linear_head",
+          "primary_model": "PANNs CNN14 frozen + calibrated E-B weather head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_3__balanced_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.999,
+          "wind_confidence": 0.839,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_4__data_expanded_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.346,
+          "wind_confidence": 0.924,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__data_expanded_weather_head",
+          "primary_model": "PANNs CNN14 frozen + data-expanded E-B weather head",
+          "pass_status": "pass"
+        },
+        "liting__mvp_5__clap_weather_probe": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.999,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
+        }
+      }
     },
     {
       "review_scene": "strong_wind",
@@ -548,7 +704,7 @@
       "human_weather_label": "wind",
       "human_notes": "clear_wind_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_1313184_000390_000405.wav",
-      "local_wav_path": "acoustic_ai/layers/layer_e/attempts/liting__smoke_1__e_b_weather_analysis/data/analysis/site257_clap_promoted/assets_wav_22050_mono/wind_primary/wind_primary__wind__site257_1313184_000390_000405.wav",
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_1313184_000390_000405.wav",
       "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313184/site_257_item_1313184_clip_002.webm",
       "attempt_results": {
@@ -556,12 +712,12 @@
           "status": "run",
           "reason": "no_checkpoint_required",
           "rain": "none",
-          "wind": "moderate",
-          "thunder": "none",
-          "rain_confidence": 0.95,
-          "wind_confidence": 0.593,
-          "thunder_confidence": 0.794,
-          "method": "panns_unavailable__site257_clap_promoted_calibrated_spectral_nearest_centroid",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.764,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
           "primary_model": "PANNs CNN14 AudioSet tagger",
           "pass_status": "partial"
         },
@@ -579,15 +735,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_3__balanced_weather_head": {
-          "status": "not_run",
-          "reason": "checkpoint_pointer_only:weather_head.pt.dvc",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "moderate",
+          "thunder": "none",
+          "rain_confidence": 0.968,
+          "wind_confidence": 0.497,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
         },
         "liting__mvp_4__data_expanded_weather_head": {
           "status": "run",
@@ -603,15 +761,17 @@
           "pass_status": "partial"
         },
         "liting__mvp_5__clap_weather_probe": {
-          "status": "not_run",
-          "reason": "CLAP backbone is not cached locally in this environment; running it would attempt HuggingFace network access. Use the existing MVP5 metrics or rerun this script on Server B / a machine with the CLAP cache materialised.",
-          "rain": null,
-          "wind": null,
-          "thunder": null,
-          "rain_confidence": null,
-          "wind_confidence": null,
-          "thunder_confidence": null,
-          "pass_status": "not_run"
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "none",
+          "rain_confidence": 0.661,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
         }
       }
     },
@@ -627,10 +787,76 @@
       "human_weather_label": "wind",
       "human_notes": "clear_wind_target_score",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_1313184_001227_001242.wav",
-      "local_wav_path": "",
-      "available_locally": false,
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_1313184_001227_001242.wav",
+      "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313184/site_257_item_1313184_clip_005.webm",
-      "attempt_results": {}
+      "attempt_results": {
+        "liting__mvp_1__panns_weather_baseline": {
+          "status": "run",
+          "reason": "no_checkpoint_required",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.756,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
+          "primary_model": "PANNs CNN14 AudioSet tagger",
+          "pass_status": "partial"
+        },
+        "liting__mvp_2__calibrated_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "moderate",
+          "thunder": "none",
+          "rain_confidence": 0.954,
+          "wind_confidence": 0.497,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__calibrated_linear_head",
+          "primary_model": "PANNs CNN14 frozen + calibrated E-B weather head",
+          "pass_status": "partial"
+        },
+        "liting__mvp_3__balanced_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.933,
+          "wind_confidence": 0.482,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "partial"
+        },
+        "liting__mvp_4__data_expanded_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.362,
+          "wind_confidence": 0.705,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__data_expanded_weather_head",
+          "primary_model": "PANNs CNN14 frozen + data-expanded E-B weather head",
+          "pass_status": "partial"
+        },
+        "liting__mvp_5__clap_weather_probe": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "none",
+          "rain_confidence": 0.355,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "pass"
+        }
+      }
     },
     {
       "review_scene": "thunder_backup",
@@ -644,10 +870,76 @@
       "human_weather_label": "thunder",
       "human_notes": "nov2019 storm scout001: promote_backup; maybe? uncertain thunder",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214707_000781_000811.wav",
-      "local_wav_path": "",
-      "available_locally": false,
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214707_000781_000811.wav",
+      "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214707/site_257_item_214707_clip_003.webm",
-      "attempt_results": {}
+      "attempt_results": {
+        "liting__mvp_1__panns_weather_baseline": {
+          "status": "run",
+          "reason": "no_checkpoint_required",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.761,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
+          "primary_model": "PANNs CNN14 AudioSet tagger",
+          "pass_status": "partial"
+        },
+        "liting__mvp_2__calibrated_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "heavy",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__calibrated_linear_head",
+          "primary_model": "PANNs CNN14 frozen + calibrated E-B weather head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_3__balanced_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 0.757,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_4__data_expanded_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.392,
+          "wind_confidence": 0.997,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__data_expanded_weather_head",
+          "primary_model": "PANNs CNN14 frozen + data-expanded E-B weather head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_5__clap_weather_probe": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "fail"
+        }
+      }
     },
     {
       "review_scene": "thunder_backup",
@@ -661,10 +953,76 @@
       "human_weather_label": "thunder",
       "human_notes": "nov2019 storm scout001: promote_backup; maybe? uncertain thunder",
       "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214872_001700_001730.wav",
-      "local_wav_path": "",
-      "available_locally": false,
+      "local_wav_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/thunder_backup/thunder_backup__thunder__site257_214872_001700_001730.wav",
+      "available_locally": true,
       "source_s3_uri": "s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214872/site_257_item_214872_clip_006.webm",
-      "attempt_results": {}
+      "attempt_results": {
+        "liting__mvp_1__panns_weather_baseline": {
+          "status": "run",
+          "reason": "no_checkpoint_required",
+          "rain": "none",
+          "wind": "strong",
+          "thunder": "heavy",
+          "rain_confidence": 0.772,
+          "wind_confidence": 0.9,
+          "thunder_confidence": 0.9,
+          "method": "panns_unavailable__spectral_heuristic",
+          "primary_model": "PANNs CNN14 AudioSet tagger",
+          "pass_status": "partial"
+        },
+        "liting__mvp_2__calibrated_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "heavy",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__calibrated_linear_head",
+          "primary_model": "PANNs CNN14 frozen + calibrated E-B weather head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_3__balanced_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.999,
+          "wind_confidence": 0.67,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__balanced_mlp_head",
+          "primary_model": "PANNs CNN14 frozen + balanced E-B weather MLP head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_4__data_expanded_weather_head": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "none",
+          "wind": "light",
+          "thunder": "none",
+          "rain_confidence": 0.401,
+          "wind_confidence": 0.996,
+          "thunder_confidence": 0.9,
+          "method": "panns_dsp_frozen_features__data_expanded_weather_head",
+          "primary_model": "PANNs CNN14 frozen + data-expanded E-B weather head",
+          "pass_status": "fail"
+        },
+        "liting__mvp_5__clap_weather_probe": {
+          "status": "run",
+          "reason": "checkpoint_materialized",
+          "rain": "light",
+          "wind": "none",
+          "thunder": "none",
+          "rain_confidence": 1.0,
+          "wind_confidence": 1.0,
+          "thunder_confidence": 0.9,
+          "method": "clap_dsp_frozen_features__weather_probe",
+          "primary_model": "LAION-CLAP frozen audio embedding + E-B weather probe",
+          "pass_status": "fail"
+        }
+      }
     }
   ]
 }

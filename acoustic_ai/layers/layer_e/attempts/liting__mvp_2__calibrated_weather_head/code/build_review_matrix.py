@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -174,7 +175,8 @@ def _attempt_checkpoint_state(attempt_id: str) -> str:
 
 
 def _run_attempt(attempt_id: str, wav_path: Path) -> dict[str, object]:
-    if attempt_id in OFFLINE_SKIP_ATTEMPTS:
+    allow_clap = os.getenv("LITING_EB_RUN_CLAP") == "1"
+    if attempt_id in OFFLINE_SKIP_ATTEMPTS and not allow_clap:
         return {
             "status": "not_run",
             "reason": OFFLINE_SKIP_ATTEMPTS[attempt_id],
@@ -291,7 +293,7 @@ def main() -> None:
 
     matrix_path = OUT_DIR / "murphy_site257_fixed_review_matrix.csv"
     with matrix_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(matrix_rows[0].keys()))
+        writer = csv.DictWriter(fh, fieldnames=list(matrix_rows[0].keys()), lineterminator="\n")
         writer.writeheader()
         writer.writerows(matrix_rows)
 
@@ -354,6 +356,24 @@ def main() -> None:
 
     lines.extend([
         "",
+        "## Attempt Result Summary",
+        "",
+        "| Attempt | Pass | Partial | Fail | Not run | Error |",
+        "|---|---:|---:|---:|---:|---:|",
+    ])
+    for attempt_id in ATTEMPTS:
+        counts: Counter[str] = Counter()
+        for case in results:
+            outcome = case["attempt_results"].get(attempt_id)
+            counts[outcome["pass_status"] if outcome else "not_run"] += 1
+        lines.append(
+            f"| `{attempt_id}` | "
+            f"{counts['pass']} | {counts['partial']} | {counts['fail']} | "
+            f"{counts['not_run']} | {counts['error']} |"
+        )
+
+    lines.extend([
+        "",
         "## Sample Results",
         "",
         "| Scene | Asset ID | Expected rain | Expected wind | Expected thunder | Local WAV | MVP1 | MVP2 | MVP3 | MVP4 | MVP5 |",
@@ -396,9 +416,11 @@ def main() -> None:
         "## Interpretation",
         "",
         "- This matrix confirms that the current Murphy-audited Site257 pool does contain multiple weather combinations.",
-        "- It does not yet satisfy the reviewer bar for two local/runnable samples in every requested scene: light rain, heavy rain, and thunder are data-limited or not materialized locally on this machine.",
-        "- MVP3 is not rerun locally unless its DVC checkpoint is materialized; this avoids silently falling back to another model.",
-        "- MVP2 remains the safest current integration candidate, but this evidence should be treated as a fixed review audit rather than a claim that all requested scenes are solved.",
+        "- The missing Site257 WAVs and all MVP2-MVP5 checkpoint artifacts were materialized on Server B, then the full matrix was rerun there.",
+        "- The matrix now has 12/12 locally runnable samples: all selected WAVs are materialized and all MVP1-MVP5 attempts have a resolved checkpoint state.",
+        "- MVP5 is the strongest result on this fixed matrix: 10 exact passes and 2 failures. The two failures are both thunder backup cases.",
+        "- MVP2 remains the safest current frontend/integration candidate because it is already wired for demo output, but MVP5 should be treated as the strongest candidate-model result from this review run.",
+        "- The reviewer bar is still not fully satisfied for every requested scene because the current audited Site257 index only contains one `light_rain` row and one `heavy_rain` row. Adding two local examples for those exact scenes requires either expanding the audited Site257 rain pool or relaxing the scene definition to rain-positive cases.",
     ])
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
