@@ -223,7 +223,7 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: lucas__smoke_1__audiogen_boobook
+    default: burger__mvp_3__sa3_generative_live
     attempts:
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
@@ -289,6 +289,73 @@ layers:
           - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
           - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
           - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
+
+      burger__mvp_3__sa3_generative_live:
+        label: "Layer C SA3 LoRA generative live model"
+        author: burger
+        stage: mvp_3
+        status: experimental
+        kind: generative
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C generative live endpoint. This attempt loads the Stable
+          Audio 3 LoRA checkpoint at request time, generates a new waveform
+          for the requested seed, then applies species-specific post-processing.
+          It should be run on the GPU worker, not on a local CPU-only server.
+        deploy_dvc:
+          - model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-pass35-captionv2-t2a1000/lora_checkpoints/epoch=28-step=1000.ckpt.dvc
+          - model/candidates/burger/layer-c-sa3-spotted-nightjar-core30-human-bandpass-step1200/lora_checkpoints/epoch=39-step=1200.ckpt.dvc
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_3__sa3_generative_live/expected/horsfields_bronze_cuckoo/audio.wav.dvc
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_3__sa3_generative_live/expected/spotted_nightjar/audio.wav.dvc
+        params:
+          method: sa3_lora_generative_live
+          base_model: Stable Audio 3 small-sfx-base
+          live_output_root: debug/layer_c/sa3_live_api
+          default_species_common_name: "Horsfield's Bronze-cuckoo"
+          species_pools:
+            horsfields_bronze_cuckoo:
+              species_common_name: "Horsfield's Bronze-cuckoo"
+              event_type: horsfields_bronze_cuckoo
+              source_checkpoint: model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-pass35-captionv2-t2a1000/lora_checkpoints/epoch=28-step=1000.ckpt
+              checkpoint_step: 1000
+              prompt: "isolated Horsfields Bronze-cuckoo call, short repeated descending whistle motif around 2-4 kHz, clean foreground bird vocalization, no wind noise, no insects, no other birds"
+              duration_s: 3.0
+              sampling_cfg_scale: 4.0
+              sampling_steps: 50
+              default_season: summer
+              default_diel: morning
+              postprocess:
+                mode: target_call_detection_timeline
+                bandpass_hz: [2100, 4100]
+                detector: cuckoo_descending_ridge_detector_v1
+                pre_buffer_s: 0.14
+                post_buffer_s: 0.18
+                min_score: 0.68
+                min_contrast_score: 0.7
+            spotted_nightjar:
+              species_common_name: "Spotted Nightjar"
+              event_type: spotted_nightjar
+              source_checkpoint: model/candidates/burger/layer-c-sa3-spotted-nightjar-core30-human-bandpass-step1200/lora_checkpoints/epoch=39-step=1200.ckpt
+              checkpoint_step: 1200
+              prompt: "low pulsing Spotted Nightjar churring bird call, narrow low frequency nocturnal call, isolated foreground wildlife sound"
+              duration_s: 5.0
+              sampling_cfg_scale: 4.0
+              sampling_steps: 50
+              default_season: summer
+              default_diel: night
+              postprocess:
+                mode: s3a_tight_tailcrop335
+                bandpass_hz: [550, 950]
+                spectral_gate_strength: 0.3
+                target_rms: 0.035
+                fade_ms: 120
+                crop_end_s: 3.35
+        notes:
+          - Runs actual SA3 LoRA inference at request time; first response may be slow.
+          - Requires Stable Audio 3 dependencies, model access, and CUDA on the worker.
+          - Expected samples are real audited bird-call references, one per species.
+          - This is the single Layer C SA3 generative route; runtime species selection switches checkpoints and post-processing.
 
   layer_d:
     label: "Layer D — Mixer"

@@ -860,8 +860,8 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 });
 
 // Per-attempt generation. Forwarded runtime params: `seed` / `retrieval_seed`,
-// optional
-// `(season, diel)` for bank attempts, and Layer B weather-stem controls.
+// optional `(season, diel)` for bank attempts, Layer C species selection, and
+// Layer B weather-stem controls.
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
@@ -908,6 +908,12 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
     }
     if (Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30) {
       payload.duration_s = requestedDuration;
+    }
+    const speciesCommonName = typeof req.body?.species_common_name === "string"
+      ? req.body.species_common_name.trim()
+      : "";
+    if (speciesCommonName) {
+      payload.species_common_name = speciesCommonName;
     }
 
     const r = await fetchAi(

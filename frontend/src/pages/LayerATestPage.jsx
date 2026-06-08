@@ -8,6 +8,7 @@ import {
 } from "../lib/api.js";
 
 const DEFAULT_SEED = 42;
+const DEFAULT_LAYER_C_SPECIES = "Horsfield's Bronze-cuckoo";
 const WEATHER_TYPE_OPTIONS = [
   { value: "rain", label: "rain" },
   { value: "wind", label: "wind" },
@@ -66,6 +67,7 @@ export default function LayerATestPage({
   const [samples,    setSamples]    = useState(null);  // {expected:[…], showcase:[…], canonical_seed}
   const [samplesErr, setSamplesErr] = useState("");
   const [expectedKey, setExpectedKey] = useState(""); // "<tier>/<stem>"
+  const [selectedSpecies, setSelectedSpecies] = useState("");
 
   // Load the layer registry once on mount.
   useEffect(() => {
@@ -103,6 +105,7 @@ export default function LayerATestPage({
     setSamples(null);
     setSamplesErr("");
     setExpectedKey("");
+    setSelectedSpecies("");
     fetchAttemptSamples(layerId, attemptId)
       .then((doc) => {
         setSamples(doc);
@@ -147,6 +150,31 @@ export default function LayerATestPage({
   const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
   const isLayerD = layerId === "layer_d";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+  const speciesOptions = useMemo(() => {
+    if (!samples?.expected?.length) return [];
+    const bySpecies = new Map();
+    for (const sample of samples.expected) {
+      const metadata = sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      if (!species) continue;
+      bySpecies.set(species, {
+        value: species,
+        label: species,
+        slug: metadata.species_slug || sample.stem,
+      });
+    }
+    return [...bySpecies.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [samples]);
+
+  useEffect(() => {
+    if (!speciesOptions.length) {
+      setSelectedSpecies("");
+      return;
+    }
+    if (speciesOptions.some((option) => option.value === selectedSpecies)) return;
+    const defaultSpecies = speciesOptions.find((option) => option.value === DEFAULT_LAYER_C_SPECIES);
+    setSelectedSpecies((defaultSpecies || speciesOptions[0]).value);
+  }, [speciesOptions, selectedSpecies]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
   const seasonOptions = useMemo(() => {
@@ -205,6 +233,10 @@ export default function LayerATestPage({
     return tiers.flatMap((t) =>
       t.entries
         .filter((s) => {
+          if (selectedSpecies) {
+            const species = s.metadata?.species_common_name || s.metadata?.species || "";
+            if (species !== selectedSpecies) return false;
+          }
           if (!activeCell) return true;
           // Cell-grouped entries match the active cell; cell-less entries
           // (e.g. legacy flat samples) are kept as-is.
@@ -216,7 +248,7 @@ export default function LayerATestPage({
           key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
         })),
     );
-  }, [samples, usesCells, season, diel]);
+  }, [samples, usesCells, season, diel, selectedSpecies]);
 
   // Auto-select the first expected sample when entries change.
   useEffect(() => {
@@ -273,6 +305,9 @@ export default function LayerATestPage({
         runParams.weather_type = weatherType;
         runParams.intensity = weatherIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
+      }
+      if (selectedSpecies) {
+        runParams.species_common_name = selectedSpecies;
       }
       const data = isLayerD
         ? await generateSoundscape({
@@ -427,6 +462,27 @@ export default function LayerATestPage({
                       value={diel}
                       onChange={setDiel}
                       options={isLayerD ? DIEL_OPTIONS : dielOptions}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {!isLayerD && speciesOptions.length > 1 && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Target bird
+                    {selectedSpecies && (
+                      <span className="dev-controls-section-pill">
+                        {selectedSpecies}
+                      </span>
+                    )}
+                  </p>
+                  <div className="dev-controls-section-grid">
+                    <LabeledSelect
+                      label="Species"
+                      value={selectedSpecies}
+                      onChange={setSelectedSpecies}
+                      options={speciesOptions}
                     />
                   </div>
                 </section>
