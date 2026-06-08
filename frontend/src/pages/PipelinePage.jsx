@@ -123,16 +123,34 @@ const ANALYSIS = {
     label: "Shared preprocess",
     sub: "mel spectrogram + waveform, computed once",
   },
+  // Mirror of the Generation decoder block — what the analysis stack does and
+  // why (observations vs. inference, deterministic fusion, LLM narrates only).
+  decoder: {
+    lead: "What the analysis stack does",
+    why: "Analysis is not generation run backwards — there is no decomposer and no separated stems. Three pre-trained detector heads each read the raw mixture and report only what they directly observe: ambient character + nearest training clips (E-A), wind / rain / thunder intensity (E-B), and species calls with onsets (E-C). Those are observations, and the owning head is authoritative — nothing downstream second-guesses them. Season and time-of-day are deliberately not any head's job: no head observes them directly. They are latent context, inferred by the aggregator in deterministic, auditable code from the heads' evidence — events carry the strongest seasonal signal (species phenology), ambient is a weak prior, weather barely counts. Only after fusion does the in-process LLM-OSS narration layer write the report: it narrates the aggregator's record and may not inspect audio or overrule a detector. Because the site bed is not seasonally discriminative, the honest answer is sometimes ‘undetermined’.",
+    example: "“Nocturnal dry-woodland bed; a southern boobook calls three times; light wind, no rain — most consistent with an autumn night, though the ambient bed is weakly seasonal.”",
+  },
   parallelHeading: "Three detector heads read the raw mixture in parallel",
   parallelNote:
-    "No decomposer, no separated stems. Each head answers one question on the full mixture — pre-trained detectors were built to find their signal in the presence of everything else.",
+    "No decomposer, no separated stems. Each head answers one question on the full mixture — pre-trained detectors were built to find their signal in the presence of everything else. Each head emits only observations; none of them estimates season or diel.",
+  // ① fan-out analog: the shared preprocess is computed once, then each head
+  // reads the slice it needs.
+  contractsMeta: {
+    title: "Shared preprocess → E-A · E-B · E-C",
+    sub: "The mel spectrogram + waveform are computed once, then each head reads only the representation it needs — no head re-decodes the file.",
+  },
+  contracts: [
+    { step: "E-A", label: "Ambient", contract: "mel + waveform → frozen CLAP embedding" },
+    { step: "E-B", label: "Weather", contract: "mel spectrogram" },
+    { step: "E-C", label: "Events", contract: "waveform (16 kHz)" },
+  ],
   layers: [
     {
       step: "E-A",
       label: "Ambient context",
-      role: "k-NN against the learned latent index — 'what kind of bed is this?'",
-      model: "CLAP embedding · similarity",
-      status: "partial",
+      role: "k-NN against the learned latent index — 'what kind of bed is this?' Surfaces the nearest training clips and a weak season/diel prior.",
+      model: "Frozen CLAP (laion/clap-htsat-unfused) → k-NN vote (k=5) + season probe · retrieval",
+      status: "mvp",
       sample: {
         input: "Mel spectrogram + waveform of the uploaded mixture (shared preprocess).",
         output: "Nearest ambient cell + similarity — e.g. autumn · dawn bed (cosine 0.78).",
@@ -141,9 +159,9 @@ const ANALYSIS = {
     {
       step: "E-B",
       label: "Weather",
-      role: "Wind / rain / thunder intensity directly from the spectrum.",
-      model: "PANNs tagger · zero-shot",
-      status: "placeholder",
+      role: "Wind / rain / thunder intensity directly from the spectrum, with a conservative gate that keeps ambiguous cases honest.",
+      model: "CLAP + PANNs + AST gate (v1.1) · zero-shot tagging",
+      status: "mvp",
       sample: {
         input: "Mel spectrogram of the uploaded mixture (shared preprocess).",
         output: "Weather tags + intensity — e.g. light rain 0.62, no wind.",
@@ -152,9 +170,9 @@ const ANALYSIS = {
     {
       step: "E-C",
       label: "Events",
-      role: "Species present + onsets — the strongest season/diel signal.",
-      model: "BirdNET + CLAP fallback",
-      status: "placeholder",
+      role: "Known-species calls + onsets — the strongest season/diel evidence via phenology.",
+      model: "Known-species event detector (production) · windowed, threshold 0.55",
+      status: "demo",
       sample: {
         input: "Waveform of the uploaded mixture (shared preprocess).",
         output: "Species + onsets — e.g. southern boobook ×3 at 22:14, 22:31, 23:02.",
@@ -165,20 +183,26 @@ const ANALYSIS = {
     in: { title: "Sample input", field: "Reads from", code: false },
     out: { title: "Sample output", field: "Detector result", code: false },
   },
+  // Σ analog of the Generation param-bus: marks where observations become
+  // inferred latent context. The LLM narration never re-weights this.
+  evidenceBus: {
+    title: "Observations → inferred context",
+    sub: "Each head's detections pass through untouched (the head is authoritative); the aggregator alone fuses them into season & diel in deterministic code — the narration LLM never re-weights the evidence.",
+  },
   merge: {
     step: "Σ",
     label: "Aggregator",
-    role: "Fuses latent context (season / diel) from per-head evidence; records disagreements.",
-    model: "Deterministic fusion",
-    status: "placeholder",
+    role: "Fuses latent context (season / diel) from per-head evidence using a fixed trust hierarchy (events ≫ ambient ≫ weather); records disagreements and is willing to answer 'undetermined'.",
+    model: "Deterministic evidence-weighted fusion (v1)",
+    status: "smoke",
     modelLabel: "Method",
   },
   postMerge: {
     step: "LLM OSS",
     label: "Narration layer",
-    role: "Writes the human-readable report from the aggregator record; it does not inspect audio or override detector evidence.",
-    model: "Open-source LLM · report policy",
-    status: "placeholder",
+    role: "Writes the human-readable report from the aggregator record; it does not inspect audio or override detector evidence. Validated on serverB; not yet on the orchestrated /analysis/run path.",
+    model: "In-process LLM-OSS (Qwen2.5-3B, 4-bit) · analysis report policy",
+    status: "partial",
   },
   output: {
     icon: "✎",
@@ -325,7 +349,7 @@ function FlowDiagram({ spec }) {
           {preNode}
           {spec.decoder ? (
             <div className="flow-decoder-why">
-              <p className="flow-decoder-why-lead">What the Prompt Parser does</p>
+              <p className="flow-decoder-why-lead">{spec.decoder.lead || "What the Prompt Parser does"}</p>
               <p className="flow-decoder-why-text">{spec.decoder.why}</p>
               {spec.decoder.example ? (
                 <p className="flow-decoder-why-eg">
@@ -373,10 +397,10 @@ function FlowDiagram({ spec }) {
         <div className="flow-contractbus">
           <span className="flow-contractbus-tag">①</span>
           <div className="flow-contractbus-body">
-            <strong>Layer contracts → A · B · C</strong>
+            <strong>{spec.contractsMeta?.title || "Layer contracts → A · B · C"}</strong>
             <p className="flow-contractbus-sub">
-              The parser decodes one prompt into a distinct contract per layer —
-              each layer only ever sees its own.
+              {spec.contractsMeta?.sub ||
+                "The parser decodes one prompt into a distinct contract per layer — each layer only ever sees its own."}
             </p>
             <ul className="flow-contractbus-list">
               {spec.contracts.map((c) => (
@@ -417,6 +441,17 @@ function FlowDiagram({ spec }) {
           <div className="flow-parambus-body">
             <strong>Placement params · from parser</strong>
             <span>second mixer input — arrives directly, not via B/C</span>
+          </div>
+        </div>
+      ) : null}
+
+      {spec.evidenceBus ? (
+        <div className="flow-parambus flow-parambus-in flow-parambus-evidence">
+          <span className="flow-parambus-arrow" aria-hidden="true">↳</span>
+          <span className="flow-parambus-tag">Σ</span>
+          <div className="flow-parambus-body">
+            <strong>{spec.evidenceBus.title}</strong>
+            <span>{spec.evidenceBus.sub}</span>
           </div>
         </div>
       ) : null}

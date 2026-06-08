@@ -7701,6 +7701,34 @@ body.theme-analysis .navbar-link.active .nav-icon {
 [data-theme="light"] .flow-parambus-body span { color: rgba(74, 58, 120, 0.7); }
 [data-theme="light"] .flow-parambus-arrow { color: #6b54a8; }
 
+/* analysis variant of the bus: where observations become inferred context.
+   Teal palette, matching the analysis detector-output ports. */
+.flow-parambus-evidence {
+  border-color: rgba(133, 246, 207, 0.42);
+  background: rgba(133, 246, 207, 0.07);
+}
+.flow-parambus-evidence .flow-parambus-tag {
+  border-color: rgba(133, 246, 207, 0.45);
+  background: rgba(133, 246, 207, 0.16);
+  color: #9cf6d6;
+}
+.flow-parambus-evidence .flow-parambus-body strong { color: #d6fff0; }
+.flow-parambus-evidence .flow-parambus-body span { color: rgba(157, 246, 214, 0.66); }
+.flow-parambus-evidence .flow-parambus-arrow { color: #9cf6d6; }
+
+[data-theme="light"] .flow-parambus-evidence {
+  border-color: rgba(0, 150, 110, 0.4);
+  background: rgba(0, 150, 110, 0.06);
+}
+[data-theme="light"] .flow-parambus-evidence .flow-parambus-tag {
+  border-color: rgba(0, 150, 110, 0.42);
+  background: rgba(0, 150, 110, 0.12);
+  color: #00765a;
+}
+[data-theme="light"] .flow-parambus-evidence .flow-parambus-body strong { color: #00614a; }
+[data-theme="light"] .flow-parambus-evidence .flow-parambus-body span { color: rgba(0, 97, 74, 0.72); }
+[data-theme="light"] .flow-parambus-evidence .flow-parambus-arrow { color: #00805a; }
+
 /* ── Stage-2 coherence gate: ok / corrected / rejected outcomes ───────── */
 .flow-gate {
   width: 100%;
