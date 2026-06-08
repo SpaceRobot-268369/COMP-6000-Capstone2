@@ -22,12 +22,12 @@ acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/revie
 acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json
 ```
 
-Latest cross-attempt reviewer rerun:
+Latest cross-attempt reviewer evidence:
 
 | Item | Status |
 |---|---|
 | Run environment | Server B (`shinypokemon`) isolated checkout |
-| Site257 WAV materialization | 12/12 selected review samples available |
+| Site257 WAV materialization | 10/10 default review samples available |
 | MVP2 checkpoint | materialized |
 | MVP3 checkpoint | materialized |
 | MVP4 checkpoint | materialized |
@@ -37,8 +37,12 @@ Latest cross-attempt reviewer rerun:
 The cross-attempt matrix now runs MVP1-MVP5 against the same fixed sample list.
 The current audited Site257 index still only contains one `light_rain` row and
 one `heavy_rain` row, so the two-case reviewer bar is met for moderate rain,
-mixed rain/wind, breezing wind, strong wind, and thunder backup, but not yet for
-light rain or heavy rain without expanding the audited Site257 rain pool.
+mixed rain/wind, breezing wind, and strong wind, but not yet for light rain or
+heavy rain without expanding the audited Site257 rain pool.
+
+Thunder is no longer part of the default E-B acceptance scope. The current
+Site257 pool has only backup/uncertain thunder candidates, so E-B should not
+claim a thunder detector until a reliable Site257 thunder pool exists.
 
 ## Data Used
 
@@ -73,7 +77,7 @@ Snapshot coverage:
 | Rain primary | 6 | Site257-only rain clips. |
 | Rain + wind mixed | 12 | Site257 mixed weather clips. |
 | Wind primary | 93 | Main validated coverage for wind. |
-| Thunder backup | 2 | Kept as backup only; not exposed as a supported MVP2 prediction. |
+| Thunder backup | 2 | Diagnostic only; excluded from the default E-B acceptance scope. |
 
 Intensity coverage:
 
@@ -85,7 +89,7 @@ Intensity coverage:
 | Light/breezing wind | 3 | Enough for spot checks, but only one landed in the MVP2 held-out split. |
 | Moderate wind | 71 | Strongest coverage. |
 | Strong/heavy wind | 31 | Strong coverage. |
-| Thunder | 2 | Backup pool only; detector suppresses thunder until more Site257 evidence is validated. |
+| Thunder | 2 | Backup/uncertain evidence only; not claimed as supported in E-B MVP. |
 
 ## Validation Split
 
@@ -186,34 +190,37 @@ s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-d
 
 ### Mixed Rain + Wind
 
-These are currently hard cases and are not claimed as solved by MVP2:
+These are hard cases for MVP2, but the MVP5 CLAP weather probe improves them
+on the fixed reviewer matrix:
 
 | Clip ID | Expected | Predicted | Status |
 |---|---|---|---|
-| `site_mvp002_site257_214659_006775_006790` | rain=moderate, wind=moderate | rain=none, wind=strong | fail |
-| `site_mvp002_site257_214659_001523_001538` | rain=moderate, wind=moderate | rain=none, wind=strong | fail |
+| `site_mvp002_site257_1313184_006689_006704` | rain=moderate, wind=moderate | MVP2: rain=moderate, wind=strong; MVP5: rain=moderate, wind=moderate | MVP2 partial, MVP5 pass |
+| `site_mvp002_site257_1539525_006050_006065` | rain=moderate, wind=moderate | MVP2: rain=none, wind=moderate; MVP5: rain=moderate, wind=moderate | MVP2 partial, MVP5 pass |
 
 Current main-aligned clip paths:
 
 ```text
-acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_214659_006775_006790.wav
-acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_214659_001523_001538.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1313184_006689_006704.wav
+acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/rain_wind_mixed/rain_wind_mixed__rain_wind__site257_1539525_006050_006065.wav
 ```
 
 Original Site257 S3 clips:
 
 ```text
-s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214659/site_257_item_214659_clip_023.webm
-s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214659/site_257_item_214659_clip_006.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1313184/site_257_item_1313184_clip_024.webm
+s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_1539525/site_257_item_1539525_clip_021.webm
 ```
 
-This is why the PR marks MVP2 as a safe demo/integration candidate for
-single-component weather, while mixed rain+wind remains a next-iteration target.
+This is why the PR keeps MVP2 as the safe current frontend/integration
+candidate, while documenting MVP5 as the stronger fixed-matrix candidate for
+mixed rain+wind once its CLAP dependency is guaranteed in the deployment
+environment.
 
 ### Thunder
 
-Thunder is intentionally suppressed in MVP2. The current Site257 pool has only
-two backup thunder candidates:
+Thunder is intentionally excluded from the default E-B acceptance scope. The
+current Site257 pool has only two backup/uncertain thunder candidates:
 
 ```text
 site_nov2019_storm001_site257_214872_001700_001730
@@ -234,8 +241,9 @@ s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-d
 s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-dry-a/downloaded_clips/site_257_item_214707/site_257_item_214707_clip_003.webm
 ```
 
-Because these are backup-only and not enough to calibrate a robust thunder
-detector, the MVP2 output contract returns:
+Because these are not enough to calibrate a robust thunder detector, E-B does
+not claim thunder support in this PR. If the diagnostic path is explicitly
+enabled later, the MVP2 output contract returns:
 
 ```json
 {
@@ -250,7 +258,11 @@ The current E-B PR should be read as:
 
 - MVP2 is the safest current integration candidate.
 - MVP2 passes the rain/wind validation gate for single-component weather.
-- MVP2 does not yet satisfy the requested two-case review bar for light rain,
-  heavy rain, or thunder because Site257 validated evidence is too small.
-- The next data task is to build a fixed review matrix with at least two
-  validated examples per scene before promoting a production E-B detector.
+- MVP5 improves mixed rain+wind on the fixed reviewer matrix, passing both
+  selected mixed cases.
+- Thunder is not part of the current E-B acceptance scope because there is no
+  reliable Site257 thunder pool.
+- The remaining data blocker is light/heavy rain coverage: the Murphy-audited
+  Site257 index has only one true light-rain row and one true heavy-rain row.
+  The previously scouted local pure-rain folder is not promoted here because
+  Murphy rejected that batch as not pure rain.
