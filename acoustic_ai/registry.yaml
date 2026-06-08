@@ -161,11 +161,11 @@ layers:
 
   layer_b:
     label: "Layer B — Weather"
-    default: lucas__smoke_1__curated_assets
+    default: murphy__smoke_1__curated_assets
     attempts:
-      lucas__smoke_1__curated_assets:
+      murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
-        author: lucas
+        author: murphy
         stage: smoke_1
         status: placeholder
         checkpoint: null
