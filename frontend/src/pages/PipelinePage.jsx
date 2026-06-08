@@ -20,6 +20,33 @@ const GENERATION = {
     why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — and corrects rather than fails: an out-of-domain or phenologically implausible request (dense city traffic, or a species that doesn't occur in the requested season) is swapped for the nearest plausible scene and the change is explained; only genuinely unrecoverable prompts are rejected with a suggested alternative; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist. The parser also resolves the arrangement: cadence like “a boobook every few seconds” is expanded into an explicit list of onset times. Those placement values — onsets, per-clip gains, continuous-vs-discrete flags — don't go to Layers B or C; they travel straight to the mixer (the only stage that places audio in time), so the mixer never has to reason about frequency, it just places clips where it's told. The whole call returns one parse result — ok, corrected, or rejected — so the UI can show exactly what was assumed.",
     example: "“A misty autumn dawn, light rain, with a boobook owl calling in the distance.”",
   },
+  // Stage-2 coherence gate: every prompt resolves to one of three outcomes.
+  gate: {
+    lead: "Coherence gate — every prompt resolves to one of three outcomes",
+    outcomes: [
+      {
+        tag: "ok",
+        title: "Valid",
+        body: "Complete and in-domain after defaults are filled — passed through unchanged.",
+      },
+      {
+        tag: "corrected",
+        title: "Partly invalid → corrected + recommended",
+        body: "Implausible parts (a species out of its season, thunder, a near-miss weather term) are swapped for the nearest plausible scene; the parser proposes a recommended prompt, explains the change, and generation continues.",
+      },
+      {
+        tag: "rejected",
+        title: "Fully invalid → rejected",
+        body: "Unrecoverable, wholly out-of-domain requests (city traffic, music, snow at an arid site) are rejected with a suggested alternative — no layers run.",
+      },
+    ],
+  },
+  // Stage-3 output ①: the distinct contract the parser hands each layer.
+  contracts: [
+    { step: "A", label: "Ambient", contract: "(season, diel) cell" },
+    { step: "B", label: "Weather", contract: "weather JSON · type · intensity · duration" },
+    { step: "C", label: "Events", contract: "species checklist · density" },
+  ],
   parallelHeading: "Three independent layers compose in parallel",
   parallelNote:
     "Each layer owns one acoustic role and must not bleed into another — mixing events into the bed double-counts them and breaks layer separation. Layer A returns exactly one bed; Layers B and C each return 0–K clips (no weather, or a few gusts; no fauna, or many calls). Those clips carry audio only — the parser's placement parameters reach the mixer separately.",
@@ -308,6 +335,19 @@ function FlowDiagram({ spec }) {
               ) : null}
             </div>
           ) : null}
+          {spec.gate ? (
+            <div className="flow-gate">
+              <p className="flow-gate-lead">{spec.gate.lead}</p>
+              <div className="flow-gate-grid">
+                {spec.gate.outcomes.map((o) => (
+                  <div key={o.tag} className={`flow-gate-card flow-gate-${o.tag}`}>
+                    <span className="flow-gate-tag">{o.title}</span>
+                    <p>{o.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {spec.paramBus ? (
             <div className="flow-parambus flow-parambus-out">
               <span className="flow-parambus-tag">②</span>
@@ -328,6 +368,28 @@ function FlowDiagram({ spec }) {
         <i className="flow-drop" />
         <i className="flow-drop" />
       </div>
+
+      {spec.contracts ? (
+        <div className="flow-contractbus">
+          <span className="flow-contractbus-tag">①</span>
+          <div className="flow-contractbus-body">
+            <strong>Layer contracts → A · B · C</strong>
+            <p className="flow-contractbus-sub">
+              The parser decodes one prompt into a distinct contract per layer —
+              each layer only ever sees its own.
+            </p>
+            <ul className="flow-contractbus-list">
+              {spec.contracts.map((c) => (
+                <li key={c.step}>
+                  <span className="flow-contractbus-step">{c.step}</span>
+                  <span className="flow-contractbus-layer">{c.label}</span>
+                  <code>{c.contract}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flow-parallel-head">
         <p className="flow-parallel-title">{spec.parallelHeading}</p>
