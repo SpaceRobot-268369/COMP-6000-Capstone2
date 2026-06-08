@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "pool_id": "a2_intensity_audit_20260607",
+  "selection_mode": "curated_intensity_seed_pool",
+  "description": "Reviewed AudioLDM2 rain seeds grouped into two MVP intensity buckets.",
+  "intensities": {
+    "light": [
+      42,
+      43,
+      44,
+      51,
+      999983,
+      38891,
+      126481,
+      4935269,
+      7257523,
+      9368669,
+      10424237,
+      11057581,
+      349687
+    ],
+    "heavy": [
+      46,
+      48,
+      2000000001,
+      123456789,
+      69317,
+      349681,
+      1649669,
+      1860781,
+      3549697,
+      8101981,
+      10213123,
+      10635353,
+      11902037,
+      69323,
+      7257533
+    ]
+  },
+  "provenance": {
+    "source_audit": "a2_intensity_audit_20260607",
+    "summary": "a2_intensity_audit_20260607/A2_1_PROVISIONAL_SUMMARY.md",
+    "raw_audio_committed": false
+  }
+}

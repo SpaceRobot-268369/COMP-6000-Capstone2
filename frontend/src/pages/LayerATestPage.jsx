@@ -19,10 +19,21 @@ const WEATHER_INTENSITY_OPTIONS = [
   { value: "medium", label: "medium" },
   { value: "heavy", label: "heavy" },
 ];
+const RAIN_INTENSITY_OPTIONS = [
+  { value: "light", label: "light" },
+  { value: "heavy", label: "heavy" },
+];
 const SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"]
   .map((value) => ({ value, label: value }));
 const DIEL_OPTIONS = ["dawn", "morning", "afternoon", "night"]
   .map((value) => ({ value, label: value }));
+const WEATHER_STEM_SELECTOR_ATTEMPT = "murphy__mvp_1__weather_stem_selector";
+const WIND_GENERATOR_ATTEMPTS = new Set([
+  "murphy__mvp_1__wind_intensity_bank",
+]);
+const RAIN_GENERATOR_ATTEMPTS = new Set([
+  "murphy__mvp_1__rain_intensity_seed_pool",
+]);
 
 const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
 const ANALYSIS_LAYER_IDS   = ["layer_e"];
@@ -50,6 +61,8 @@ export default function LayerATestPage({
   const [diel,     setDiel]     = useState("");        // bank attempts only
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
+  const [windIntensity, setWindIntensity] = useState("medium");
+  const [rainIntensity, setRainIntensity] = useState("light");
   const [weatherDuration, setWeatherDuration] = useState(10);
   const [layerDIncludeWeather, setLayerDIncludeWeather] = useState(true);
   const [layerDIncludeEvents, setLayerDIncludeEvents] = useState(true);
@@ -148,6 +161,11 @@ export default function LayerATestPage({
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
+  const usesWeatherStemControls = usesWeatherControls || (layerId === "layer_b" && attemptId === WEATHER_STEM_SELECTOR_ATTEMPT);
+  const usesWindGeneratorControls = layerId === "layer_b" && WIND_GENERATOR_ATTEMPTS.has(attemptId);
+  const usesRainGeneratorControls = layerId === "layer_b" && RAIN_GENERATOR_ATTEMPTS.has(attemptId);
+  const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls || usesRainGeneratorControls;
+  const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
   const isLayerD = layerId === "layer_d";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
 
@@ -295,17 +313,29 @@ export default function LayerATestPage({
     try {
       const runParams = {};
       if (usesSeed) {
-        if (usesWeatherControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
+        if (usesWeatherStemControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
         else runParams.seed = Number(seed) || DEFAULT_SEED;
       }
       if (usesCells && season && diel) {
         runParams.season = season;
         runParams.diel = diel;
       }
-      if (usesWeatherControls) {
+      if (usesWeatherStemControls) {
         runParams.weather_type = weatherType;
         runParams.intensity = weatherIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
+      }
+      if (usesWindGeneratorControls) {
+        runParams.weather_type = "wind";
+        if (isWindIntensityBank) {
+          runParams.intensity = windIntensity;
+          runParams.wind_intensity = windIntensity;
+        }
+      }
+      if (usesRainGeneratorControls) {
+        runParams.weather_type = "rain";
+        runParams.intensity = rainIntensity;
+        runParams.rain_intensity = rainIntensity;
       }
       if (selectedSpecies) {
         runParams.species_common_name = selectedSpecies;
@@ -354,7 +384,14 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${(usesCells || isLayerD) && season && diel ? `__${season}_${diel}` : ""}${(usesWeatherControls || isLayerD) ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
+  const layerBTag = usesWeatherStemControls
+    ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__retrieval_seed`
+    : usesWindGeneratorControls
+      ? `__wind${isWindIntensityBank ? `_${windIntensity}` : ""}__seed`
+      : usesRainGeneratorControls
+        ? `__rain_${rainIntensity}__seed_pool_entropy`
+      : "__seed";
+  const tag       = `${layerId}__${attemptId}${(usesCells || isLayerD) && season && diel ? `__${season}_${diel}` : ""}${isLayerD ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__seed` : usesLayerBControls ? layerBTag : "__seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -487,7 +524,7 @@ export default function LayerATestPage({
                 </section>
               )}
 
-              {(usesWeatherControls || isLayerD) && (
+              {(usesWeatherStemControls || isLayerD) && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
                     {isLayerD ? "Upstream weather" : "Weather stem"}
@@ -517,6 +554,70 @@ export default function LayerATestPage({
                       hint="seconds"
                       onChange={setWeatherDuration}
                     />
+                  </div>
+                </section>
+              )}
+
+              {usesWindGeneratorControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Wind generator
+                    <span className="dev-controls-section-pill">
+                      wind{isWindIntensityBank ? ` · ${windIntensity}` : " · locked profile"}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="wind" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Wind intensity"
+                      value={windIntensity}
+                      onChange={setWindIntensity}
+                      options={WEATHER_INTENSITY_OPTIONS}
+                      disabled={!isWindIntensityBank}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Duration</span>
+                      <input
+                        className="layer-a-input"
+                        type="text"
+                        value={currentAttempt?.params?.audio_length_in_s ? `${currentAttempt.params.audio_length_in_s}s` : "server locked"}
+                        disabled
+                      />
+                      <small>Owned by registry / handler.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
+              {usesRainGeneratorControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Rain generator
+                    <span className="dev-controls-section-pill">
+                      rain · {rainIntensity}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="rain" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Rain intensity"
+                      value={rainIntensity}
+                      onChange={setRainIntensity}
+                      options={RAIN_INTENSITY_OPTIONS}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Seed mode</span>
+                      <input className="layer-a-input" type="text" value="curated pool" disabled />
+                      <small>Seed chooses from reviewed good rain seeds.</small>
+                    </label>
                   </div>
                 </section>
               )}
@@ -577,15 +678,19 @@ export default function LayerATestPage({
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
                   <SeedField
-                    label={usesWeatherControls ? "Retrieval seed" : "Seed"}
+                    label={usesWeatherStemControls ? "Retrieval seed" : usesRainGeneratorControls ? "Seed entropy" : "Seed"}
                     value={seed}
                     onChange={setSeed}
                     disabled={!usesSeed && !isLayerD}
                     hint={
                       isLayerD
                         ? "Same seed + same orchestration settings should reproduce the upstream choices."
-                        : usesWeatherControls
-                        ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                        : usesWeatherStemControls
+                          ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                        : usesWindGeneratorControls
+                          ? "Same seed + same wind generator settings = same model sample."
+                        : usesRainGeneratorControls
+                          ? "Seed maps deterministically into the reviewed rain seed pool for the selected intensity."
                         : usesSeed
                           ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
@@ -755,7 +860,7 @@ export default function LayerATestPage({
                          style={{ width: "100%" }} />
                   <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
                     {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s ·{" "}
-                    {usesWeatherControls
+                    {usesWeatherStemControls
                       ? `retrieval_seed ${result.metadata?.retrieval_seed ?? result.metadata?.seed ?? seed}`
                       : `seed ${result.metadata?.seed ?? seed}`}
                   </p>
@@ -1034,12 +1139,13 @@ function LabeledNumber({ label, value, min, max, step = 1, hint, onChange, disab
   );
 }
 
-function LabeledSelect({ label, value, options, onChange }) {
+function LabeledSelect({ label, value, options, onChange, disabled = false }) {
   return (
-    <label className="layer-a-field">
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
       <span>{label}</span>
       <select className="layer-a-input"
               value={value}
+              disabled={disabled}
               onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
