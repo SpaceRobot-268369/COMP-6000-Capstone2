@@ -53,7 +53,9 @@ class AttemptSpec:
     stage:   str           # "smoke_1" | "mvp_1" | "prod_1" | ...
     head:    str | None    # Layer E only: "ambient" | "weather" | "events"
     status:  str
+    kind:    str | None
     checkpoint: Path | None
+    asset_bank: Path | None
     extra_checkpoints: dict[str, Path]
     params:  dict[str, Any]
     notes:   list[str]
@@ -61,6 +63,12 @@ class AttemptSpec:
     @property
     def handler_module(self) -> str:
         return f"layers.{self.layer}.attempts.{self.id}.code.handler"
+
+    @property
+    def artifact_root(self) -> Path | None:
+        if self.kind == "retrieval" and self.asset_bank is not None:
+            return self.asset_bank
+        return self.checkpoint
 
 
 # --- loading ---------------------------------------------------------------
@@ -154,16 +162,64 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     }
 
 
+def _bank_availability(bank_dir: Path | None) -> dict:
+    if bank_dir is None:
+        return {"available": True, "reason": None, "missing": []}
+    if not bank_dir.exists():
+        return {
+            "available": False,
+            "reason": f"asset bank directory missing: {bank_dir}",
+            "missing": [],
+        }
+    index = bank_dir / "index.json"
+    media_dir = bank_dir / "media_asset_bank"
+    missing = []
+    if not index.is_file():
+        missing.append("index.json")
+    if not media_dir.exists():
+        missing.append("media_asset_bank/")
+    elif not any(media_dir.rglob("*.wav")):
+        pointers = sorted(
+            str(p.relative_to(bank_dir))
+            for p in media_dir.rglob("*.dvc")
+            if p.is_file()
+        )
+        if pointers:
+            return {
+                "available": False,
+                "reason": (
+                    "Asset bank is DVC-tracked but audio is not on disk locally. "
+                    f"Run `dvc pull` for: {', '.join(pointers[:3])}"
+                    + (" ..." if len(pointers) > 3 else "")
+                ),
+                "missing": pointers,
+            }
+        missing.append("media_asset_bank audio")
+    if missing:
+        return {
+            "available": False,
+            "reason": f"asset bank incomplete: {', '.join(missing)}",
+            "missing": missing,
+        }
+    return {"available": True, "reason": None, "missing": []}
+
+
 def list_layers() -> list[dict]:
     """Return the dropdown payload — one entry per layer, with attempt list."""
     out: list[dict] = []
     for layer_id, layer_block in _registry_doc()["layers"].items():
         attempts = []
         for att_id, att in layer_block["attempts"].items():
+            kind = att.get("kind")
             ckpt = _resolve_checkpoint(att.get("checkpoint"))
+            asset_bank = _resolve_checkpoint(att.get("asset_bank"))
             params = att.get("params") or {}
             cells = sorted((params.get("cells") or {}).keys())
-            avail = _ckpt_availability(ckpt, cell_names=cells)
+            avail = (
+                _bank_availability(asset_bank)
+                if kind == "retrieval" and asset_bank is not None
+                else _ckpt_availability(ckpt, cell_names=cells)
+            )
             attempts.append({
                 "id":      att_id,
                 "label":   att.get("label", att_id),
@@ -173,6 +229,8 @@ def list_layers() -> list[dict]:
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
+                "kind":             kind,
+                "asset_bank":       str(asset_bank) if asset_bank else None,
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
@@ -213,6 +271,8 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         head=att.get("head"),
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
+        kind=att.get("kind"),
+        asset_bank=_resolve_checkpoint(att.get("asset_bank")),
         extra_checkpoints=extras,
         params=dict(att.get("params") or {}),
         notes=list(att.get("notes") or []),
@@ -470,7 +530,7 @@ def _get_state(spec: AttemptSpec):
         if cache_key in _state_cache:
             return _state_cache[cache_key]
         mod = _get_handler_module(spec)
-        state = mod.load(spec.checkpoint, dict(spec.params), extra=spec.extra_checkpoints)
+        state = mod.load(spec.artifact_root, dict(spec.params), extra=spec.extra_checkpoints)
         _state_cache[cache_key] = state
         return state
 
