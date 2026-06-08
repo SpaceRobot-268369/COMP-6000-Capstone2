@@ -9,6 +9,8 @@ import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
 
+const USER_GENERATION_LAYER_D_ATTEMPT = "songke__mvp_2__multi_clip_mix";
+
 function generatedWavUrl(audioB64) {
   if (!audioB64) return "";
   const raw = window.atob(audioB64);
@@ -105,6 +107,7 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
       layer_c: layerC,
       include_weather: Boolean(layerB),
       include_events: Boolean(layerC?.species?.length),
+      layer_d_attempt: USER_GENERATION_LAYER_D_ATTEMPT,
     });
   } finally {
     clearTimeout(genTimer1);

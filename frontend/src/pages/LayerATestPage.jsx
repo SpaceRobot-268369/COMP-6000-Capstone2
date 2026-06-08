@@ -625,6 +625,9 @@ export default function LayerATestPage({
               {isLayerD && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">Upstream models</p>
+                  <p className="dev-controls-section-help">
+                    Select one upstream attempt per layer. Multi-clip behavior comes from the selected Layer B/C attempt output, not from selecting multiple attempts.
+                  </p>
                   <div className="dev-controls-section-grid three-col">
                     <LabeledSelect
                       label="Layer A attempt"
