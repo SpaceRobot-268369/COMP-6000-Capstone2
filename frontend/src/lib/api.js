@@ -192,6 +192,34 @@ export async function narrateReport(report, register = "analytical") {
   return res.json();
 }
 
+/**
+ * Pre-render BOTH tone registers for a report so the immersive scene's tone
+ * toggle switches instantly — a pure cache swap with no LLM call on click.
+ * Renders any missing register via narrateReport in parallel; pass an
+ * already-rendered register (e.g. the immersive narrative analysis returns
+ * inline) in `have` to skip a redundant call. Partial failure is tolerated: a
+ * register that fails to render comes back empty, and the toggle falls back to
+ * a lazy call when that register is first selected.
+ *
+ * @param {object} report  fused analysis report JSON (real or synthesized)
+ * @param {{immersive?:string, analytical?:string}} have  already-rendered text per register
+ * @returns {Promise<{immersive:string, analytical:string}>}
+ */
+export async function renderBothNarratives(report, have = {}) {
+  const out = { immersive: have.immersive || "", analytical: have.analytical || "" };
+  const jobs = [];
+  for (const register of ["immersive", "analytical"]) {
+    if (out[register]) continue;
+    jobs.push(
+      narrateReport(report, register)
+        .then((data) => { out[register] = data?.narrative?.text || ""; })
+        .catch(() => { /* leave empty; toggle falls back to a lazy call */ }),
+    );
+  }
+  await Promise.all(jobs);
+  return out;
+}
+
 export async function parseGenerationPrompt(prompt) {
   const res = await fetch(`${API_BASE}/api/generation/parse`, {
     method:      "POST",
