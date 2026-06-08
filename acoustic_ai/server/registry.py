@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import threading
 from dataclasses import dataclass
@@ -87,6 +88,10 @@ def _resolve_checkpoint(value: Any) -> Path | None:
     return (_PROJECT_ROOT / str(value)).resolve()
 
 
+def _resolve_asset_bank(value: Any) -> Path | None:
+    return _resolve_checkpoint(value)
+
+
 # Weight-file extensions we treat as "real" model binaries (i.e. not pointers).
 _WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pt")
 
@@ -139,6 +144,29 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     if has_weight:
         return {"available": True, "reason": None, "missing": []}
 
+    # Adapter-bank layout: weights live under ckpt_dir/adapters/<profile>/.
+    # Layer B wind intensity uses this for medium/heavy profiles, with light
+    # derived from medium at runtime.
+    adapter_root = ckpt_dir / "adapters"
+    if adapter_root.is_dir():
+        adapter_dirs = [p for p in sorted(adapter_root.iterdir()) if p.is_dir()]
+        missing = [
+            f"adapters/{p.name}/adapter_model.safetensors"
+            for p in adapter_dirs
+            if not (p / "adapter_model.safetensors").is_file()
+        ]
+        if adapter_dirs and not missing:
+            return {"available": True, "reason": None, "missing": []}
+        if missing:
+            return {
+                "available": False,
+                "reason": (
+                    f"{len(missing)}/{len(adapter_dirs)} adapter profiles not on disk. "
+                    f"Run `dvc pull` under {ckpt_dir}."
+                ),
+                "missing": missing,
+            }
+
     # No real weights — list any `.dvc` pointer files so the UI can tell the
     # user exactly which paths to `dvc pull`.
     pointers = sorted(
@@ -163,23 +191,48 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     }
 
 
-def _bank_availability(bank_dir: Path | None) -> dict:
+def _asset_bank_availability(bank_dir: Path | None) -> dict:
+    """Inspect a retrieval asset bank and report whether it is materialised."""
     if bank_dir is None:
-        return {"available": True, "reason": None, "missing": []}
+        return {
+            "available": False,
+            "reason": "retrieval attempt missing registry-level asset_bank",
+            "missing": [],
+        }
     if not bank_dir.exists():
         return {
             "available": False,
             "reason": f"asset bank directory missing: {bank_dir}",
             "missing": [],
         }
-    index = bank_dir / "index.json"
+
+    index_path = bank_dir / "index.json"
     media_dir = bank_dir / "media_asset_bank"
     missing = []
-    if not index.is_file():
+    if not index_path.is_file():
         missing.append("index.json")
-    if not media_dir.exists():
+    if not media_dir.is_dir():
         missing.append("media_asset_bank/")
-    elif not any(media_dir.rglob("*.wav")):
+    if missing:
+        pull_hint = ""
+        if (bank_dir / "media_asset_bank.dvc").is_file():
+            pull_hint = f" Run `dvc pull {bank_dir / 'media_asset_bank.dvc'}`."
+        return {
+            "available": False,
+            "reason": f"retrieval asset bank not materialized: {', '.join(missing)}.{pull_hint}",
+            "missing": missing,
+        }
+
+    try:
+        doc = json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - user-facing registry health
+        return {
+            "available": False,
+            "reason": f"failed to read asset bank index: {exc}",
+            "missing": ["index.json"],
+        }
+
+    if not any(media_dir.rglob("*.wav")):
         pointers = sorted(
             str(p.relative_to(bank_dir))
             for p in media_dir.rglob("*.dvc")
@@ -195,13 +248,26 @@ def _bank_availability(bank_dir: Path | None) -> dict:
                 ),
                 "missing": pointers,
             }
-        missing.append("media_asset_bank audio")
-    if missing:
         return {
             "available": False,
-            "reason": f"asset bank incomplete: {', '.join(missing)}",
-            "missing": missing,
+            "reason": "retrieval asset bank not materialized: media_asset_bank audio.",
+            "missing": ["media_asset_bank audio"],
         }
+
+    missing_audio = [
+        str(asset.get("audio_path", ""))
+        for asset in doc.get("assets", [])
+        if asset.get("audio_path") and not (bank_dir / str(asset["audio_path"])).is_file()
+    ]
+    if missing_audio:
+        shown = ", ".join(missing_audio[:3])
+        suffix = "..." if len(missing_audio) > 3 else ""
+        return {
+            "available": False,
+            "reason": f"{len(missing_audio)} asset bank audio files missing: {shown}{suffix}",
+            "missing": missing_audio,
+        }
+
     return {"available": True, "reason": None, "missing": []}
 
 
@@ -213,12 +279,12 @@ def list_layers() -> list[dict]:
         for att_id, att in layer_block["attempts"].items():
             kind = att.get("kind")
             ckpt = _resolve_checkpoint(att.get("checkpoint"))
-            asset_bank = _resolve_checkpoint(att.get("asset_bank"))
+            asset_bank = _resolve_asset_bank(att.get("asset_bank"))
             params = att.get("params") or {}
             cells = sorted((params.get("cells") or {}).keys())
             avail = (
-                _bank_availability(asset_bank)
-                if kind == "retrieval" and asset_bank is not None
+                _asset_bank_availability(asset_bank)
+                if kind == "retrieval"
                 else _ckpt_availability(ckpt, cell_names=cells)
             )
             attempts.append({
@@ -227,16 +293,17 @@ def list_layers() -> list[dict]:
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
                 "head":    att.get("head"),
+                "kind":    kind,
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
-                "kind":             kind,
                 "asset_bank":       str(asset_bank) if asset_bank else None,
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
                 "uses_seed":        bool(att.get("uses_seed", False)),
                 "uses_cells":       bool(att.get("uses_cells", False)),
+                "uses_weather_controls": bool(att.get("uses_weather_controls", False)),
                 "cells":            cells,
                 "default_cell":     params.get("default_cell"),
             })
@@ -273,7 +340,7 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
         kind=att.get("kind"),
-        asset_bank=_resolve_checkpoint(att.get("asset_bank")),
+        asset_bank=_resolve_asset_bank(att.get("asset_bank")),
         extra_checkpoints=extras,
         params=dict(att.get("params") or {}),
         notes=list(att.get("notes") or []),
@@ -833,6 +900,7 @@ def _attempt_snapshot(spec: AttemptSpec) -> dict:
         "author": spec.author,
         "status": spec.status,
         "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
+        "asset_bank": str(spec.asset_bank) if spec.asset_bank else None,
     }
 
 
