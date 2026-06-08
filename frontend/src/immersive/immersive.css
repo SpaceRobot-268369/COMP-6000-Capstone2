@@ -60,6 +60,95 @@
 
 .immersive-page .immersive-bolt { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 90ms ease-out; }
 
+/* ---- source-recording caption ----
+   The demo's audio + scene description currently stand in with a real Layer A
+   recording (Layer D mixing + the LLM-OSS scene writer are not built yet). This
+   quiet pill names the clip the scene is grounded in so the stand-in is honest. */
+.immersive-page .immersive-source-caption {
+  position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
+  z-index: 11; pointer-events: none; margin: 0;
+  max-width: min(640px, calc(100% - 36px));
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+  text-align: center;
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: 12px; line-height: 1.4; letter-spacing: 0.02em;
+  color: rgba(244, 239, 228, 0.82);
+  padding: 7px 14px; border-radius: 999px;
+  background: rgba(14, 15, 18, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.immersive-page .immersive-source-tag {
+  text-transform: uppercase; font-size: 10px; letter-spacing: 0.13em;
+  font-weight: 600; color: rgba(244, 239, 228, 0.6);
+}
+
+.immersive-page .immersive-model-line {
+  position: absolute; top: 124px; left: 50%; transform: translateX(-50%);
+  z-index: 11; pointer-events: none;
+  max-width: min(860px, calc(100% - 36px));
+  padding: 10px 14px; border-radius: 18px;
+  background: rgba(14, 15, 18, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  color: rgba(244, 239, 228, 0.82);
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: 11px;
+}
+.immersive-page .immersive-model-line strong {
+  display: block;
+  margin-bottom: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: rgba(244, 239, 228, 0.62);
+}
+.immersive-page .immersive-model-line div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.immersive-page .immersive-model-line span {
+  display: grid;
+  gap: 2px;
+  min-width: 130px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.immersive-page .immersive-model-line b,
+.immersive-page .immersive-model-line em {
+  font-style: normal;
+  opacity: 0.72;
+}
+.immersive-page .immersive-model-line code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+[data-theme="light"] .immersive-page .immersive-source-caption {
+  color: rgba(28, 26, 22, 0.82);
+  background: rgba(248, 245, 238, 0.62);
+  border-color: rgba(0, 0, 0, 0.1);
+  text-shadow: none;
+}
+[data-theme="light"] .immersive-page .immersive-source-tag { color: rgba(28, 26, 22, 0.55); }
+[data-theme="light"] .immersive-page .immersive-model-line {
+  color: rgba(28, 26, 22, 0.82);
+  background: rgba(248, 245, 238, 0.62);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .immersive-page .immersive-model-line strong {
+  color: rgba(28, 26, 22, 0.55);
+}
+[data-theme="light"] .immersive-page .immersive-model-line span {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 /* ---- dev control panel ---- */
 .immersive-page .immersive-panel {
   position: absolute; top: 18px; right: 18px; width: 248px; z-index: 10;

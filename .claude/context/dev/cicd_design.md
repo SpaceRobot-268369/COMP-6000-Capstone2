@@ -389,6 +389,7 @@ service paths:
 
 ```text
 model/production/**
+model/candidates/**
 acoustic_ai/registry.yaml
 acoustic_ai/server/**
 acoustic_ai/layers/**
@@ -408,8 +409,12 @@ Current behavior:
 - run `git fetch`, `git checkout main`, and `git pull --ff-only origin main`;
 - call Server B's local DVC executable, including `~/.local/bin/dvc`, because
   non-interactive SSH sessions may not include that directory in `PATH`;
-- pull `model/production/**/*.dvc` targets plus committed attempt sample
-  targets under `acoustic_ai/layers/**/{expected,showcase}/**/*.dvc`;
+- pull `model/production/**/*.dvc` and `model/candidates/**/*.dvc` targets —
+  generative weights **and** retrieval media-asset banks both live under
+  `model/`, so both deploy automatically with no per-attempt config — plus
+  committed attempt sample targets under
+  `acoustic_ai/layers/**/{expected,showcase}/**/*.dvc`, plus any registry
+  `deploy_dvc:` pointers (legacy override — see DVC policy below);
 - verify the corresponding production model/sample files are materialised;
 - report which process, if any, is listening on `127.0.0.1:8000`;
 - never start, stop, or restart uvicorn.
@@ -421,11 +426,31 @@ a later hardening step can safely add an opt-in restart.
 
 DVC policy:
 
-- Pull production model pointers under `model/production/` and attempt sample
-  pointers under `acoustic_ai/layers/**/{expected,showcase}/`.
+- Pull model pointers under `model/production/` and `model/candidates/` (both
+  kinds — generative weights and retrieval `media_asset_bank/` audio) and
+  attempt sample pointers under `acoustic_ai/layers/**/{expected,showcase}/`.
+- **Retrieval banks under `model/` deploy automatically.** A `kind: retrieval`
+  attempt whose `asset_bank:` lives under `model/candidates|production` needs
+  **no** `deploy_dvc:` entry — the `model/**/*.dvc` pull already materialises
+  its `index.json` audio. `deploy_dvc:` is a **legacy override**, kept only for
+  banks intentionally stored outside `model/` (e.g. pre-migration in-attempt
+  CSV banks); drop it from an attempt once its bank moves under `model/`.
 - Do not run broad `dvc pull` from CI unless explicitly requested.
 - Keep DVC/S3 credentials on Server B under the local `capstone2` AWS profile;
   do not store S3 credentials in GitHub Actions secrets for this workflow.
+
+> **Bank-size policy (decided):** `pull_dvc_artifacts` deliberately
+> materialises *every* candidate bank, including parked/superseded ones —
+> "pull all candidates" is the chosen policy (simple, no registry-served
+> logic to maintain). Retrieval banks are audio and can grow, so the deploy
+> emits a **non-fatal per-bank size warning** (`warn_large_media_banks`,
+> threshold `SERVER_B_BANK_WARN_BYTES`, default 2 GiB) — it never blocks the
+> deploy, it just surfaces a large bank in the Actions log so a dev can prune
+> superseded banks. The same warning fires at PR time via
+> [validate_model_attempt](../../skills/validate_model_attempt.md). Only if
+> those warnings pile up should anyone revisit scoping pulls to registry-served
+> attempts (layer `default:` + non-deprecated `status`) — don't build that
+> until the pain is real.
 
 Required GitHub Actions secrets:
 

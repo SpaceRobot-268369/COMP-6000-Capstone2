@@ -18,13 +18,17 @@ data/
   media_asset_bank/
     layer_c_retrieval_v2_event_index.csv
     species_band_config_final_human_v1.csv
+model/candidates/burger/mvp_2__retrieval_v2_library/
+  index.json
+  media_asset_bank/
     review_package_full_v2_final_human_bandpass.dvc
 ```
 
-The media asset bank is attempt-local derived data. Git tracks the manifests,
-metadata, and `.dvc` pointers; DVC/S3 stores the materialized review package
-audio and spectrogram files. The runtime route uses the final human-audited
-bandpass package and returns Layer C only output, not an A-layer mix.
+The attempt-local CSV files are build/audit provenance. The runnable retrieval
+artifact lives under `model/candidates/burger/mvp_2__retrieval_v2_library/`
+as `index.json` plus a DVC-tracked `media_asset_bank/`. The runtime route uses
+the final human-audited bandpass package and returns Layer C only output, not
+an A-layer mix.
 
 ## Data Summary
 
@@ -39,11 +43,11 @@ bandpass package and returns Layer C only output, not an A-layer mix.
 ## Runtime
 
 The registered attempt is `burger__mvp_2__retrieval_v2_library`.
-Its `retrieval_index` is declared in `acoustic_ai/registry.yaml` and points to
-`data/media_asset_bank/layer_c_retrieval_v2_event_index.csv`.
+Its `asset_bank` is declared in `acoustic_ai/registry.yaml` and points to
+`model/candidates/burger/mvp_2__retrieval_v2_library`.
 
 To materialize the audited retrieval package for local generation testing:
 
 ```bash
-dvc pull acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
+dvc pull model/candidates/burger/mvp_2__retrieval_v2_library/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
 ```

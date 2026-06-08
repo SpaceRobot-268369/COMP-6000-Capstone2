@@ -1,7 +1,6 @@
 method: retrieval
 species_common_name: Splendid Fairywren
 event_type: layer_c_retrieval_v2_library
-retrieval_index: acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv
 duration_s: 60.0
 count: 12
 default_cell: summer_morning

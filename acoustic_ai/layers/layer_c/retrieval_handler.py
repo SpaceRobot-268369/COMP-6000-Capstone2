@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,6 +33,10 @@ DEFAULT_INDEX = (
     / "data"
     / "media_asset_bank"
     / "layer_c_retrieval_v2_event_index.csv"
+)
+
+DEFAULT_BANK = (
+    REPO_ROOT / "model" / "candidates" / "burger" / "mvp_2__retrieval_v2_library"
 )
 
 DIEL_NEIGHBOURS = {
@@ -93,21 +98,30 @@ class LayerResult:
 class RetrievalState:
     params: dict
     index_path: Path
+    bank_root: Path | None
     snippets: list[EventSnippet]
 
 
 def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> RetrievalState:
-    """Load the audited snippet index. No checkpoint is needed."""
+    """Load the audited snippet index from the retrieval asset bank."""
 
-    del checkpoint_dir, extra
-    index_path = Path(params.get("retrieval_index", DEFAULT_INDEX))
-    if not index_path.is_absolute():
-        index_path = REPO_ROOT / index_path
+    del extra
+    bank_root: Path | None = None
+    if checkpoint_dir is not None:
+        bank_root = Path(checkpoint_dir)
+        index_path = bank_root / "index.json"
+    else:
+        index_path = Path(params.get("retrieval_index", DEFAULT_BANK / "index.json"))
+        if not index_path.is_absolute():
+            index_path = REPO_ROOT / index_path
+        if index_path.name == "index.json":
+            bank_root = index_path.parent
     if not index_path.exists():
         raise FileNotFoundError(f"Layer C retrieval index not found: {index_path}")
     return RetrievalState(
         params=dict(params),
         index_path=index_path,
+        bank_root=bank_root,
         snippets=_load_index(index_path),
     )
 
@@ -150,6 +164,7 @@ def generate(
             ecological_mode=bool(params.get("ecological_mode", True)),
         ),
         target_duration_s=duration_s,
+        bank_root=state.bank_root,
     )
 
     events_gain_db = float(params.get("events_gain_db", -1.0))
@@ -215,6 +230,8 @@ def generate(
 
 
 def _load_index(path: Path) -> list[EventSnippet]:
+    if path.suffix.lower() == ".json":
+        return _load_json_index(path)
     snippets: list[EventSnippet] = []
     with path.open("r", encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
@@ -239,6 +256,35 @@ def _load_index(path: Path) -> list[EventSnippet]:
                     notes=row.get("notes", ""),
                 )
             )
+    return snippets
+
+
+def _load_json_index(path: Path) -> list[EventSnippet]:
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    snippets: list[EventSnippet] = []
+    for asset in doc.get("assets", []):
+        attrs = asset.get("attributes") or {}
+        snippets.append(
+            EventSnippet(
+                snippet_id=str(asset["id"]),
+                event_type=str(attrs.get("event_type", "")),
+                species_common_name=str(attrs.get("species_common_name", "")),
+                species_scientific_name=str(attrs.get("species_scientific_name", "")),
+                audio_event_id=str(attrs.get("audio_event_id", "")),
+                audio_path=str(asset["audio_path"]),
+                score=float(attrs.get("score") or 0.0),
+                quality_score=_parse_float(attrs.get("quality_score")),
+                diel_bin=str(attrs.get("diel_bin", "")),
+                season=str(attrs.get("season", "unknown")),
+                duration_s=float(attrs.get("duration_s") or 0.0),
+                recording_id=str(attrs.get("recording_id", "")),
+                event_start_seconds=_parse_float(attrs.get("event_start_seconds")),
+                event_end_seconds=_parse_float(attrs.get("event_end_seconds")),
+                source_manifest=str(attrs.get("source_manifest", "")),
+                verdict=str(attrs.get("verdict", "")),
+                notes=str(attrs.get("notes", "")),
+            )
+        )
     return snippets
 
 
@@ -374,13 +420,18 @@ def _schedule(
     return events
 
 
-def _render_events(events: list[ScheduledEvent], *, target_duration_s: float) -> LayerResult:
+def _render_events(
+    events: list[ScheduledEvent],
+    *,
+    target_duration_s: float,
+    bank_root: Path | None = None,
+) -> LayerResult:
     total_samples = int(round(target_duration_s * SR))
     layer = np.zeros(total_samples, dtype=np.float32)
     metadata_events = []
 
     for event in events:
-        audio = _load_audio(Path(event.retrieved.snippet.audio_path))
+        audio = _load_audio(Path(event.retrieved.snippet.audio_path), base_root=bank_root)
         audio = _apply_variation(
             audio,
             pitch_shift_semitones=event.pitch_shift_semitones,
@@ -493,9 +544,9 @@ def _reason(
     return "; ".join(parts)
 
 
-def _load_audio(path: Path) -> np.ndarray:
+def _load_audio(path: Path, *, base_root: Path | None = None) -> np.ndarray:
     if not path.is_absolute():
-        path = REPO_ROOT / path
+        path = (base_root or REPO_ROOT) / path
     audio, sr = sf.read(path, dtype="float32", always_2d=False)
     if audio.ndim > 1:
         audio = np.mean(audio, axis=1)

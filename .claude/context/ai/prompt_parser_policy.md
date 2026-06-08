@@ -59,7 +59,7 @@ decision, not a gap.**
 | Layer | If the user *does not* mention it | Rationale |
 |---|---|---|
 | A — Ambient bed | **Always on.** Resolve `(season, diel)` from the prompt; if absent, use the attempt's `default_cell`. | The site bed is the substrate of every soundscape — there is no "no ambient" option. |
-| B — Weather | **Off.** No rain, no wind, no thunder unless explicitly requested. | A clear, calm day is the neutral baseline. Weather is an *additive* event the user opts into. |
+| B — Weather | **Off.** No rain, wind, or rain+wind unless explicitly requested. Thunder/storm wording is corrected to `rain+wind` until reliable site thunder candidates are exposed. | A clear, calm day is the neutral baseline. Weather is an *additive* event the user opts into. |
 | C — Events | **Empty checklist.** No species placed unless named or clearly implied. | Foreground calls are deliberate. An empty timeline yields a quiet, ambient-only scene rather than random fauna. |
 
 So "a misty autumn dawn" fills to: Layer A `(autumn, dawn)`, Layer B *none*,

@@ -5,9 +5,21 @@
 #   - serve GET /layers (for the frontend dropdown)
 #   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
 #
-# Naming rules:    .claude/context/dev/attempt_naming.md
-# Artifact policy: .claude/context/dev/artifact_policy.md
+# Naming rules + artifact policy: .claude/context/conventions.md
 # Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# Every GENERATION-layer attempt (layers A/B/C) declares its kind (conventions.md § 5.5):
+#   kind: generative   → checkpoint: <model/candidates|production path>   (trained weights)
+#   kind: retrieval    → asset_bank: <model/candidates|production path>   (media asset bank:
+#                        index.json + media_asset_bank/ audio; JSON index only, no CSV)
+# Both artifact kinds live under model/; only the attempt code lives under
+# acoustic_ai/layers/.../attempts/. Layer D (mixer) and Layer E (analysis,
+# keyed by `head:`) are not generation models and carry no `kind`.
+#
+# Retrieval entries are labelled with `kind` now, but still point at their
+# in-attempt CSV banks (checkpoint: null + asset_index/retrieval_index under
+# params). They gain `asset_bank:` + the model/ layout (index.json +
+# media_asset_bank/) when their author migrates the bank.
 #
 # IDs use snake_case on disk; dropdown labels use human-readable strings.
 # Canonical seed for samples/reference/ is 42 unless an attempt overrides it
@@ -25,6 +37,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
         params:
@@ -46,6 +59,7 @@ layers:
         author: lucas
         stage: smoke_2
         status: smoke_test_2_insects_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
         params:
@@ -67,6 +81,7 @@ layers:
         author: lucas
         stage: mvp_2
         status: mvp_2_per_cell_passed
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/candidates/lucas/mvp_2__per_cell_loras
@@ -105,6 +120,7 @@ layers:
         author: lucas
         stage: prod_1
         status: production
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/production/layer_a_ambient
@@ -149,6 +165,7 @@ layers:
         author: lucas
         stage: smoke_4
         status: superseded
+        kind: generative
         checkpoint: model/candidates/lucas/vae-site257-30epoch
         extra_checkpoints:
           vocoder: model/candidates/lucas/vocoder-hifigan-site257
@@ -168,16 +185,18 @@ layers:
         author: murphy
         stage: mvp_1
         status: mvp_candidate
+        kind: retrieval
         uses_seed: true
+        uses_weather_controls: true
         checkpoint: null
         description: |
           Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-only retrieval pool from site_257 Bowra dry woodland is filtered by weather label and intensity, then retrieval_seed chooses a deterministic site asset and start offset.
 
-          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. The two thunder backup stems are intentionally not exposed in the frontend/API until the site thunder policy is reliable. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
 
-          Supported site weather types in this branch: rain, wind, and rain+wind, with thunder available only as a cautious backup pool. Site storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+          asset_index: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
@@ -191,11 +210,12 @@ layers:
           - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
           - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
 
-      lucas__smoke_1__curated_assets:
+      murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: lucas
         stage: smoke_1
         status: placeholder
+        kind: retrieval
         checkpoint: null
         params: {}
         notes:
@@ -210,6 +230,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
         params:
@@ -223,20 +244,19 @@ layers:
         author: burger
         stage: mvp_2
         status: demo_ready
+        kind: retrieval
         uses_seed: true
         uses_cells: true
         checkpoint: null
+        asset_bank: model/candidates/burger/mvp_2__retrieval_v2_library
         description: |
           Layer C retrieval v2 baseline backed by the rebuilt 63-species
           audited library. It selects real Pass-reviewed snippets from the v2
           event index and schedules them into a 60-second ecological timeline.
-        deploy_dvc:
-          - acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
         params:
           method: retrieval
           species_common_name: "Splendid Fairywren"
           event_type: layer_c_retrieval_v2_library
-          retrieval_index: acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv
           duration_s: 60.0
           count: 12
           default_cell: summer_morning
@@ -416,6 +436,25 @@ layers:
           - Reports continuous rain / wind / thunder summaries through observations.weather.
           - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      songke__smoke_3__analysis_aggregator:
+        label: "Analysis Aggregator - deterministic fusion v1"
+        author: songke
+        stage: smoke_3
+        head: aggregator
+        status: smoke_test
+        checkpoint: null
+        params:
+          fusion:
+            ambient_weight_cap: 0.5
+            event_weight_cap: 1.0
+            ambient_fallback_min_confidence: 0.6
+            undetermined_threshold: 0.50
+            conflict_margin: 0.20
+        notes:
+          - Combines E-A ambient, E-B weather, and E-C events reports into analysis_aggregator.v1.
+          - Does not run audio inference or generation.
+          - Used by the orchestrated /analysis/run endpoint, not by the per-head dev picker.
 
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"
