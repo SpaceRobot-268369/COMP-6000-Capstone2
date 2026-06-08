@@ -10,19 +10,19 @@ const GENERATION = {
   pre: {
     step: "LLM OSS",
     label: "Prompt Parser",
-    role: "Pre-fills defaults, validates ecological coherence, then decodes the request into layer-specific parameters.",
-    model: "Open-source LLM · prompt parser policy",
-    status: "placeholder",
+    role: "One in-process LLM call: pre-fills defaults, runs the correct-and-continue coherence gate, then decodes the request into per-layer contracts — returning a parse result (ok / corrected / rejected) with the defaults it filled.",
+    model: "In-process LLM-OSS · prompt parser policy",
+    status: "partial",
     visual: "llm",
   },
   // What the parser does — shown beside the Prompt Parser node.
   decoder: {
-    why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — a request our site can't voice, like dense city traffic in a remote dry woodland, is blocked and a sensible alternative is suggested rather than generated; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist. The parser also resolves the arrangement: cadence like “a boobook every few seconds” is expanded into an explicit list of onset times so the mixer never has to reason about frequency — it just places clips where it's told.",
+    why: "Generation is split into independent, modular layers, so a raw natural-language prompt can't be fed straight into any one layer's model — and most prompts under-specify. The Prompt Parser is an LLM-OSS layer, governed by a written policy, that does three things before any layer runs: (1) pre-fills sensible defaults for anything you didn't say — the ambient bed is always on, but there's no rain unless you ask and no fauna unless you name it; (2) validates coherence — and corrects rather than fails: an out-of-domain or phenologically implausible request (dense city traffic, or a species that doesn't occur in the requested season) is swapped for the nearest plausible scene and the change is explained; only genuinely unrecoverable prompts are rejected with a suggested alternative; (3) decodes the completed, validated request into the three aligned inputs each layer expects — Layer A a (season, diel) cell, Layer B structured weather JSON, Layer C a species checklist. The parser also resolves the arrangement: cadence like “a boobook every few seconds” is expanded into an explicit list of onset times. Those placement values — onsets, per-clip gains, continuous-vs-discrete flags — don't go to Layers B or C; they travel straight to the mixer (the only stage that places audio in time), so the mixer never has to reason about frequency, it just places clips where it's told. The whole call returns one parse result — ok, corrected, or rejected — so the UI can show exactly what was assumed.",
     example: "“A misty autumn dawn, light rain, with a boobook owl calling in the distance.”",
   },
   parallelHeading: "Three independent layers compose in parallel",
   parallelNote:
-    "Each layer owns one acoustic role and must not bleed into another — mixing events into the bed double-counts them and breaks layer separation.",
+    "Each layer owns one acoustic role and must not bleed into another — mixing events into the bed double-counts them and breaks layer separation. Layer A returns exactly one bed; Layers B and C each return 0–K clips (no weather, or a few gusts; no fauna, or many calls). Those clips carry audio only — the parser's placement parameters reach the mixer separately.",
   layers: [
     {
       step: "A",
@@ -30,6 +30,7 @@ const GENERATION = {
       role: "Continuous site texture. Ingests decoded (season, diel) cell metadata.",
       model: "AudioLDM2 LoRA · per-cell bank (16 season×diel)",
       status: "live",
+      outCount: "×1",
       sample: {
         input: '{ "seed": 42, "season": "autumn", "diel": "dawn" }',
         output: "Continuous ambient bed — insects, low foliage rustle, distant site tone. No discrete events. WAV + mel spectrogram.",
@@ -38,23 +39,25 @@ const GENERATION = {
     {
       step: "B",
       label: "Weather",
-      role: "Wind / rain / thunder. Ingests decoded weather type, intensity, and duration parameters.",
-      model: "Curated assets · parameter retrieval/mixing",
-      status: "placeholder",
+      role: "Wind / rain. Ingests decoded weather type, intensity, and duration; selects from curated site-only intensity banks.",
+      model: "Curated wind/rain banks + stem selector · retrieval",
+      status: "mvp",
+      outCount: "0–K",
       sample: {
         input: '{ "weather_type": "rain", "intensity": "medium", "duration_s": 10, "retrieval_seed": 42 }',
-        output: "Weather clips for the mixer — continuous beds (wind, steady rain) loop to length; discrete claps (thunder) carry onset times. Loudness-normalised WAV.",
+        output: "0–K weather clips for the mixer — continuous beds (wind, steady rain) loop to length; discrete claps (thunder) are placed at parser-supplied onsets. Loudness-normalised WAV.",
       },
     },
     {
       step: "C",
       label: "Events",
       role: "Species calls. Ingests checklist of plausible callers for requested time/season.",
-      model: "AudioGen LoRA / audited bank retrieval",
-      status: "smoke",
+      model: "Audited retrieval library (default) · AudioGen LoRA (smoke)",
+      status: "demo",
+      outCount: "0–K",
       sample: {
         input: '{ "seed": 42 }  // boobook LoRA — one species, server owns the caption',
-        output: "Isolated species call(s) — each species hands the mixer one clip plus the onset times it should be placed at. WAV (16 kHz, resampled at the mixer).",
+        output: "0–K species clips — each named caller hands the mixer one clip; the parser supplies the onset times for its calls. WAV (16 kHz, resampled at the mixer).",
       },
     },
   ],
@@ -66,7 +69,7 @@ const GENERATION = {
   merge: {
     step: "D",
     label: "Mixer",
-    role: "Arranges A+B+C on one timeline. The ambient bed (and any continuous weather) loops to length; discrete clips — thunder claps, each species call — drop at the explicit onset times the parser computed. Overlaps are summed, never resolved. Per-layer gain staging (ambient 0 / weather −2 / event −8 dB) with optional per-clip overrides, 0.95 peak ceiling, then export. A null onset list falls back to a seeded random placement.",
+    role: "Takes two inputs: the audio — A's single bed plus 0–K weather and 0–K event clips from B/C — and the placement parameters the parser computed (onsets, per-clip gains, continuous flags). Arranges them on one timeline: the ambient bed and any continuous weather loop to length; discrete clips drop at their onset times. Overlaps are summed, never resolved. Per-layer gain staging (ambient 0 / weather −2 / event −8 dB) with per-clip overrides, 0.95 peak ceiling, then export. A null onset list falls back to a seeded random placement.",
     model: "Multi-clip algorithmic combiner · seeded onset fallback · implemented + tested",
     status: "live",
     modelLabel: "Method",
@@ -76,6 +79,9 @@ const GENERATION = {
     label: "Soundscape + explanation",
     sub: "WAV · spectrogram · per-layer reasoning JSON",
   },
+  // The parser's second output: placement parameters that skip B/C and go
+  // straight to the mixer. Rendered as a labeled bypass line (parser → mixer).
+  paramBus: "onsets · per-clip gain · continuous flags — computed by the parser, never seen by B/C",
 };
 
 // ── Analysis: NOT reverse generation. raw mixture → 3 parallel heads → fuse → report.
@@ -154,6 +160,26 @@ const ANALYSIS = {
   },
 };
 
+// Status → visible badge. Maps the registry-ish status strings used in the
+// specs above to a short label + a tone class (CSS colours the chip).
+const STATUS_META = {
+  live: { label: "Live", tone: "live" },
+  production: { label: "Live", tone: "live" },
+  demo: { label: "Demo-ready", tone: "live" },
+  mvp: { label: "MVP", tone: "mvp" },
+  partial: { label: "Partial", tone: "partial" },
+  smoke: { label: "Smoke", tone: "partial" },
+  placeholder: { label: "Placeholder", tone: "placeholder" },
+};
+
+function StatusBadge({ status }) {
+  if (!status) return null;
+  const meta = STATUS_META[status] || { label: status, tone: "placeholder" };
+  return (
+    <span className={`flow-status flow-status-${meta.tone}`}>{meta.label}</span>
+  );
+}
+
 function FlowNode({ node, variant = "" }) {
   return (
     <div className={`flow-node ${variant}`}>
@@ -169,18 +195,29 @@ function FlowNode({ node, variant = "" }) {
 
 // An input/output port: a circle that reveals its sample on hover, and
 // pins it open on click (so it stays after the pointer leaves).
-function SamplePort({ kind, glyph, title, fieldLabel, value, isCode }) {
+function SamplePort({ kind, glyph, title, fieldLabel, value, isCode, count }) {
   const [pinned, setPinned] = useState(false);
+  // A count badge marks how many clips this port emits. "0–K" (variable,
+  // prompt-dependent) is highlighted so it reads differently from a fixed "×1".
+  const variable = Boolean(count) && /k/i.test(count);
   return (
     <span className={`flow-port flow-port-${kind}${pinned ? " is-pinned" : ""}`}>
       <button
         type="button"
         className="flow-port-dot"
         aria-expanded={pinned}
-        aria-label={`${pinned ? "Hide" : "Show"} ${title}`}
+        aria-label={`${pinned ? "Hide" : "Show"} ${title}${count ? ` — emits ${count} clips` : ""}`}
         onClick={() => setPinned((p) => !p)}
       >
         <i>{glyph}</i>
+        {count ? (
+          <span
+            className={`flow-port-count${variable ? " flow-port-count-var" : ""}`}
+            aria-hidden="true"
+          >
+            {count}
+          </span>
+        ) : null}
       </button>
       <span className="flow-port-pop" role="tooltip">
         <span className="flow-port-pop-title">{title}</span>
@@ -216,6 +253,7 @@ function LayerCard({ layer, index = 0, variant = "", ports = false, portMeta }) 
       ) : null}
       <div className="flow-layer-top">
         <span className="flow-layer-step">{layer.step}</span>
+        <StatusBadge status={layer.status} />
       </div>
       <strong className="flow-layer-label">{layer.label}</strong>
       <div className="flow-layer-facts">
@@ -236,6 +274,7 @@ function LayerCard({ layer, index = 0, variant = "", ports = false, portMeta }) 
           fieldLabel={portMeta.out.field}
           value={layer.sample.output}
           isCode={portMeta.out.code}
+          count={layer.outCount}
         />
       ) : null}
     </article>
@@ -269,11 +308,21 @@ function FlowDiagram({ spec }) {
               ) : null}
             </div>
           ) : null}
+          {spec.paramBus ? (
+            <div className="flow-parambus flow-parambus-out">
+              <span className="flow-parambus-tag">②</span>
+              <div className="flow-parambus-body">
+                <strong>Placement params → Mixer (D)</strong>
+                <span>{spec.paramBus}</span>
+              </div>
+              <span className="flow-parambus-arrow" aria-hidden="true">↘</span>
+            </div>
+          ) : null}
           <div className="flow-conn" aria-hidden="true" />
         </>
       ) : null}
 
-      {/* fan-out 1 → 3 */}
+      {/* fan-out 1 → 3 — output ① of the parser: the per-layer contracts */}
       <div className="flow-fan flow-fan-out" aria-hidden="true">
         <i className="flow-drop" />
         <i className="flow-drop" />
@@ -298,6 +347,17 @@ function FlowDiagram({ spec }) {
         <i className="flow-drop" />
       </div>
       <div className="flow-conn" aria-hidden="true" />
+
+      {spec.paramBus ? (
+        <div className="flow-parambus flow-parambus-in">
+          <span className="flow-parambus-arrow" aria-hidden="true">↳</span>
+          <span className="flow-parambus-tag">②</span>
+          <div className="flow-parambus-body">
+            <strong>Placement params · from parser</strong>
+            <span>second mixer input — arrives directly, not via B/C</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flow-merge-stack">
         <LayerCard layer={spec.merge} variant="flow-layer-card-merge" />
