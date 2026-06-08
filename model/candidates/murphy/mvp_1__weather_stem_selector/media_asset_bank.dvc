@@ -1,0 +1,6 @@
+outs:
+- md5: 6c8f0db456ff91556709118cd049f957.dir
+  size: 82696368
+  nfiles: 113
+  hash: md5
+  path: media_asset_bank

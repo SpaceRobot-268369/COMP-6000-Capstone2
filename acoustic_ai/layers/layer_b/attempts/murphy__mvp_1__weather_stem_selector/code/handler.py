@@ -8,8 +8,8 @@ for frontend preview / Layer D handoff.
 
 from __future__ import annotations
 
-import csv
 import io
+import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,11 +55,17 @@ class WeatherStemState:
 
 def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> WeatherStemState:
     del checkpoint_dir, extra
+    asset_bank = str(params.get("asset_bank", "")).strip()
+    if asset_bank:
+        assets = _load_json_bank(_resolve_path(asset_bank))
+        return WeatherStemState(assets=assets, params=dict(params))
+
     index_path = _resolve_path(str(params.get("asset_index", "")))
     if not index_path.is_file():
         raise FileNotFoundError(f"Layer B asset index not found: {index_path}")
 
     assets: list[WeatherAsset] = []
+    import csv
     with index_path.open("r", encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
             if row.get("layer_d_use") == "reject":
@@ -73,6 +79,29 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
     if not assets:
         raise FileNotFoundError(f"No materialized Layer B audio assets found in {index_path}")
     return WeatherStemState(assets=assets, params=dict(params))
+
+
+def _load_json_bank(bank_root: Path) -> list[WeatherAsset]:
+    index_path = bank_root / "index.json"
+    if not index_path.is_file():
+        raise FileNotFoundError(f"Layer B asset bank index not found: {index_path}")
+
+    with index_path.open("r", encoding="utf-8") as fh:
+        doc = json.load(fh)
+
+    assets: list[WeatherAsset] = []
+    for item in doc.get("assets", []):
+        audio_path = str(item.get("audio_path", ""))
+        row = dict(item.get("attributes") or {})
+        row["asset_id"] = str(item.get("id", row.get("asset_id", "")))
+        row["clip_path"] = audio_path
+        path = (bank_root / audio_path).resolve()
+        if path.is_file():
+            assets.append(WeatherAsset(row=row, path=path))
+
+    if not assets:
+        raise FileNotFoundError(f"No materialized Layer B audio assets found in {index_path}")
+    return assets
 
 
 def generate(state: WeatherStemState, seed: int | None = None, **runtime_params) -> dict:
@@ -235,17 +264,23 @@ def _matches_weather(row: dict[str, str], weather_type: str) -> bool:
             primary == "rain+wind"
             or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_wind", "")))
         )
+    if weather_type == "storm":
+        return primary == "storm" or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_thunder", "")))
     if primary == weather_type:
         return True
     component_field = {
         "rain": "has_rain",
         "wind": "has_wind",
+        "thunder": "has_thunder",
     }[weather_type]
     return _truthy(row.get(component_field, ""))
 
 
 def _is_exact_weather(row: dict[str, str], weather_type: str) -> bool:
-    return row.get("primary_weather", "") == weather_type
+    primary = row.get("primary_weather", "")
+    if weather_type == "storm":
+        return primary == "storm"
+    return primary == weather_type
 
 
 def _matches_intensity(row: dict[str, str], weather_type: str, intensity: str) -> bool:
@@ -257,6 +292,8 @@ def _matches_intensity(row: dict[str, str], weather_type: str, intensity: str) -
 def _intensity_field(weather_type: str) -> str:
     if weather_type == "rain+wind":
         return "rain_intensity"
+    if weather_type == "storm":
+        return "thunder_intensity"
     return f"{weather_type}_intensity"
 
 
