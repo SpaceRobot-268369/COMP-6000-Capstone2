@@ -68,6 +68,55 @@ a model. It prepares the next Server B run by selecting:
 After DVC audio is materialised on Server B, this manifest becomes the listening
 and audit queue.
 
+## Env Rain Scout
+
+For rain-specific expansion, use an env-first scout before CLAP and human
+review:
+
+```bash
+./acoustic_ai/.venv/bin/python acoustic_ai/layers/layer_e/attempts/liting__mvp_3__site257_weather_audit_dataset/code/build_env_rain_scout_manifest.py
+```
+
+Output:
+
+```text
+debug/e_b_site257_env_rain_scout/env_rain_scout_manifest.csv
+debug/e_b_site257_env_rain_scout/summary.json
+```
+
+This manifest ranks Site257 recording clips by rain-prior metadata:
+
+- `precipitation_mm`
+- `precipitation_daily_mm`
+- `wind_speed_ms`
+- `wind_max_ms`
+
+Important: this is not a rain label. It is only a listening queue. The next
+steps are:
+
+1. Materialise the referenced `downloaded_clips` audio via DVC/S3.
+2. Run CLAP rain-vs-wind-vs-contamination scoring over the selected clips.
+3. Human-audit the retained clips.
+4. Promote only confirmed rain examples into an E-B training manifest.
+
+Local DVC pull note:
+
+```bash
+python3 -m dvc pull resources/site_257_bowra-dry-a/mvp1_all_conditioned_dataset/clips.dvc resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips.dvc
+```
+
+The current DVC remote expects an AWS profile named `capstone2`:
+
+```text
+s3://eco-acoustic-data.store.adelaideuni.cloud/dvc-cache
+region=ap-southeast-2
+profile=capstone2
+```
+
+If the local machine has no `~/.aws/config` / `~/.aws/credentials` entry for
+`capstone2`, run the audio materialisation step on Server B or configure the
+profile locally first.
+
 ## Audit Output
 
 The final audited manifest should follow:
