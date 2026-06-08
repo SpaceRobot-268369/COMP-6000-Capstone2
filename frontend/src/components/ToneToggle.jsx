@@ -3,32 +3,37 @@ import { narrateReport } from "../lib/api.js";
 import "./ToneToggle.css";
 
 /* Top-center tone toggle for the immersive scene (plan §3.5). Switches the
-   analysis report narrative between Immersive and Analytical registers by
-   re-rendering it through the LLM-OSS report writer (/api/analysis/narrative)
-   — no detectors re-run, so toggling is cheap.
+   analysis report narrative between Immersive and Analytical registers.
 
-   Renders nothing unless a fused `report` is supplied. The current generation
-   flow has no analysis report on this page; route one into the immersive page
-   state (e.g. location.state.resolved.report) to activate the toggle. */
+   Both registers are rendered through the LLM-OSS report writer
+   (/api/analysis/narrative) *upfront* — at analysis/generation time, before
+   this page mounts — and handed in via `narratives`. Switching is then a pure
+   cache read with no LLM call. `report` is kept only as a lazy fallback: if a
+   register was not pre-rendered (e.g. its upfront call failed), the first
+   selection renders it on demand.
+
+   Renders nothing unless there is a pre-rendered narrative or a `report` to
+   render from. Generated scenes supply a synthesized report — see
+   lib/generationReport.js. */
 
 const REGISTERS = [
   { id: "immersive", label: "Immersive" },
   { id: "analytical", label: "Analytical" },
 ];
 
-export default function ToneToggle({ report, defaultRegister = "immersive", initialText = "" }) {
+export default function ToneToggle({ report, narratives = {}, defaultRegister = "immersive" }) {
   const [register, setRegister] = useState(defaultRegister);
-  const [text, setText] = useState(initialText);
+  // Seed the cache with every pre-rendered register so toggling never re-calls.
+  const cache = useRef({ ...narratives });
+  const [text, setText] = useState(cache.current[defaultRegister] || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Cache rendered text per register so re-toggling is instant (no re-call).
-  const cache = useRef(initialText ? { [defaultRegister]: initialText } : {});
 
   async function select(next) {
     if (next === register || loading) return;
     setRegister(next);
     setError("");
-    if (cache.current[next] !== undefined) {
+    if (cache.current[next]) {
       setText(cache.current[next]);
       return;
     }
@@ -46,7 +51,8 @@ export default function ToneToggle({ report, defaultRegister = "immersive", init
     }
   }
 
-  if (!report) return null;
+  const hasAnyNarrative = Object.values(cache.current).some(Boolean);
+  if (!report && !hasAnyNarrative) return null;
 
   return (
     <div className="tone-toggle">

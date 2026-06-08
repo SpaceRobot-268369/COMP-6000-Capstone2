@@ -72,6 +72,8 @@ export function sceneStateFromAnalysis(routeState) {
     audioUrl: routeState.audioUrl || "",
     sourceCaption: routeState.sourceCaption || "",
     report,
+    // Both registers pre-rendered at analysis time (HomePage) for instant toggling.
+    narratives: routeState.narratives || undefined,
     register: routeState.register || routeState.narrative?.register || "immersive",
   };
 }

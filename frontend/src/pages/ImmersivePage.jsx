@@ -225,13 +225,14 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
         />
       )}
 
-      {/* Top-center tone toggle (plan §3.5). Renders only when an analysis
-          report is present in page state; switches the narrative register via
-          the LLM-OSS report writer without re-running detectors. */}
+      {/* Top-center tone toggle (plan §3.5). Both registers are pre-rendered at
+          analysis/generation time and passed in via `narratives`, so switching
+          is an instant cache swap. `report` is the lazy fallback for a register
+          that failed to pre-render. */}
       <ToneToggle
         report={activeInitial?.report}
+        narratives={activeInitial?.narratives}
         defaultRegister={activeInitial?.register || "immersive"}
-        initialText={activeInitial?.narration}
       />
     </div>
   );
