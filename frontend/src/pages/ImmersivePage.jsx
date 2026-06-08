@@ -4,6 +4,7 @@ import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
 import ToneToggle from "../components/ToneToggle.jsx";
+import { sceneStateFromAnalysis } from "../lib/analysisScene.js";
 import "../immersive/immersive.css";
 
 /* The eco-acoustic immersive experience screen — a procedural Three.js woodland
@@ -23,9 +24,11 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const location = useLocation();
   const navigate = useNavigate();
 
+  const analysisInitial = sceneStateFromAnalysis(location.state);
   const isFromDemo = Boolean(location.state?.fromDemo);
-  const activeInitial = location.state?.resolved || initial;
-  const activeShowDevPanel = isFromDemo ? false : showDevPanel;
+  const isFromAnalysis = Boolean(location.state?.fromAnalysis);
+  const activeInitial = location.state?.resolved || analysisInitial || initial;
+  const activeShowDevPanel = isFromDemo || isFromAnalysis ? false : showDevPanel;
 
   const sceneRef = useRef(null);
   const boltRef = useRef(null);
@@ -154,7 +157,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   const activeOverlay = overlay || (
     <>
-      {isFromDemo && (
+      {(isFromDemo || isFromAnalysis) && (
         <button
           type="button"
           className={`demo-reset ${audioSrc ? "has-audio" : ""}`}
@@ -183,6 +186,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           </span>
           {activeInitial.sourceCaption}
         </p>
+      )}
+      {activeInitial?.generation?.attempts && (
+        <GenerationModelLine attempts={activeInitial.generation.attempts} />
       )}
       <div className="immersive-title">
         <div className="immersive-title-words" ref={titleWordsRef} />
@@ -224,9 +230,33 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           the LLM-OSS report writer without re-running detectors. */}
       <ToneToggle
         report={activeInitial?.report}
-        defaultRegister="immersive"
+        defaultRegister={activeInitial?.register || "immersive"}
         initialText={activeInitial?.narration}
       />
     </div>
+  );
+}
+
+function GenerationModelLine({ attempts }) {
+  const rows = [
+    ["A", "Ambient", attempts.layer_a],
+    ["B", "Weather", attempts.layer_b],
+    ["C", "Events", attempts.layer_c],
+    ["D", "Mixer", attempts.layer_d],
+  ].filter(([, , attempt]) => attempt);
+  if (!rows.length) return null;
+  return (
+    <aside className="immersive-model-line" aria-label="Generation models used">
+      <strong>Models used</strong>
+      <div>
+        {rows.map(([letter, label, attempt]) => (
+          <span key={letter}>
+            <b>Layer {letter}</b>
+            <em>{label}</em>
+            <code>{attempt}</code>
+          </span>
+        ))}
+      </div>
+    </aside>
   );
 }

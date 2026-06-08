@@ -7,11 +7,16 @@ evidence; it does not decide the final season/diel answer.
 
 from __future__ import annotations
 
+import csv
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
 SEASONS = ("spring", "summer", "autumn", "winter")
 DIELS = ("dawn", "morning", "afternoon", "night")
+PROJECT_ROOT = Path(__file__).resolve().parents[6]
+PHENOLOGY_PATH = PROJECT_ROOT / "acoustic_ai" / "layers" / "layer_e" / "shared" / "species_phenology.csv"
 
 
 def adapt_head_reports(
@@ -78,15 +83,21 @@ def adapt_event_observations(report: dict[str, Any] | None) -> list[dict[str, An
         return []
 
     normalized: list[dict[str, Any]] = []
+    phenology_by_label = load_species_phenology()
     for event in events:
         if not isinstance(event, dict):
             continue
-        phenology = event.get("phenology") if isinstance(event.get("phenology"), dict) else {}
+        label = str(event.get("label", "unknown"))
+        embedded_phenology = event.get("phenology") if isinstance(event.get("phenology"), dict) else {}
+        phenology = {
+            **(phenology_by_label.get(label) or {}),
+            **embedded_phenology,
+        }
         normalized.append(
             {
-                "label": str(event.get("label", "unknown")),
-                "common_name": phenology.get("common_name") or _species_label(event.get("label")),
-                "scientific_name": phenology.get("scientific_name"),
+                "label": label,
+                "common_name": event.get("common_name") or phenology.get("common_name") or _species_label(label),
+                "scientific_name": event.get("scientific_name") or phenology.get("scientific_name"),
                 "confidence": _safe_float(
                     event.get("confidence_mean", event.get("confidence")),
                     default=0.0,
@@ -106,6 +117,30 @@ def adapt_event_observations(report: dict[str, Any] | None) -> list[dict[str, An
             }
         )
     return normalized
+
+
+@lru_cache(maxsize=1)
+def load_species_phenology(path: Path = PHENOLOGY_PATH) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8", newline="") as f:
+        table: dict[str, dict[str, Any]] = {}
+        for row in csv.DictReader(f):
+            label = str(row.get("label") or "").strip()
+            if not label:
+                continue
+            table[label] = {
+                "common_name": _clean_text(row.get("common_name")),
+                "scientific_name": _clean_text(row.get("scientific_name")),
+                "diel_signal": _clean_text(row.get("diel_signal")),
+                "diel_confidence": _safe_float(row.get("diel_confidence"), default=0.0),
+                "season_signal": _clean_text(row.get("season_signal")),
+                "season_confidence": _safe_float(row.get("season_confidence"), default=0.0),
+                "habitat_signal": _clean_text(row.get("habitat_signal")),
+                "inference_notes": _clean_text(row.get("inference_notes")),
+                "source_url": _clean_text(row.get("source_url")),
+            }
+        return table
 
 
 def ambient_context_evidence(observation: dict[str, Any], field: str) -> list[dict[str, Any]]:
@@ -279,6 +314,11 @@ def _safe_float(value: Any, *, default: float | None = 0.0) -> float | None:
         return round(float(value), 6)
     except (TypeError, ValueError):
         return default
+
+
+def _clean_text(value: Any) -> str | None:
+    text = "" if value is None else str(value).strip()
+    return text or None
 
 
 def _clean_token(value: Any) -> str | None:

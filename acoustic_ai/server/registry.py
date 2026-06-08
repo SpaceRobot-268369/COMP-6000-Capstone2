@@ -233,13 +233,20 @@ def default_layer_e_head_attempt(head: str) -> str:
     """Return the default attempt for one Layer E analysis head.
 
     The layer-level default is the ambient head. For weather/events/aggregator
-    we select the first registered attempt whose `head:` field matches.
+    we first honor explicit per-head defaults, then fall back to the first
+    registered attempt whose `head:` field matches.
     """
     layers = _registry_doc().get("layers", {})
     layer = layers.get("layer_e")
     if not layer:
         raise KeyError("unknown layer: 'layer_e'")
     attempts = layer.get("attempts", {})
+    head_defaults = layer.get("default_heads") or {}
+    head_default = head_defaults.get(head)
+    if head_default:
+        attempt = attempts.get(head_default)
+        if attempt and attempt.get("head") == head:
+            return str(head_default)
     layer_default = layer.get("default")
     if layer_default and attempts.get(layer_default, {}).get("head") == head:
         return str(layer_default)
@@ -543,6 +550,7 @@ def orchestrate_generation(
     layer_b_attempt: str | None = None,
     layer_c_attempt: str | None = None,
     layer_d_attempt: str | None = None,
+    include_stems: bool = False,
 ) -> dict:
     """Run generation layers A/B/C and hand their in-memory WAVs to Layer D."""
 
@@ -618,6 +626,12 @@ def orchestrate_generation(
             "layer_c": layer_c.get("metadata", {}) if layer_c else None,
         },
     }
+    if include_stems:
+        final["_stems"] = {
+            "layer_a": layer_a,
+            "layer_b": layer_b,
+            "layer_c": layer_c,
+        }
     return final
 
 

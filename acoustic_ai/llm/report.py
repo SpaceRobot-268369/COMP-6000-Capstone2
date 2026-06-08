@@ -24,6 +24,17 @@ def normalize_register(register: str) -> str:
     return reg if reg in _VALID_REGISTERS else "analytical"
 
 
+def _prompt_payload(report: dict) -> dict:
+    """Return the compact report slice the LLM should narrate."""
+    source_report = report or {}
+    schema = source_report.get("schema_version")
+    if schema == "analysis_aggregator.v1":
+        return source_report.get("decision") or source_report
+    if schema == "analysis_llm_input.v1":
+        return source_report.get("decision") or source_report
+    return source_report
+
+
 def write_report(report: dict, register: str = "analytical", *, max_retries: int = 1) -> dict:
     """Render `report` (fused analysis JSON) into prose.
 
@@ -34,7 +45,7 @@ def write_report(report: dict, register: str = "analytical", *, max_retries: int
     register = normalize_register(register)
     messages = [
         {"role": "system", "content": load_skill(report_skill_name(register))},
-        {"role": "user", "content": json.dumps(report, ensure_ascii=False)},
+        {"role": "user", "content": json.dumps(_prompt_payload(report), ensure_ascii=False)},
     ]
     # Immersive wants a little warmth; analytical stays nearly deterministic.
     temp = CONFIG.report_temperature if register == "immersive" else 0.2
@@ -46,7 +57,13 @@ def write_report(report: dict, register: str = "analytical", *, max_retries: int
         ok, violations = validate_narrative(text, report)
         if ok:
             break
-    return {"register": register, "text": text, "faithful": ok, "violations": violations}
+    return {
+        "register": register,
+        "text": text,
+        "source": "llm",
+        "faithful": ok,
+        "violations": violations,
+    }
 
 
 __all__ = ["write_report", "normalize_register"]

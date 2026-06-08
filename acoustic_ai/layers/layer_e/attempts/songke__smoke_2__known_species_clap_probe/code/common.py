@@ -15,7 +15,7 @@ import torch
 ATTEMPT_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[6]
 PARAMS_PATH = ATTEMPT_ROOT / "params.yaml"
-PHENOLOGY_PATH = ATTEMPT_ROOT / "data" / "species_phenology.csv"
+PHENOLOGY_PATH = PROJECT_ROOT / "acoustic_ai" / "layers" / "layer_e" / "shared" / "species_phenology.csv"
 
 
 DEFAULT_CONFIG: dict[str, Any] = {

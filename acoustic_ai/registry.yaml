@@ -5,9 +5,21 @@
 #   - serve GET /layers (for the frontend dropdown)
 #   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
 #
-# Naming rules:    .claude/context/dev/attempt_naming.md
-# Artifact policy: .claude/context/dev/artifact_policy.md
+# Naming rules + artifact policy: .claude/context/conventions.md
 # Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# Every GENERATION-layer attempt (layers A/B/C) declares its kind (conventions.md § 5.5):
+#   kind: generative   → checkpoint: <model/candidates|production path>   (trained weights)
+#   kind: retrieval    → asset_bank: <model/candidates|production path>   (media asset bank:
+#                        index.json + media_asset_bank/ audio; JSON index only, no CSV)
+# Both artifact kinds live under model/; only the attempt code lives under
+# acoustic_ai/layers/.../attempts/. Layer D (mixer) and Layer E (analysis,
+# keyed by `head:`) are not generation models and carry no `kind`.
+#
+# Retrieval entries are labelled with `kind` now, but still point at their
+# in-attempt CSV banks (checkpoint: null + asset_index/retrieval_index under
+# params). They gain `asset_bank:` + the model/ layout (index.json +
+# media_asset_bank/) when their author migrates the bank.
 #
 # IDs use snake_case on disk; dropdown labels use human-readable strings.
 # Canonical seed for samples/reference/ is 42 unless an attempt overrides it
@@ -25,6 +37,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
         params:
@@ -46,6 +59,7 @@ layers:
         author: lucas
         stage: smoke_2
         status: smoke_test_2_insects_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
         params:
@@ -67,6 +81,7 @@ layers:
         author: lucas
         stage: mvp_2
         status: mvp_2_per_cell_passed
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/candidates/lucas/mvp_2__per_cell_loras
@@ -105,6 +120,7 @@ layers:
         author: lucas
         stage: prod_1
         status: production
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/production/layer_a_ambient
@@ -149,6 +165,7 @@ layers:
         author: lucas
         stage: smoke_4
         status: superseded
+        kind: generative
         checkpoint: model/candidates/lucas/vae-site257-30epoch
         extra_checkpoints:
           vocoder: model/candidates/lucas/vocoder-hifigan-site257
@@ -167,7 +184,8 @@ layers:
         label: "Weather stem selector — site-only MVP"
         author: murphy
         stage: mvp_1
-        status: iteration_checkpoint
+        status: mvp_candidate
+        kind: retrieval
         uses_seed: true
         uses_weather_controls: true
         checkpoint: null
@@ -197,6 +215,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: placeholder
+        kind: retrieval
         checkpoint: null
         params: {}
         notes:
@@ -211,6 +230,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
         params:
@@ -224,6 +244,7 @@ layers:
         author: burger
         stage: mvp_2
         status: demo_ready
+        kind: retrieval
         uses_seed: true
         uses_cells: true
         checkpoint: null
@@ -302,6 +323,8 @@ layers:
   layer_e:
     label: "Layer E — Analysis"
     default: lucas__mvp_2__clap_knn_probe_enlarged
+    default_heads:
+      weather: liting__mvp_2__calibrated_weather_head
     # Analysis runs three independent detector heads on the raw mixture
     # (pipeline_design.md § Analysis Mode): E-A ambient context, E-B weather,
     # E-C events. Each attempt declares which head it serves via `head:`

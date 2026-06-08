@@ -101,9 +101,10 @@ const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio(file, attempts = {}) {
+export async function analyseAudio(file, attempts = {}, register = "immersive") {
   const form = new FormData();
   form.append("file", file);
+  form.append("register", register);
   for (const [key, value] of Object.entries(attempts)) {
     if (value) form.append(`${key}_attempt`, value);
   }
@@ -193,22 +194,39 @@ export async function parseGenerationPrompt(prompt) {
 }
 
 export async function generateSoundscape(conditions = {}) {
+  const layerA = conditions.layer_a || {};
+  const layerB = conditions.layer_b || null;
+  const layerC = conditions.layer_c || null;
   const windSpeed = Number(conditions.wind_speed_ms) || 0;
   const precipitation = Number(conditions.precipitation_mm) || 0;
-  const intensity = windSpeed >= 10 || precipitation >= 20
+  const fallbackIntensity = windSpeed >= 10 || precipitation >= 20
     ? "heavy"
     : windSpeed >= 4 || precipitation > 0
       ? "medium"
       : "light";
+  const hasExplicitLayerContracts =
+    conditions.layer_a !== undefined ||
+    conditions.layer_b !== undefined ||
+    conditions.layer_c !== undefined;
+  const hasParsedEvents = Boolean(layerC?.species?.length);
+  const includeWeather = conditions.include_weather ??
+    (hasExplicitLayerContracts ? Boolean(layerB) : true);
+  const includeEvents = conditions.include_events ??
+    (hasExplicitLayerContracts ? hasParsedEvents : true);
   const payload = {
-    seed: 42,
-    duration_s: Number(conditions.duration_s) || 30,
-    season: conditions.season,
-    diel: conditions.sample_bin,
-    weather_type: precipitation > 0 ? "rain+wind" : "wind",
-    intensity,
-    include_weather: true,
-    include_events: true,
+    seed: Number.isInteger(conditions.seed) ? conditions.seed : 42,
+    duration_s: Number(conditions.duration_s ?? layerB?.duration_s) || 30,
+    season: conditions.season ?? layerA.season,
+    diel: conditions.diel ?? conditions.sample_bin ?? conditions.time ?? layerA.diel,
+    weather_type: conditions.weather_type ?? layerB?.weather_type ?? (precipitation > 0 ? "rain+wind" : "wind"),
+    intensity: conditions.intensity ?? layerB?.intensity ?? fallbackIntensity,
+    include_weather: includeWeather,
+    include_events: includeEvents,
+    include_stems: conditions.include_stems === true,
+    layer_a_attempt: conditions.layer_a_attempt,
+    layer_b_attempt: conditions.layer_b_attempt,
+    layer_c_attempt: conditions.layer_c_attempt,
+    layer_d_attempt: conditions.layer_d_attempt,
   };
   const res = await fetch(`${API_BASE}/api/generation`, {
     method: "POST",

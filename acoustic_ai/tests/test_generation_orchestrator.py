@@ -114,6 +114,25 @@ class GenerationOrchestratorTest(unittest.TestCase):
         self.assertIsNone(calls[-1][1]["event_wav_bytes"])
         self.assertFalse(result["metadata"]["orchestration"]["include_events"])
 
+    def test_can_return_upstream_stems_for_layer_d_dev_ui(self) -> None:
+        def fake_generate(layer_id, attempt_id, seed, **params):
+            return {
+                "wav_bytes": layer_id.encode(),
+                "metadata": {"audio": {"duration_s": 5.0}, "source": layer_id},
+            }
+
+        with patch.object(registry, "generate", side_effect=fake_generate):
+            result = registry.orchestrate_generation(
+                seed=1,
+                duration_s=5.0,
+                include_stems=True,
+            )
+
+        self.assertEqual(set(result["_stems"]), {"layer_a", "layer_b", "layer_c"})
+        self.assertEqual(result["_stems"]["layer_a"]["metadata"]["source"], "layer_a")
+        self.assertEqual(result["_stems"]["layer_b"]["metadata"]["source"], "layer_b")
+        self.assertEqual(result["_stems"]["layer_c"]["metadata"]["source"], "layer_c")
+
     def test_rejects_duration_above_current_layer_b_limit(self) -> None:
         with self.assertRaisesRegex(ValueError, "at most 30 seconds"):
             registry.orchestrate_generation(seed=42, duration_s=31.0)
