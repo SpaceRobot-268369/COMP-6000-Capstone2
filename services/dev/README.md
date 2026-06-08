@@ -81,7 +81,7 @@ Example shape, using the URL as seen from the backend process:
 
 ```bash
 LAYER_B_GENERATE_SERVER_URL=http://<backend-reachable-host>:<local-800x-port>
-LAYER_B_GENERATE_ATTEMPTS=murphy__mvp_1__wind_intensity_bank
+LAYER_B_GENERATE_ATTEMPTS=murphy__mvp_1__wind_intensity_bank,murphy__mvp_1__rain_intensity_seed_pool
 ```
 
 The backend only uses `LAYER_B_GENERATE_SERVER_URL` for the listed Layer B wind

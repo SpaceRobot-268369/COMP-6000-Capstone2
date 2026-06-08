@@ -252,6 +252,73 @@ layers:
           - medium/heavy are true adapters; light is parametric-derived from medium.
           - Runtime expects weather_type=wind and intensity in {light,medium,heavy}.
 
+      murphy__mvp_1__rain_intensity_seed_pool:
+        label: "Generate rain — curated intensity seed pool"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        kind: generative
+        uses_seed: true
+        checkpoint: model/candidates/murphy/mvp_1__rain_intensity_seed_pool
+        description: |
+          Generates rain-only Layer B weather stems from the AudioLDM2 rain
+          LoRA, constrained to a curated MVP pool of good seeds selected from
+          the a2 intensity listening audit. Runtime seed is deterministic
+          entropy into the selected intensity bucket, not an unrestricted model
+          seed. This keeps frontend testing inside the reviewed rain outputs.
+
+          Runtime controls are seed entropy and rain intensity. Weather type is
+          fixed to rain. Supported intensity buckets are light and heavy.
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            steady rain over dry eucalyptus woodland,
+            Bowra, Australia
+          negative_prompt: >-
+            hiss, static noise, background hum, tape noise, birds, insects,
+            wind gusts, reverb, music, machinery, low quality, distortion
+          guidance_scale: 3.0
+          num_inference_steps: 200
+          audio_length_in_s: 5.0
+          output_target_rms: 0.05
+          highpass_hz: 80.0
+          seed_mode: curated_intensity_pool
+          intensity_profile_version: a2_intensity_audit_20260607
+          intensities: [light, heavy]
+          default_intensity: light
+          good_seeds_by_intensity:
+            light: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687]
+            heavy: [46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+          bwe_enabled: true
+          bwe:
+            cross_over_hz: 8000.0
+            output_sr: 24000
+            output_sample_rate_hz: 24000
+            sbr_source_low_hz: 4000.0
+            sbr_source_high_hz: 7900.0
+            sbr_shift_hz: 4000.0
+            sbr_target_low_hz: 8000.0
+            sbr_target_high_hz: 11800.0
+            noise_low_hz: 8000.0
+            noise_high_hz: 11800.0
+            envelope_source_low_hz: 3000.0
+            envelope_source_high_hz: 7900.0
+            envelope_smooth_ms: 35.0
+            noise_to_sbr_rms_ratio: 0.35
+            target_drop_8_11_minus_2_8_db: -10.985337681240505
+            post_bwe_highband_trim_db: -2.75
+            denoise_enabled: false
+          denoise_enabled: false
+          denoise_strength: 0.15
+          denoise_noise_quantile: 0.2
+          denoise_floor_ratio: 0.38
+          denoise_hop_length: 512
+          fade_ms: 20.0
+        notes:
+          - MVP seed pool comes from a2_intensity_audit_20260607.
+          - Runtime seed maps deterministically into the selected good-seed bucket.
+          - Raw listening WAVs are not committed; audit CSVs document the pool.
+
       murphy__mvp_1__weather_stem_selector:
         label: "Weather stem selector — site-only MVP"
         author: murphy
