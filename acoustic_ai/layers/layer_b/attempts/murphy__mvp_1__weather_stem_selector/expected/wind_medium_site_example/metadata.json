@@ -19,7 +19,7 @@
     },
     "selected": {
       "asset_id": "site_mvp002_site257_215122_005589_005604",
-      "clip_path": "acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/site_mvp_002/wind_primary/wind_primary__wind__site257_215122_005589_005604.wav",
+      "clip_path": "media_asset_bank/site_mvp_002/wind_primary/wind_primary__wind__site257_215122_005589_005604.wav",
       "source_type": "site",
       "primary_weather": "wind",
       "layer_d_role": "wind_primary",

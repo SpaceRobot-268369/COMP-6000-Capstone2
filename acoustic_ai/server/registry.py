@@ -193,6 +193,7 @@ def list_layers() -> list[dict]:
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
                 "head":    att.get("head"),
+                "kind":    att.get("kind"),
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
@@ -201,6 +202,7 @@ def list_layers() -> list[dict]:
                 "missing_files":    avail["missing"],
                 "uses_seed":        bool(att.get("uses_seed", False)),
                 "uses_cells":       bool(att.get("uses_cells", False)),
+                "uses_weather_controls": bool(att.get("uses_weather_controls", False)),
                 "cells":            cells,
                 "default_cell":     params.get("default_cell"),
             })
