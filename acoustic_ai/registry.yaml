@@ -459,6 +459,36 @@ layers:
           - Current preferred listening configuration is local mix attempt v5.
           - Handler accepts upstream WAV bytes from a generation orchestrator.
 
+      songke__mvp_2__multi_clip_mix:
+        label: "Multi-clip timeline mix"
+        author: songke
+        stage: mvp_2
+        status: implemented_not_default
+        checkpoint: null
+        description: |
+          Handler-level Layer D multi-clip mixer for the next generation
+          pipeline. Accepts one Layer A ambient bed plus zero or more Layer B
+          weather clips and Layer C event clips, supports continuous weather
+          beds, discrete placed weather clips, multiple event clips, explicit
+          onset lists, seeded random onset fallback, per-clip gain overrides,
+          peak protection, and reviewer-facing placed-clip metadata. Registered
+          and routable through the generation orchestrator when selected, but
+          not the Layer D default until real A/B/C listening checks are
+          complete.
+        params:
+          default_duration_s: 30.0
+          weather_gain_db: -2.0
+          event_gain_db: -8.0
+          event_activity_envelope: true
+          event_boundary_fade_s: 1.0
+          event_bandpass_hz: [500.0, 8000.0]
+          peak_ceiling: 0.95
+          placement_seed_default: 42
+        notes:
+          - Handler-level multi-clip contract is implemented and covered by tests.
+          - Backward-compatible with the mvp_1 single-stem handler parameters while the orchestrator catches up.
+          - Do not promote to layer_d default until real A/B/C listening checks are complete.
+
   layer_e:
     label: "Layer E — Analysis"
     default: lucas__mvp_2__clap_knn_probe_enlarged
