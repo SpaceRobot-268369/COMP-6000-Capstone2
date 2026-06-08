@@ -28,10 +28,14 @@ Provide a reliable Layer C retrieval baseline for the MVP demo. The bank stores 
 ## Artifacts
 
 - Index: `index.json`.
+- Params: `params.yaml`.
 - Media asset bank: `media_asset_bank/review_package_full_v2_final_human_bandpass.dvc`.
 - Sample outputs:
-  - Expected: `acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/expected.dvc`.
-  - Showcase: not populated beyond the live deterministic dev route.
+  - Expected:
+    - `expected/real_splendid_fairywren_v2_001_13490756/`
+    - `expected/real_pacific_swift_v2_001_18680797/`
+    - `expected/real_zebra_finch_v2_001_3097142/`
+  - Showcase: `showcase/seed_42_baseline/`
 
 ## Bank stats
 
@@ -57,4 +61,4 @@ _Empty until developer evaluation notes are provided._
 
 ## Follow-up actions
 
-- Add a canonical DVC-tracked `showcase/seed_42_baseline/` case if the team wants the attempt to satisfy the full artifact-tier checklist.
+- Add formal metrics once a Layer C retrieval evaluation rubric is agreed.

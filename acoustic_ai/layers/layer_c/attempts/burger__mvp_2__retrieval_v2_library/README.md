@@ -19,6 +19,7 @@ data/
     layer_c_retrieval_v2_event_index.csv
     species_band_config_final_human_v1.csv
 model/candidates/burger/mvp_2__retrieval_v2_library/
+  params.yaml
   index.json
   media_asset_bank/
     review_package_full_v2_final_human_bandpass.dvc
@@ -29,6 +30,10 @@ artifact lives under `model/candidates/burger/mvp_2__retrieval_v2_library/`
 as `index.json` plus a DVC-tracked `media_asset_bank/`. The runtime route uses
 the final human-audited bandpass package and returns Layer C only output, not
 an A-layer mix.
+
+Expected samples are checked in as three reviewable case directories under
+`expected/` with Git-visible metadata and spectrograms plus DVC-tracked audio.
+The canonical generated showcase lives under `showcase/seed_42_baseline/`.
 
 ## Data Summary
 
