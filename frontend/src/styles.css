@@ -3372,6 +3372,8 @@ textarea {
 .account-page {
   display: grid;
   gap: 20px;
+  width: min(720px, calc(100vw - 48px));
+  margin: 0 auto;
 }
 
 .account-topbar h1 {
@@ -3389,7 +3391,7 @@ textarea {
 }
 
 .account-card {
-  width: min(100%, 520px);
+  width: 100%;
   padding: 24px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),

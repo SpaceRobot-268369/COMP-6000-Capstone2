@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginAccount } from "../lib/auth.js";
 
 export default function LoginPage({ accountName, onLogin }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from?.pathname || "/about";
   const [form, setForm] = useState({
     account: accountName,
     password: "",
@@ -31,8 +33,8 @@ export default function LoginPage({ accountName, onLogin }) {
         password: form.password,
       });
 
-      onLogin(data.user.username);
-      navigate("/");
+      onLogin(data.user);
+      navigate(fromPath, { replace: true });
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -63,6 +65,7 @@ export default function LoginPage({ accountName, onLogin }) {
               onChange={handleChange}
               placeholder="Enter your account name"
               autoComplete="username"
+              disabled={isSubmitting}
             />
           </label>
 
@@ -75,6 +78,7 @@ export default function LoginPage({ accountName, onLogin }) {
               onChange={handleChange}
               placeholder="Enter your password"
               autoComplete="current-password"
+              disabled={isSubmitting}
             />
           </label>
 

@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { registerAccount } from "../lib/auth.js";
+
+const usernamePattern = /^[a-zA-Z0-9_-]{3,32}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const minPasswordLength = 6;
 
 export default function RegisterPage({ accountName, onRegister }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from?.pathname || "/about";
   const [form, setForm] = useState({
     account: accountName,
     email: "",
@@ -27,6 +33,21 @@ export default function RegisterPage({ accountName, onRegister }) {
       return;
     }
 
+    if (!usernamePattern.test(nextName)) {
+      setErrorMessage("Account name must be 3-32 letters, numbers, underscores, or hyphens.");
+      return;
+    }
+
+    if (!emailPattern.test(form.email.trim())) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (form.password.length < minPasswordLength) {
+      setErrorMessage(`Password must be at least ${minPasswordLength} characters.`);
+      return;
+    }
+
     if (form.password !== form.confirmPassword) {
       setErrorMessage("The passwords do not match.");
       return;
@@ -35,13 +56,13 @@ export default function RegisterPage({ accountName, onRegister }) {
     try {
       setIsSubmitting(true);
       const data = await registerAccount({
-        username: form.account,
-        email: form.email,
+        username: nextName,
+        email: form.email.trim(),
         password: form.password,
       });
 
-      onRegister(data.user.username);
-      navigate("/");
+      onRegister(data.user);
+      navigate(fromPath, { replace: true });
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -56,7 +77,7 @@ export default function RegisterPage({ accountName, onRegister }) {
           <p className="eyebrow">ACCOUNT</p>
           <h1>Register</h1>
           <p className="account-lead">
-            Create an account to access the platform.
+            Create an account and continue into the platform.
           </p>
         </div>
       </header>
@@ -72,6 +93,8 @@ export default function RegisterPage({ accountName, onRegister }) {
               onChange={handleChange}
               placeholder="Choose an account name"
               autoComplete="username"
+              maxLength={32}
+              disabled={isSubmitting}
             />
           </label>
 
@@ -84,6 +107,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               onChange={handleChange}
               placeholder="Enter your email"
               autoComplete="email"
+              disabled={isSubmitting}
             />
           </label>
 
@@ -96,6 +120,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               onChange={handleChange}
               placeholder="Create a password"
               autoComplete="new-password"
+              disabled={isSubmitting}
             />
           </label>
 
@@ -108,6 +133,7 @@ export default function RegisterPage({ accountName, onRegister }) {
               onChange={handleChange}
               placeholder="Confirm your password"
               autoComplete="new-password"
+              disabled={isSubmitting}
             />
           </label>
 

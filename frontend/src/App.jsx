@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ImmersivePage from "./pages/ImmersivePage.jsx";
@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
 import ServerStatus from "./components/ServerStatus.jsx";
+import { getCurrentUser, logoutAccount } from "./lib/auth.js";
 import {
   checkServerBStatus,
   createCheckingStatus,
@@ -19,8 +20,9 @@ import {
   reconnectServerB,
 } from "./lib/serverBStatus.js";
 
-const accountStorageKey = "sonic-lab-account-name";
 const minServerBCheckingMs = 350;
+const authExpiredEventName = "sonic-lab-auth-expired";
+const sessionRefreshMs = 60 * 1000;
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -38,20 +40,96 @@ function navbarActionClass({ isActive }) {
   return `navbar-action${isActive ? " active" : ""}`;
 }
 
+function isAdminRoute(pathname) {
+  return pathname.startsWith("/dev/") || pathname === "/server-b";
+}
+
+function RequireAdmin({ currentUser, authChecking, children }) {
+  const routeLocation = useLocation();
+
+  if (authChecking) {
+    return (
+      <section className="account-page">
+        <section className="panel account-card">
+          <p className="account-lead">Checking account access...</p>
+        </section>
+      </section>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace state={{ from: routeLocation }} />;
+  }
+
+  if (currentUser.role !== "admin") {
+    return (
+      <section className="account-page">
+        <header className="account-topbar">
+          <div>
+            <p className="eyebrow">ACCOUNT</p>
+            <h1>Admin access required</h1>
+            <p className="account-lead">
+              Developer tools are only available to admin accounts.
+            </p>
+          </div>
+        </header>
+        <section className="panel account-card">
+          <p className="account-feedback error">
+            Your current account does not have permission to view this page.
+          </p>
+          <NavLink to="/about" className="auth-primary-btn">
+            Back to introduction
+          </NavLink>
+        </section>
+      </section>
+    );
+  }
+
+  return children;
+}
+
+function RequireGuest({ currentUser, authChecking, children }) {
+  const routeLocation = useLocation();
+  const fromPath = routeLocation.state?.from?.pathname || "/about";
+
+  if (authChecking) {
+    return (
+      <section className="account-page">
+        <section className="panel account-card">
+          <p className="account-lead">Checking account access...</p>
+        </section>
+      </section>
+    );
+  }
+
+  if (currentUser) {
+    return <Navigate to={fromPath} replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
-  const [accountName, setAccountName] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [serverBStatus, setServerBStatus] = useState(() => createCheckingStatus());
   const [serverBLogs, setServerBLogs] = useState([]);
   const [serverBChecking, setServerBChecking] = useState(false);
   const serverBCheckInFlightRef = useRef(false);
   const serverBPollStartedRef = useRef(false);
+  const accountName = currentUser?.username || "";
   const isLoggedIn = Boolean(accountName);
+  const isAdmin = currentUser?.role === "admin";
 
   const [devDropdownOpen, setDevDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
+  const authReturnLocation = location.pathname === "/login" || location.pathname === "/register"
+    ? { pathname: "/about" }
+    : location;
 
   useEffect(() => {
     const path = location.pathname;
@@ -66,12 +144,71 @@ export default function App() {
     };
   }, [location.pathname]);
 
-  useEffect(() => {
-    const storedAccountName = window.localStorage.getItem(accountStorageKey);
-    if (storedAccountName) {
-      setAccountName(storedAccountName);
+  const handleSessionExpired = useCallback(() => {
+    setCurrentUser(null);
+    if (isAdminRoute(location.pathname)) {
+      navigate("/login", { replace: true, state: { from: location } });
     }
-  }, []);
+  }, [location, navigate]);
+
+  const refreshCurrentUser = useCallback(({ showChecking = false } = {}) => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      if (showChecking) {
+        setAuthChecking(true);
+      }
+
+      try {
+        const data = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(data.user || null);
+        }
+      } catch {
+        if (!cancelled) {
+          handleSessionExpired();
+        }
+      } finally {
+        if (!cancelled && showChecking) {
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [handleSessionExpired]);
+
+  useEffect(() => {
+    return refreshCurrentUser({ showChecking: true });
+  }, [refreshCurrentUser]);
+
+  useEffect(() => {
+    window.addEventListener(authExpiredEventName, handleSessionExpired);
+    return () => window.removeEventListener(authExpiredEventName, handleSessionExpired);
+  }, [handleSessionExpired]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return undefined;
+    }
+
+    function handleFocus() {
+      refreshCurrentUser();
+    }
+
+    window.addEventListener("focus", handleFocus);
+    const timer = window.setInterval(() => {
+      refreshCurrentUser();
+    }, sessionRefreshMs);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(timer);
+    };
+  }, [currentUser, refreshCurrentUser]);
 
   const runServerBCheck = useCallback(async (source = "auto") => {
     if (serverBCheckInFlightRef.current) {
@@ -143,20 +280,19 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [runServerBCheck]);
 
-  function handleAuthenticate(value) {
-    const nextValue = value.trim();
-    setAccountName(nextValue);
-    if (nextValue) {
-      window.localStorage.setItem(accountStorageKey, nextValue);
-      return;
-    }
-
-    window.localStorage.removeItem(accountStorageKey);
+  function handleAuthenticate(user) {
+    setCurrentUser(user || null);
   }
 
-  function handleLogout() {
-    setAccountName("");
-    window.localStorage.removeItem(accountStorageKey);
+  async function handleLogout() {
+    try {
+      await logoutAccount();
+    } finally {
+      setCurrentUser(null);
+      if (isAdminRoute(location.pathname)) {
+        navigate("/about", { replace: true });
+      }
+    }
   }
 
   return (
@@ -207,39 +343,41 @@ export default function App() {
 
             <div className="navbar-controls">
               {/* Dev Tools Dropdown */}
-              <div 
-                className={`navbar-dropdown-wrapper ${devDropdownOpen ? "open" : ""}`}
-                onMouseEnter={() => setDevDropdownOpen(true)}
-                onMouseLeave={() => setDevDropdownOpen(false)}
-              >
-                <button 
-                  type="button" 
-                  className="navbar-dropdown-trigger"
-                  onClick={() => setDevDropdownOpen(!devDropdownOpen)}
+              {isAdmin ? (
+                <div 
+                  className={`navbar-dropdown-wrapper ${devDropdownOpen ? "open" : ""}`}
+                  onMouseEnter={() => setDevDropdownOpen(true)}
+                  onMouseLeave={() => setDevDropdownOpen(false)}
                 >
-                  <span className="nav-icon">⌬</span>
-                  <span>Developer</span>
-                  <span className="dropdown-arrow">▼</span>
-                </button>
-                <div className="navbar-dropdown-menu">
-                  <NavLink to="/dev/layers" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                  <button 
+                    type="button" 
+                    className="navbar-dropdown-trigger"
+                    onClick={() => setDevDropdownOpen(!devDropdownOpen)}
+                  >
                     <span className="nav-icon">⌬</span>
-                    <span>Dev — Generation</span>
-                  </NavLink>
-                  <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
-                    <span className="nav-icon">◉</span>
-                    <span>Dev — Analysis</span>
-                  </NavLink>
-                  <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
-                    <span className="nav-icon">❂</span>
-                    <span>Immersive</span>
-                  </NavLink>
-                  <div className="dropdown-divider"></div>
-                  <div className="navbar-dropdown-status">
-                    <ServerStatus status={serverBStatus} />
+                    <span>Developer</span>
+                    <span className="dropdown-arrow">▼</span>
+                  </button>
+                  <div className="navbar-dropdown-menu">
+                    <NavLink to="/dev/layers" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">⌬</span>
+                      <span>Dev — Generation</span>
+                    </NavLink>
+                    <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">◉</span>
+                      <span>Dev — Analysis</span>
+                    </NavLink>
+                    <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                      <span className="nav-icon">❂</span>
+                      <span>Immersive</span>
+                    </NavLink>
+                    <div className="dropdown-divider"></div>
+                    <div className="navbar-dropdown-status">
+                      <ServerStatus status={serverBStatus} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
               {/* Theme Toggle */}
               <ThemeToggle />
@@ -256,14 +394,18 @@ export default function App() {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 >
                   <span className="nav-icon">👤</span>
-                  <span>{isLoggedIn ? accountName : "Account"}</span>
+                  <span>{authChecking ? "Checking..." : isLoggedIn ? accountName : "Account"}</span>
                   <span className="dropdown-arrow">▼</span>
                 </button>
                 <div className="navbar-dropdown-menu user-dropdown">
                   <div className="navbar-dropdown-header">
-                    {isLoggedIn ? "Account Logged In" : "Not Logged In"}
+                    {authChecking ? "Checking Account" : isLoggedIn ? "Account Logged In" : "Not Logged In"}
                   </div>
-                  {isLoggedIn ? (
+                  {authChecking ? (
+                    <div className="navbar-user-simple">
+                      <span className="navbar-username">Restoring session...</span>
+                    </div>
+                  ) : isLoggedIn ? (
                     <div className="navbar-user-simple">
                       <strong className="navbar-user-name">{accountName}</strong>
                       <button 
@@ -278,6 +420,7 @@ export default function App() {
                     <div className="navbar-user-actions">
                       <NavLink 
                         to="/login" 
+                        state={{ from: authReturnLocation }}
                         className={navbarActionClass} 
                         onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
                       >
@@ -285,6 +428,7 @@ export default function App() {
                       </NavLink>
                       <NavLink 
                         to="/register" 
+                        state={{ from: authReturnLocation }}
                         className={navbarActionClass} 
                         onClick={() => { setUserDropdownOpen(false); setMobileMenuOpen(false); }}
                       >
@@ -312,32 +456,51 @@ export default function App() {
           <Route
             path="/dev/layers"
             element={
-              <LayerATestPage
-                mode="generation"
-                eyebrow="DEVELOPER TOOLS — GENERATION"
-                title="Generation Layers Dev Test"
-              />
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <LayerATestPage
+                  mode="generation"
+                  eyebrow="DEVELOPER TOOLS — GENERATION"
+                  title="Generation Layers Dev Test"
+                />
+              </RequireAdmin>
             }
           />
-          <Route path="/dev/analysis" element={<DevAnalysisPage />} />
+          <Route
+            path="/dev/analysis"
+            element={
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <DevAnalysisPage />
+              </RequireAdmin>
+            }
+          />
           <Route
             path="/server-b"
             element={
-              <ServerBStatusPage
-                status={serverBStatus}
-                logs={serverBLogs}
-                checking={serverBChecking}
-                onRecheck={() => runServerBCheck("manual")}
-              />
+              <RequireAdmin currentUser={currentUser} authChecking={authChecking}>
+                <ServerBStatusPage
+                  status={serverBStatus}
+                  logs={serverBLogs}
+                  checking={serverBChecking}
+                  onRecheck={() => runServerBCheck("manual")}
+                />
+              </RequireAdmin>
             }
           />
           <Route
             path="/login"
-            element={<LoginPage accountName={accountName} onLogin={handleAuthenticate} />}
+            element={
+              <RequireGuest currentUser={currentUser} authChecking={authChecking}>
+                <LoginPage accountName={accountName} onLogin={handleAuthenticate} />
+              </RequireGuest>
+            }
           />
           <Route
             path="/register"
-            element={<RegisterPage accountName={accountName} onRegister={handleAuthenticate} />}
+            element={
+              <RequireGuest currentUser={currentUser} authChecking={authChecking}>
+                <RegisterPage accountName={accountName} onRegister={handleAuthenticate} />
+              </RequireGuest>
+            }
           />
         </Routes>
       </main>

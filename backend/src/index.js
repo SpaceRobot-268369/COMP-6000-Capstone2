@@ -65,6 +65,10 @@ function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const usernamePattern = /^[a-zA-Z0-9_-]{3,32}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const minPasswordLength = 6;
+
 function scryptPassword(password, salt) {
   return new Promise((resolve, reject) => {
     crypto.scrypt(password, salt, 64, (err, key) => {
@@ -89,11 +93,35 @@ async function verifyPassword(password, storedHash) {
   return crypto.timingSafeEqual(expectedBuf, key);
 }
 
-function requireAuth(req, res, next) {
-  // AUTH TEMPORARILY DISABLED — re-enable before production
-  // if (!req.session?.userId) {
-  //   return res.status(401).json({ ok: false, message: "Not authenticated." });
-  // }
+async function requireAuth(req, res, next) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ ok: false, message: "Not authenticated." });
+  }
+
+  try {
+    const { rows } = await query(
+      `SELECT id, username, email, role, created_at
+       FROM users
+       WHERE id = $1`,
+      [req.session.userId],
+    );
+
+    if (!rows[0]) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ ok: false, message: "Not authenticated." });
+    }
+
+    req.user = rows[0];
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ ok: false, message: "Admin access required." });
+  }
   next();
 }
 
@@ -118,12 +146,24 @@ app.post("/api/register", async (req, res) => {
     return res.status(400).json({ ok: false, message: "Username, email, and password are required." });
   }
 
+  if (!usernamePattern.test(username)) {
+    return res.status(400).json({ ok: false, message: "Username must be 3-32 letters, numbers, underscores, or hyphens." });
+  }
+
+  if (!emailPattern.test(email)) {
+    return res.status(400).json({ ok: false, message: "Please enter a valid email address." });
+  }
+
+  if (password.length < minPasswordLength) {
+    return res.status(400).json({ ok: false, message: `Password must be at least ${minPasswordLength} characters.` });
+  }
+
   try {
     const passwordHash = await hashPassword(password);
     const { rows } = await query(
       `INSERT INTO users (username, email, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, username, email, created_at`,
+       RETURNING id, username, email, role, created_at`,
       [username, email, passwordHash],
     );
 
@@ -131,7 +171,7 @@ app.post("/api/register", async (req, res) => {
     req.session.userId   = user.id;
     req.session.username = user.username;
 
-    res.status(201).json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
+    res.status(201).json({ ok: true, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (err) {
     if (err.code === "23505") {
       const message = err.constraint === "users_email_key"
@@ -154,7 +194,7 @@ app.post("/api/login", async (req, res) => {
 
   try {
     const { rows } = await query(
-      `SELECT id, username, email, password_hash
+      `SELECT id, username, email, role, password_hash
        FROM users
        WHERE username = $1 OR email = $1
        LIMIT 1`,
@@ -169,7 +209,7 @@ app.post("/api/login", async (req, res) => {
     req.session.userId   = user.id;
     req.session.username = user.username;
 
-    res.json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
+    res.json({ ok: true, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (err) {
     console.error("Login failed:", err);
     res.status(500).json({ ok: false, message: String(err.message || err) });
@@ -188,16 +228,7 @@ app.post("/api/logout", (req, res) => {
 });
 
 app.get("/api/me", requireAuth, async (req, res) => {
-  try {
-    const { rows } = await query(
-      `SELECT id, username, email, created_at FROM users WHERE id = $1`,
-      [req.session.userId],
-    );
-    if (!rows[0]) return res.status(404).json({ ok: false, message: "User not found." });
-    res.json({ ok: true, user: rows[0] });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: String(err.message || err) });
-  }
+  res.json({ ok: true, user: req.user });
 });
 
 // ---------------------------------------------------------------------------
