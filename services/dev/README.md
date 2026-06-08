@@ -69,3 +69,21 @@ cd /path/to/COMP-6000-Capstone2/acoustic_ai
 source .venv/bin/activate
 python -m uvicorn server.server:app --host 127.0.0.1 --reload --port 8000
 ```
+
+### Optional Layer B Generate Wind Test Port
+
+Keep the main AI registry server on port 8000. If Layer B wind generation is
+being tested on a separate serverB process, run that process on a separate
+800x port and point the backend at it with environment variables instead of
+hard-coding the port in frontend code.
+
+Example shape, using the URL as seen from the backend process:
+
+```bash
+LAYER_B_GENERATE_SERVER_URL=http://<backend-reachable-host>:<local-800x-port>
+LAYER_B_GENERATE_ATTEMPTS=murphy__mvp_1__wind_intensity_bank
+```
+
+The backend only uses `LAYER_B_GENERATE_SERVER_URL` for the listed Layer B wind
+generator attempts. The existing Layer B weather stem selector continues to use
+the normal `AI_SERVER_URL` path.

@@ -130,6 +130,29 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     if has_weight:
         return {"available": True, "reason": None, "missing": []}
 
+    # Adapter-bank layout: weights live under ckpt_dir/adapters/<profile>/.
+    # Layer B wind intensity uses this for medium/heavy profiles, with light
+    # derived from medium at runtime.
+    adapter_root = ckpt_dir / "adapters"
+    if adapter_root.is_dir():
+        adapter_dirs = [p for p in sorted(adapter_root.iterdir()) if p.is_dir()]
+        missing = [
+            f"adapters/{p.name}/adapter_model.safetensors"
+            for p in adapter_dirs
+            if not (p / "adapter_model.safetensors").is_file()
+        ]
+        if adapter_dirs and not missing:
+            return {"available": True, "reason": None, "missing": []}
+        if missing:
+            return {
+                "available": False,
+                "reason": (
+                    f"{len(missing)}/{len(adapter_dirs)} adapter profiles not on disk. "
+                    f"Run `dvc pull` under {ckpt_dir}."
+                ),
+                "missing": missing,
+            }
+
     # No real weights — list any `.dvc` pointer files so the UI can tell the
     # user exactly which paths to `dvc pull`.
     pointers = sorted(

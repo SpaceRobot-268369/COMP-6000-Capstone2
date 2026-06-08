@@ -1,0 +1,46 @@
+{
+  "audio": {
+    "channels": 1,
+    "duration_s": 10.0,
+    "peak": 1.0,
+    "rms": 0.15802831947803497,
+    "sample_rate": 22050
+  },
+  "expected_intensity": "heavy",
+  "expected_notes": "Site-only Layer B wind retrieval-pool exemplar for frontend expected-results preview.",
+  "expected_weather_type": "wind",
+  "layer_b": {
+    "attempt": "murphy__mvp_1__wind_intensity_bank",
+    "mode": "expected_real_audio",
+    "retrieval_pool": "site-only weather stem pool",
+    "weather_type": "wind"
+  },
+  "preview": {
+    "duration_s": 10.0,
+    "offset_s": 0.0,
+    "sliced_from_asset": true
+  },
+  "provenance": {
+    "source_dvc_pointer": "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/wind.dvc",
+    "storage": "DVC/S3-backed source asset copied into attempt expected tier"
+  },
+  "sample_label": "Wind / heavy - site retrieval pool example",
+  "source": "real_audio",
+  "source_asset_id": "site_nov2019_storm001_site257_214871_006725_006755",
+  "source_audio_rms_dbfs": -16.258,
+  "source_clip_path": "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/site_nov2019_storm_scout_001/wind_primary/wind_primary__wind__site257_214871_006725_006755.wav",
+  "source_duration_s": 30.0,
+  "source_end_s": 6755.0,
+  "source_env_wind_max_ms": null,
+  "source_env_wind_speed_ms": null,
+  "source_human_audit_status": "site_ready",
+  "source_human_weather_label": "wind",
+  "source_kind": "site_weather_retrieval_pool_asset",
+  "source_manifest": "acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv",
+  "source_recording_id": "214871",
+  "source_site_id": "257",
+  "source_start_s": 6725.0,
+  "source_type": "site",
+  "source_wind_intensity": "heavy",
+  "tier": "expected"
+}

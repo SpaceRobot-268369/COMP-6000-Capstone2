@@ -180,6 +180,78 @@ layers:
     label: "Layer B — Weather"
     default: murphy__mvp_1__weather_stem_selector
     attempts:
+      murphy__mvp_1__wind_intensity_bank:
+        label: "Generate wind — intensity bank"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        uses_seed: true
+        checkpoint: model/candidates/murphy/mvp_1__wind_intensity_bank
+        description: |
+          Generates wind-only Layer B weather stems from the sealed AudioLDM2
+          wind intensity bank. This is the frontend-facing model test for
+          layerB_generate_wind and sits beside, not in place of, the site-only
+          weather stem selector.
+
+          Runtime controls are seed and wind intensity. Weather type is fixed to
+          wind. The sealed profiles are: light = v2 light_a with 6 kHz lowpass,
+          medium = v3 denoise bump, and heavy = v2 frozen. Medium and heavy use
+          LoRA adapters; light is derived from medium.
+
+          Output is a generated WAV plus metadata for review in the developer
+          Generation page. Layer D still owns final placement and full
+          soundscape mixing.
+        params:
+          base_model: cvssp/audioldm2
+          default_intensity: medium
+          intensity_profile_version: sealed
+          num_inference_steps: 200
+          audio_length_in_s: 8.0
+          denoise_enabled: true
+          denoise_strength: 0.15
+          denoise_noise_quantile: 0.2
+          denoise_floor_ratio: 0.40
+          denoise_hop_length: 512
+          fade_ms: 80.0
+          negative_prompt: >-
+            hiss, static noise, background hum, tape noise, insects, low quality, distortion
+          intensity_profiles:
+            heavy:
+              adapter: heavy
+              prompt: >-
+                loud roaring blustery wind through dry eucalyptus woodland, intense strong gusts,
+                Bowra, Australia
+              guidance_scale: 3.4
+              output_target_rms: 0.09
+              highpass_hz: 80.0
+              denoise_strength: 0.15
+              denoise_floor_ratio: 0.40
+            medium:
+              adapter: medium
+              prompt: >-
+                steady wind through dry eucalyptus woodland, gentle natural breeze,
+                Bowra, Australia
+              guidance_scale: 3.0
+              output_target_rms: 0.048
+              highpass_hz: 80.0
+              denoise_strength: 0.19
+              denoise_floor_ratio: 0.38
+            light:
+              derived_from: medium
+              prompt: >-
+                gentle light breeze through dry eucalyptus woodland, soft faint airflow,
+                Bowra, Australia
+              guidance_scale: 2.5
+              output_target_rms: 0.045
+              highpass_hz: 80.0
+              lowpass_hz: 6000.0
+              denoise_strength: 0.22
+              denoise_floor_ratio: 0.30
+        notes:
+          - Sealed profiles (2026-06-04): light=light_a, medium=v3, heavy=v2.
+          - medium/heavy are true adapters; light is parametric-derived from medium.
+          - Runtime expects weather_type=wind and intensity in {light,medium,heavy}.
+
       murphy__mvp_1__weather_stem_selector:
         label: "Weather stem selector — site-only MVP"
         author: murphy
