@@ -37,6 +37,7 @@ import yaml
 _AI_ROOT = Path(__file__).resolve().parent.parent     # acoustic_ai/
 _PROJECT_ROOT = _AI_ROOT.parent
 _REGISTRY_PATH = _AI_ROOT / "registry.yaml"
+_LAYER_D_MULTI_CLIP_ATTEMPT = "songke__mvp_2__multi_clip_mix"
 
 if str(_AI_ROOT) not in sys.path:
     sys.path.insert(0, str(_AI_ROOT))
@@ -648,14 +649,19 @@ def orchestrate_generation(
         if include_events
         else None
     )
+    layer_d_params = _layer_d_generation_params(
+        layer_d_attempt=attempts["layer_d"],
+        layer_a=layer_a,
+        layer_b=layer_b,
+        layer_c=layer_c,
+        duration_s=duration_s,
+        placement_seed=seed,
+    )
     final = generate(
         "layer_d",
         attempts["layer_d"],
         seed=None,
-        ambient_wav_bytes=layer_a.get("wav_bytes"),
-        weather_wav_bytes=layer_b.get("wav_bytes") if layer_b else None,
-        event_wav_bytes=layer_c.get("wav_bytes") if layer_c else None,
-        duration_s=duration_s,
+        **layer_d_params,
     )
     final.setdefault("metadata", {})["orchestration"] = {
         "seed": seed,
@@ -671,7 +677,7 @@ def orchestrate_generation(
             "layer_a": ["seed", "season", "diel"],
             "layer_b": ["seed", "weather_type", "intensity", "duration_s"],
             "layer_c": ["seed", "season", "diel", "duration_s"],
-            "layer_d": ["ambient_wav_bytes", "weather_wav_bytes", "event_wav_bytes", "duration_s"],
+            "layer_d": list(layer_d_params.keys()),
         },
         "upstream": {
             "layer_a": layer_a.get("metadata", {}),
@@ -686,6 +692,86 @@ def orchestrate_generation(
             "layer_c": layer_c,
         }
     return final
+
+
+def _layer_d_generation_params(
+    *,
+    layer_d_attempt: str,
+    layer_a: dict,
+    layer_b: dict | None,
+    layer_c: dict | None,
+    duration_s: float,
+    placement_seed: int | None,
+) -> dict[str, Any]:
+    if layer_d_attempt != _LAYER_D_MULTI_CLIP_ATTEMPT:
+        return {
+            "ambient_wav_bytes": layer_a.get("wav_bytes"),
+            "weather_wav_bytes": layer_b.get("wav_bytes") if layer_b else None,
+            "event_wav_bytes": layer_c.get("wav_bytes") if layer_c else None,
+            "duration_s": duration_s,
+        }
+    return {
+        "ambient_wav_bytes": layer_a.get("wav_bytes"),
+        "weather_clips": _weather_clips_for_layer_d(layer_b),
+        "event_clips": _event_clips_for_layer_d(layer_c),
+        "duration_s": duration_s,
+        "placement_seed": placement_seed,
+    }
+
+
+def _weather_clips_for_layer_d(layer_b: dict | None) -> list[dict[str, Any]]:
+    if not layer_b:
+        return []
+    metadata = layer_b.get("metadata") or {}
+    existing = metadata.get("weather_clips") or layer_b.get("weather_clips")
+    if isinstance(existing, list):
+        return [_normalise_clip_wav_key(clip) for clip in existing if isinstance(clip, dict)]
+    wav = layer_b.get("wav_bytes")
+    if wav is None:
+        return []
+    layer_b_md = metadata.get("layer_b") or {}
+    requested = layer_b_md.get("requested") or {}
+    selected = layer_b_md.get("selected") or {}
+    weather_type = requested.get("weather_type") or selected.get("primary_weather") or "weather"
+    role = str(selected.get("layer_d_role") or "").lower()
+    continuous = role != "discrete"
+    return [
+        {
+            "wav": wav,
+            "weather_type": weather_type,
+            "continuous": continuous,
+            "onsets_s": None if not continuous else None,
+            "gain_db": None,
+            "change": None,
+        }
+    ]
+
+
+def _event_clips_for_layer_d(layer_c: dict | None) -> list[dict[str, Any]]:
+    if not layer_c:
+        return []
+    metadata = layer_c.get("metadata") or {}
+    existing = metadata.get("event_clips") or layer_c.get("event_clips")
+    if isinstance(existing, list):
+        return [_normalise_clip_wav_key(clip) for clip in existing if isinstance(clip, dict)]
+    wav = layer_c.get("wav_bytes")
+    if wav is None:
+        return []
+    return [
+        {
+            "wav": wav,
+            "species": metadata.get("species") or "layer_c_events",
+            "onsets_s": [0.0],
+            "gain_db": None,
+        }
+    ]
+
+
+def _normalise_clip_wav_key(clip: dict[str, Any]) -> dict[str, Any]:
+    normalised = dict(clip)
+    if "wav" not in normalised and "wav_bytes" in normalised:
+        normalised["wav"] = normalised["wav_bytes"]
+    return normalised
 
 
 def orchestrate_analysis(
