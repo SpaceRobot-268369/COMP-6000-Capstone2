@@ -22,6 +22,24 @@ acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/revie
 acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json
 ```
 
+Latest cross-attempt reviewer rerun:
+
+| Item | Status |
+|---|---|
+| Run environment | Server B (`shinypokemon`) isolated checkout |
+| Site257 WAV materialization | 12/12 selected review samples available |
+| MVP2 checkpoint | materialized |
+| MVP3 checkpoint | materialized |
+| MVP4 checkpoint | materialized |
+| MVP5 checkpoint | materialized |
+| MVP5 CLAP run | enabled on Server B with `LITING_EB_RUN_CLAP=1` |
+
+The cross-attempt matrix now runs MVP1-MVP5 against the same fixed sample list.
+The current audited Site257 index still only contains one `light_rain` row and
+one `heavy_rain` row, so the two-case reviewer bar is met for moderate rain,
+mixed rain/wind, breezing wind, strong wind, and thunder backup, but not yet for
+light rain or heavy rain without expanding the audited Site257 rain pool.
+
 ## Data Used
 
 The MVP2 calibrated weather head was trained and validated on the Site257
