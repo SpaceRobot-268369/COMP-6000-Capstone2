@@ -14,6 +14,16 @@
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
+function apiErrorMessage(err, fallback) {
+  return (
+    err?.message ||
+    err?.detail ||
+    err?.upstream?.message ||
+    err?.upstream?.detail ||
+    fallback
+  );
+}
+
 // ─── Layer registry (drives the dropdown) ─────────────────────────────────────
 
 /**
@@ -29,7 +39,7 @@ export async function fetchLayerRegistry() {
   const res = await fetch(`${API_BASE}/api/layers`, { credentials: "include" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Failed to list layers (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Failed to list layers (${res.status})`));
   }
   return res.json();
 }
@@ -37,13 +47,13 @@ export async function fetchLayerRegistry() {
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
- * Generate audio with a specific layer/attempt. Only `seed` is sent; every
- * other parameter is owned by the registry/handler server-side (see CLAUDE.md
- * → "Layer A dev-generation contract").
+ * Generate audio with a specific layer/attempt. `seed` is always supported;
+ * bank attempts may also use `(season, diel)`, Layer B uses weather stem
+ * controls, and Layer C retrieval can use `species_common_name`.
  *
  * @param {string} layerId    e.g. "layer_a"
  * @param {string} attemptId  e.g. "lucas__smoke_1__audioldm2_spring_night"
- * @param {{seed?: number}} params
+ * @param {{seed?: number, retrieval_seed?: number, season?: string, diel?: string, weather_type?: string, intensity?: string, duration_s?: number, species_common_name?: string}} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, sample_rate:number, duration_s:number}>}
  */
 // ─── Cached samples (no model load required) ──────────────────────────────────
@@ -66,7 +76,7 @@ export async function fetchAttemptSamples(layerId, attemptId) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Failed to list samples (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Failed to list samples (${res.status})`));
   }
   return res.json();
 }
@@ -82,16 +92,33 @@ export function sampleWavUrl(sample) {
   return `${base}/api${sample.wav_url}`;
 }
 
-// ─── Stage-3 product endpoints (placeholders) ─────────────────────────────────
-// Analysis / Generation / Transformation routes will be reimplemented on top of
-// the new layer/attempt registry in a follow-up. The current stubs keep the
-// build green and surface a clear message at click time.
+// ─── Stage-3 product endpoints ──────────────────────────────────────────────────
+// Generation is implemented through the A/B/C -> D orchestrator. Analysis uses
+// the Layer E head orchestrator + aggregator. Transformation remains a
+// placeholder.
 
 const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio()        { throw new Error(_PLACEHOLDER_MSG); }
+export async function analyseAudio(file, attempts = {}, register = "immersive") {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("register", register);
+  for (const [key, value] of Object.entries(attempts)) {
+    if (value) form.append(`${key}_attempt`, value);
+  }
+  const res = await fetch(`${API_BASE}/api/analysis`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
+  }
+  return res.json();
+}
 
 /**
  * Run one Layer E analysis head on an uploaded audio file. Analysis is
@@ -124,18 +151,110 @@ export async function analyseUpload(layerId, attemptId, file) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Analysis failed (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Analysis failed (${res.status})`));
   }
   return res.json();
 }
 
-export async function generateSoundscape()  { throw new Error(_PLACEHOLDER_MSG); }
+/**
+ * Re-render an analysis report in a chosen tone register through the LLM-OSS
+ * report writer (POST /api/analysis/narrative). No detectors re-run — the
+ * caller supplies the already-computed fused report. Backs the scene-page tone
+ * toggle.
+ * @param {object} report   fused analysis report JSON (e.g. from analyseUpload)
+ * @param {"analytical"|"immersive"} register
+ * @returns {Promise<{ok:boolean, narrative:{register:string, text:string, faithful:boolean, violations:string[]}}>}
+ */
+export async function narrateReport(report, register = "analytical") {
+  const res = await fetch(`${API_BASE}/api/analysis/narrative`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify({ report, register }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Narrative failed (${res.status})`));
+  }
+  return res.json();
+}
+
+export async function parseGenerationPrompt(prompt) {
+  const res = await fetch(`${API_BASE}/api/generation/parse`, {
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body:        JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Prompt parsing failed (${res.status})`));
+  }
+  return res.json();
+}
+
+export async function generateSoundscape(conditions = {}) {
+  const layerA = conditions.layer_a || {};
+  const layerB = conditions.layer_b || null;
+  const layerC = conditions.layer_c || null;
+  const windSpeed = Number(conditions.wind_speed_ms) || 0;
+  const precipitation = Number(conditions.precipitation_mm) || 0;
+  const fallbackIntensity = windSpeed >= 10 || precipitation >= 20
+    ? "heavy"
+    : windSpeed >= 4 || precipitation > 0
+      ? "medium"
+      : "light";
+  const hasExplicitLayerContracts =
+    conditions.layer_a !== undefined ||
+    conditions.layer_b !== undefined ||
+    conditions.layer_c !== undefined;
+  const hasParsedEvents = Boolean(layerC?.species?.length);
+  const includeWeather = conditions.include_weather ??
+    (hasExplicitLayerContracts ? Boolean(layerB) : true);
+  const includeEvents = conditions.include_events ??
+    (hasExplicitLayerContracts ? hasParsedEvents : true);
+  const payload = {
+    seed: Number.isInteger(conditions.seed) ? conditions.seed : 42,
+    duration_s: Number(conditions.duration_s ?? layerB?.duration_s) || 30,
+    season: conditions.season ?? layerA.season,
+    diel: conditions.diel ?? conditions.sample_bin ?? conditions.time ?? layerA.diel,
+    weather_type: conditions.weather_type ?? layerB?.weather_type ?? (precipitation > 0 ? "rain+wind" : "wind"),
+    intensity: conditions.intensity ?? layerB?.intensity ?? fallbackIntensity,
+    include_weather: includeWeather,
+    include_events: includeEvents,
+    include_stems: conditions.include_stems === true,
+    layer_a_attempt: conditions.layer_a_attempt,
+    layer_b_attempt: conditions.layer_b_attempt,
+    layer_c_attempt: conditions.layer_c_attempt,
+    layer_d_attempt: conditions.layer_d_attempt,
+  };
+  const res = await fetch(`${API_BASE}/api/generation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Generation failed (${res.status})`));
+  }
+  return res.json();
+}
 export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG); }
 
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
+  {
+    seed,
+    retrieval_seed,
+    season,
+    diel,
+    weather_type,
+    intensity,
+    duration_s,
+    species_common_name: speciesCommonName,
+  } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -147,6 +266,7 @@ export async function generateAttempt(
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
   if (duration_s) payload.duration_s = duration_s;
+  if (speciesCommonName) payload.species_common_name = speciesCommonName;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {
@@ -158,7 +278,7 @@ export async function generateAttempt(
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.detail || `Generation failed (${res.status})`);
+    throw new Error(apiErrorMessage(err, `Generation failed (${res.status})`));
   }
   return res.json();
 }

@@ -36,18 +36,51 @@ POSTGRES_DB=...
 POSTGRES_PORT=5432
 BACKEND_PORT=4000
 FRONTEND_PORT=5173
-FRONTEND_URL=https://...
-VITE_API_URL=https://...
+FRONTEND_URL=https://spacerobot-268369.adelaideuni.cloud,http://16.176.232.101
+VITE_API_URL=
 SESSION_SECRET=...
 APP_SECRET=...
 AI_SERVER_LABEL=shinypokemon
 AI_SSH_USER=ubuntu
 AI_SSH_HOST=shinypokemon.adelaideuni.cloud
+AI_REQUEST_TIMEOUT_MS=300000
+AI_SERVICE_START_COMMAND=
+AI_TUNNEL_CONTAINER_NAME=eco-ai-tunnel-server-a
+AI_RECONNECT_MODE=docker-container
 SERVERB_PEM_PATH=/home/ubuntu/.ssh/itds-eap/shinypokemon.pem
 ```
 
+`FRONTEND_URL` is the backend CORS allowlist and is matched **exactly** against
+the browser `Origin` header (scheme + host + port, case-sensitive). In
+production it must be the public HTTPS origin
+(`https://spacerobot-268369.adelaideuni.cloud`), not the `:5173`/`http` dev
+value — a mismatch makes the backend reject generate requests with a 500.
+
+`AI_REQUEST_TIMEOUT_MS` must exceed the synchronous generation time (30-90s warm
+on serverB, far longer for a cold model load) or the backend returns 504 before
+the audio comes back. It must also stay **under** the nginx `/api/`
+`proxy_read_timeout` (600s) so the backend's descriptive error surfaces ahead of
+a bare nginx 504 — the deployed default is `540000` (9 min). serverB pre-warms
+its default models on boot (`AI_PREWARM`, see the on-demand worker doc), so the
+warm path is the norm; the headroom mainly covers cold loads of non-default
+attempts.
+
+Automatic serverB reconnect is split into two layers. The backend restarts the
+configured `ai-tunnel` container through Docker when health checks go offline.
+Inside that container, SSH reachability to serverB is checked before the tunnel
+opens. If serverB is reachable but the remote AI service `/health` is down,
+`AI_SERVICE_START_COMMAND` is run when configured; leave it empty to report a
+degraded status without attempting to start anything remotely.
+
 For local validation, copy `.env.example` to `.env` and replace all placeholder
 secret values. Do not commit `.env`.
+
+`FRONTEND_URL` must list the **exact** public origin(s) the browser sends as
+its `Origin` header — lowercase scheme + host, no trailing slash, and no port
+when nginx serves on the default `:443`/`:80`. The backend treats it as a CORS
+allow-list; a case/scheme/port mismatch makes every credentialed `POST`
+(login, register, generate) fail CORS. Leave `VITE_API_URL` empty so the
+frontend calls `/api` same-origin through nginx.
 
 ## TLS / HTTPS
 

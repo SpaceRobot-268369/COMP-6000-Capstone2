@@ -1,0 +1,6 @@
+outs:
+- md5: e49b31bdec41a60eed22a1a4fc8701e3.dir
+  size: 89186728
+  nfiles: 708
+  hash: md5
+  path: australian_raven

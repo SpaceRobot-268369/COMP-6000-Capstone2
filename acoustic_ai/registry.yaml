@@ -5,9 +5,21 @@
 #   - serve GET /layers (for the frontend dropdown)
 #   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
 #
-# Naming rules:    .claude/context/dev/attempt_naming.md
-# Artifact policy: .claude/context/dev/artifact_policy.md
+# Naming rules + artifact policy: .claude/context/conventions.md
 # Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# Every GENERATION-layer attempt (layers A/B/C) declares its kind (conventions.md § 5.5):
+#   kind: generative   → checkpoint: <model/candidates|production path>   (trained weights)
+#   kind: retrieval    → asset_bank: <model/candidates|production path>   (media asset bank:
+#                        index.json + media_asset_bank/ audio; JSON index only, no CSV)
+# Both artifact kinds live under model/; only the attempt code lives under
+# acoustic_ai/layers/.../attempts/. Layer D (mixer) and Layer E (analysis,
+# keyed by `head:`) are not generation models and carry no `kind`.
+#
+# Retrieval entries are labelled with `kind` now, but still point at their
+# in-attempt CSV banks (checkpoint: null + asset_index/retrieval_index under
+# params). They gain `asset_bank:` + the model/ layout (index.json +
+# media_asset_bank/) when their author migrates the bank.
 #
 # IDs use snake_case on disk; dropdown labels use human-readable strings.
 # Canonical seed for samples/reference/ is 42 unless an attempt overrides it
@@ -25,6 +37,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
         params:
@@ -46,6 +59,7 @@ layers:
         author: lucas
         stage: smoke_2
         status: smoke_test_2_insects_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
         params:
@@ -67,6 +81,7 @@ layers:
         author: lucas
         stage: mvp_2
         status: mvp_2_per_cell_passed
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/candidates/lucas/mvp_2__per_cell_loras
@@ -105,6 +120,7 @@ layers:
         author: lucas
         stage: prod_1
         status: production
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/production/layer_a_ambient
@@ -149,6 +165,7 @@ layers:
         author: lucas
         stage: smoke_4
         status: superseded
+        kind: generative
         checkpoint: model/candidates/lucas/vae-site257-30epoch
         extra_checkpoints:
           vocoder: model/candidates/lucas/vocoder-hifigan-site257
@@ -164,20 +181,22 @@ layers:
     default: murphy__mvp_1__weather_stem_selector
     attempts:
       murphy__mvp_1__weather_stem_selector:
-        label: "Weather stem selector — MVP"
+        label: "Weather stem selector — site-only MVP"
         author: murphy
         stage: mvp_1
         status: mvp_candidate
+        kind: retrieval
         uses_seed: true
+        uses_weather_controls: true
         checkpoint: null
         description: |
-          Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-first retrieval pool from site_257 Bowra dry woodland is combined with curated sound-library fallback assets; the server filters by weather label and intensity, then uses retrieval_seed to choose a deterministic asset and start offset.
+          Selects a short weather-only stem for a chosen weather type, intensity, and duration. Under the hood: a site-only retrieval pool from site_257 Bowra dry woodland is filtered by weather label and intensity, then retrieval_seed chooses a deterministic site asset and start offset.
 
-          Pool contents: 101 site-derived 15-second WAV stems promoted from CLAP/env/manual weather screening (6 rain, 7 rain+wind, 88 wind), plus 40 curated library rain/wind/thunder/storm fallback assets. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
+          Pool contents: 113 site-derived WAV stems promoted from CLAP/env/manual weather screening (6 rain, 12 rain+wind, 93 wind, 2 thunder backup). Curated sound-library assets remain documented in the index but are marked unavailable on this branch and are excluded from the runtime pool. The two thunder backup stems are intentionally not exposed in the frontend/API until the site thunder policy is reliable. Runtime output: a short WAV weather stem, RMS-normalised by requested intensity, for Layer D to place and mix into the final soundscape.
 
-          Supported weather types: rain, wind, thunder, storm. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
+          Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_index: acoustic_ai/layers/layer_b/attempts/lucas__smoke_1__curated_assets/data/weather/asset_index.csv
+          asset_index: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
@@ -191,11 +210,12 @@ layers:
           - Layer B outputs a short weather stem; Layer D owns final placement and full soundscape mixing.
           - Runtime parameters are weather_type, intensity, duration_s, and retrieval_seed.
 
-      lucas__smoke_1__curated_assets:
+      murphy__smoke_1__curated_assets:
         label: "Curated wind/rain assets"
         author: lucas
         stage: smoke_1
         status: placeholder
+        kind: retrieval
         checkpoint: null
         params: {}
         notes:
@@ -203,13 +223,14 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: lucas__smoke_1__audiogen_boobook
+    default: burger__mvp_2__retrieval_v2_library
     attempts:
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
         params:
@@ -218,19 +239,85 @@ layers:
         notes:
           - Per-species LoRA; 16 kHz native.
 
+      burger__mvp_2__retrieval_v2_library:
+        label: "Layer C retrieval v2 audited library"
+        author: burger
+        stage: mvp_2
+        status: demo_ready
+        kind: retrieval
+        uses_seed: true
+        uses_cells: true
+        checkpoint: null
+        asset_bank: model/candidates/burger/mvp_2__retrieval_v2_library
+        description: |
+          Layer C retrieval v2 baseline backed by the rebuilt 63-species
+          audited library. It selects real Pass-reviewed snippets from the v2
+          event index and schedules them into a 60-second ecological timeline.
+        params:
+          method: retrieval
+          species_common_name: "Splendid Fairywren"
+          event_type: layer_c_retrieval_v2_library
+          duration_s: 60.0
+          count: 12
+          default_cell: summer_morning
+          default_season: summer
+          default_diel: morning
+          ecological_mode: true
+          enable_variation: false
+          layer_c_only: true
+          ambient_gain_db: -26.0
+          events_gain_db: -2.0
+          cells:
+            spring_dawn: {}
+            spring_morning: {}
+            spring_afternoon: {}
+            spring_night: {}
+            summer_dawn: {}
+            summer_morning: {}
+            summer_afternoon: {}
+            summer_night: {}
+            autumn_dawn: {}
+            autumn_morning: {}
+            autumn_afternoon: {}
+            autumn_night: {}
+            winter_dawn: {}
+            winter_morning: {}
+            winter_afternoon: {}
+            winter_night: {}
+        notes:
+          - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
+          - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
+          - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
+
   layer_d:
     label: "Layer D — Mixer"
-    default: lucas__smoke_1__layered_mix
+    default: songke__mvp_1__layered_mix
     attempts:
-      lucas__smoke_1__layered_mix:
-        label: "Layered mix (placeholder)"
-        author: lucas
-        stage: smoke_1
-        status: placeholder
+      songke__mvp_1__layered_mix:
+        label: "Layered mix"
+        author: songke
+        stage: mvp_1
+        status: mvp_candidate
         checkpoint: null
-        params: {}
+        description: |
+          Final Layer D mixer for the generation pipeline. Receives upstream
+          Layer A ambient, Layer B weather, and Layer C event WAV stems,
+          normalizes their technical format, aligns them to the target
+          duration, applies gain staging, weather smoothing, event fade
+          smoothing, event band-pass cleanup, and peak protection, then returns
+          the final mixed soundscape WAV with traceable mix metadata.
+        params:
+          default_duration_s: 30.0
+          weather_gain_db: -12.0
+          event_gain_db: -18.0
+          event_activity_envelope: true
+          event_boundary_fade_s: 1.0
+          event_bandpass_hz: [500.0, 8000.0]
+          peak_ceiling: 0.95
         notes:
           - Combines A+B+C outputs into final WAV + explanation JSON.
+          - Current preferred listening configuration is local mix attempt v5.
+          - Handler accepts upstream WAV bytes from a generation orchestrator.
 
   layer_e:
     label: "Layer E — Analysis"
@@ -249,6 +336,16 @@ layers:
         head: ambient
         status: candidate
         checkpoint: model/candidates/lucas/mvp_2__clap_knn_probe_enlarged
+        description: |
+          Estimates the ambient context of an uploaded clip — season and time of day (diel) plus an hour/month guess — and surfaces the nearest training clips. Under the hood: frozen `laion/clap-htsat-unfused` CLAP embeddings feed a k=5 nearest-neighbour vote (τ=0.1) and a 1-hidden-layer MLP season probe (hidden 256, seed 42).
+
+          Trained on `resources/site_257_bowra-dry-a/ambient_pool_v2` (the enlarged pool). Metrics: probe season acc **0.553** vs k-NN **0.512** (+0.041), diel **0.706**, hour MAE **1.97 h**, month MAE **1.80 mo**. The season probe beats the k-NN baseline but still misses the 0.60 candidate bar; diel/hour/month clear their bars.
+
+          Output (report JSON): `estimated_conditions` — season, diel bin, hour, month; `similar_clips` — top-k nearest training segments with similarity scores (the evidence behind the estimate); `confidence` — mean neighbour similarity; `season_confidence` — the probe's softmax for the predicted season; `ood_flag` — raised when the clip's k-NN cell vote disagrees with its anchors (likely outside the Bowra training distribution). The `k` (5) and `tau` (0.1) settings are echoed back for traceability.
+
+          Interaction: the three Analysis heads run independently on the raw mixture (no wired cross-head call yet), but by design this head feeds the event head (E-C). E-A's estimated season/diel/hour is the ecological prior for which species are plausible — Bowra species are strongly gated by time of day and season (nocturnal callers ~22:00–05:00, summer-only insects), the same context Layer C uses to select events. So ambient context turns E-C's open-class detections into context-aware ones: a dawn-chorus species flagged in a clip placed at night is a red flag, not a confident hit. E-A and E-C also share the frozen CLAP encoder, and `estimated_conditions` can later drive Generation (Layer A per-cell bank + Layer C species choice), closing the analysis→generation loop.
+
+          Status: candidate (E-A default). Serves the Ambient head via `POST /layers/layer_e/attempts/{id}/analyze`.
         params:
           k: 5
           tau: 0.1
@@ -266,6 +363,14 @@ layers:
         head: ambient
         status: parked_negative
         checkpoint: model/candidates/lucas/mvp_1__clap_knn_probe
+        description: |
+          The v0 baseline of the ambient-context head: same recipe as the enlarged candidate (frozen `laion/clap-htsat-unfused` CLAP → k-NN season vote + a small season probe), but trained on the original 1,982-segment single-site pool.
+
+          Documented **negative result**: the season probe does not beat the k-NN season baseline (0.522) on v0 data — linear val acc 0.445 (underfits), MLP val acc 0.491 (overfits, train 0.755). Kept as a reproducibility baseline for the enlarged-pool retry; serving falls back to the k-NN season vote.
+
+          Output: same report shape as the enlarged candidate — `estimated_conditions` (season, diel, hour, month), `similar_clips`, `confidence`, `season_confidence`, `ood_flag`. Interaction: same intended role — ambient context as the ecological prior for the E-C event head — but this v0 probe is parked, so it is not the served E-A path.
+
+          Status: parked (negative). Superseded by `lucas__mvp_2__clap_knn_probe_enlarged`.
         params:
           k: 5
           tau: 0.1
@@ -300,6 +405,83 @@ layers:
           - Uses Site257 weather seed assets and spectral features as calibration and explainability support.
           - Falls back to the smoke spectral detector when PANNs dependencies or checkpoint are unavailable.
           - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      songke__prod_1__e_c_species_event_detector:
+        label: "Known species event detector - PRODUCTION"
+        author: songke
+        stage: prod_1
+        head: events
+        status: production
+        checkpoint: model/production/layer_e_c_species_event_detector
+        params:
+          threshold: 0.55
+          window_s: 5.0
+          hop_s: 1.0
+          merge_gap_s: 1.0
+          min_event_windows: 7
+        notes:
+          - Production E-C detector promoted from songke__smoke_2__known_species_clap_probe for the online Analysis Mode demo.
+          - Supports 13 known Australian species using frozen LAION-CLAP embeddings plus an MLP probe.
+          - Test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Returns event confidence, species matches, phenology metadata, and an aggregator-ready analysis_report.
+          - The production checkpoint is automatically materialised by the Server B model sync workflow.
+
+      songke__smoke_2__known_species_clap_probe:
+        label: "Known species events - CLAP probe"
+        author: songke
+        stage: smoke_2
+        head: events
+        status: candidate
+        checkpoint: model/candidates/songke/mvp_1__layer_e_species_event_detector
+        params:
+          threshold: 0.55
+          window_s: 5.0
+          hop_s: 1.0
+          merge_gap_s: 1.0
+          min_event_windows: 7
+        notes:
+          - E-C known-species detector for ninox_boobook, laughing_kookaburra, rhipidura_leucophrys, psophodes_cristatus, cincloramphus_mathewsi, podargus_strigoides, red_capped_robin, anas_superciliosa, australian_raven, peaceful_dove, galah, crested_bellbird, and rainbow_bee_eater.
+          - Uses frozen LAION-CLAP audio embeddings plus a local MLP probe trained from xeno-canto clips.
+          - Local no-magpie 13-class CLAP probe test accuracy is 0.817 and macro-F1 is 0.811 on the 2842-clip manifest.
+          - Enriches each detected species event with a conservative phenology block for report synthesis.
+          - Emits an analysis_report block with observations, inferred_context, and disagreements for aggregator integration.
+          - Serves the E-C events head via POST /layers/layer_e/attempts/{id}/analyze.
+
+      murphy__mvp_1__weather_direct_detection:
+        label: "Weather analysis — CLAP + PANNs + AST gate v1.1"
+        author: murphy
+        stage: mvp_1
+        head: weather
+        status: mvp
+        checkpoint: null
+        params:
+          model_backend: clap
+          audioset_backend: panns
+          guard_backend: ast
+        notes:
+          - Frozen E-B weather analysis MVP v1 for uploaded-audio weather detection.
+          - Reports continuous rain / wind / thunder summaries through observations.weather.
+          - Conservative gate v1.1 keeps rain+wind and thunder ambiguous cases honest.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      songke__smoke_3__analysis_aggregator:
+        label: "Analysis Aggregator - deterministic fusion v1"
+        author: songke
+        stage: smoke_3
+        head: aggregator
+        status: smoke_test
+        checkpoint: null
+        params:
+          fusion:
+            ambient_weight_cap: 0.5
+            event_weight_cap: 1.0
+            ambient_fallback_min_confidence: 0.6
+            undetermined_threshold: 0.50
+            conflict_margin: 0.20
+        notes:
+          - Combines E-A ambient, E-B weather, and E-C events reports into analysis_aggregator.v1.
+          - Does not run audio inference or generation.
+          - Used by the orchestrated /analysis/run endpoint, not by the per-head dev picker.
 
       lucas__smoke_1__detectors:
         label: "Weather + event detectors"

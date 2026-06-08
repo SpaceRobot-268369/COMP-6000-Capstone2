@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import sys
 import threading
 from dataclasses import dataclass
 from functools import lru_cache
@@ -37,6 +38,9 @@ _AI_ROOT = Path(__file__).resolve().parent.parent     # acoustic_ai/
 _PROJECT_ROOT = _AI_ROOT.parent
 _REGISTRY_PATH = _AI_ROOT / "registry.yaml"
 
+if str(_AI_ROOT) not in sys.path:
+    sys.path.insert(0, str(_AI_ROOT))
+
 # --- types -----------------------------------------------------------------
 
 
@@ -49,7 +53,9 @@ class AttemptSpec:
     stage:   str           # "smoke_1" | "mvp_1" | "prod_1" | ...
     head:    str | None    # Layer E only: "ambient" | "weather" | "events"
     status:  str
+    kind:    str | None
     checkpoint: Path | None
+    asset_bank: Path | None
     extra_checkpoints: dict[str, Path]
     params:  dict[str, Any]
     notes:   list[str]
@@ -57,6 +63,12 @@ class AttemptSpec:
     @property
     def handler_module(self) -> str:
         return f"layers.{self.layer}.attempts.{self.id}.code.handler"
+
+    @property
+    def artifact_root(self) -> Path | None:
+        if self.kind == "retrieval" and self.asset_bank is not None:
+            return self.asset_bank
+        return self.checkpoint
 
 
 # --- loading ---------------------------------------------------------------
@@ -150,16 +162,64 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     }
 
 
+def _bank_availability(bank_dir: Path | None) -> dict:
+    if bank_dir is None:
+        return {"available": True, "reason": None, "missing": []}
+    if not bank_dir.exists():
+        return {
+            "available": False,
+            "reason": f"asset bank directory missing: {bank_dir}",
+            "missing": [],
+        }
+    index = bank_dir / "index.json"
+    media_dir = bank_dir / "media_asset_bank"
+    missing = []
+    if not index.is_file():
+        missing.append("index.json")
+    if not media_dir.exists():
+        missing.append("media_asset_bank/")
+    elif not any(media_dir.rglob("*.wav")):
+        pointers = sorted(
+            str(p.relative_to(bank_dir))
+            for p in media_dir.rglob("*.dvc")
+            if p.is_file()
+        )
+        if pointers:
+            return {
+                "available": False,
+                "reason": (
+                    "Asset bank is DVC-tracked but audio is not on disk locally. "
+                    f"Run `dvc pull` for: {', '.join(pointers[:3])}"
+                    + (" ..." if len(pointers) > 3 else "")
+                ),
+                "missing": pointers,
+            }
+        missing.append("media_asset_bank audio")
+    if missing:
+        return {
+            "available": False,
+            "reason": f"asset bank incomplete: {', '.join(missing)}",
+            "missing": missing,
+        }
+    return {"available": True, "reason": None, "missing": []}
+
+
 def list_layers() -> list[dict]:
     """Return the dropdown payload — one entry per layer, with attempt list."""
     out: list[dict] = []
     for layer_id, layer_block in _registry_doc()["layers"].items():
         attempts = []
         for att_id, att in layer_block["attempts"].items():
+            kind = att.get("kind")
             ckpt = _resolve_checkpoint(att.get("checkpoint"))
+            asset_bank = _resolve_checkpoint(att.get("asset_bank"))
             params = att.get("params") or {}
             cells = sorted((params.get("cells") or {}).keys())
-            avail = _ckpt_availability(ckpt, cell_names=cells)
+            avail = (
+                _bank_availability(asset_bank)
+                if kind == "retrieval" and asset_bank is not None
+                else _ckpt_availability(ckpt, cell_names=cells)
+            )
             attempts.append({
                 "id":      att_id,
                 "label":   att.get("label", att_id),
@@ -169,6 +229,8 @@ def list_layers() -> list[dict]:
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
+                "kind":             kind,
+                "asset_bank":       str(asset_bank) if asset_bank else None,
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
@@ -209,10 +271,42 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         head=att.get("head"),
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
+        kind=att.get("kind"),
+        asset_bank=_resolve_checkpoint(att.get("asset_bank")),
         extra_checkpoints=extras,
         params=dict(att.get("params") or {}),
         notes=list(att.get("notes") or []),
     )
+
+
+def default_attempt_id(layer_id: str) -> str:
+    layers = _registry_doc().get("layers", {})
+    if layer_id not in layers:
+        raise KeyError(f"unknown layer: {layer_id!r}")
+    attempt_id = layers[layer_id].get("default")
+    if not attempt_id:
+        raise KeyError(f"layer has no default attempt: {layer_id!r}")
+    return str(attempt_id)
+
+
+def default_layer_e_head_attempt(head: str) -> str:
+    """Return the default attempt for one Layer E analysis head.
+
+    The layer-level default is the ambient head. For weather/events/aggregator
+    we select the first registered attempt whose `head:` field matches.
+    """
+    layers = _registry_doc().get("layers", {})
+    layer = layers.get("layer_e")
+    if not layer:
+        raise KeyError("unknown layer: 'layer_e'")
+    attempts = layer.get("attempts", {})
+    layer_default = layer.get("default")
+    if layer_default and attempts.get(layer_default, {}).get("head") == head:
+        return str(layer_default)
+    for attempt_id, attempt in attempts.items():
+        if attempt.get("head") == head:
+            return str(attempt_id)
+    raise KeyError(f"Layer E has no registered {head!r} analysis head")
 
 
 # --- handler dispatch ------------------------------------------------------
@@ -436,9 +530,47 @@ def _get_state(spec: AttemptSpec):
         if cache_key in _state_cache:
             return _state_cache[cache_key]
         mod = _get_handler_module(spec)
-        state = mod.load(spec.checkpoint, dict(spec.params), extra=spec.extra_checkpoints)
+        state = mod.load(spec.artifact_root, dict(spec.params), extra=spec.extra_checkpoints)
         _state_cache[cache_key] = state
         return state
+
+
+def warm(layer_id: str, attempt_id: str) -> None:
+    """Eager-load and cache an attempt's handler state (no generation).
+
+    This is the same lazy ``_get_state`` the first request would otherwise
+    trigger inside the request path — calling it up front (see
+    ``server.prewarm``) keeps the heavy cold load (e.g. the Layer A 16-adapter
+    AudioLDM2 bank) out of the request, so the first user generate no longer
+    blows past the backend ``AI_REQUEST_TIMEOUT_MS``.
+    """
+    spec = get_attempt(layer_id, attempt_id)
+    _get_state(spec)
+
+
+def prewarm_defaults(layers: set[str] | None = None) -> list[dict]:
+    """Eager-load each layer's ``default`` attempt. Resilient: a failure for
+    one attempt (un-installed dep, un-pulled checkpoint, …) is captured and
+    skipped, never raised — one broken head must not stop the server booting.
+
+    ``layers`` restricts which layer defaults are warmed (None => all).
+    Returns one result row per warmed layer default, for the caller to log.
+    """
+    results: list[dict] = []
+    for layer_id, layer_block in _registry_doc()["layers"].items():
+        if layers is not None and layer_id not in layers:
+            continue
+        default = layer_block.get("default")
+        if not default:
+            continue
+        row = {"layer": layer_id, "attempt": default, "ok": True, "error": None}
+        try:
+            warm(layer_id, default)
+        except Exception as exc:  # noqa: BLE001 — boot must survive any handler failure
+            row["ok"] = False
+            row["error"] = str(exc)
+        results.append(row)
+    return results
 
 
 def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params) -> dict:
@@ -457,6 +589,153 @@ def generate(layer_id: str, attempt_id: str, seed: int | None, **runtime_params)
     return result
 
 
+def orchestrate_generation(
+    *,
+    seed: int | None,
+    duration_s: float,
+    season: str | None = None,
+    diel: str | None = None,
+    weather_type: str = "wind",
+    intensity: str = "light",
+    include_weather: bool = True,
+    include_events: bool = True,
+    layer_a_attempt: str | None = None,
+    layer_b_attempt: str | None = None,
+    layer_c_attempt: str | None = None,
+    layer_d_attempt: str | None = None,
+    include_stems: bool = False,
+) -> dict:
+    """Run generation layers A/B/C and hand their in-memory WAVs to Layer D."""
+
+    duration_s = float(duration_s)
+    if not 0.0 < duration_s <= 30.0:
+        raise ValueError("duration_s must be greater than 0 and at most 30 seconds")
+    attempts = {
+        "layer_a": layer_a_attempt or default_attempt_id("layer_a"),
+        "layer_b": layer_b_attempt or default_attempt_id("layer_b"),
+        "layer_c": layer_c_attempt or default_attempt_id("layer_c"),
+        "layer_d": layer_d_attempt or default_attempt_id("layer_d"),
+    }
+
+    layer_a = generate(
+        "layer_a",
+        attempts["layer_a"],
+        seed=seed,
+        season=season,
+        diel=diel,
+    )
+    layer_b = (
+        generate(
+            "layer_b",
+            attempts["layer_b"],
+            seed=seed,
+            weather_type=weather_type,
+            intensity=intensity,
+            duration_s=duration_s,
+        )
+        if include_weather
+        else None
+    )
+    layer_c = (
+        generate(
+            "layer_c",
+            attempts["layer_c"],
+            seed=seed,
+            season=season,
+            diel=diel,
+            duration_s=duration_s,
+        )
+        if include_events
+        else None
+    )
+    final = generate(
+        "layer_d",
+        attempts["layer_d"],
+        seed=None,
+        ambient_wav_bytes=layer_a.get("wav_bytes"),
+        weather_wav_bytes=layer_b.get("wav_bytes") if layer_b else None,
+        event_wav_bytes=layer_c.get("wav_bytes") if layer_c else None,
+        duration_s=duration_s,
+    )
+    final.setdefault("metadata", {})["orchestration"] = {
+        "seed": seed,
+        "duration_s": duration_s,
+        "season": season,
+        "diel": diel,
+        "weather_type": weather_type if include_weather else None,
+        "intensity": intensity if include_weather else None,
+        "include_weather": include_weather,
+        "include_events": include_events,
+        "attempts": attempts,
+        "parameter_routing": {
+            "layer_a": ["seed", "season", "diel"],
+            "layer_b": ["seed", "weather_type", "intensity", "duration_s"],
+            "layer_c": ["seed", "season", "diel", "duration_s"],
+            "layer_d": ["ambient_wav_bytes", "weather_wav_bytes", "event_wav_bytes", "duration_s"],
+        },
+        "upstream": {
+            "layer_a": layer_a.get("metadata", {}),
+            "layer_b": layer_b.get("metadata", {}) if layer_b else None,
+            "layer_c": layer_c.get("metadata", {}) if layer_c else None,
+        },
+    }
+    if include_stems:
+        final["_stems"] = {
+            "layer_a": layer_a,
+            "layer_b": layer_b,
+            "layer_c": layer_c,
+        }
+    return final
+
+
+def orchestrate_analysis(
+    audio_path: str,
+    *,
+    ambient_attempt: str | None = None,
+    weather_attempt: str | None = None,
+    events_attempt: str | None = None,
+    aggregator_attempt: str | None = None,
+    include_head_reports: bool = True,
+) -> dict:
+    """Run E-A/E-B/E-C analysis heads and fuse them through the aggregator."""
+
+    attempts = {
+        "ambient": ambient_attempt or default_layer_e_head_attempt("ambient"),
+        "weather": weather_attempt or default_layer_e_head_attempt("weather"),
+        "events": events_attempt or default_layer_e_head_attempt("events"),
+        "aggregator": aggregator_attempt or default_layer_e_head_attempt("aggregator"),
+    }
+
+    ambient = analyze("layer_e", attempts["ambient"], audio_path)
+    weather = analyze("layer_e", attempts["weather"], audio_path)
+    events = analyze("layer_e", attempts["events"], audio_path)
+    aggregator = aggregate_analysis_reports(
+        attempts["aggregator"],
+        ambient_report=ambient.get("report", {}),
+        weather_report=weather.get("report", {}),
+        events_report=events.get("report", {}),
+    )
+    model_lineage = {
+        "ambient": ambient["attempt"],
+        "weather": weather["attempt"],
+        "events": events["attempt"],
+        "aggregator": aggregator["attempt"],
+    }
+    aggregator["report"]["model_lineage"] = model_lineage
+
+    result = {
+        "report": aggregator["report"],
+        "attempts": model_lineage,
+    }
+    if include_head_reports:
+        result["head_reports"] = {
+            "ambient": ambient.get("report", {}),
+            "weather": weather.get("report", {}),
+            "events": events.get("report", {}),
+        }
+    return result
+
+
 def _attempt_snapshot(spec: AttemptSpec) -> dict:
     """Compact spec block attached to every dispatch result for traceability."""
     return {
@@ -469,6 +748,33 @@ def _attempt_snapshot(spec: AttemptSpec) -> dict:
         "status": spec.status,
         "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
     }
+
+
+def aggregate_analysis_reports(
+    attempt_id: str,
+    *,
+    ambient_report: dict,
+    weather_report: dict,
+    events_report: dict,
+) -> dict:
+    """Dispatch report fusion to a Layer E aggregator attempt."""
+    spec = get_attempt("layer_e", attempt_id)
+    if spec.head != "aggregator":
+        raise ValueError(f"{attempt_id} is not a Layer E aggregator attempt")
+    mod = _get_handler_module(spec)
+    if not hasattr(mod, "aggregate"):
+        raise NotImplementedError(
+            f"layer_e/{attempt_id} handler has no aggregate(); this attempt "
+            f"does not support report fusion."
+        )
+    state = _get_state(spec)
+    report = mod.aggregate(
+        state,
+        ambient_report=ambient_report,
+        weather_report=weather_report,
+        events_report=events_report,
+    )
+    return {"report": report, "attempt": _attempt_snapshot(spec)}
 
 
 def analyze(layer_id: str, attempt_id: str, audio_path: str) -> dict:

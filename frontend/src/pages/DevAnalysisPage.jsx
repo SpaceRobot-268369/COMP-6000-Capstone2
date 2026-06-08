@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import SpectrogramCanvas from "../components/SpectrogramCanvas.jsx";
-import { analyseUpload, fetchLayerRegistry } from "../lib/api.js";
+import { analyseAudio, analyseUpload, fetchLayerRegistry } from "../lib/api.js";
 
 /**
  * Dev page for Analysis Mode (Layer E) — a per-head testing harness.
@@ -62,6 +62,8 @@ export default function DevAnalysisPage() {
 
   const [registry, setRegistry] = useState(null);
   const [regError, setRegError] = useState("");
+  const [fullAnalysis, setFullAnalysis] = useState({ status: "idle", result: null, error: "" });
+  const [aggregatorAttemptId, setAggregatorAttemptId] = useState("");
 
   // Independent per-head runtime state (selected attempt + analysis result).
   const [heads, setHeads] = useState(() => ({
@@ -78,6 +80,8 @@ export default function DevAnalysisPage() {
         const layerE = (doc.layers || []).find((l) => l.id === LAYER_ID);
         const attempts = layerE?.attempts || [];
         const def = layerE?.default;
+        const aggregators = attempts.filter((a) => a.head === "aggregator");
+        setAggregatorAttemptId(aggregators[0]?.id || "");
         setHeads((prev) => {
           const next = { ...prev };
           for (const h of HEADS) {
@@ -95,7 +99,7 @@ export default function DevAnalysisPage() {
   const attemptsByHead = useMemo(() => {
     const layerE = registry?.layers?.find((l) => l.id === LAYER_ID);
     const attempts = layerE?.attempts || [];
-    const map = { ambient: [], weather: [], events: [] };
+    const map = { ambient: [], weather: [], events: [], aggregator: [] };
     for (const a of attempts) {
       if (map[a.head]) map[a.head].push(a);
     }
@@ -117,6 +121,7 @@ export default function DevAnalysisPage() {
       }
       return next;
     });
+    setFullAnalysis({ status: "idle", result: null, error: "" });
   }
 
   function onDrop(e) {
@@ -141,8 +146,24 @@ export default function DevAnalysisPage() {
     }
   }
 
+  async function runFullAnalysis() {
+    if (!file) return;
+    setFullAnalysis({ status: "analysing", result: null, error: "" });
+    try {
+      const data = await analyseAudio(file, {
+        ambient: heads.ambient.attemptId,
+        weather: heads.weather.attemptId,
+        events: heads.events.attemptId,
+        aggregator: aggregatorAttemptId,
+      });
+      setFullAnalysis({ status: "done", result: data, error: "" });
+    } catch (err) {
+      setFullAnalysis({ status: "error", result: null, error: err.message });
+    }
+  }
+
   return (
-    <section className="generation-page">
+    <section className="generation-page theme-analysis">
       <header className="generation-topbar">
         <div className="generation-brandline">
           <p className="eyebrow">DEVELOPER TOOLS — ANALYSIS</p>
@@ -150,8 +171,8 @@ export default function DevAnalysisPage() {
         </div>
       </header>
 
-      {/* ── Row 1: uploader (holds the clip only — no global run) ─────────── */}
-      <div className="dev-controls-row">
+      {/* ── Row 1: uploader + uploaded-clip spectrogram ───────────────────── */}
+      <div className="dev-controls-row analysis-upload-stack">
         <FileUploader
           file={file}
           audioUrl={audioUrl}
@@ -160,29 +181,24 @@ export default function DevAnalysisPage() {
           onFile={acceptFile}
           onDrop={onDrop}
         />
+
+        <SpectrogramPanel file={file} />
       </div>
 
-      {/* ── Row 2: spectrogram + per-head analysis ──────────────────────── */}
-      <div className="dev-results-row">
-        <main className="panel dev-result-card">
-          <div className="generation-card-head">
-            <h2>Mel-Spectrogram</h2>
-            <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
-          </div>
-          <div className="dev-result-body">
-            <ReviewSection title="▤ Spectral Mapping">
-              {file ? (
-                <SpectrogramCanvas file={file} />
-              ) : (
-                <Placeholder kind="image">
-                  Spectrogram appears once an audio file is loaded.
-                </Placeholder>
-              )}
-            </ReviewSection>
-          </div>
-        </main>
+      <div className="dev-results-row analysis-heads-row">
+        <FullAnalysisCard
+          state={fullAnalysis}
+          hasFile={!!file}
+          onRun={runFullAnalysis}
+          aggregatorAttemptId={aggregatorAttemptId}
+          aggregatorAttempts={attemptsByHead.aggregator}
+          onAggregatorAttemptChange={setAggregatorAttemptId}
+        />
+      </div>
 
-        <aside className="panel dev-result-card">
+      {/* ── Row 2: per-head analysis ─────────────────────────────────────── */}
+      <div className="dev-results-row analysis-heads-row">
+        <aside className="panel dev-result-card analysis-heads-card">
           <div className="generation-card-head">
             <h2>Analysis Heads</h2>
             <p>Each head picks its own model and runs on its own button</p>
@@ -207,13 +223,246 @@ export default function DevAnalysisPage() {
   );
 }
 
+function SpectrogramPanel({ file }) {
+  return (
+    <main className="panel dev-result-card analysis-spectrogram-card">
+      <div className="generation-card-head">
+        <h2>Mel-Spectrogram</h2>
+        <p>{file ? file.name : "Upload a clip to render its spectrogram"}</p>
+      </div>
+      <div className="dev-result-body">
+        <ReviewSection title="▤ Spectral Mapping">
+          {file ? (
+            <SpectrogramCanvas file={file} />
+          ) : (
+            <Placeholder kind="image">
+              Spectrogram appears once an audio file is loaded.
+            </Placeholder>
+          )}
+        </ReviewSection>
+      </div>
+    </main>
+  );
+}
+
 // ─── Uploader ────────────────────────────────────────────────────────────────
+
+function FullAnalysisCard({
+  state,
+  hasFile,
+  onRun,
+  aggregatorAttemptId,
+  aggregatorAttempts,
+  onAggregatorAttemptChange,
+}) {
+  const analysing = state.status === "analysing";
+  const done = state.status === "done";
+  const report = state.result?.report;
+
+  return (
+    <aside className="panel dev-result-card analysis-heads-card">
+      <div className="generation-card-head">
+        <h2>Full Analysis</h2>
+        <p>Runs E-A, E-B, E-C, then fuses them through the Aggregator</p>
+      </div>
+      <div className="dev-result-body">
+        <ReviewSection title="Aggregator">
+          {aggregatorAttempts?.length > 0 && (
+            <AttemptPicker
+              headCode="Aggregator"
+              attemptId={aggregatorAttemptId}
+              attempts={aggregatorAttempts}
+              onChange={onAggregatorAttemptChange}
+            />
+          )}
+
+          <div className="upload-actions" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className="analyse-btn"
+              onClick={onRun}
+              disabled={!hasFile || analysing || !aggregatorAttemptId}
+            >
+              {analysing ? "Analysing..." : "Run Full Analysis"}
+            </button>
+            {!hasFile && (
+              <span style={{ fontSize: 12, opacity: 0.6, alignSelf: "center" }}>
+                Upload a clip first
+              </span>
+            )}
+          </div>
+
+          {state.error && <p className="analysis-error">{state.error}</p>}
+
+          {done && report ? (
+            <FullAnalysisResult result={state.result} />
+          ) : (
+            <Placeholder kind="json" loading={analysing}>
+              {analysing ? "Running all heads and fusing report..." : "Run the full stack to see the fused report."}
+            </Placeholder>
+          )}
+
+          {done && state.result && (
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.7 }}>
+                {"{ } Raw full analysis"}
+              </summary>
+              <pre className="layer-a-json">{JSON.stringify(state.result, null, 2)}</pre>
+            </details>
+          )}
+        </ReviewSection>
+      </div>
+    </aside>
+  );
+}
+
+function FullAnalysisResult({ result }) {
+  const report = result?.report || {};
+  const context = report.inferred_context || {};
+  const weather = report.observations?.weather || {};
+  const events = Array.isArray(report.observations?.events) ? report.observations.events : [];
+  const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
+  const limitations = Array.isArray(report.limitations) ? report.limitations : [];
+  const attempts = report.model_lineage || result?.attempts || {};
+  const narration = report.narration || {};
+  const narrationBullets = Array.isArray(narration.bullets) ? narration.bullets : [];
+
+  return (
+    <div className="dev-controls-meta">
+      {narration.summary && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Narration</p>
+            <span>{narration.source || "deterministic"}</span>
+          </div>
+          <p style={{ margin: "6px 0 8px", fontSize: 13, lineHeight: 1.5 }}>
+            {narration.summary}
+          </p>
+          {narrationBullets.length > 0 && (
+            <div className="analysis-report-chips">
+              {narrationBullets.slice(0, 4).map((item, idx) => (
+                <span key={`${item}-${idx}`}>{item}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="gen-info-block">
+        <p>Diel</p>
+        <code>{context.diel?.estimate || "undetermined"} · {fmtPct(context.diel?.posterior)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Season</p>
+        <code>{context.season?.estimate || "undetermined"} · {fmtPct(context.season?.posterior)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Weather</p>
+        <code>{weather.derived_label || "none"} · {fmtPct(weather.confidence)}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Events</p>
+        <code>{events.length}</code>
+      </div>
+      <ConfidenceBar value={report.overall_confidence ?? report.confidence} label="Aggregator confidence" />
+
+      <ContextDistribution title="Diel distribution" distribution={context.diel?.distribution} />
+      <ContextDistribution title="Season distribution" distribution={context.season?.distribution} />
+
+      {events.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Detected events</p>
+            <span>{events.length} event observations</span>
+          </div>
+          <div className="analysis-report-chips">
+            {events.slice(0, 8).map((event, idx) => (
+              <span key={`${event.label}-${event.onset_s}-${idx}`}>
+                {event.common_name || formatSpeciesLabel(event.label)} · {fmtPct(event.confidence)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {disagreements.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Disagreements</p>
+            <span>{disagreements.length}</span>
+          </div>
+          <div className="analysis-report-chips">
+            {disagreements.map((item, idx) => (
+              <span key={`${item.field}-${idx}`}>
+                {item.field}: {formatSignal(item.resolution)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {limitations.length > 0 && (
+        <div className="analysis-report-summary">
+          <div className="analysis-report-head">
+            <p>Limitations</p>
+            <span>{limitations.length}</span>
+          </div>
+          <div className="analysis-report-chips">
+            {limitations.slice(0, 5).map((item, idx) => (
+              <span key={`${item}-${idx}`}>{item}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="analysis-report-summary">
+        <div className="analysis-report-head">
+          <p>Attempts</p>
+          <span>ambient · weather · events · aggregator</span>
+        </div>
+        <div className="analysis-report-chips">
+          {["ambient", "weather", "events", "aggregator"].map((key) => (
+            <span key={key}>{key}: {attempts[key]?.id || "unknown"}</span>
+          ))}
+        </div>
+      </div>
+      {report.decision && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.7 }}>
+            {"{ } LLM-ready decision JSON"}
+          </summary>
+          <pre className="layer-a-json">{JSON.stringify(report.decision, null, 2)}</pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ContextDistribution({ title, distribution }) {
+  const rows = distribution && typeof distribution === "object"
+    ? Object.entries(distribution)
+    : [];
+  if (rows.length === 0) return null;
+  return (
+    <div className="analysis-report-summary">
+      <div className="analysis-report-head">
+        <p>{title}</p>
+        <span>{rows.length} bins</span>
+      </div>
+      <div className="analysis-report-chips">
+        {rows.map(([key, value]) => (
+          <span key={key}>{key}: {fmtPct(value)}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop }) {
   const inputId = "dev-analysis-file";
   return (
     <section
-      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}`}
+      className={`hero-upload panel panel-hero${dragging ? " drag-over" : ""}${file ? " has-file" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
@@ -245,7 +494,7 @@ function FileUploader({ file, audioUrl, dragging, setDragging, onFile, onDrop })
             </label>
           </div>
           {audioUrl && (
-            <audio controls src={audioUrl} style={{ width: "100%", marginTop: 12 }} />
+            <audio className="upload-audio-preview" controls src={audioUrl} />
           )}
         </div>
       )}
@@ -260,6 +509,7 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
   const { attemptId, status, report, error } = state;
   const analysing = status === "analysing";
   const done = status === "done";
+  const selected = attempts.find((a) => a.id === attemptId);
 
   return (
     <ReviewSection title={`${head.icon} ${head.code} — ${head.label}`}>
@@ -277,6 +527,8 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
             attempts={attempts}
             onChange={onAttemptChange}
           />
+
+          <ModelDescription attempt={selected} />
 
           <div className="upload-actions" style={{ marginBottom: 8 }}>
             <button
@@ -318,6 +570,47 @@ function HeadCard({ head, state, attempts, regError, hasFile, onAttemptChange, o
   );
 }
 
+// "About this model" panel — documents the selected attempt straight from the
+// registry `description`. Scoped to lucas's models for now (other authors show
+// a muted not-yet-documented note); split this gate out once teammates add
+// documented Layer E attempts.
+function ModelDescription({ attempt }) {
+  if (!attempt) return null;
+
+  const isLucas = attempt.author === "lucas";
+  const text = (attempt.description || "").trim();
+
+  return (
+    <div
+      className="dev-model-doc"
+      style={{
+        margin: "0 0 10px",
+        padding: "10px 12px",
+        borderRadius: 8,
+        background: "rgba(127,127,127,0.08)",
+        border: "1px solid rgba(127,127,127,0.18)",
+      }}
+    >
+      <p style={{ margin: "0 0 6px", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
+        About this model · {attempt.stage} · {attempt.status}
+      </p>
+      {isLucas && text ? (
+        text.split(/\n{2,}/).map((para, i) => (
+          <p key={i} style={{ margin: i === 0 ? 0 : "8px 0 0", fontSize: 13, lineHeight: 1.5, opacity: 0.85 }}>
+            {para}
+          </p>
+        ))
+      ) : (
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
+          {isLucas
+            ? "No description provided for this model yet."
+            : `Not yet documented (author: ${attempt.author || "unknown"}).`}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EmptyHead({ label, regError }) {
   return (
     <div className="dev-placeholder dev-placeholder-json">
@@ -334,8 +627,8 @@ function EmptyHead({ label, regError }) {
 
 function HeadResult({ headId, report }) {
   if (headId === "ambient") return <AmbientResult report={report} />;
-  // Weather / events have no model yet, so this is unreachable today; fall
-  // back to the raw report so a future detector still renders something.
+  if (headId === "weather") return <WeatherResult report={report} />;
+  if (headId === "events") return <EventsResult report={report} />;
   return (
     <pre className="layer-a-json">{JSON.stringify(report, null, 2)}</pre>
   );
@@ -379,7 +672,248 @@ function AmbientResult({ report }) {
   );
 }
 
+function WeatherResult({ report }) {
+  const weather = report?.observations?.weather || {};
+  const legacyWeather = report?.weather || {};
+  const derivedLabel = weather.derived_label || legacyWeather.overall_label || "—";
+  const warnings = weather.warnings || legacyWeather.warnings || [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Derived label</p>
+        <code>{derivedLabel}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Confidence</p>
+        <code>{fmtNum(weather.confidence)}</code>
+      </div>
+      {["rain", "wind", "thunder"].map((element) => (
+        <WeatherElementBlock
+          key={element}
+          element={element}
+          summary={weather?.[element]?.summary}
+        />
+      ))}
+      {warnings.length > 0 && (
+        <div className="gen-info-block" style={{ gridColumn: "1 / -1" }}>
+          <p>Warnings</p>
+          <code>{warnings.join(" · ")}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeatherElementBlock({ element, summary }) {
+  const label = summary?.label || "none";
+  const intensity = typeof summary?.intensity === "number" ? summary.intensity : null;
+  const confidence = typeof summary?.confidence === "number" ? summary.confidence : null;
+  const coverage = typeof summary?.coverage === "number" ? summary.coverage : null;
+  return (
+    <div className="gen-info-block">
+      <p>{element}</p>
+      <code>
+        {label}
+        {intensity == null ? "" : ` · ${intensity.toFixed(3)}`}
+        {confidence == null ? "" : ` · conf ${confidence.toFixed(3)}`}
+        {coverage == null ? "" : ` · cov ${coverage.toFixed(2)}`}
+      </code>
+    </div>
+  );
+}
+
 // ─── Shared bits ──────────────────────────────────────────────────────────────
+
+function EventsResult({ report }) {
+  const events = Array.isArray(report?.events) ? report.events : [];
+  const species = Array.isArray(report?.known_species) ? report.known_species : [];
+  return (
+    <div className="dev-controls-meta">
+      <div className="gen-info-block">
+        <p>Detected events</p>
+        <code>{report?.num_events ?? events.length}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Windows hit</p>
+        <code>{report?.num_detected_windows ?? 0} / {report?.num_windows ?? 0}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Known species</p>
+        <code>{species.length}</code>
+      </div>
+      <div className="gen-info-block">
+        <p>Threshold</p>
+        <code>{fmtNum(report?.threshold)}</code>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="dev-placeholder dev-placeholder-json" style={{ gridColumn: "1 / -1" }}>
+          <p className="dev-placeholder-caption">
+            No species event passed the current threshold.
+          </p>
+        </div>
+      ) : (
+        <div className="event-result-list">
+          <div className="event-timeline-head">
+            <p>Detected species timeline</p>
+            <span>{events.length} time segments</span>
+          </div>
+          {events.map((event, idx) => (
+            <article className="event-result-item" key={`${event.label}-${event.onset_s}-${idx}`}>
+              <div className="event-result-main">
+                <span>{fmtNum(event.onset_s)}s - {fmtNum(event.offset_s)}s</span>
+                <strong>{formatSpeciesLabel(event.label)}</strong>
+              </div>
+              <div className="event-result-stats">
+                <span>Mean {fmtPct(event.confidence_mean)}</span>
+                <span>Max {fmtPct(event.confidence_max)}</span>
+                <span>{event.window_count ?? 0} windows</span>
+              </div>
+              <ConfidenceBar value={event.confidence_mean} label="Event confidence" />
+              <SpeciesMatchList matches={event.species_matches} />
+              <PhenologyBlock phenology={event.phenology} />
+            </article>
+          ))}
+        </div>
+      )}
+      <AnalysisReportSummary report={report?.analysis_report} />
+      <DetectionTimeline windows={report?.diagnostics?.detected_windows} />
+    </div>
+  );
+}
+
+function AnalysisReportSummary({ report }) {
+  if (!report) return null;
+  const observations = Array.isArray(report.observations) ? report.observations : [];
+  const inferred = Array.isArray(report.inferred_context) ? report.inferred_context : [];
+  const disagreements = Array.isArray(report.disagreements) ? report.disagreements : [];
+  return (
+    <div className="analysis-report-summary">
+      <div className="analysis-report-head">
+        <p>Report-ready summary</p>
+        <span>
+          {observations.length} observations · {inferred.length} inferences · {disagreements.length} disagreements
+        </span>
+      </div>
+      {inferred.length > 0 && (
+        <div className="analysis-report-chips">
+          {inferred.slice(0, 6).map((item, idx) => (
+            <span key={`${item.type}-${idx}`}>
+              {formatSignal(item.type)}: {formatSignal(item.value)} · {fmtPct(item.confidence)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhenologyBlock({ phenology }) {
+  if (!phenology) return null;
+  return (
+    <div className="phenology-block">
+      <p>Ecological signal</p>
+      <div className="phenology-grid">
+        <span>Common name</span>
+        <strong>{phenology.common_name || "Unknown"}</strong>
+        <span>Scientific name</span>
+        <strong>{phenology.scientific_name || "Unknown"}</strong>
+        <span>Active time</span>
+        <strong>{formatSignal(phenology.diel_signal)} · {fmtPct(phenology.diel_confidence)}</strong>
+        <span>Season signal</span>
+        <strong>{formatSignal(phenology.season_signal)} · {fmtPct(phenology.season_confidence)}</strong>
+        <span>Habitat</span>
+        <strong>{formatSignal(phenology.habitat_signal)}</strong>
+      </div>
+      {phenology.inference_notes && <em>{phenology.inference_notes}</em>}
+    </div>
+  );
+}
+
+function SpeciesMatchList({ matches }) {
+  const rows = Array.isArray(matches) ? matches.slice(0, 5) : [];
+  if (rows.length === 0) return null;
+  return (
+    <div className="species-match-list">
+      <p>Species match</p>
+      {rows.map((row) => {
+        const score = typeof row.score === "number" ? Math.max(0, Math.min(1, row.score)) : 0;
+        return (
+          <div className="species-match-row" key={row.label}>
+            <span>{formatSpeciesLabel(row.label)}</span>
+            <div className="species-match-track" aria-hidden="true">
+              <i style={{ width: `${Math.max(3, Math.round(score * 100))}%` }} />
+            </div>
+            <code>{fmtPct(score)}</code>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DetectionTimeline({ windows }) {
+  const rawRows = Array.isArray(windows) ? windows : [];
+  const rows = mergeDetectionWindows(rawRows);
+  if (rows.length === 0) return null;
+  return (
+    <div className="detection-timeline">
+      <div className="detection-timeline-head">
+        <p>Supporting window segments</p>
+        <span>{rawRows.length} windows merged into {rows.length} segments</span>
+      </div>
+      <div className="detection-window-list">
+        {rows.map((row) => (
+          <div className="detection-window-row" key={`${row.label}-${row.start_s}-${row.end_s}`}>
+            <code>{fmtNum(row.start_s)}s - {fmtNum(row.end_s)}s</code>
+            <span>{formatSpeciesLabel(row.label)}</span>
+            <div className="detection-window-score">
+              <i style={{ width: `${Math.max(3, Math.round(clamp01(row.confidence_mean) * 100))}%` }} />
+            </div>
+            <strong>{fmtPct(row.confidence_mean)}</strong>
+            <em>Max {fmtPct(row.confidence_max)} · {row.window_count} windows</em>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function mergeDetectionWindows(windows) {
+  const sorted = windows
+    .filter((row) => row && typeof row.start_s === "number" && typeof row.end_s === "number")
+    .slice()
+    .sort((a, b) => (a.start_s - b.start_s) || String(a.top_label).localeCompare(String(b.top_label)));
+  const segments = [];
+  for (const row of sorted) {
+    const label = String(row.top_label || "unknown");
+    const confidence = typeof row.confidence === "number" ? row.confidence : 0;
+    const last = segments[segments.length - 1];
+    if (last && last.label === label && row.start_s <= last.end_s + 1.01) {
+      last.end_s = Math.max(last.end_s, row.end_s);
+      last.confidence_sum += confidence;
+      last.confidence_max = Math.max(last.confidence_max, confidence);
+      last.window_count += 1;
+    } else {
+      segments.push({
+        label,
+        start_s: row.start_s,
+        end_s: row.end_s,
+        confidence_sum: confidence,
+        confidence_max: confidence,
+        window_count: 1,
+      });
+    }
+  }
+  return segments.map((segment) => ({
+    label: segment.label,
+    start_s: segment.start_s,
+    end_s: segment.end_s,
+    confidence_mean: segment.confidence_sum / segment.window_count,
+    confidence_max: segment.confidence_max,
+    window_count: segment.window_count,
+  }));
+}
 
 function AttemptPicker({ headCode, attemptId, attempts, onChange }) {
   return (
@@ -459,6 +993,20 @@ function Placeholder({ kind, loading, children }) {
   );
 }
 
+function formatSpeciesLabel(value) {
+  if (!value) return "Unknown species";
+  return String(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatSignal(value) {
+  if (!value) return "Unknown";
+  return String(value).replaceAll("_", " ");
+}
+
 function fmtNum(v) {
   return typeof v === "number" ? v.toFixed(2) : "—";
 }
@@ -466,4 +1014,8 @@ function fmtNum(v) {
 function fmtPct(v) {
   if (typeof v !== "number") return "—";
   return `${Math.round(v * 100)}%`;
+}
+
+function clamp01(value) {
+  return typeof value === "number" ? Math.max(0, Math.min(1, value)) : 0;
 }

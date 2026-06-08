@@ -1,0 +1,6 @@
+outs:
+- md5: fd069c17db9ee855187d873bbbe92060.dir
+  size: 76303427
+  nfiles: 714
+  hash: md5
+  path: common_greenshank

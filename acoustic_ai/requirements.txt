@@ -6,6 +6,8 @@ pandas >= 2.0
 librosa >= 0.10
 soundfile >= 0.12
 torchaudio >= 2.2
+panns-inference >= 0.1.1
+torchlibrosa >= 0.1.0
 
 # Deep learning
 torch >= 2.2
@@ -27,3 +29,11 @@ scipy >= 1.12
 
 # Visualisation
 matplotlib >= 3.8
+
+# LLM-OSS layer (in-process prompt parser + Layer E report writer)
+# See .claude/context/ai/llm_layer_config.md + llm_layer_implementation_plan.md.
+# bitsandbytes: 4-bit (NF4) quantization for the 3B on serverB's 16 GB GPU
+#   (Linux/CUDA only — skipped on the macOS dev box, which lazy-loads anyway).
+# lm-format-enforcer: grammar-constrained JSON for the parser contract.
+bitsandbytes >= 0.43 ; platform_system == "Linux"
+lm-format-enforcer >= 0.10

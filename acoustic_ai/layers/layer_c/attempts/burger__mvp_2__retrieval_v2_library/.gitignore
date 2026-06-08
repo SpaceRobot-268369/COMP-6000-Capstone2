@@ -1,0 +1,9 @@
+# Local scratch for this attempt.
+/dev-artifacts-self-testing/*
+!/dev-artifacts-self-testing/.gitkeep
+
+# Audio and generated review images must be DVC-tracked or ignored.
+*.wav
+*.webm
+/showcase/**/*.png
+/showcase/**/metadata.json

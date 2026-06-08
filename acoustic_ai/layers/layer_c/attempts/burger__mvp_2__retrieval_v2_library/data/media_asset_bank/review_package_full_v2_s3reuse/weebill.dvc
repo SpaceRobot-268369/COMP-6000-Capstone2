@@ -1,0 +1,6 @@
+outs:
+- md5: 4c92ce641fed661923b7d4ba7cc47587.dir
+  size: 76159300
+  nfiles: 702
+  hash: md5
+  path: weebill
