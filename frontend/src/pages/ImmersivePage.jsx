@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
-import ToneToggle from "../components/ToneToggle.jsx";
 import { sceneStateFromAnalysis } from "../lib/analysisScene.js";
 import "../immersive/immersive.css";
 
@@ -45,6 +44,10 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const [wind, setWind] = useState(() => activeInitial?.wind ?? 0);
   const [audioSrc, setAudioSrc] = useState(() => activeInitial?.audioUrl || "");
   const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
+  // Toggle for the supplementary metadata overlays (analytical narration +
+  // source caption + models-used). The center caption always shows the
+  // immersive register; this just reveals/hides the analytical detail.
+  const [showDetails, setShowDetails] = useState(true);
 
   useEffect(() => {
     const instance = createImmersive({
@@ -174,21 +177,48 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     </>
   );
 
+  const analyticalText = activeInitial?.narratives?.analytical || "";
+  const hasDetails = Boolean(
+    analyticalText || activeInitial?.sourceCaption || activeInitial?.generation?.attempts
+  );
+
   return (
     <div className="immersive-page">
       <div className="immersive-scene" ref={sceneRef} />
       <div className="immersive-scrim" ref={titleScrimRef} />
 
-      {activeInitial?.sourceCaption && (
-        <p className="immersive-source-caption">
-          <span className="immersive-source-tag">
-            {activeInitial.generatedAudio ? "Generated audio" : "Source recording"}
-          </span>
-          {activeInitial.sourceCaption}
-        </p>
+      {hasDetails && (
+        <button
+          type="button"
+          className={`immersive-details-toggle ${showDetails ? "is-on" : ""}`}
+          aria-pressed={showDetails}
+          onClick={() => setShowDetails((v) => !v)}
+        >
+          {showDetails ? "Hide details" : "Show details"}
+        </button>
       )}
-      {activeInitial?.generation?.attempts && (
-        <GenerationModelLine attempts={activeInitial.generation.attempts} />
+
+      {showDetails && analyticalText && (
+        <aside className="immersive-analytical" aria-label="Analytical narration">
+          <span className="immersive-analytical-tag">Analytical</span>
+          <p>{renderNarrative(analyticalText)}</p>
+        </aside>
+      )}
+
+      {showDetails && (activeInitial?.sourceCaption || activeInitial?.generation?.attempts) && (
+        <div className="immersive-meta-stack">
+          {activeInitial?.sourceCaption && (
+            <p className="immersive-source-caption">
+              <span className="immersive-source-tag">
+                {activeInitial.generatedAudio ? "Generated audio" : "Source recording"}
+              </span>
+              {activeInitial.sourceCaption}
+            </p>
+          )}
+          {activeInitial?.generation?.attempts && (
+            <GenerationModelLine attempts={activeInitial.generation.attempts} />
+          )}
+        </div>
       )}
       <div className="immersive-title">
         <div className="immersive-title-words" ref={titleWordsRef} />
@@ -224,18 +254,25 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           audioRef={audioRef}
         />
       )}
-
-      {/* Top-center tone toggle (plan §3.5). Both registers are pre-rendered at
-          analysis/generation time and passed in via `narratives`, so switching
-          is an instant cache swap. `report` is the lazy fallback for a register
-          that failed to pre-render. */}
-      <ToneToggle
-        report={activeInitial?.report}
-        narratives={activeInitial?.narratives}
-        defaultRegister={activeInitial?.register || "immersive"}
-      />
     </div>
   );
+}
+
+/* Render the report writer's light markdown (bold + blockquote markers) as React
+   nodes for the analytical panel: strip blockquote/heading markers and turn
+   **bold** into <strong>. */
+function renderNarrative(md) {
+  const clean = (md || "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    .trim();
+  return clean
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, i) => {
+      const m = part.match(/^\*\*([^*]+)\*\*$/);
+      return m ? <strong key={i}>{m[1]}</strong> : <span key={i}>{part}</span>;
+    });
 }
 
 function GenerationModelLine({ attempts }) {
