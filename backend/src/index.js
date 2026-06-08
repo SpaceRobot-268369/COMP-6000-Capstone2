@@ -860,8 +860,8 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 });
 
 // Per-attempt generation. Forwarded runtime params: `seed` / `retrieval_seed`,
-// optional `(season, diel)` for bank attempts, Layer C species selection, and
-// Layer B weather-stem controls.
+// optional `(season, diel)` for bank attempts, Layer B weather-stem controls,
+// and the Layer C species selector.
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);

@@ -171,8 +171,8 @@ class GenerateRequest(BaseModel):
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
     duration_s: Optional[float] = None
-    # Layer C live generative/retrieval attempts can expose multiple species
-    # behind one attempt id; the frontend passes this selector through.
+    # Layer C attempts can expose multiple species behind one attempt id.
+    # Other layers ignore this through **kwargs.
     species_common_name: Optional[str] = None
 
 
@@ -260,7 +260,6 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
     return _generation_response(layer_id, attempt_id, result)
-
 
 @app.post("/generation/render")
 def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
@@ -586,6 +585,8 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        import librosa
+        import librosa.display
 
         fig, ax = plt.subplots(figsize=(10, 4))
         img = None

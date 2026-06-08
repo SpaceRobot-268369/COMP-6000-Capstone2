@@ -677,9 +677,11 @@ export default function LayerATestPage({
           <div className="generation-card-head">
             <h2>Expected Results</h2>
             <p>
-              {samples?.canonical_seed != null
-                ? `Cached samples · canonical seed ${samples.canonical_seed}`
-                : "Cached expected / showcase samples"}
+              {selectedSpecies
+                ? `${selectedSpecies} · layer C only expected sample`
+                : samples?.canonical_seed != null
+                  ? `Cached samples · canonical seed ${samples.canonical_seed}`
+                  : "Cached expected / showcase samples"}
             </p>
           </div>
 
