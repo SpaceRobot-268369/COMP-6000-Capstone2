@@ -1,0 +1,44 @@
+# Production E-C known-species event detector.
+
+data:
+  manifest: local_data/ec_species/manifests/ec_species_13class_no_magpie_manifest.csv
+  labels:
+    - ninox_boobook
+    - laughing_kookaburra
+    - rhipidura_leucophrys
+    - psophodes_cristatus
+    - cincloramphus_mathewsi
+    - podargus_strigoides
+    - red_capped_robin
+    - anas_superciliosa
+    - australian_raven
+    - peaceful_dove
+    - galah
+    - crested_bellbird
+    - rainbow_bee_eater
+
+backbone:
+  model_id: laion/clap-htsat-unfused
+  sample_rate: 48000
+  window_s: 10.0
+
+training:
+  seed: 42
+  arch: mlp
+  hidden: 128
+  epochs: 500
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  class_weighting: inverse_frequency
+  select_metric: val_macro_f1
+
+output:
+  embedding_dir: local_data/ec_species/embeddings/clap_13class_no_magpie
+  model_dir: model/production/layer_e_c_species_event_detector
+
+inference:
+  threshold: 0.55
+  window_s: 5.0
+  hop_s: 1.0
+  merge_gap_s: 1.0
+  min_event_windows: 7

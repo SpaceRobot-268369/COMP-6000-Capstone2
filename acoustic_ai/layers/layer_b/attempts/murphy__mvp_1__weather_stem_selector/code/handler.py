@@ -20,7 +20,7 @@ import soundfile as sf
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[6]
-_ALLOWED_WEATHER = {"rain", "wind", "rain+wind", "thunder", "storm"}
+_ALLOWED_WEATHER = {"rain", "wind", "rain+wind"}
 _ALLOWED_INTENSITY = {"light", "medium", "heavy"}
 _USABLE_AUDIT_STATUSES = {
     "library_seed",
@@ -235,23 +235,17 @@ def _matches_weather(row: dict[str, str], weather_type: str) -> bool:
             primary == "rain+wind"
             or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_wind", "")))
         )
-    if weather_type == "storm":
-        return primary == "storm" or (_truthy(row.get("has_rain", "")) and _truthy(row.get("has_thunder", "")))
     if primary == weather_type:
         return True
     component_field = {
         "rain": "has_rain",
         "wind": "has_wind",
-        "thunder": "has_thunder",
     }[weather_type]
     return _truthy(row.get(component_field, ""))
 
 
 def _is_exact_weather(row: dict[str, str], weather_type: str) -> bool:
-    primary = row.get("primary_weather", "")
-    if weather_type == "storm":
-        return primary == "storm"
-    return primary == weather_type
+    return row.get("primary_weather", "") == weather_type
 
 
 def _matches_intensity(row: dict[str, str], weather_type: str, intensity: str) -> bool:
@@ -263,8 +257,6 @@ def _matches_intensity(row: dict[str, str], weather_type: str, intensity: str) -
 def _intensity_field(weather_type: str) -> str:
     if weather_type == "rain+wind":
         return "rain_intensity"
-    if weather_type == "storm":
-        return "thunder_intensity"
     return f"{weather_type}_intensity"
 
 

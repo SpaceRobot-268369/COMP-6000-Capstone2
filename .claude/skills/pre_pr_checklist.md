@@ -75,6 +75,15 @@ Stop at the first failure, fix, then resume.
       (+ `params.yaml` for candidates).
 - [ ] ⚠️ Attempt `params.yaml` matches the frozen model `params.yaml` snapshot.
 - [ ] ⚠️ Model README audit/experiment log updated.
+- [ ] ⚠️ **Model attempt matches its `kind`** — run
+      [validate_model_attempt](validate_model_attempt.md) (registry
+      `kind: generative|retrieval`,
+      [conventions §5.5](../context/conventions.md#55-generative-vs-retrieval-attempts)).
+      The runnable artifact lives under `model/`, not inside the attempt:
+  - **generative** → `checkpoint:` points at weights (`.dvc`) + `README.md` (+ `params.yaml`).
+  - **retrieval** → `asset_bank:` points at `index.json` (git, no CSV) + `media_asset_bank/` (DVC) + `README.md`;
+    every index record has `id` + `audio_path` + `attributes`, each `audio_path`
+    resolving to a DVC-tracked file.
 - [ ] ⚠️ If `registry.yaml`, a handler, or a frontend control changed →
       `GET /layers` + the affected generation path tested, not just imported.
 
@@ -84,7 +93,8 @@ Stop at the first failure, fix, then resume.
 - [ ] ⚠️ Smoke/registry checks run with `acoustic_ai/.venv` — **never** system
       python (incompatible torch/torchaudio).
 - [ ] ⚠️ Feature exercised through the real path, not only compile/import.
-- [ ] ⚠️ PR body states exact commands run + known limitations.
+- [ ] ⚠️ PR body states exact commands run + known limitations — draft it to
+      the repo PR standard ([draft_pr](draft_pr.md)).
 
 ### 7. Branch + commits
 - [ ] Branch name `<type>/<author>/<short-desc>`.

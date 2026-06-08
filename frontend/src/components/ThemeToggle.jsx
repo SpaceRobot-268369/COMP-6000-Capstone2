@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const OPTIONS = [
   { value: "auto",  label: "Auto",  icon: "◑" },
@@ -17,6 +18,9 @@ const OPTIONS = [
  * Preference is saved to localStorage.
  */
 export default function ThemeToggle() {
+  const location = useLocation();
+  const isImmersive = location.pathname === "/immersive";
+
   const [theme, setTheme] = useState(
     () => localStorage.getItem("sl-theme") || "auto"
   );
@@ -41,6 +45,8 @@ export default function ThemeToggle() {
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, [theme]);
+
+  if (isImmersive) return null;
 
   return (
     <div className="theme-toggle" role="group" aria-label="Colour theme">

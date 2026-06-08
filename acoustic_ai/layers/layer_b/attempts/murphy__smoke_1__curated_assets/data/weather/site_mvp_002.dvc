@@ -1,0 +1,6 @@
+outs:
+- md5: 77efd6e8412a1880525331c1fb9eb40b.dir
+  size: 66819410
+  nfiles: 101
+  hash: md5
+  path: site_mvp_002

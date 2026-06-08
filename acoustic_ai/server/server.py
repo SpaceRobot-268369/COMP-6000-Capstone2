@@ -28,10 +28,10 @@ from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Make `layers.*` importable.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -86,6 +86,43 @@ def _run_prewarm(selection: Optional[set[str]]) -> None:
     log.info("[prewarm] done")
 
 
+def _env_truthy(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _llm_narrative_enabled() -> bool:
+    """Whether /analyze attaches an inline narrative. Off by default."""
+    return _env_truthy("AI_LLM_NARRATIVE", False)
+
+
+def _fallback_narrative(report: dict, register: str = "immersive") -> dict:
+    narration = (report or {}).get("narration") if isinstance(report, dict) else {}
+    text = ""
+    if isinstance(narration, dict):
+        text = str(narration.get("summary") or "")
+    if not text:
+        text = "The analysis completed, but no narrative summary was available."
+    return {
+        "register": register,
+        "text": text,
+        "source": "deterministic_fallback",
+        "faithful": True,
+        "violations": [],
+    }
+
+
+def _run_llm_prewarm() -> None:
+    try:
+        from llm import warm
+        warm()
+        log.info("[prewarm] ready: llm")
+    except Exception as exc:  # noqa: BLE001 — boot must survive LLM load failure
+        log.warning("[prewarm] skipped llm: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     selection = _prewarm_selection()
@@ -95,10 +132,21 @@ async def lifespan(_app: FastAPI):
         threading.Thread(
             target=_run_prewarm, args=(selection,), name="prewarm", daemon=True,
         ).start()
+    # LLM-OSS pre-warm is opt-in (AI_LLM_PREWARM, default off) so existing boots
+    # are unchanged until the model is validated on serverB (plan Phase 5).
+    if _env_truthy("AI_LLM_PREWARM", False):
+        threading.Thread(
+            target=_run_llm_prewarm, name="prewarm-llm", daemon=True,
+        ).start()
     yield
 
 
 app = FastAPI(title="Soundscape Inference API", version="0.2.0", lifespan=lifespan)
+
+
+def _clean_form_value(value: str | None) -> str | None:
+    value = value.strip() if isinstance(value, str) else ""
+    return value or None
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4000", "http://localhost:5173"],
@@ -124,6 +172,34 @@ class GenerateRequest(BaseModel):
     intensity: Optional[str] = None
     wind_intensity: Optional[str] = None
     duration_s: Optional[float] = None
+
+
+class OrchestratedGenerationRequest(BaseModel):
+    seed: Optional[int] = None
+    duration_s: float = 30.0
+    season: Optional[str] = None
+    diel: Optional[str] = None
+    weather_type: str = "wind"
+    intensity: str = "light"
+    include_weather: bool = True
+    include_events: bool = True
+    layer_a_attempt: Optional[str] = None
+    layer_b_attempt: Optional[str] = None
+    layer_c_attempt: Optional[str] = None
+    layer_d_attempt: Optional[str] = None
+    include_stems: bool = False
+
+
+class ParseRequest(BaseModel):
+    """Raw NL prompt for the generation Prompt Parser (LLM-OSS)."""
+    prompt: str
+
+
+class NarrativeRequest(BaseModel):
+    """Re-render prose from an already-computed fused report in a chosen
+    register (backs the scene-page tone toggle). No detectors re-run."""
+    report: dict
+    narrative_register: str = Field(default="analytical", alias="register")
 
 
 # ---------------------------------------------------------------------------
@@ -181,26 +257,161 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
-    wav_bytes = result.get("wav_bytes", b"")
-    mel_db = result.get("mel_db")
-    metadata = result.get("metadata", {})
-    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
-    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return _generation_response(layer_id, attempt_id, result)
 
-    png_b64 = _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s)
 
-    return {
-        "ok":          True,
-        "audio_b64":   base64.b64encode(wav_bytes).decode("utf-8"),
-        "image_b64":   png_b64,
-        "metadata":    metadata,
-        "sample_rate": sample_rate,
-        "duration_s":  duration_s,
-    }
+@app.post("/generation/render")
+def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
+    """Generate A/B/C stems and render the final soundscape through Layer D."""
+    try:
+        result = registry.orchestrate_generation(**body.model_dump())
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
+    attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
+    response = _generation_response("layer_d", attempt_id, result)
+    if body.include_stems:
+        stems = result.get("_stems") or {}
+        response["stems"] = {
+            layer_id: _generation_response(
+                layer_id,
+                body_layer_attempt(layer_id, body),
+                stem_result,
+            )
+            for layer_id, stem_result in stems.items()
+            if stem_result is not None
+        }
+    return response
+
+
+@app.post("/generation/parse")
+def generation_parse(body: ParseRequest) -> dict:
+    """Run the LLM-OSS Prompt Parser on a raw NL prompt and return the
+    parse-result contract (prompt_parser_policy.md §5). Generates no audio."""
+    prompt = (body.prompt or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+    try:
+        from llm import parse_prompt
+        result = parse_prompt(prompt)
+    except HTTPException:
+        raise
+    except Exception as exc:  # model/dep unavailable, etc.
+        raise HTTPException(status_code=503, detail=f"prompt parser unavailable: {exc}")
+    return {"ok": True, **result}
+
+
+@app.post("/analysis/narrative")
+def analysis_narrative(body: NarrativeRequest) -> dict:
+    """Re-render prose from a prior fused report in a chosen register, without
+    re-running detectors. Backs the scene-page tone toggle (plan §3.4/§3.5)."""
+    if not isinstance(body.report, dict) or not body.report:
+        raise HTTPException(status_code=400, detail="report JSON is required")
+    try:
+        from llm import write_report
+        narrative = write_report(body.report, body.narrative_register)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"report writer unavailable: {exc}")
+    return {"ok": True, "narrative": narrative}
+
+
+@app.post("/analysis/run")
+async def orchestrated_analysis(
+    file: UploadFile = File(...),
+    narrative_register: str = Form(default="immersive", alias="register"),
+    ambient_attempt: str | None = Form(default=None),
+    weather_attempt: str | None = Form(default=None),
+    events_attempt: str | None = Form(default=None),
+    aggregator_attempt: str | None = Form(default=None),
+) -> dict:
+    """Run the full Layer E analysis stack over one uploaded audio clip."""
+    suffix = Path(file.filename or "upload.wav").suffix or ".wav"
+    try:
+        data = await file.read()
+    finally:
+        await file.close()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty upload")
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    analysis_path = tmp_path
+    converted_path = None
+    try:
+        with os.fdopen(tmp_fd, "wb") as fh:
+            fh.write(data)
+        if suffix.lower() != ".wav":
+            converted_fd, converted_path = tempfile.mkstemp(suffix=".wav")
+            os.close(converted_fd)
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    tmp_path,
+                    "-ar",
+                    "22050",
+                    "-ac",
+                    "1",
+                    converted_path,
+                ],
+                check=True,
+            )
+            analysis_path = converted_path
+        result = registry.orchestrate_analysis(
+            analysis_path,
+            ambient_attempt=_clean_form_value(ambient_attempt),
+            weather_attempt=_clean_form_value(weather_attempt),
+            events_attempt=_clean_form_value(events_attempt),
+            aggregator_attempt=_clean_form_value(aggregator_attempt),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(status_code=400, detail=f"audio conversion failed: {exc}")
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"orchestrated analysis failed: {exc}")
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        if converted_path:
+            try:
+                os.unlink(converted_path)
+            except OSError:
+                pass
+
+    register = (narrative_register or "immersive").strip().lower() or "immersive"
+    report = result.get("report") or {}
+    response = {"ok": True, **result}
+    try:
+        from llm import write_report
+        narrative = write_report(report, register)
+        if not narrative.get("faithful", True):
+            response["narrative_violations"] = narrative.get("violations", [])
+            narrative = _fallback_narrative(report, narrative.get("register") or register)
+        response["narrative"] = narrative
+    except Exception as exc:  # product mode should still return the fused report
+        response["narrative"] = _fallback_narrative(report, register)
+        response["narrative_error"] = str(exc)
+    return response
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
-async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) -> dict:
+async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...),
+                  register: str = "analytical") -> dict:
     """Dispatch an upload-based analysis call to the attempt's handler.
 
     Layer E analysis is upload-based (not seed-based): the client posts an
@@ -264,7 +475,18 @@ async def analyze(layer_id: str, attempt_id: str, file: UploadFile = File(...)) 
             except OSError:
                 pass
 
-    return {"ok": True, **result}
+    response = {"ok": True, **result}
+    # Opt-in inline narrative (AI_LLM_NARRATIVE). Off by default so analysis
+    # never pays a cold LLM load on the request path; the scene-page toggle uses
+    # the dedicated /analysis/narrative endpoint instead.
+    if _llm_narrative_enabled():
+        try:
+            from llm import write_report
+            response["narrative"] = write_report(result.get("report") or {}, register)
+        except Exception as exc:  # never break analysis if the LLM is down
+            response["narrative"] = None
+            response["narrative_error"] = str(exc)
+    return response
 
 
 @app.get("/layers/{layer_id}/attempts/{attempt_id}/samples")
@@ -305,6 +527,32 @@ def get_sample_wav(layer_id: str, attempt_id: str, tier: str, rel_path: str):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _generation_response(layer_id: str, attempt_id: str, result: dict) -> dict:
+    wav_bytes = result.get("wav_bytes", b"")
+    mel_db = result.get("mel_db")
+    metadata = result.get("metadata", {})
+    duration_s = float(metadata.get("audio", {}).get("duration_s", 0.0))
+    sample_rate = int(metadata.get("audio", {}).get("sample_rate", 0))
+    return {
+        "ok": True,
+        "audio_b64": base64.b64encode(wav_bytes).decode("utf-8"),
+        "image_b64": _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s),
+        "metadata": metadata,
+        "sample_rate": sample_rate,
+        "duration_s": duration_s,
+    }
+
+
+def body_layer_attempt(layer_id: str, body: OrchestratedGenerationRequest) -> str:
+    explicit = {
+        "layer_a": body.layer_a_attempt,
+        "layer_b": body.layer_b_attempt,
+        "layer_c": body.layer_c_attempt,
+        "layer_d": body.layer_d_attempt,
+    }.get(layer_id)
+    return explicit or registry.default_attempt_id(layer_id)
 
 
 def _mel_to_png_b64(layer_id: str, attempt_id: str,
