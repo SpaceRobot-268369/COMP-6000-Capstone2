@@ -194,13 +194,27 @@ Run `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.p
 
 **Mixer responsibilities:**
 - Match sample rate (22,050 Hz throughout)
-- Trim or loop layers to requested duration
-- Apply fades (avoid clicks at layer boundaries)
+- Trim or loop **bed** layers (ambient, continuous weather) to requested duration
+- Place **discrete** clips (thunder, species calls) at caller-supplied onset times
+- Apply fades (avoid clicks at layer/clip boundaries)
 - Control gain staging (avoid clipping)
 - Optionally apply light per-layer EQ
 - Export final WAV
 - Generate mel spectrogram preview (PNG base64)
 - Return explanation JSON
+
+**Multi-clip arrangement (target contract).** The MVP mixer
+(`songke__mvp_1__layered_mix`) takes one stem per layer. The next iteration
+(`songke__mvp_2__multi_clip_mix`, design only) accepts **lists of placed clips**:
+Layer B may pass several weather clips (continuous beds vs. discrete thunder),
+and Layer C may pass several event clips (multiple species, or repeated calls).
+Each clip carries an explicit `onsets_s` list — repetition ("frequency") is
+expanded **LLM-side** into concrete times, never reasoned about by the mixer.
+Onsets may overlap (a call during thunder is natural); the mixer just sums them.
+`null` onsets trigger a seeded random fallback inside Layer D (`placement_seed`,
+the one case where Layer D consumes a seed). Weather *transitions* are a reserved placeholder, not
+built yet. Full contract:
+[`layer_d/.../songke__mvp_2__multi_clip_mix/README.md`](../../../acoustic_ai/layers/layer_d/attempts/songke__mvp_2__multi_clip_mix/README.md).
 
 **Explanation JSON fields:**
 
@@ -212,7 +226,7 @@ Run `layers/layer_c/attempts/lucas__smoke_1__audiogen_boobook/annotation_audit.p
 | `env_match_score` | Similarity between request and retrieved clips |
 | `limitations` | Notes about speculative nature and dataset gaps |
 
-**Code:** `layers/layer_d/attempts/lucas__smoke_1__layered_mix/audio_mixer.py` [PLACEHOLDER]
+**Code:** `layers/layer_d/attempts/songke__mvp_1__layered_mix/code/audio_mixer.py` (single-stem MVP, implemented) · `layers/layer_d/attempts/songke__mvp_2__multi_clip_mix/` (multi-clip contract, design only)
 
 ---
 
