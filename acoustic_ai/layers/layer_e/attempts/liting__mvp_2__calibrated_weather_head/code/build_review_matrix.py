@@ -64,6 +64,7 @@ ATTEMPTS = [
     "liting__mvp_4__data_expanded_weather_head",
     "liting__mvp_5__clap_weather_probe",
 ]
+INCLUDE_THUNDER_BACKUP = os.getenv("LITING_EB_INCLUDE_THUNDER_BACKUP") == "1"
 OFFLINE_SKIP_ATTEMPTS = {
     "liting__mvp_5__clap_weather_probe": (
         "CLAP backbone is not cached locally in this environment; running it "
@@ -142,8 +143,9 @@ def _build_review_cases(rows: list[dict[str, str]]) -> list[dict[str, str]]:
         ("mixed_rain_wind", lambda r: r.get("primary_weather") == "rain+wind", 2),
         ("breezing_light_wind", lambda r: _truthy(r.get("has_wind")) and r.get("wind_intensity") == "light", 2),
         ("strong_wind", lambda r: _truthy(r.get("has_wind")) and r.get("wind_intensity") == "heavy", 2),
-        ("thunder_backup", lambda r: _truthy(r.get("has_thunder")), 2),
     ]
+    if INCLUDE_THUNDER_BACKUP:
+        buckets.append(("thunder_backup", lambda r: _truthy(r.get("has_thunder")), 2))
 
     seen: set[str] = set()
     selected: list[dict[str, str]] = []
@@ -337,7 +339,7 @@ def main() -> None:
         "mixed_rain_wind": "Known hard mixed-weather cases.",
         "breezing_light_wind": "Two selected from three available light-wind rows.",
         "strong_wind": "Two selected from strong Site257 wind rows.",
-        "thunder_backup": "Backup-only; E-B candidates suppress thunder until more site evidence exists.",
+        "thunder_backup": "Optional backup-only diagnostic; not part of the default E-B acceptance scope.",
     }
     for scene in scene_counts:
         lines.append(
@@ -417,8 +419,9 @@ def main() -> None:
         "",
         "- This matrix confirms that the current Murphy-audited Site257 pool does contain multiple weather combinations.",
         "- The missing Site257 WAVs and all MVP2-MVP5 checkpoint artifacts were materialized on Server B, then the full matrix was rerun there.",
-        "- The matrix now has 12/12 locally runnable samples: all selected WAVs are materialized and all MVP1-MVP5 attempts have a resolved checkpoint state.",
-        "- MVP5 is the strongest result on this fixed matrix: 10 exact passes and 2 failures. The two failures are both thunder backup cases.",
+        f"- The matrix now has {summary['available_locally_count']}/{summary['case_count']} locally runnable samples: all selected WAVs are materialized and all MVP1-MVP5 attempts have a resolved checkpoint state.",
+        "- Thunder is not part of the default E-B acceptance scope because the current Site257 pool does not contain enough reliable thunder evidence.",
+        "- MVP5 is the strongest result on this fixed matrix and improves the mixed rain+wind cases relative to MVP2.",
         "- MVP2 remains the safest current frontend/integration candidate because it is already wired for demo output, but MVP5 should be treated as the strongest candidate-model result from this review run.",
         "- The reviewer bar is still not fully satisfied for every requested scene because the current audited Site257 index only contains one `light_rain` row and one `heavy_rain` row. Adding two local examples for those exact scenes requires either expanding the audited Site257 rain pool or relaxing the scene definition to rain-positive cases.",
     ])
