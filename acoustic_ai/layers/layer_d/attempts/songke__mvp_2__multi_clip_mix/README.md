@@ -1,17 +1,27 @@
-# Layer D — Multi-Clip Mix (design)
+# Layer D - Multi-Clip Mix
 
 ## Status
 
-**Design only — no code yet.** This card is a self-contained handoff spec for
-the next Layer D implementer. It firms up the input/output contract for a Layer
-D mixer that accepts **multiple placed clips per layer** (the current
-`songke__mvp_1__layered_mix` accepts exactly one stem per layer). Nothing here
-is wired into the orchestrator or the LLM parser yet; this card defines the
-target contract those changes will build toward.
+**Implemented at handler level; not yet the default Layer D attempt.** This
+attempt implements the Layer D mixer contract for multiple placed clips per
+layer. It accepts one ambient bed, zero or more weather clips, and zero or more
+event clips, places discrete clips on an explicit timeline, applies per-layer
+and per-clip gain staging, preserves the v1 event cleanup path, and returns
+traceable mix metadata.
+
+This attempt is registered in `acoustic_ai/registry.yaml` and
+`registry.orchestrate_generation` can route to it when
+`layer_d_attempt="songke__mvp_2__multi_clip_mix"` is selected. It is still not
+the default Layer D attempt. The LLM parser and frontend still need follow-up
+work before this becomes the normal user-facing path.
+
+For compatibility while the rest of the pipeline catches up, the handler still
+accepts the v1 single-stem parameters (`weather_wav_bytes`, `event_wav_bytes`,
+and `event_start_s`) in addition to the v2 list contract.
 
 The MVP mixer this supersedes is documented in
 [`songke__mvp_1__layered_mix/README.md`](../songke__mvp_1__layered_mix/README.md).
-Read that first for the existing fixed-format / gain-staging decisions — they
+Read that first for the existing fixed-format / gain-staging decisions; they
 carry forward unchanged unless this card says otherwise.
 
 ---
@@ -19,206 +29,219 @@ carry forward unchanged unless this card says otherwise.
 ## 1. Purpose
 
 Layer D mixes the audio produced by Layers A/B/C into one coherent file and
-makes the result feel like a real recording. The only new capability over the
-MVP is **arrangement**: instead of one weather stem and one event stem, Layer D
-now lays down a *timeline* of clips at caller-specified times.
+makes the result feel like a real recording. The new capability over the MVP is
+arrangement: instead of one weather stem and one event stem, Layer D can lay
+down a timeline of clips at caller-specified times.
 
 | Layer | What it hands Layer D | Multiplicity |
 |---|---|---|
-| A — Ambient | One ambient bed | exactly 1 (the "audio bed") |
-| B — Weather | Wind / rain (continuous beds) and/or thunder (discrete) | 0…N, optional |
-| C — Events | Species calls | 0…N (multiple species, or repeated calls of one species) |
+| A - Ambient | One ambient bed | exactly 1 |
+| B - Weather | Wind / rain continuous beds and/or thunder discrete clips | 0..N, optional |
+| C - Events | Species calls | 0..N, optional |
 
-Layer D stays **dumb on purpose**: it does not interpret prompts, environmental
+Layer D stays dumb on purpose: it does not interpret prompts, environmental
 conditions, species, or weather semantics. It places and mixes the bytes it is
-given. All "where / how often / which species" decisions are made upstream by
-the LLM parser (powered by skills) and passed to Layer D as concrete numbers.
+given. All "where / how often / which species" decisions are made upstream and
+passed to Layer D as concrete numbers.
 
 ---
 
-## 2. Division of responsibility (read this first)
+## 2. Division of Responsibility
 
-The single most important rule of this contract:
+The main rule of this contract:
 
-> **The LLM computes specifics; the mixer consumes specifics.**
+> The LLM computes specifics; the mixer consumes specifics.
 
-- "Frequency" / repetition is **not** a parameter the mixer reasons about. The
-  LLM expands a desired cadence into an **explicit list of onset times** and
-  passes that list. A clip that recurs 4 times is one clip with 4 onsets.
-- **Overlap is allowed and expected.** Real soundscapes layer sound — a bird
-  calls while thunder rolls, two species answer each other. The LLM may emit
-  onsets that overlap (across clips, or even within one clip), and the mixer
-  simply **sums** the overlapping audio; the final peak ceiling (§4) protects
-  against clipping. The mixer runs no collision solver and never rejects or
-  reshuffles overlapping onsets.
-- The mixer **only** owns: format normalization, fitting beds to duration,
-  placing discrete clips at given onsets, summing, gain staging, peak
-  protection, random-onset fallback when a list is `null`, export, and the
-  explanation JSON.
+- "Frequency" / repetition is not a parameter the mixer reasons about. The LLM
+  or orchestrator expands cadence into an explicit list of onset times. A clip
+  that recurs 4 times is one clip with 4 onsets.
+- Overlap is allowed and expected. The mixer sums overlapping audio and relies
+  on the final peak ceiling to protect against clipping. It does not run a
+  collision solver and does not reshuffle onsets.
+- The mixer owns format normalization, fitting beds to duration, placing
+  discrete clips at given onsets, summing, gain staging, peak protection,
+  random-onset fallback when a list is `null`, export, and explanation JSON.
 
 ---
 
-## 3. Input contract
+## 3. Input Contract
 
 Layer D's handler receives one mix request. Audio is passed as in-memory WAV
-bytes (as today). The shape:
+bytes. The v2 list contract is:
 
 ```jsonc
 {
-  "duration_s": 30,            // <= 30 for this stage (see §6)
-  "placement_seed": 42,        // NEW — seeds random onset fallback only (§5)
+  "duration_s": 30,
+  "placement_seed": 42,
 
-  "ambient": {                 // exactly one, required
-    "wav": "<bytes>"
-  },
+  "ambient_wav_bytes": "<bytes>",
 
-  "weather": [                 // 0..N, optional (omit/empty for no weather)
+  "weather_clips": [
     {
       "wav": "<bytes>",
-      "weather_type": "thunder",   // label for the explanation only
-      "continuous": false,         // true  -> looped bed (wind, steady rain)
-                                   // false -> discrete, placed at onsets
-      "onsets_s": [8.0, 21.0],     // required when continuous=false; null = random (§5)
-      "gain_db": null,             // optional per-clip override; null = layer default (§4)
-      "change": null               // RESERVED PLACEHOLDER — weather transitions (§7)
+      "weather_type": "thunder",
+      "continuous": false,
+      "onsets_s": [8.0, 21.0],
+      "gain_db": null,
+      "change": null
     }
   ],
 
-  "events": [                  // 0..N, optional
+  "event_clips": [
     {
       "wav": "<bytes>",
-      "species": "tawny_frogmouth",  // label for the explanation only
-      "onsets_s": [5.0, 12.5, 19.0], // explicit call times; null = one random onset (§5)
-      "gain_db": null                // optional per-clip override; null = layer default
+      "species": "tawny_frogmouth",
+      "onsets_s": [5.0, 12.5, 19.0],
+      "gain_db": null
     }
   ]
 }
 ```
 
-### Field semantics
+### Field Semantics
 
-- **`ambient`** — exactly one bed. Looped (or trimmed) to `duration_s` exactly
-  as the MVP does today. No placement; it underlies the whole timeline.
-- **`weather[].continuous`** — splits the two weather behaviours:
-  - `true` → a **bed** (wind, steady rain). Looped/crossfaded to full
-    duration like ambient. `onsets_s` is ignored.
-  - `false` → a **discrete** sound (thunder clap). Placed at each time in
-    `onsets_s`; the clip is *not* looped to fill duration.
-- **`weather[].onsets_s` / `events[].onsets_s`** — list of start times in
-  seconds on the final timeline. One element = one occurrence; multiple
-  elements = repetition (this is how "frequency" is realised). `null` triggers
-  the random fallback in §5. Each placed copy that runs past `duration_s` is
-  trimmed at the end (matches MVP event behaviour).
-- **`events`** — always discrete; there is no `continuous` flag. Every species
-  call is placed at its onsets.
-- **`gain_db`** — see §4.
+- `ambient_wav_bytes`: exactly one bed. It is looped or trimmed to
+  `duration_s` exactly as the MVP does today.
+- `weather_clips[].continuous`:
+  - `true`: a bed such as wind or steady rain. It is looped/crossfaded to the
+    full duration. `onsets_s` is ignored.
+  - `false`: a discrete weather sound such as thunder. It is placed at each
+    resolved onset and is not looped to fill duration.
+- `weather_clips[].onsets_s` / `event_clips[].onsets_s`: list of start times
+  in seconds on the final timeline. `null` triggers the random fallback in
+  section 5. Copies that run past `duration_s` are trimmed at the end.
+- `event_clips`: always discrete. There is no `continuous` flag.
+- `gain_db`: optional per-clip gain override. `null` means use the layer
+  default.
+- `change`: reserved placeholder for future weather transitions. It is carried
+  through metadata but no transition behavior is implemented.
+
+Legacy compatibility parameters still accepted by the handler:
+
+- `weather_wav_bytes`
+- `event_wav_bytes`
+- `event_start_s`
 
 ---
 
-## 4. Gain staging
+## 4. Gain Staging
 
-**Provisional for this stage — expected to be re-tuned by ear once multi-clip
-artifacts exist.** Start from the MVP's per-layer gains (these came out of
-songke's v5 listening pass on real A/B/C stems, so they're a validated baseline,
-not a guess):
+Current defaults:
 
-| Layer / role | Starting gain (provisional) |
+| Layer / role | Starting gain |
 |---|---|
 | Ambient | 0 dB |
-| Weather | −12 dB |
-| Event | −18 dB |
+| Weather | -2 dB |
+| Event | -8 dB |
 
-These are a starting point, not a locked decision. After the first multi-clip
-mixes are generated and listened to, adjust the per-layer defaults (and record
-the new values in this attempt's `params.yaml`). The per-clip `gain_db` override
-is the fine-tuning lever for individual clips that sit too hot or too quiet
-within a layer.
+Every clip gets that layer default unless its `gain_db` field is set. When set,
+the per-clip value overrides the layer default for that clip only.
 
-Every clip in a layer gets that layer's default gain unless its `gain_db` field
-is set, in which case the per-clip value overrides the layer default for that
-clip only. The same final **peak ceiling (0.95)** and runtime format
-(22,050 Hz mono float32 → PCM16 export) from the MVP apply after summing.
+Implementation detail: the v2 handler pre-scales override clips by the delta
+between clip gain and layer gain, then passes the timeline through the existing
+v1 layer-gain mixer. This preserves the existing v1 mixer path while producing
+the intended final per-clip gain.
 
-Event band-pass and the event activity envelope from the MVP also carry forward
-and apply per discrete clip.
+The same final peak ceiling (`0.95`) and runtime/export format from the MVP
+apply after summing:
 
----
+- Runtime: 22,050 Hz mono float32
+- Export: PCM16 WAV
 
-## 5. Random onset fallback (and the seed)
-
-When an `onsets_s` list is `null`, Layer D assigns the onset(s) itself:
-
-- **Events**: place one copy at a random onset within
-  `[0, duration_s − clip_length]`.
-- **Discrete weather**: same single-random-onset behaviour.
-- Random draws use **`placement_seed`** so the same request reproduces the same
-  arrangement. Multiple omitted clips each get an independent draw from the same
-  seeded RNG; resulting overlaps are fine (they're summed, §2) — Layer D does
-  not try to space clips out.
-
-> **Convention change to note in handoff:** the MVP states "Layer D does not
-> interpret environmental conditions or generation seeds" and the handler does
-> `del seed`. This stays true for *generation* seeds (A/B/C own those). Layer D
-> now takes a **separate `placement_seed`** used solely for random-onset
-> fallback — it never touches audio synthesis. CLAUDE.md's Layer D
-> dev-generation note should be refined accordingly when this lands.
+Event band-pass and the event activity envelope from the MVP carry forward and
+apply per discrete event clip through the existing event timeline path.
 
 ---
 
-## 6. Limits (this stage)
+## 5. Random Onset Fallback
 
-- `duration_s` ≤ **30 s** (unchanged — Layer B currently caps at 30 s).
-- No maximum clip count is enforced by the mixer; the LLM is trusted to emit a
-  sane arrangement within 30 s.
-- Overlapping onsets are summed, not resolved or rejected (see §2).
+When an `onsets_s` list is `null`, Layer D assigns the onset itself:
 
----
+- Events: place one copy at a random onset within
+  `[0, duration_s - clip_length]`.
+- Discrete weather: same single-random-onset behavior.
+- If the clip is longer than `duration_s`, onset is fixed at `0.0`.
+- Random draws use `placement_seed`, so the same request reproduces the same
+  arrangement.
+- Multiple omitted clips each get an independent draw from the same seeded RNG.
+  Overlaps are allowed and summed.
 
-## 7. Reserved: weather change / transitions
-
-`weather[].change` is a **reserved placeholder**, intentionally `null` for now.
-Not every soundscape needs a weather transition, and transitions are out of
-scope for this stage. The field exists so the schema is forward-compatible: a
-future iteration can express "heavy rain → light rain" as a transition spec
-(e.g. crossfaded segments with timed intensity changes) **without changing the
-top-level contract**. Implementers should carry the field through untouched and
-not build transition behaviour yet.
+Layer D still ignores the generation `seed`; A/B/C own synthesis and retrieval
+seeds. `placement_seed` is separate and only affects random placement fallback.
 
 ---
 
-## 8. Output contract
+## 6. Limits
 
-Unchanged from the MVP registry payload:
+- `duration_s <= 30 s` remains the intended stage limit because Layer B
+  currently caps at 30 s. This handler itself does not promote v2 as the
+  default route yet.
+- No maximum clip count is enforced by the mixer; upstream is trusted to emit a
+  sane arrangement.
+- Overlapping onsets are summed, not resolved or rejected.
 
-- `wav_bytes` — final 22,050 Hz mono PCM16 WAV.
-- `mel_db` — mel spectrogram preview of the mix.
-- `metadata.layer_d` — the explanation dict, **extended** with one row per
-  placed clip:
-  - resolved `onsets_s` (after random fallback / trimming),
-  - `placement_random: true|false` and `placement_seed` when random was used,
-  - per-clip applied `gain_db`,
-  - `continuous` flag (weather),
-  - the carried-forward fields (band-pass, activity envelope, peak protection).
+---
+
+## 7. Reserved: Weather Change / Transitions
+
+`weather_clips[].change` is a reserved placeholder, intentionally `null` for
+now. It is carried through metadata untouched. No transition behavior is
+implemented in this attempt.
+
+---
+
+## 8. Output Contract
+
+Unchanged top-level handler payload:
+
+- `wav_bytes`: final 22,050 Hz mono PCM16 WAV.
+- `mel_db`: mel spectrogram preview of the mix.
+- `metadata.layer_d`: explanation dict.
+
+The explanation is extended with:
+
+- `input_contract.weather` and `input_contract.events`: raw resolved contract
+  rows used by the handler.
+- `placed_clips.weather` and `placed_clips.events`: reviewer-facing summaries
+  for reconstructing the timeline.
+
+Each placed clip summary includes:
+
+- resolved `onsets_s`
+- `placement_random`
+- `placement_seed` when random placement was used
+- `applied_gain_db`
+- `gain_override`
+- layer default gain
+- source duration
+- placement count
+- weather `continuous` flag
+- discrete weather placement rows
+- carried `change` placeholder for weather
 
 The explanation must let a reviewer reconstruct exactly where every sound was
 placed and why.
 
 ---
 
-## 9. Handoff checklist for the implementer
+## 9. Implementation Checklist
 
-1. Create `code/` (mirror the MVP layout: `handler.py`, `audio_mixer.py`,
-   `audio_format.py`, `audio_metrics.py`) + `params.yaml` (frozen snapshot of
-   the gains / format constants above).
-2. Generalise `MixRequest` to lists of placed weather/event clips per §3.
-3. Add `placement_seed` plumbing and the §5 random fallback.
-4. Extend the explanation JSON per §8.
-5. Register the attempt in `acoustic_ai/registry.yaml` (`kind: generative`? no
-   — Layer D is an algorithmic combiner; follow how `songke__mvp_1` is
-   declared) once code exists.
-6. Wire the orchestrator (`registry.orchestrate_generation`) to call B/C for
-   multiple clips and pass the lists — **separate follow-up task, out of scope
-   for this design card.**
-7. Update the LLM parser contract per
-   [`prompt_parser_policy.md`](../../../../../.claude/context/ai/prompt_parser_policy.md)
-   to emit `onsets_s` / `continuous` per clip — also a follow-up.
+1. Done - create `code/` mirroring the MVP layout:
+   `handler.py`, `audio_mixer.py`, `audio_format.py`, `audio_metrics.py`.
+2. Done - add `params.yaml`.
+3. Done - implement handler support for lists of placed weather/event clips.
+4. Done - support continuous weather beds and discrete weather clips.
+5. Done - support multiple event clips and repeated event onsets.
+6. Done - add `placement_seed` plumbing and random fallback.
+7. Done - add per-clip `gain_db` override.
+8. Done - extend explanation JSON with `input_contract` and `placed_clips`.
+9. Done - register the attempt in `acoustic_ai/registry.yaml`.
+10. Done - add handler-level unit coverage, including a main multi-clip
+    contract test.
+11. Done - wire `registry.orchestrate_generation` to pass
+    `weather_clips` / `event_clips` when this Layer D attempt is selected.
+12. Follow-up - update the LLM parser contract per
+    [`prompt_parser_policy.md`](../../../../../.claude/context/ai/prompt_parser_policy.md)
+    to emit `onsets_s` / `continuous` per clip.
+13. Follow-up - listen to real A/B/C multi-clip mixes and retune defaults if
+    needed before promoting this attempt to the Layer D default.
