@@ -1,0 +1,40 @@
+bank:
+  bank_id: murphy__mvp_1__weather_stem_selector
+  schema_version: "1.0"
+  layer: layer_b
+  owner: murphy
+  kind: retrieval
+  index: index.json
+  audio_path_root: media_asset_bank
+  dvc_pointer: media_asset_bank.dvc
+  asset_count: 113
+  source_site: site_257_bowra_dry_woodland
+
+runtime_contract:
+  handler_attempt: murphy__mvp_1__weather_stem_selector
+  exposed_weather_types: [rain, wind, rain+wind]
+  backup_weather_types_not_exposed: [thunder, storm]
+  intensities: [light, medium, heavy]
+  retrieval_seed_behavior: deterministic_asset_and_offset_selection
+  output_role: short_layer_b_weather_stem_for_layer_d
+
+defaults:
+  weather_type: rain
+  intensity: medium
+  duration_s: 10.0
+  retrieval_seed: 42
+  target_rms:
+    light: 0.035
+    medium: 0.050
+    heavy: 0.070
+  peak_ceiling: 0.95
+
+fallback_policy:
+  intensity_fallbacks:
+    light: [light, medium, heavy]
+    medium: [medium, light, heavy]
+    heavy: [heavy, medium, light]
+  prefer_exact_weather: true
+  prefer_primary_layer_d_use: true
+  prefer_site_only_when_at_least: 3
+  mixed_weather_fallback: true

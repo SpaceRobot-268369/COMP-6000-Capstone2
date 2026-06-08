@@ -54,10 +54,14 @@ class WeatherStemState:
 
 
 def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> WeatherStemState:
-    del checkpoint_dir, extra
-    asset_bank = str(params.get("asset_bank", "")).strip()
-    if asset_bank:
-        assets = _load_json_bank(_resolve_path(asset_bank))
+    del extra
+    if checkpoint_dir is not None:
+        assets = _load_json_bank(Path(checkpoint_dir))
+        return WeatherStemState(assets=assets, params=dict(params))
+
+    legacy_asset_bank = str(params.get("asset_bank", "")).strip()
+    if legacy_asset_bank:
+        assets = _load_json_bank(_resolve_path(legacy_asset_bank))
         return WeatherStemState(assets=assets, params=dict(params))
 
     index_path = _resolve_path(str(params.get("asset_index", "")))

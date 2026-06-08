@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import threading
 from dataclasses import dataclass
@@ -54,6 +55,7 @@ class AttemptSpec:
     head:    str | None    # Layer E only: "ambient" | "weather" | "events"
     status:  str
     checkpoint: Path | None
+    asset_bank: Path | None
     extra_checkpoints: dict[str, Path]
     params:  dict[str, Any]
     notes:   list[str]
@@ -76,6 +78,10 @@ def _resolve_checkpoint(value: Any) -> Path | None:
     if value is None or value == "":
         return None
     return (_PROJECT_ROOT / str(value)).resolve()
+
+
+def _resolve_asset_bank(value: Any) -> Path | None:
+    return _resolve_checkpoint(value)
 
 
 # Weight-file extensions we treat as "real" model binaries (i.e. not pointers).
@@ -177,26 +183,91 @@ def _ckpt_availability(ckpt_dir: Path | None, cell_names: list[str] | None = Non
     }
 
 
+def _asset_bank_availability(bank_dir: Path | None) -> dict:
+    """Inspect a retrieval asset bank and report whether it is materialised."""
+    if bank_dir is None:
+        return {
+            "available": False,
+            "reason": "retrieval attempt missing registry-level asset_bank",
+            "missing": [],
+        }
+    if not bank_dir.exists():
+        return {
+            "available": False,
+            "reason": f"asset bank directory missing: {bank_dir}",
+            "missing": [],
+        }
+
+    index_path = bank_dir / "index.json"
+    media_dir = bank_dir / "media_asset_bank"
+    missing = []
+    if not index_path.is_file():
+        missing.append("index.json")
+    if not media_dir.is_dir():
+        missing.append("media_asset_bank/")
+    if missing:
+        pull_hint = ""
+        if (bank_dir / "media_asset_bank.dvc").is_file():
+            pull_hint = f" Run `dvc pull {bank_dir / 'media_asset_bank.dvc'}`."
+        return {
+            "available": False,
+            "reason": f"retrieval asset bank not materialized: {', '.join(missing)}.{pull_hint}",
+            "missing": missing,
+        }
+
+    try:
+        doc = json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - user-facing registry health
+        return {
+            "available": False,
+            "reason": f"failed to read asset bank index: {exc}",
+            "missing": ["index.json"],
+        }
+
+    missing_audio = [
+        str(asset.get("audio_path", ""))
+        for asset in doc.get("assets", [])
+        if asset.get("audio_path") and not (bank_dir / str(asset["audio_path"])).is_file()
+    ]
+    if missing_audio:
+        shown = ", ".join(missing_audio[:3])
+        suffix = "..." if len(missing_audio) > 3 else ""
+        return {
+            "available": False,
+            "reason": f"{len(missing_audio)} asset bank audio files missing: {shown}{suffix}",
+            "missing": missing_audio,
+        }
+
+    return {"available": True, "reason": None, "missing": []}
+
+
 def list_layers() -> list[dict]:
     """Return the dropdown payload — one entry per layer, with attempt list."""
     out: list[dict] = []
     for layer_id, layer_block in _registry_doc()["layers"].items():
         attempts = []
         for att_id, att in layer_block["attempts"].items():
+            kind = att.get("kind")
             ckpt = _resolve_checkpoint(att.get("checkpoint"))
+            asset_bank = _resolve_asset_bank(att.get("asset_bank"))
             params = att.get("params") or {}
             cells = sorted((params.get("cells") or {}).keys())
-            avail = _ckpt_availability(ckpt, cell_names=cells)
+            avail = (
+                _asset_bank_availability(asset_bank)
+                if kind == "retrieval" and asset_bank is not None
+                else _ckpt_availability(ckpt, cell_names=cells)
+            )
             attempts.append({
                 "id":      att_id,
                 "label":   att.get("label", att_id),
                 "stage":   att.get("stage", ""),
                 "author":  att.get("author", ""),
                 "head":    att.get("head"),
-                "kind":    att.get("kind"),
+                "kind":    kind,
                 "status":  att.get("status", ""),
                 "description": att.get("description", ""),
                 "checkpoint":       str(ckpt) if ckpt else None,
+                "asset_bank":       str(asset_bank) if asset_bank else None,
                 "available":        avail["available"],
                 "unavailable_reason": avail["reason"],
                 "missing_files":    avail["missing"],
@@ -238,6 +309,7 @@ def get_attempt(layer_id: str, attempt_id: str) -> AttemptSpec:
         head=att.get("head"),
         status=att.get("status", ""),
         checkpoint=_resolve_checkpoint(att.get("checkpoint")),
+        asset_bank=_resolve_asset_bank(att.get("asset_bank")),
         extra_checkpoints=extras,
         params=dict(att.get("params") or {}),
         notes=list(att.get("notes") or []),
@@ -495,7 +567,8 @@ def _get_state(spec: AttemptSpec):
         if cache_key in _state_cache:
             return _state_cache[cache_key]
         mod = _get_handler_module(spec)
-        state = mod.load(spec.checkpoint, dict(spec.params), extra=spec.extra_checkpoints)
+        load_root = spec.asset_bank if spec.asset_bank is not None else spec.checkpoint
+        state = mod.load(load_root, dict(spec.params), extra=spec.extra_checkpoints)
         _state_cache[cache_key] = state
         return state
 
@@ -712,6 +785,7 @@ def _attempt_snapshot(spec: AttemptSpec) -> dict:
         "author": spec.author,
         "status": spec.status,
         "checkpoint": str(spec.checkpoint) if spec.checkpoint else None,
+        "asset_bank": str(spec.asset_bank) if spec.asset_bank else None,
     }
 
 

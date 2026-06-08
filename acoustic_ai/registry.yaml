@@ -326,6 +326,7 @@ layers:
         stage: mvp_1
         status: mvp_candidate
         kind: retrieval
+        asset_bank: model/candidates/murphy/mvp_1__weather_stem_selector
         uses_seed: true
         uses_weather_controls: true
         checkpoint: null
@@ -336,7 +337,6 @@ layers:
 
           Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_bank: model/candidates/murphy/mvp_1__weather_stem_selector
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
