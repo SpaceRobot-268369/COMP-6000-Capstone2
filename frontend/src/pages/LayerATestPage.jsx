@@ -8,7 +8,7 @@ import {
 } from "../lib/api.js";
 
 const DEFAULT_SEED = 42;
-const DEFAULT_LAYER_C_SPECIES = "Splendid Fairywren";
+const DEFAULT_LAYER_C_SPECIES = "Horsfield's Bronze-cuckoo";
 const WEATHER_TYPE_OPTIONS = [
   { value: "rain", label: "rain" },
   { value: "wind", label: "wind" },
@@ -168,6 +168,31 @@ export default function LayerATestPage({
   const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
   const isLayerD = layerId === "layer_d";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+  const speciesOptions = useMemo(() => {
+    if (!samples?.expected?.length) return [];
+    const bySpecies = new Map();
+    for (const sample of samples.expected) {
+      const metadata = sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      if (!species) continue;
+      bySpecies.set(species, {
+        value: species,
+        label: species,
+        slug: metadata.species_slug || sample.stem,
+      });
+    }
+    return [...bySpecies.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [samples]);
+
+  useEffect(() => {
+    if (!speciesOptions.length) {
+      setSelectedSpecies("");
+      return;
+    }
+    if (speciesOptions.some((option) => option.value === selectedSpecies)) return;
+    const defaultSpecies = speciesOptions.find((option) => option.value === DEFAULT_LAYER_C_SPECIES);
+    setSelectedSpecies((defaultSpecies || speciesOptions[0]).value);
+  }, [speciesOptions, selectedSpecies]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
   const seasonOptions = useMemo(() => {
@@ -201,32 +226,6 @@ export default function LayerATestPage({
     setSeason(s);
     setDiel(d);
   }, [usesCells, cells, currentAttempt, isLayerD]);
-
-  const speciesOptions = useMemo(() => {
-    if (!samples?.expected?.length) return [];
-    const bySpecies = new Map();
-    for (const sample of samples.expected) {
-      const metadata = sample.metadata || {};
-      const species = metadata.species_common_name || metadata.species || "";
-      if (!species) continue;
-      bySpecies.set(species, {
-        value: species,
-        label: species,
-        slug: metadata.species_slug || sample.stem,
-      });
-    }
-    return [...bySpecies.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [samples]);
-
-  useEffect(() => {
-    if (!speciesOptions.length) {
-      setSelectedSpecies("");
-      return;
-    }
-    if (speciesOptions.some((s) => s.value === selectedSpecies)) return;
-    const defaultSpecies = speciesOptions.find((s) => s.value === DEFAULT_LAYER_C_SPECIES);
-    setSelectedSpecies((defaultSpecies || speciesOptions[0]).value);
-  }, [speciesOptions, selectedSpecies]);
 
   // Keep diel valid when season changes (pick the first diel for that season).
   useEffect(() => {
@@ -505,22 +504,24 @@ export default function LayerATestPage({
                 </section>
               )}
 
-              {speciesOptions.length > 1 && (
+              {!isLayerD && speciesOptions.length > 1 && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
-                    Species
+                    Target bird
                     {selectedSpecies && (
                       <span className="dev-controls-section-pill">
                         {selectedSpecies}
                       </span>
                     )}
                   </p>
-                  <LabeledSelect
-                    label="Bird"
-                    value={selectedSpecies}
-                    onChange={setSelectedSpecies}
-                    options={speciesOptions}
-                  />
+                  <div className="dev-controls-section-grid">
+                    <LabeledSelect
+                      label="Species"
+                      value={selectedSpecies}
+                      onChange={setSelectedSpecies}
+                      options={speciesOptions}
+                    />
+                  </div>
                 </section>
               )}
 

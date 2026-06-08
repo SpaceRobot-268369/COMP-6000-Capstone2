@@ -1,0 +1,23 @@
+{
+  "species_common_name": "Spotted Nightjar",
+  "species_scientific_name": "Eurostopodus argus",
+  "species_slug": "spotted_nightjar",
+  "expected_source": "training_set_bandpass",
+  "expected_item": "rank_10_kept_from_selected_rank_14_train_002_audioevent_16899695",
+  "audio_event_id": "16899695",
+  "recording_id": "216211",
+  "diel_bin": "night",
+  "season": "autumn",
+  "score": "0.999900",
+  "bandpass_hz": {
+    "low_hz": 500,
+    "high_hz": 1000
+  },
+  "source_audio_path": "resources/site_257_bowra-dry-a/layer_c_generate_sa3_lora_spotted_nightjar_v1/sa3_lora_core30_human_rescreen_v1/selected_core30/items/rank_10_kept_from_selected_rank_14_train_002_audioevent_16899695/crop_bandpass.wav",
+  "source_spectrogram_path": "debug/layer_c/generative_expected_preview_v1/spotted_nightjar_expected_rank10_spectrogram.png",
+  "display_title": "Spotted Nightjar \u00b7 expected reference",
+  "spectrogram_axis_style": "frontend_generative_linear_frequency_0_10000hz_time_0p5s_ticks_db_-80_0_resampled_plot",
+  "plot_sample_rate": 44100,
+  "display_audio": "audio.wav",
+  "display_spectrogram": "spectrogram.png"
+}
