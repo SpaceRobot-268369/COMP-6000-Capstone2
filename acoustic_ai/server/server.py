@@ -172,7 +172,8 @@ class GenerateRequest(BaseModel):
     intensity: Optional[str] = None
     wind_intensity: Optional[str] = None
     duration_s: Optional[float] = None
-    # Layer C retrieval selector. Other layers ignore this through **kwargs.
+    # Layer C attempts can expose multiple species behind one attempt id.
+    # Other layers ignore this through **kwargs.
     species_common_name: Optional[str] = None
 
 
@@ -590,18 +591,24 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         import librosa.display
 
         fig, ax = plt.subplots(figsize=(10, 4))
-        if sample_rate > 0:
+        img = None
+        if sample_rate > 0 and duration_s > 0:
+            import librosa
+            import librosa.display
+
             hop_length = max(1, int(round(duration_s * sample_rate / mel_db.shape[1])))
             if layer_id == "layer_c":
                 mel_arr = np.asarray(mel_db)
                 time_edges = np.linspace(0, duration_s, mel_arr.shape[1] + 1)
+                low_hz = 0.0
+                high_hz = min(sample_rate / 2.0, 11025)
                 mel_centers = librosa.mel_frequencies(
                     n_mels=mel_arr.shape[0],
-                    fmin=0,
-                    fmax=sample_rate / 2.0,
+                    fmin=low_hz,
+                    fmax=high_hz,
                 )
                 freq_edges = np.concatenate(
-                    ([0.0], (mel_centers[:-1] + mel_centers[1:]) / 2.0, [sample_rate / 2.0])
+                    ([low_hz], (mel_centers[:-1] + mel_centers[1:]) / 2.0, [high_hz])
                 )
                 img = ax.pcolormesh(
                     time_edges,
@@ -626,7 +633,7 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
                 )
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Hz")
-            _format_layer_c_axes(ax, layer_id, duration_s, sample_rate)
+            _format_layer_c_axes(ax, layer_id, duration_s, sample_rate, metadata)
         else:
             img = ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma",
                             vmin=-80, vmax=0)
@@ -644,17 +651,33 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         return ""
 
 
-def _format_layer_c_axes(ax, layer_id: str, duration_s: float, sample_rate: int) -> None:
-    """Use fixed audit-friendly seconds/Hz ticks for Layer C comparison plots."""
+def _format_layer_c_axes(
+    ax,
+    layer_id: str,
+    duration_s: float,
+    sample_rate: int,
+    metadata: dict | None = None,
+) -> None:
+    """Use audit-friendly seconds/Hz axes for Layer C plots."""
 
     if layer_id != "layer_c" or duration_s <= 0 or sample_rate <= 0:
         return
 
-    target_duration = max(60.0, duration_s)
+    method = (metadata or {}).get("method") if isinstance(metadata, dict) else None
+    is_generative_event = isinstance(method, str) and method.startswith("sa3_lora_generative")
+    target_duration = duration_s if is_generative_event else max(60.0, duration_s)
     ax.set_xlim(0, target_duration)
-    x_ticks = np.arange(0, target_duration + 0.1, 10.0)
-    ax.set_xticks(x_ticks)
-    ax.set_xticklabels([f"{int(tick)}s" for tick in x_ticks])
+    if is_generative_event:
+        tick_step = 0.5 if target_duration <= 6.0 else 1.0
+        x_ticks = np.arange(0, target_duration + 1e-6, tick_step)
+        if len(x_ticks) < 2:
+            x_ticks = np.array([0.0, target_duration])
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels([f"{tick:g}s" for tick in x_ticks])
+    else:
+        x_ticks = np.arange(0, target_duration + 0.1, 10.0)
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels([f"{int(tick)}s" for tick in x_ticks])
 
     max_hz = min(10000, sample_rate / 2.0)
     y_ticks = [0, 500, 1000, 2000, 4000, 6000, 8000, 10000]
@@ -669,7 +692,11 @@ def _spectrogram_title(layer_id: str, attempt_id: str, metadata: dict) -> str:
         species = metadata.get("species")
         method = metadata.get("method")
         if species and method:
-            return f"{species} · {method}"
+            method_label = {
+                "sa3_lora_generative_live": "SA3 LoRA live generation",
+                "layer_c_retrieval_v2": "retrieval library",
+            }.get(str(method), str(method))
+            return f"{species} · {method_label}"
         if species:
             return str(species)
     return f"{layer_id} / {attempt_id}"

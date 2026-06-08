@@ -1937,6 +1937,14 @@ textarea {
   text-transform: uppercase;
 }
 
+.dev-controls-section-help {
+  margin: -4px 0 0;
+  max-width: 760px;
+  color: rgba(226, 246, 255, 0.56);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .dev-controls-section-pill {
   padding: 2px 8px;
   border-radius: 999px;
