@@ -1,15 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 
+/* Preset prompts. `tag` marks demo intent so we (and an audience) know a chip
+   is deliberately crafted:
+     - "safe"    : built only from species BOTH Layer C models share
+                   (Bronze-cuckoo / Nightjar), so it generates on either model.
+                   The two safe chips differ in EVENT FREQUENCY (sparse vs
+                   frequent) to show off event-density control.
+     - "partial" : partly voiceable — a real site species plus an element the
+                   site/models can't produce (ocean). The parser corrects and
+                   confirms rather than rejecting. Kept on a shared species so
+                   it stays "partial" regardless of the selected model.
+     - "invalid" : nothing the remote dry-woodland site or our models can voice
+                   (urban scene, no site fauna) — a deliberate rejection demo.
+   Untagged chips are ordinary free-form examples. */
 const PRESET_PROMPTS = [
-  "Windy spring afternoon, distant birdsong",
-  "Still summer night, crickets and a boobook owl",
-  "Cold winter dawn, light drizzle",
-  "Summer dawn, kookaburra chorus",
-  "Gusty autumn morning, rain on the wind",
-  "Frosty winter afternoon, gusting wind",
-  "Heavy autumn downpour at night, thunder",
-  "Warm spring dusk, insects and a breeze",
+  { text: "Summer night, a lone Spotted Nightjar churring every so often", tag: "safe" },
+  { text: "Summer morning, restless Horsfield's Bronze-cuckoo whistling over and over", tag: "safe" },
+  { text: "Summer night, a Spotted Nightjar calling, with ocean waves breaking on a beach", tag: "partial" },
+  { text: "Midday city traffic downtown, car horns, sirens and a passing subway train", tag: "invalid" },
+  { text: "Windy spring afternoon, distant birdsong" },
+  { text: "Cold winter dawn, light drizzle" },
+  { text: "Gusty autumn morning, rain on the wind" },
+  { text: "Warm spring dusk, insects and a breeze" },
 ];
+
+// Short badge label + class suffix per tag. Untagged presets render no badge.
+const PRESET_TAGS = {
+  safe: { label: "Safe", className: "safe" },
+  partial: { label: "Partial", className: "partial" },
+  invalid: { label: "Invalid demo", className: "invalid" },
+};
 
 /* ---- Guided option selectors ----
    The rails let users build a prompt by choosing rather than typing. Each
@@ -383,16 +403,20 @@ export default function PromptChat({
 
             <div className="demo-center">
               <div className="demo-presets">
-              {PRESET_PROMPTS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`demo-preset-chip${value === s ? " selected" : ""}`}
-                  onClick={() => { setSel(EMPTY_SEL); setValue(s); inputRef.current?.focus(); }}
-                >
-                  {s}
-                </button>
-              ))}
+              {PRESET_PROMPTS.map((p) => {
+                const tag = p.tag ? PRESET_TAGS[p.tag] : null;
+                return (
+                  <button
+                    key={p.text}
+                    type="button"
+                    className={`demo-preset-chip${tag ? ` tagged ${tag.className}` : ""}${value === p.text ? " selected" : ""}`}
+                    onClick={() => { setSel(EMPTY_SEL); setValue(p.text); inputRef.current?.focus(); }}
+                  >
+                    {tag && <span className={`demo-preset-tag ${tag.className}`}>{tag.label}</span>}
+                    {p.text}
+                  </button>
+                );
+              })}
               </div>
             </div>
 
