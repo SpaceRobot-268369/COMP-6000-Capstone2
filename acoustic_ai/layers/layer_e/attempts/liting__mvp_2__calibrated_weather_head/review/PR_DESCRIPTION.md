@@ -78,7 +78,7 @@ Cross-check summary:
 | E-B wind present | 4 |
 | E-B thunder present | 0 |
 | E-B light rain, wind none | 9 |
-| E-B heavy rain, wind none | 57 |
+| E-B heavy rain, wind none | 59 |
 
 Example added light-rain validation rows:
 

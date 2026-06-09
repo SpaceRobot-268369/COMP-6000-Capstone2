@@ -53,7 +53,7 @@ Additional independent rain cross-check evidence was run after the fixed matrix:
 | E-B `rain` results | 68 |
 | E-B `rain+wind` results | 4 |
 | E-B light-rain results with wind=none | 9 |
-| E-B heavy-rain results with wind=none | 57 |
+| E-B heavy-rain results with wind=none | 59 |
 
 The cross-check CSV records each filename, original Site257 S3 URI, Murphy pool
 label, and E-B result:
