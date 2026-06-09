@@ -8,6 +8,7 @@ model-dependent checks are serverB-only (plan §7).
 
 from __future__ import annotations
 
+import json
 import unittest
 
 import acoustic_ai.llm.service as svc_mod
@@ -18,7 +19,28 @@ from acoustic_ai.llm.parser import _detect_weather
 from acoustic_ai.llm.service import _extract_json
 from acoustic_ai.llm.skills import available_skills, load_skill, report_skill_name
 
-REPORT = {"observations": {"events": [{"label": "Southern Boobook", "onset_s": 12.4}]}}
+REPORT = {
+    "schema_version": "analysis_aggregator.v1",
+    "observations": {
+        "events": [
+            {"label": "ninox_boobook", "common_name": "Southern Boobook", "onset_s": 12.4}
+        ]
+    },
+    "decision": {
+        "schema_version": "analysis_decision.v1",
+        "detected_calls": [
+            {"label": "ninox_boobook", "common_name": "Southern Boobook", "confidence": 0.91}
+        ],
+    },
+    "llm_input": {
+        "task": "immersive, third-person perspective narration with an analytical tone",
+        "decision": {
+            "detected_calls": [
+                {"label": "ninox_boobook", "common_name": "Southern Boobook"}
+            ],
+        },
+    },
+}
 
 
 class _FakeService:
@@ -28,6 +50,7 @@ class _FakeService:
         self.json_out = json_out or {}
         self.text_out = text_out
         self.text_calls = 0
+        self.messages = None
 
     def complete_json(self, messages, schema=None, max_new_tokens=None):
         return self.json_out
@@ -35,6 +58,7 @@ class _FakeService:
     def complete(self, messages, temperature=None, max_new_tokens=None,
                  prefix_allowed_tokens_fn=None):
         self.text_calls += 1
+        self.messages = messages
         # Allow a list to simulate retry: first bad, then good.
         if isinstance(self.text_out, list):
             return self.text_out[min(self.text_calls - 1, len(self.text_out) - 1)]
@@ -195,10 +219,23 @@ class ReportTest(unittest.TestCase):
         svc_mod._service = None
 
     def test_faithful_immersive(self):
-        svc_mod._service = _FakeService(text_out="A Southern Boobook calls in the dark.")
+        fake = _FakeService(text_out="A Southern Boobook calls in the dark.")
+        svc_mod._service = fake
         r = write_report(REPORT, "immersive")
         self.assertEqual(r["register"], "immersive")
         self.assertTrue(r["faithful"])
+        self.assertEqual(r["source"], "llm")
+
+    def test_full_aggregator_report_serializes_decision_payload(self):
+        fake = _FakeService(text_out="A Southern Boobook calls in the dark.")
+        svc_mod._service = fake
+        write_report(REPORT, "immersive")
+
+        user_payload = json.loads(fake.messages[1]["content"])
+        self.assertEqual(user_payload["schema_version"], "analysis_decision.v1")
+        self.assertIn("detected_calls", user_payload)
+        self.assertNotIn("observations", user_payload)
+        self.assertNotIn("task", user_payload)
 
     def test_retries_then_reports_violation(self):
         # both attempts hallucinate -> faithful False, violation surfaced

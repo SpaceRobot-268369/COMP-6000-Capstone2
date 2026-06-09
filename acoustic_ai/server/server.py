@@ -31,7 +31,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Make `layers.*` importable.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -98,6 +98,22 @@ def _llm_narrative_enabled() -> bool:
     return _env_truthy("AI_LLM_NARRATIVE", False)
 
 
+def _fallback_narrative(report: dict, register: str = "immersive") -> dict:
+    narration = (report or {}).get("narration") if isinstance(report, dict) else {}
+    text = ""
+    if isinstance(narration, dict):
+        text = str(narration.get("summary") or "")
+    if not text:
+        text = "The analysis completed, but no narrative summary was available."
+    return {
+        "register": register,
+        "text": text,
+        "source": "deterministic_fallback",
+        "faithful": True,
+        "violations": [],
+    }
+
+
 def _run_llm_prewarm() -> None:
     try:
         from llm import warm
@@ -154,7 +170,11 @@ class GenerateRequest(BaseModel):
     # Layer B weather-stem controls. Other attempts ignore these.
     weather_type: Optional[str] = None
     intensity: Optional[str] = None
+    wind_intensity: Optional[str] = None
     duration_s: Optional[float] = None
+    # Layer C attempts can expose multiple species behind one attempt id.
+    # Other layers ignore this through **kwargs.
+    species_common_name: Optional[str] = None
 
 
 class OrchestratedGenerationRequest(BaseModel):
@@ -170,6 +190,7 @@ class OrchestratedGenerationRequest(BaseModel):
     layer_b_attempt: Optional[str] = None
     layer_c_attempt: Optional[str] = None
     layer_d_attempt: Optional[str] = None
+    include_stems: bool = False
 
 
 class ParseRequest(BaseModel):
@@ -181,7 +202,7 @@ class NarrativeRequest(BaseModel):
     """Re-render prose from an already-computed fused report in a chosen
     register (backs the scene-page tone toggle). No detectors re-run."""
     report: dict
-    register: str = "analytical"
+    narrative_register: str = Field(default="analytical", alias="register")
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +248,9 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
             seed=run_seed, season=body.season, diel=body.diel,
             weather_type=body.weather_type,
             intensity=body.intensity,
+            wind_intensity=body.wind_intensity,
             duration_s=body.duration_s,
+            species_common_name=body.species_common_name,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -239,7 +262,6 @@ def generate(layer_id: str, attempt_id: str, body: GenerateRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"generation failed: {exc}")
 
     return _generation_response(layer_id, attempt_id, result)
-
 
 @app.post("/generation/render")
 def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
@@ -255,7 +277,19 @@ def orchestrated_generation(body: OrchestratedGenerationRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"orchestrated generation failed: {exc}")
     attempt_id = body.layer_d_attempt or registry.default_attempt_id("layer_d")
-    return _generation_response("layer_d", attempt_id, result)
+    response = _generation_response("layer_d", attempt_id, result)
+    if body.include_stems:
+        stems = result.get("_stems") or {}
+        response["stems"] = {
+            layer_id: _generation_response(
+                layer_id,
+                body_layer_attempt(layer_id, body),
+                stem_result,
+            )
+            for layer_id, stem_result in stems.items()
+            if stem_result is not None
+        }
+    return response
 
 
 @app.post("/generation/parse")
@@ -283,7 +317,7 @@ def analysis_narrative(body: NarrativeRequest) -> dict:
         raise HTTPException(status_code=400, detail="report JSON is required")
     try:
         from llm import write_report
-        narrative = write_report(body.report, body.register)
+        narrative = write_report(body.report, body.narrative_register)
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"report writer unavailable: {exc}")
     return {"ok": True, "narrative": narrative}
@@ -292,6 +326,7 @@ def analysis_narrative(body: NarrativeRequest) -> dict:
 @app.post("/analysis/run")
 async def orchestrated_analysis(
     file: UploadFile = File(...),
+    narrative_register: str = Form(default="immersive", alias="register"),
     ambient_attempt: str | None = Form(default=None),
     weather_attempt: str | None = Form(default=None),
     events_attempt: str | None = Form(default=None),
@@ -365,7 +400,20 @@ async def orchestrated_analysis(
             except OSError:
                 pass
 
-    return {"ok": True, **result}
+    register = (narrative_register or "immersive").strip().lower() or "immersive"
+    report = result.get("report") or {}
+    response = {"ok": True, **result}
+    try:
+        from llm import write_report
+        narrative = write_report(report, register)
+        if not narrative.get("faithful", True):
+            response["narrative_violations"] = narrative.get("violations", [])
+            narrative = _fallback_narrative(report, narrative.get("register") or register)
+        response["narrative"] = narrative
+    except Exception as exc:  # product mode should still return the fused report
+        response["narrative"] = _fallback_narrative(report, register)
+        response["narrative_error"] = str(exc)
+    return response
 
 
 @app.post("/layers/{layer_id}/attempts/{attempt_id}/analyze")
@@ -497,20 +545,34 @@ def _generation_response(layer_id: str, attempt_id: str, result: dict) -> dict:
     return {
         "ok": True,
         "audio_b64": base64.b64encode(wav_bytes).decode("utf-8"),
-        "image_b64": _mel_to_png_b64(layer_id, attempt_id, mel_db, duration_s),
+        "image_b64": _mel_to_png_b64(layer_id, attempt_id, mel_db, metadata),
         "metadata": metadata,
         "sample_rate": sample_rate,
         "duration_s": duration_s,
     }
 
 
+def body_layer_attempt(layer_id: str, body: OrchestratedGenerationRequest) -> str:
+    explicit = {
+        "layer_a": body.layer_a_attempt,
+        "layer_b": body.layer_b_attempt,
+        "layer_c": body.layer_c_attempt,
+        "layer_d": body.layer_d_attempt,
+    }.get(layer_id)
+    return explicit or registry.default_attempt_id(layer_id)
+
+
 def _mel_to_png_b64(layer_id: str, attempt_id: str,
-                    mel_db, duration_s: float) -> str:
+                    mel_db, metadata: dict) -> str:
     """Render a mel-spectrogram PNG. For Layer A we use the attempt-local
     visualization helper to keep visual style consistent across attempts.
     """
     if mel_db is None:
         return ""
+
+    audio_meta = metadata.get("audio", {}) if isinstance(metadata, dict) else {}
+    duration_s = float(audio_meta.get("duration_s", 0.0))
+    sample_rate = int(audio_meta.get("sample_rate", 0))
 
     # Try attempt-local renderer first (Layer A + Layer C ship one).
     try:
@@ -529,14 +591,60 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        import librosa
+        import librosa.display
 
         fig, ax = plt.subplots(figsize=(10, 4))
-        ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma",
-                  vmin=-80, vmax=0)
-        ax.set_xlabel("Time frames")
-        ax.set_ylabel("Mel bins")
-        ax.set_title(f"{layer_id} / {attempt_id}")
-        plt.colorbar(ax.images[0], ax=ax, label="dB")
+        img = None
+        if sample_rate > 0 and duration_s > 0:
+            import librosa
+            import librosa.display
+
+            hop_length = max(1, int(round(duration_s * sample_rate / mel_db.shape[1])))
+            if layer_id == "layer_c":
+                mel_arr = np.asarray(mel_db)
+                time_edges = np.linspace(0, duration_s, mel_arr.shape[1] + 1)
+                low_hz = 0.0
+                high_hz = min(sample_rate / 2.0, 11025)
+                mel_centers = librosa.mel_frequencies(
+                    n_mels=mel_arr.shape[0],
+                    fmin=low_hz,
+                    fmax=high_hz,
+                )
+                freq_edges = np.concatenate(
+                    ([low_hz], (mel_centers[:-1] + mel_centers[1:]) / 2.0, [high_hz])
+                )
+                img = ax.pcolormesh(
+                    time_edges,
+                    freq_edges,
+                    mel_arr,
+                    cmap="magma",
+                    vmin=-80,
+                    vmax=0,
+                    shading="auto",
+                )
+            else:
+                img = librosa.display.specshow(
+                    np.asarray(mel_db),
+                    sr=sample_rate,
+                    hop_length=hop_length,
+                    x_axis="time",
+                    y_axis="mel",
+                    cmap="magma",
+                    vmin=-80,
+                    vmax=0,
+                    ax=ax,
+                )
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Hz")
+            _format_layer_c_axes(ax, layer_id, duration_s, sample_rate, metadata)
+        else:
+            img = ax.imshow(mel_db, origin="lower", aspect="auto", cmap="magma",
+                            vmin=-80, vmax=0)
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Frequency")
+        ax.set_title(_spectrogram_title(layer_id, attempt_id, metadata))
+        plt.colorbar(img, ax=ax, label="dB")
         plt.tight_layout()
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=100)
@@ -545,6 +653,58 @@ def _mel_to_png_b64(layer_id: str, attempt_id: str,
         return base64.b64encode(buf.read()).decode("utf-8")
     except ImportError:
         return ""
+
+
+def _format_layer_c_axes(
+    ax,
+    layer_id: str,
+    duration_s: float,
+    sample_rate: int,
+    metadata: dict | None = None,
+) -> None:
+    """Use audit-friendly seconds/Hz axes for Layer C plots."""
+
+    if layer_id != "layer_c" or duration_s <= 0 or sample_rate <= 0:
+        return
+
+    method = (metadata or {}).get("method") if isinstance(metadata, dict) else None
+    is_generative_event = isinstance(method, str) and method.startswith("sa3_lora_generative")
+    is_retrieval_clip = method == "retrieval_clip"
+    target_duration = duration_s if (is_generative_event or is_retrieval_clip) else max(60.0, duration_s)
+    ax.set_xlim(0, target_duration)
+    if is_generative_event or is_retrieval_clip:
+        tick_step = 0.5 if target_duration <= 6.0 else 1.0
+        x_ticks = np.arange(0, target_duration + 1e-6, tick_step)
+        if len(x_ticks) < 2:
+            x_ticks = np.array([0.0, target_duration])
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels([f"{tick:g}s" for tick in x_ticks])
+    else:
+        x_ticks = np.arange(0, target_duration + 0.1, 10.0)
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels([f"{int(tick)}s" for tick in x_ticks])
+
+    max_hz = min(10000, sample_rate / 2.0)
+    y_ticks = [0, 500, 1000, 2000, 4000, 6000, 8000, 10000]
+    y_ticks = [tick for tick in y_ticks if 0 <= tick <= max_hz]
+    ax.set_ylim(0, max_hz)
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([str(tick) for tick in y_ticks])
+
+
+def _spectrogram_title(layer_id: str, attempt_id: str, metadata: dict) -> str:
+    if layer_id == "layer_c" and isinstance(metadata, dict):
+        species = metadata.get("species")
+        method = metadata.get("method")
+        if species and method:
+            method_label = {
+                "sa3_lora_generative_live": "SA3 LoRA live generation",
+                "layer_c_retrieval_v2": "retrieval library",
+            }.get(str(method), str(method))
+            return f"{species} · {method_label}"
+        if species:
+            return str(species)
+    return f"{layer_id} / {attempt_id}"
 
 
 # ---------------------------------------------------------------------------

@@ -94,6 +94,127 @@ class GenerationOrchestratorTest(unittest.TestCase):
         )
         self.assertIsNone(calls["layer_d"]["seed"])
 
+    def test_routes_multi_clip_contract_to_layer_d_v2_attempt(self) -> None:
+        calls = []
+
+        def fake_generate(layer_id, attempt_id, seed, **params):
+            calls.append((layer_id, attempt_id, seed, params))
+            if layer_id == "layer_b":
+                return {
+                    "wav_bytes": b"weather_wav",
+                    "metadata": {
+                        "layer_b": {
+                            "requested": {"weather_type": "rain"},
+                            "selected": {"layer_d_role": "bed"},
+                        }
+                    },
+                }
+            if layer_id == "layer_c":
+                return {
+                    "wav_bytes": b"event_wav",
+                    "metadata": {"species": "Splendid Fairywren"},
+                }
+            return {
+                "wav_bytes": f"{layer_id}_wav".encode(),
+                "metadata": {"source": layer_id},
+            }
+
+        with patch.object(registry, "generate", side_effect=fake_generate):
+            result = registry.orchestrate_generation(
+                seed=42,
+                duration_s=10.0,
+                weather_type="rain",
+                layer_d_attempt="songke__mvp_2__multi_clip_mix",
+            )
+
+        layer_d_params = calls[-1][3]
+        self.assertEqual(calls[-1][1], "songke__mvp_2__multi_clip_mix")
+        self.assertEqual(layer_d_params["ambient_wav_bytes"], b"layer_a_wav")
+        self.assertNotIn("weather_wav_bytes", layer_d_params)
+        self.assertNotIn("event_wav_bytes", layer_d_params)
+        self.assertEqual(layer_d_params["placement_seed"], 42)
+        self.assertEqual(
+            layer_d_params["weather_clips"],
+            [
+                {
+                    "wav": b"weather_wav",
+                    "weather_type": "rain",
+                    "continuous": True,
+                    "onsets_s": None,
+                    "gain_db": None,
+                    "change": None,
+                }
+            ],
+        )
+        self.assertEqual(
+            layer_d_params["event_clips"],
+            [
+                {
+                    "wav": b"event_wav",
+                    "species": "Splendid Fairywren",
+                    "onsets_s": [0.0],
+                    "gain_db": None,
+                }
+            ],
+        )
+        self.assertEqual(
+            result["metadata"]["orchestration"]["parameter_routing"]["layer_d"],
+            ["ambient_wav_bytes", "weather_clips", "event_clips", "duration_s", "placement_seed"],
+        )
+
+    def test_preserves_upstream_clip_lists_for_layer_d_v2_attempt(self) -> None:
+        calls = []
+
+        def fake_generate(layer_id, attempt_id, seed, **params):
+            calls.append((layer_id, attempt_id, seed, params))
+            if layer_id == "layer_b":
+                return {
+                    "wav_bytes": b"legacy_weather",
+                    "weather_clips": [
+                        {
+                            "wav_bytes": b"rain",
+                            "weather_type": "rain",
+                            "continuous": True,
+                            "onsets_s": None,
+                        },
+                        {
+                            "wav": b"thunder",
+                            "weather_type": "thunder",
+                            "continuous": False,
+                            "onsets_s": [2.0],
+                        },
+                    ],
+                    "metadata": {},
+                }
+            if layer_id == "layer_c":
+                return {
+                    "wav_bytes": b"legacy_event",
+                    "event_clips": [
+                        {
+                            "wav_bytes": b"bird",
+                            "species": "Boobook Owl",
+                            "onsets_s": [1.0, 3.0],
+                        }
+                    ],
+                    "metadata": {},
+                }
+            return {"wav_bytes": layer_id.encode(), "metadata": {}}
+
+        with patch.object(registry, "generate", side_effect=fake_generate):
+            registry.orchestrate_generation(
+                seed=5,
+                duration_s=10.0,
+                layer_d_attempt="songke__mvp_2__multi_clip_mix",
+            )
+
+        layer_d_params = calls[-1][3]
+        self.assertEqual(layer_d_params["weather_clips"][0]["wav"], b"rain")
+        self.assertEqual(layer_d_params["weather_clips"][1]["wav"], b"thunder")
+        self.assertEqual(layer_d_params["weather_clips"][1]["onsets_s"], [2.0])
+        self.assertEqual(layer_d_params["event_clips"][0]["wav"], b"bird")
+        self.assertEqual(layer_d_params["event_clips"][0]["species"], "Boobook Owl")
+        self.assertEqual(layer_d_params["event_clips"][0]["onsets_s"], [1.0, 3.0])
+
     def test_can_disable_optional_weather_and_events(self) -> None:
         calls = []
 
@@ -113,6 +234,25 @@ class GenerationOrchestratorTest(unittest.TestCase):
         self.assertIsNone(calls[-1][1]["weather_wav_bytes"])
         self.assertIsNone(calls[-1][1]["event_wav_bytes"])
         self.assertFalse(result["metadata"]["orchestration"]["include_events"])
+
+    def test_can_return_upstream_stems_for_layer_d_dev_ui(self) -> None:
+        def fake_generate(layer_id, attempt_id, seed, **params):
+            return {
+                "wav_bytes": layer_id.encode(),
+                "metadata": {"audio": {"duration_s": 5.0}, "source": layer_id},
+            }
+
+        with patch.object(registry, "generate", side_effect=fake_generate):
+            result = registry.orchestrate_generation(
+                seed=1,
+                duration_s=5.0,
+                include_stems=True,
+            )
+
+        self.assertEqual(set(result["_stems"]), {"layer_a", "layer_b", "layer_c"})
+        self.assertEqual(result["_stems"]["layer_a"]["metadata"]["source"], "layer_a")
+        self.assertEqual(result["_stems"]["layer_b"]["metadata"]["source"], "layer_b")
+        self.assertEqual(result["_stems"]["layer_c"]["metadata"]["source"], "layer_c")
 
     def test_rejects_duration_above_current_layer_b_limit(self) -> None:
         with self.assertRaisesRegex(ValueError, "at most 30 seconds"):

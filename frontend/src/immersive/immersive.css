@@ -60,14 +60,82 @@
 
 .immersive-page .immersive-bolt { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 90ms ease-out; }
 
+/* ---- details show/hide toggle ----
+   Top-right pill that reveals/hides the supplementary metadata overlays
+   (analytical narration + source caption + models-used). Sits below the
+   floating navbar pill so the two never collide. */
+.immersive-page .immersive-details-toggle {
+  position: fixed; top: 76px; right: 24px; z-index: 41;
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: 12px; letter-spacing: 0.06em;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  color: rgba(244, 239, 228, 0.86); background: rgba(14, 15, 18, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px) saturate(1.1);
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.immersive-page .immersive-details-toggle:hover {
+  background: rgba(30, 32, 38, 0.78); border-color: rgba(255, 255, 255, 0.28);
+}
+.immersive-page .immersive-details-toggle.is-on {
+  color: #14110d; background: rgba(244, 239, 228, 0.9); border-color: transparent;
+}
+
+/* ---- analytical narration panel ----
+   The immersive register feeds the centre film-style caption; the analytical
+   register is surfaced here as its own quiet panel, top-centre below the navbar. */
+.immersive-page .immersive-analytical {
+  position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+  z-index: 40; pointer-events: auto;
+  width: max-content; max-width: min(46rem, 78vw);
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 0.85rem 1.1rem; border-radius: 0.85rem;
+  background: rgba(14, 15, 18, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  color: rgba(244, 239, 228, 0.94);
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  max-height: 42vh; overflow-y: auto;
+}
+.immersive-page .immersive-analytical-tag {
+  text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em;
+  font-weight: 600; color: rgba(244, 239, 228, 0.6);
+}
+.immersive-page .immersive-analytical p {
+  margin: 0; font-size: 0.92rem; line-height: 1.55; text-align: left;
+}
+.immersive-page .immersive-analytical strong { font-weight: 600; }
+
+[data-theme="light"] .immersive-page .immersive-details-toggle {
+  color: rgba(28, 26, 22, 0.86); background: rgba(248, 245, 238, 0.62);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .immersive-page .immersive-details-toggle.is-on {
+  color: #f8f5ee; background: rgba(28, 26, 22, 0.82); border-color: transparent;
+}
+[data-theme="light"] .immersive-page .immersive-analytical {
+  color: rgba(28, 26, 22, 0.9); background: rgba(248, 245, 238, 0.66);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .immersive-page .immersive-analytical-tag { color: rgba(28, 26, 22, 0.55); }
+
 /* ---- source-recording caption ----
    The demo's audio + scene description currently stand in with a real Layer A
    recording (Layer D mixing + the LLM-OSS scene writer are not built yet). This
    quiet pill names the clip the scene is grounded in so the stand-in is honest. */
+/* Secondary metadata (source caption + "models used") is anchored at the bottom,
+   above the player bar, so it never collides with the variable-height narration
+   at the top of the scene. */
+.immersive-page .immersive-meta-stack {
+  position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%);
+  z-index: 11; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: min(860px, calc(100% - 36px));
+}
+
 .immersive-page .immersive-source-caption {
-  position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
-  z-index: 11; pointer-events: none; margin: 0;
-  max-width: min(640px, calc(100% - 36px));
+  margin: 0;
+  max-width: min(640px, 100%);
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
   text-align: center;
   font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
@@ -83,6 +151,52 @@
   text-transform: uppercase; font-size: 10px; letter-spacing: 0.13em;
   font-weight: 600; color: rgba(244, 239, 228, 0.6);
 }
+
+.immersive-page .immersive-model-line {
+  pointer-events: none;
+  max-width: 100%;
+  padding: 10px 14px; border-radius: 18px;
+  background: rgba(14, 15, 18, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  color: rgba(244, 239, 228, 0.82);
+  font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: 11px;
+}
+.immersive-page .immersive-model-line strong {
+  display: block;
+  margin-bottom: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: rgba(244, 239, 228, 0.62);
+}
+.immersive-page .immersive-model-line div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.immersive-page .immersive-model-line span {
+  display: grid;
+  gap: 2px;
+  min-width: 130px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.immersive-page .immersive-model-line b,
+.immersive-page .immersive-model-line em {
+  font-style: normal;
+  opacity: 0.72;
+}
+.immersive-page .immersive-model-line code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 [data-theme="light"] .immersive-page .immersive-source-caption {
   color: rgba(28, 26, 22, 0.82);
   background: rgba(248, 245, 238, 0.62);
@@ -90,6 +204,17 @@
   text-shadow: none;
 }
 [data-theme="light"] .immersive-page .immersive-source-tag { color: rgba(28, 26, 22, 0.55); }
+[data-theme="light"] .immersive-page .immersive-model-line {
+  color: rgba(28, 26, 22, 0.82);
+  background: rgba(248, 245, 238, 0.62);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .immersive-page .immersive-model-line strong {
+  color: rgba(28, 26, 22, 0.55);
+}
+[data-theme="light"] .immersive-page .immersive-model-line span {
+  background: rgba(0, 0, 0, 0.05);
+}
 
 /* ---- dev control panel ---- */
 .immersive-page .immersive-panel {

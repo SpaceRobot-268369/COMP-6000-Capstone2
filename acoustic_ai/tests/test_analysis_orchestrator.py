@@ -2,10 +2,33 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from unittest.mock import patch
 
+from fastapi.testclient import TestClient
+
 from acoustic_ai.server import registry
+from acoustic_ai.server import server
+
+
+FUSED_REPORT = {
+    "schema_version": "analysis_aggregator.v1",
+    "decision": {
+        "schema_version": "analysis_decision.v1",
+        "season": {"value": "autumn"},
+        "time_of_day": {"value": "night"},
+        "weather": {
+            "rain": {"label": "none", "intensity": 0.0},
+            "wind": {"label": "light", "intensity": 0.25},
+            "thunder": {"label": "none", "intensity": 0.0, "events": []},
+        },
+        "detected_calls": [
+            {"label": "ninox_boobook", "common_name": "Southern Boobook"},
+        ],
+    },
+    "narration": {"summary": "A Southern Boobook is detected in a dry night recording."},
+}
 
 
 class AnalysisOrchestratorTest(unittest.TestCase):
@@ -106,6 +129,65 @@ class AnalysisOrchestratorTest(unittest.TestCase):
             [ambient_id, weather_id, events_id],
         )
         self.assertEqual(result["attempts"]["aggregator"]["id"], aggregator_id)
+
+    def test_analysis_run_attaches_inline_narrative(self) -> None:
+        captured = {}
+
+        def fake_orchestrate(audio_path: str, **kwargs) -> dict:
+            captured["audio_path"] = audio_path
+            captured["kwargs"] = kwargs
+            return {
+                "report": FUSED_REPORT,
+                "head_reports": {},
+                "attempts": {"aggregator": {"id": "songke__smoke_3__analysis_aggregator"}},
+            }
+
+        def fake_write_report(report: dict, register: str) -> dict:
+            captured["report"] = report
+            captured["register"] = register
+            return {
+                "register": register,
+                "text": "A Southern Boobook calls in the night.",
+                "source": "llm",
+                "faithful": True,
+                "violations": [],
+            }
+
+        os.environ["AI_PREWARM"] = "off"
+        with patch.object(server.registry, "orchestrate_analysis", side_effect=fake_orchestrate), \
+             patch("llm.write_report", side_effect=fake_write_report):
+            response = TestClient(server.app).post(
+                "/analysis/run",
+                files={"file": ("clip.wav", b"RIFFfake", "audio/wav")},
+                data={"register": "immersive"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["narrative"]["source"], "llm")
+        self.assertEqual(captured["register"], "immersive")
+        self.assertIs(captured["report"], FUSED_REPORT)
+        self.assertEqual(captured["kwargs"]["ambient_attempt"], None)
+
+    def test_analysis_run_uses_deterministic_fallback_on_llm_failure(self) -> None:
+        os.environ["AI_PREWARM"] = "off"
+        with patch.object(server.registry, "orchestrate_analysis", return_value={
+            "report": FUSED_REPORT,
+            "head_reports": {},
+            "attempts": {},
+        }), patch("llm.write_report", side_effect=RuntimeError("LLM unavailable")):
+            response = TestClient(server.app).post(
+                "/analysis/run",
+                files={"file": ("clip.wav", b"RIFFfake", "audio/wav")},
+                data={"register": "immersive"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["narrative"]["source"], "deterministic_fallback")
+        self.assertEqual(body["narrative"]["text"], FUSED_REPORT["narration"]["summary"])
+        self.assertIn("LLM unavailable", body["narrative_error"])
 
 
 if __name__ == "__main__":

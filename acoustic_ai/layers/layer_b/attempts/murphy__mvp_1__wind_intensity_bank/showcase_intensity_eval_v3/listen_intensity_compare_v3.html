@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8" />
+<title>Layer B 风强度 v3（light_c + medium降噪 + heavy锁定）</title>
+<style>
+ body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; margin: 20px; background:#0f1115; color:#e6e6e6; }
+ h2 { margin: 0 0 8px; }
+ p.note { color:#9aa4b2; margin:0 0 14px; line-height:1.5; }
+ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+ th, td { border: 1px solid #2a2f3a; vertical-align: top; padding: 10px; }
+ th { background:#1b2029; text-align:left; }
+ td { background:#141922; font-size: 13px; }
+ .meta { margin-bottom: 4px; }
+ .sub { font-size:11px; color:#9aa4b2; margin-bottom:8px; line-height:1.35; }
+ .tag { font-size:11px; color:#a9e07f; border:1px solid #3d5731; border-radius:10px; padding:1px 6px; margin-left:4px; }
+ audio { width:100%; }
+</style></head><body>
+<h2>Layer B 风强度 v3（light_c + medium降噪 + heavy锁定）</h2>
+<p class="note">同 seed 横向对比。重点：light 42–44、medium 噪感、seed 48 三档回归。</p>
+<table>
+  <thead><tr><th>Seed</th><th>Heavy (v2 locked)</th><th>Light (v3 light_c)</th><th>Medium (v3)</th></tr></thead>
+  <tbody><tr><th>seed 42</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_42_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_42_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_42_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 43</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_43_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_43_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_43_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 44</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_44_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_44_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_44_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 45</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_45_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_45_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_45_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 46</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_46_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_46_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_46_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 47</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_47_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_47_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_47_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 48</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> <span class="tag">回归保护</span></div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_48_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span><span class="tag">回归保护</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_48_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> <span class="tag">回归保护</span></div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_48_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 49</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_49_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_49_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_49_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 50</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_50_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_50_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_50_generated/audio.wav"></audio>
+</td></tr><tr><th>seed 51</th><td>
+  <div class="meta"><b>Heavy (v2 locked)</b> </div>
+  <div class="sub">regression guard<br>guidance=3.4 · rms=0.09 · hp=80.0 · lp=None · denoise=0.15/0.4</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/heavy/seed_51_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Light (v3 light_c)</b> <span class="tag">derived</span></div>
+  <div class="sub">derived · hybrid A/B<br>guidance=2.3 · rms=0.041 · hp=100.0 · lp=None · denoise=0.2/0.34</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/light/seed_51_generated/audio.wav"></audio>
+</td><td>
+  <div class="meta"><b>Medium (v3)</b> </div>
+  <div class="sub">stronger denoise<br>guidance=3.0 · rms=0.048 · hp=80.0 · lp=None · denoise=0.19/0.38</div>
+  <audio controls preload="none" src="file:///Users/murphy/Documents/Codex/2026-05-28/spacerobot-268369-comp-6000-capstone2-https-2/acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/showcase_intensity_eval_v3/medium/seed_51_generated/audio.wav"></audio>
+</td></tr></tbody>
+</table>
+</body></html>

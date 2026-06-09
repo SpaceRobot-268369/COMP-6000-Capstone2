@@ -116,9 +116,24 @@ aligned input per layer:
    open-prompt models.
 2. **Layer B** — structured JSON: `weather_type` (`rain` | `wind` | …),
    `intensity` (`light` | `medium` | `heavy`), `duration_s`. Omitted entirely
-   when Stage 1 left weather off.
+   when Stage 1 left weather off. For the multi-clip Layer D contract the parser
+   also marks each weather element as `continuous` (wind/steady rain → looped
+   bed) vs. discrete (thunder), and emits explicit `onsets_s` for discrete
+   clips (see below).
 3. **Layer C** — a species checklist (common names) plus density/timeline
    params, mapped to per-species LoRA weights or the audited retrieval query.
+
+**Placement / repetition (multi-clip Layer D).** When generation targets the
+multi-clip mixer, the parser owns *arrangement*: it decides where each discrete
+weather/event clip starts and how often it recurs, then emits an explicit
+`onsets_s` list per clip (one element = single occurrence; many = repetition —
+"frequency" is expanded here, not in the mixer). Onsets **may overlap** — across
+clips or within one clip — because real soundscapes layer sound (a call during
+thunder); the mixer simply sums overlapping audio. A `null` onset list hands
+placement to Layer D's seeded random fallback. The mixer never reasons about
+cadence or arrangement — it consumes the concrete times the parser produces.
+Full Layer D side of this contract:
+[`songke__mvp_2__multi_clip_mix/README.md`](../../../acoustic_ai/layers/layer_d/attempts/songke__mvp_2__multi_clip_mix/README.md).
 
 Each downstream layer therefore receives exactly what its API expects, and
 nothing it can't handle. The dev-generation contract still applies on top of
@@ -142,6 +157,24 @@ The parser returns a single structured object (also surfaced to the UI):
   "layer_c": { "species": [], "density": "sparse" }
 }
 ```
+
+For the multi-clip Layer D path, `layer_b` / `layer_c` carry per-clip placement,
+e.g.:
+
+```json
+{
+  "layer_b": [
+    { "weather_type": "wind", "intensity": "light", "continuous": true, "onsets_s": null },
+    { "weather_type": "thunder", "continuous": false, "onsets_s": [8.0, 21.0] }
+  ],
+  "layer_c": [
+    { "species": "tawny_frogmouth", "onsets_s": [5.0, 12.5, 19.0] }
+  ]
+}
+```
+
+Onsets are in seconds on the final timeline and may overlap (summed by the
+mixer); `null` defers placement to Layer D's seeded random fallback.
 
 - `ok` — request was complete and coherent (after default fill).
 - `corrected` — parser changed something (gate swap or default); `note` and

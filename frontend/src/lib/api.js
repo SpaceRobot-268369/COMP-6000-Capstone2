@@ -84,13 +84,26 @@ export async function saveModelConfig(slots) {
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
- * Generate audio with a specific layer/attempt. Only `seed` is sent; every
- * other parameter is owned by the registry/handler server-side (see CLAUDE.md
- * → "Layer A dev-generation contract").
+ * Generate audio with a specific layer/attempt. Most model behavior stays
+ * registry/handler-owned; the dev UI only forwards the small runtime selector
+ * set needed by each attempt. `seed` is always supported; bank attempts may
+ * also use `(season, diel)`, Layer B uses weather/generator controls, and
+ * Layer C retrieval can use `species_common_name`.
  *
  * @param {string} layerId    e.g. "layer_a"
  * @param {string} attemptId  e.g. "lucas__smoke_1__audioldm2_spring_night"
- * @param {{seed?: number}} params
+ * @param {{
+ *   seed?: number,
+ *   retrieval_seed?: number,
+ *   season?: string,
+ *   diel?: string,
+ *   weather_type?: string,
+ *   intensity?: string,
+ *   wind_intensity?: string,
+ *   rain_intensity?: string,
+ *   species_common_name?: string,
+ *   duration_s?: number
+ * }} params
  * @returns {Promise<{ok:boolean, audio_b64:string, image_b64:string, metadata:object, sample_rate:number, duration_s:number}>}
  */
 // ─── Cached samples (no model load required) ──────────────────────────────────
@@ -138,9 +151,10 @@ const _PLACEHOLDER_MSG =
   "This product feature is being rebuilt on the new layer/attempt structure. " +
   "Use /dev/layers in the meantime.";
 
-export async function analyseAudio(file, attempts = {}) {
+export async function analyseAudio(file, attempts = {}, register = "immersive") {
   const form = new FormData();
   form.append("file", file);
+  form.append("register", register);
   for (const [key, value] of Object.entries(attempts)) {
     if (value) form.append(`${key}_attempt`, value);
   }
@@ -216,50 +230,81 @@ export async function narrateReport(report, register = "analytical") {
 }
 
 /**
- * Run a raw prompt through the LLM-OSS Prompt Parser validity gate
- * (POST /api/generation/parse → FastAPI /generation/parse). Generates no audio;
- * returns the parse-result contract (prompt_parser_policy.md §5).
+ * Pre-render BOTH tone registers for a report so the immersive scene's tone
+ * toggle switches instantly — a pure cache swap with no LLM call on click.
+ * Renders any missing register via narrateReport in parallel; pass an
+ * already-rendered register (e.g. the immersive narrative analysis returns
+ * inline) in `have` to skip a redundant call. Partial failure is tolerated: a
+ * register that fails to render comes back empty, and the toggle falls back to
+ * a lazy call when that register is first selected.
  *
- * @param {string} prompt  raw natural-language prompt
- * @returns {Promise<{
- *   status: "ok"|"corrected"|"rejected",
- *   note: string,
- *   filled_defaults: string[],
- *   layer_a: ?{season:?string, diel:?string},
- *   layer_b: ?{weather_type:string, intensity:string, duration_s:number},
- *   layer_c: ?{species:string[], density:string}
- * }>}
+ * @param {object} report  fused analysis report JSON (real or synthesized)
+ * @param {{immersive?:string, analytical?:string}} have  already-rendered text per register
+ * @returns {Promise<{immersive:string, analytical:string}>}
  */
-export async function parsePrompt(prompt) {
+export async function renderBothNarratives(report, have = {}) {
+  const out = { immersive: have.immersive || "", analytical: have.analytical || "" };
+  const jobs = [];
+  for (const register of ["immersive", "analytical"]) {
+    if (out[register]) continue;
+    jobs.push(
+      narrateReport(report, register)
+        .then((data) => { out[register] = data?.narrative?.text || ""; })
+        .catch(() => { /* leave empty; toggle falls back to a lazy call */ }),
+    );
+  }
+  await Promise.all(jobs);
+  return out;
+}
+
+export async function parseGenerationPrompt(prompt) {
   const res = await fetch(`${API_BASE}/api/generation/parse`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ prompt }),
+    body:        JSON.stringify({ prompt }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(apiErrorMessage(err, `Prompt parse failed (${res.status})`));
+    throw new Error(apiErrorMessage(err, `Prompt parsing failed (${res.status})`));
   }
   return res.json();
 }
 
 export async function generateSoundscape(conditions = {}) {
+  const layerA = conditions.layer_a || {};
+  const layerB = conditions.layer_b || null;
+  const layerC = conditions.layer_c || null;
   const windSpeed = Number(conditions.wind_speed_ms) || 0;
   const precipitation = Number(conditions.precipitation_mm) || 0;
-  const intensity = windSpeed >= 10 || precipitation >= 20
+  const fallbackIntensity = windSpeed >= 10 || precipitation >= 20
     ? "heavy"
     : windSpeed >= 4 || precipitation > 0
       ? "medium"
       : "light";
+  const hasExplicitLayerContracts =
+    conditions.layer_a !== undefined ||
+    conditions.layer_b !== undefined ||
+    conditions.layer_c !== undefined;
+  const hasParsedEvents = Boolean(layerC?.species?.length);
+  const includeWeather = conditions.include_weather ??
+    (hasExplicitLayerContracts ? Boolean(layerB) : true);
+  const includeEvents = conditions.include_events ??
+    (hasExplicitLayerContracts ? hasParsedEvents : true);
   const payload = {
-    duration_s: Number(conditions.duration_s) || 30,
-    season: conditions.season,
-    diel: conditions.sample_bin,
-    weather_type: precipitation > 0 ? "rain+wind" : "wind",
-    intensity,
-    include_weather: true,
-    include_events: true,
+    seed: Number.isInteger(conditions.seed) ? conditions.seed : 42,
+    duration_s: Number(conditions.duration_s ?? layerB?.duration_s) || 30,
+    season: conditions.season ?? layerA.season,
+    diel: conditions.diel ?? conditions.sample_bin ?? conditions.time ?? layerA.diel,
+    weather_type: conditions.weather_type ?? layerB?.weather_type ?? (precipitation > 0 ? "rain+wind" : "wind"),
+    intensity: conditions.intensity ?? layerB?.intensity ?? fallbackIntensity,
+    include_weather: includeWeather,
+    include_events: includeEvents,
+    include_stems: conditions.include_stems === true,
+    layer_a_attempt: conditions.layer_a_attempt,
+    layer_b_attempt: conditions.layer_b_attempt,
+    layer_c_attempt: conditions.layer_c_attempt,
+    layer_d_attempt: conditions.layer_d_attempt,
   };
   // Only pin a seed when the caller explicitly supplies a valid one; otherwise
   // omit it so the server draws a fresh random seed (different result each run).
@@ -284,7 +329,18 @@ export async function transformSoundscape() { throw new Error(_PLACEHOLDER_MSG);
 export async function generateAttempt(
   layerId,
   attemptId,
-  { seed, retrieval_seed, season, diel, weather_type, intensity, duration_s } = {},
+  {
+    seed,
+    retrieval_seed,
+    season,
+    diel,
+    weather_type,
+    intensity,
+    wind_intensity,
+    rain_intensity,
+    duration_s,
+    species_common_name: speciesCommonName,
+  } = {},
 ) {
   const payload = {};
   if (seed !== undefined) payload.seed = seed;
@@ -295,7 +351,10 @@ export async function generateAttempt(
   }
   if (weather_type) payload.weather_type = weather_type;
   if (intensity) payload.intensity = intensity;
+  if (wind_intensity) payload.wind_intensity = wind_intensity;
+  if (rain_intensity) payload.rain_intensity = rain_intensity;
   if (duration_s) payload.duration_s = duration_s;
+  if (speciesCommonName) payload.species_common_name = speciesCommonName;
   const res = await fetch(
     `${API_BASE}/api/layers/${encodeURIComponent(layerId)}/attempts/${encodeURIComponent(attemptId)}/generate`,
     {

@@ -1,0 +1,26 @@
+training:
+  method: stable_audio_3_lora
+  base_model: Stable Audio 3 small-sfx-base
+  species_common_name: "Horsfield's Bronze-cuckoo"
+  event_type: horsfields_bronze_cuckoo
+  training_run_label: pass35_captionv2_t2a1000
+  checkpoint_step: 1000
+  checkpoint_file: lora_checkpoints/epoch=28-step=1000.ckpt
+  checkpoint_size_bytes: 22414335
+
+inference:
+  method: sa3_lora_generative_live
+  prompt: "isolated Horsfields Bronze-cuckoo call, short repeated descending whistle motif around 2-4 kHz, clean foreground bird vocalization, no wind noise, no insects, no other birds"
+  duration_s: 3.0
+  sampling_cfg_scale: 4.0
+  sampling_steps: 50
+  default_season: summer
+  default_diel: morning
+  postprocess:
+    mode: target_call_detection_timeline
+    bandpass_hz: [2100, 4100]
+    detector: cuckoo_descending_ridge_detector_v1
+    pre_buffer_s: 0.14
+    post_buffer_s: 0.18
+    min_score: 0.68
+    min_contrast_score: 0.7

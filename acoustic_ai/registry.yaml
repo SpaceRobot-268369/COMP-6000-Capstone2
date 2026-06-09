@@ -5,9 +5,21 @@
 #   - serve GET /layers (for the frontend dropdown)
 #   - resolve POST /layers/{layer}/attempts/{attempt_id}/generate to a handler
 #
-# Naming rules:    .claude/context/dev/attempt_naming.md
-# Artifact policy: .claude/context/dev/artifact_policy.md
+# Naming rules + artifact policy: .claude/context/conventions.md
 # Handler interface: each attempt provides handler.py exporting load() + generate().
+#
+# Every GENERATION-layer attempt (layers A/B/C) declares its kind (conventions.md § 5.5):
+#   kind: generative   → checkpoint: <model/candidates|production path>   (trained weights)
+#   kind: retrieval    → asset_bank: <model/candidates|production path>   (media asset bank:
+#                        index.json + media_asset_bank/ audio; JSON index only, no CSV)
+# Both artifact kinds live under model/; only the attempt code lives under
+# acoustic_ai/layers/.../attempts/. Layer D (mixer) and Layer E (analysis,
+# keyed by `head:`) are not generation models and carry no `kind`.
+#
+# Retrieval entries are labelled with `kind` now, but still point at their
+# in-attempt CSV banks (checkpoint: null + asset_index/retrieval_index under
+# params). They gain `asset_bank:` + the model/ layout (index.json +
+# media_asset_bank/) when their author migrates the bank.
 #
 # IDs use snake_case on disk; dropdown labels use human-readable strings.
 # Canonical seed for samples/reference/ is 42 unless an attempt overrides it
@@ -25,6 +37,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-raw-smoke
         params:
@@ -46,6 +59,7 @@ layers:
         author: lucas
         stage: smoke_2
         status: smoke_test_2_insects_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-a-audioldm2-insects-smoke
         params:
@@ -67,6 +81,7 @@ layers:
         author: lucas
         stage: mvp_2
         status: mvp_2_per_cell_passed
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/candidates/lucas/mvp_2__per_cell_loras
@@ -105,6 +120,7 @@ layers:
         author: lucas
         stage: prod_1
         status: production
+        kind: generative
         uses_seed: true
         uses_cells: true
         checkpoint: model/production/layer_a_ambient
@@ -149,6 +165,7 @@ layers:
         author: lucas
         stage: smoke_4
         status: superseded
+        kind: generative
         checkpoint: model/candidates/lucas/vae-site257-30epoch
         extra_checkpoints:
           vocoder: model/candidates/lucas/vocoder-hifigan-site257
@@ -163,11 +180,153 @@ layers:
     label: "Layer B — Weather"
     default: murphy__mvp_1__weather_stem_selector
     attempts:
+      murphy__mvp_1__wind_intensity_bank:
+        label: "Generate wind — intensity bank"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        kind: generative
+        uses_seed: true
+        checkpoint: model/candidates/murphy/mvp_1__wind_intensity_bank
+        description: |
+          Generates wind-only Layer B weather stems from the sealed AudioLDM2
+          wind intensity bank. This is the frontend-facing model test for
+          layerB_generate_wind and sits beside, not in place of, the site-only
+          weather stem selector.
+
+          Runtime controls are seed and wind intensity. Weather type is fixed to
+          wind. The sealed profiles are: light = v2 light_a with 6 kHz lowpass,
+          medium = v3 denoise bump, and heavy = v2 frozen. Medium and heavy use
+          LoRA adapters; light is derived from medium.
+
+          Output is a generated WAV plus metadata for review in the developer
+          Generation page. Layer D still owns final placement and full
+          soundscape mixing.
+        params:
+          base_model: cvssp/audioldm2
+          default_intensity: medium
+          intensity_profile_version: sealed
+          num_inference_steps: 200
+          audio_length_in_s: 8.0
+          denoise_enabled: true
+          denoise_strength: 0.15
+          denoise_noise_quantile: 0.2
+          denoise_floor_ratio: 0.40
+          denoise_hop_length: 512
+          fade_ms: 80.0
+          negative_prompt: >-
+            hiss, static noise, background hum, tape noise, insects, low quality, distortion
+          intensity_profiles:
+            heavy:
+              adapter: heavy
+              prompt: >-
+                loud roaring blustery wind through dry eucalyptus woodland, intense strong gusts,
+                Bowra, Australia
+              guidance_scale: 3.4
+              output_target_rms: 0.09
+              highpass_hz: 80.0
+              denoise_strength: 0.15
+              denoise_floor_ratio: 0.40
+            medium:
+              adapter: medium
+              prompt: >-
+                steady wind through dry eucalyptus woodland, gentle natural breeze,
+                Bowra, Australia
+              guidance_scale: 3.0
+              output_target_rms: 0.048
+              highpass_hz: 80.0
+              denoise_strength: 0.19
+              denoise_floor_ratio: 0.38
+            light:
+              derived_from: medium
+              prompt: >-
+                gentle light breeze through dry eucalyptus woodland, soft faint airflow,
+                Bowra, Australia
+              guidance_scale: 2.5
+              output_target_rms: 0.045
+              highpass_hz: 80.0
+              lowpass_hz: 6000.0
+              denoise_strength: 0.22
+              denoise_floor_ratio: 0.30
+        notes:
+          - Sealed profiles (2026-06-04): light=light_a, medium=v3, heavy=v2.
+          - medium/heavy are true adapters; light is parametric-derived from medium.
+          - Runtime expects weather_type=wind and intensity in {light,medium,heavy}.
+
+      murphy__mvp_1__rain_intensity_seed_pool:
+        label: "Generate rain — curated intensity seed pool"
+        author: murphy
+        stage: mvp_1
+        status: mvp_candidate
+        kind: generative
+        uses_seed: true
+        checkpoint: model/candidates/murphy/mvp_1__rain_intensity_seed_pool
+        description: |
+          Generates rain-only Layer B weather stems from the AudioLDM2 rain
+          LoRA, constrained to a curated MVP pool of good seeds selected from
+          the a2 intensity listening audit. Runtime seed is deterministic
+          entropy into the selected intensity bucket, not an unrestricted model
+          seed. This keeps frontend testing inside the reviewed rain outputs.
+
+          Runtime controls are seed entropy and rain intensity. Weather type is
+          fixed to rain. Supported intensity buckets are light and heavy.
+        params:
+          base_model: cvssp/audioldm2
+          prompt: >-
+            steady rain over dry eucalyptus woodland,
+            Bowra, Australia
+          negative_prompt: >-
+            hiss, static noise, background hum, tape noise, birds, insects,
+            wind gusts, reverb, music, machinery, low quality, distortion
+          guidance_scale: 3.0
+          num_inference_steps: 200
+          audio_length_in_s: 5.0
+          output_target_rms: 0.05
+          highpass_hz: 80.0
+          seed_mode: curated_intensity_pool
+          intensity_profile_version: a2_intensity_audit_20260607
+          intensities: [light, heavy]
+          default_intensity: light
+          good_seeds_by_intensity:
+            light: [42, 43, 44, 51, 999983, 38891, 126481, 4935269, 7257523, 9368669, 10424237, 11057581, 349687]
+            heavy: [46, 48, 2000000001, 123456789, 69317, 349681, 1649669, 1860781, 3549697, 8101981, 10213123, 10635353, 11902037, 69323, 7257533]
+          bwe_enabled: true
+          bwe:
+            cross_over_hz: 8000.0
+            output_sr: 24000
+            output_sample_rate_hz: 24000
+            sbr_source_low_hz: 4000.0
+            sbr_source_high_hz: 7900.0
+            sbr_shift_hz: 4000.0
+            sbr_target_low_hz: 8000.0
+            sbr_target_high_hz: 11800.0
+            noise_low_hz: 8000.0
+            noise_high_hz: 11800.0
+            envelope_source_low_hz: 3000.0
+            envelope_source_high_hz: 7900.0
+            envelope_smooth_ms: 35.0
+            noise_to_sbr_rms_ratio: 0.35
+            target_drop_8_11_minus_2_8_db: -10.985337681240505
+            post_bwe_highband_trim_db: -2.75
+            denoise_enabled: false
+          denoise_enabled: false
+          denoise_strength: 0.15
+          denoise_noise_quantile: 0.2
+          denoise_floor_ratio: 0.38
+          denoise_hop_length: 512
+          fade_ms: 20.0
+        notes:
+          - MVP seed pool comes from a2_intensity_audit_20260607.
+          - Runtime seed maps deterministically into the selected good-seed bucket.
+          - Raw listening WAVs are not committed; audit CSVs document the pool.
+
       murphy__mvp_1__weather_stem_selector:
         label: "Weather stem selector — site-only MVP"
         author: murphy
         stage: mvp_1
         status: mvp_candidate
+        kind: retrieval
+        asset_bank: model/candidates/murphy/mvp_1__weather_stem_selector
         uses_seed: true
         uses_weather_controls: true
         checkpoint: null
@@ -178,7 +337,6 @@ layers:
 
           Supported site weather types in this branch: rain, wind, and rain+wind. Site thunder/storm/rain+thunder/rain+thunder+wind are not exposed until reliable site-derived storm candidates are promoted. Runtime controls: weather_type, intensity, duration_s, and retrieval_seed. This is an asset-selection MVP, not a trained weather generator and not a full soundscape renderer.
         params:
-          asset_index: acoustic_ai/layers/layer_b/attempts/murphy__smoke_1__curated_assets/data/weather/asset_index.csv
           default_weather_type: rain
           default_intensity: medium
           default_duration_s: 10.0
@@ -197,6 +355,7 @@ layers:
         author: lucas
         stage: smoke_1
         status: placeholder
+        kind: retrieval
         checkpoint: null
         params: {}
         notes:
@@ -204,13 +363,14 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: lucas__smoke_1__audiogen_boobook
+    default: burger__mvp_3__sa3_generative_live
     attempts:
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
         author: lucas
         stage: smoke_1
         status: smoke_test_1_success
+        kind: generative
         uses_seed: true
         checkpoint: model/candidates/lucas/layer-c-audiogen-boobook-smoke
         params:
@@ -224,27 +384,26 @@ layers:
         author: burger
         stage: mvp_2
         status: demo_ready
+        kind: retrieval
         uses_seed: true
         uses_cells: true
         checkpoint: null
+        asset_bank: model/candidates/burger/mvp_2__retrieval_v2_library
         description: |
           Layer C retrieval v2 baseline backed by the rebuilt 63-species
-          audited library. It selects real Pass-reviewed snippets from the v2
-          event index and schedules them into a 60-second ecological timeline.
-        deploy_dvc:
-          - acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/review_package_full_v2_s3reuse/splendid_fairywren.dvc
+          audited library. It selects one real Pass-reviewed snippet from the
+          v2 event index and returns the clip at its natural duration.
         params:
           method: retrieval
           species_common_name: "Splendid Fairywren"
           event_type: layer_c_retrieval_v2_library
-          retrieval_index: acoustic_ai/layers/layer_c/attempts/burger__mvp_2__retrieval_v2_library/data/media_asset_bank/layer_c_retrieval_v2_event_index.csv
-          duration_s: 60.0
-          count: 12
+          count: 1
           default_cell: summer_morning
           default_season: summer
           default_diel: morning
           ecological_mode: true
           enable_variation: false
+          layer_c_only: true
           ambient_gain_db: -26.0
           events_gain_db: -2.0
           cells:
@@ -268,6 +427,73 @@ layers:
           - Uses the v2 Pass manifest with 4,329 snippets across 63 species.
           - Pacific Swift has 9 snippets because the v2 candidate pool only had 9 valid candidates.
           - Default species is Splendid Fairywren; params can be copied for other species-specific retrieval demos.
+
+      burger__mvp_3__sa3_generative_live:
+        label: "Layer C SA3 LoRA generative live model"
+        author: burger
+        stage: mvp_3
+        status: experimental
+        kind: generative
+        uses_seed: true
+        checkpoint: null
+        description: |
+          Layer C generative live endpoint. This attempt loads the Stable
+          Audio 3 LoRA checkpoint at request time, generates a new waveform
+          for the requested seed, then applies species-specific post-processing.
+          It should be run on the GPU worker, not on a local CPU-only server.
+        deploy_dvc:
+          - model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-pass35-captionv2-t2a1000/lora_checkpoints/epoch=28-step=1000.ckpt.dvc
+          - model/candidates/burger/layer-c-sa3-spotted-nightjar-core30-human-bandpass-step1200/lora_checkpoints/epoch=39-step=1200.ckpt.dvc
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_3__sa3_generative_live/expected/horsfields_bronze_cuckoo/audio.wav.dvc
+          - acoustic_ai/layers/layer_c/attempts/burger__mvp_3__sa3_generative_live/expected/spotted_nightjar/audio.wav.dvc
+        params:
+          method: sa3_lora_generative_live
+          base_model: Stable Audio 3 small-sfx-base
+          live_output_root: debug/layer_c/sa3_live_api
+          default_species_common_name: "Horsfield's Bronze-cuckoo"
+          species_pools:
+            horsfields_bronze_cuckoo:
+              species_common_name: "Horsfield's Bronze-cuckoo"
+              event_type: horsfields_bronze_cuckoo
+              source_checkpoint: model/candidates/burger/layer-c-sa3-horsfields-bronze-cuckoo-pass35-captionv2-t2a1000/lora_checkpoints/epoch=28-step=1000.ckpt
+              checkpoint_step: 1000
+              prompt: "isolated Horsfields Bronze-cuckoo call, short repeated descending whistle motif around 2-4 kHz, clean foreground bird vocalization, no wind noise, no insects, no other birds"
+              duration_s: 3.0
+              sampling_cfg_scale: 4.0
+              sampling_steps: 50
+              default_season: summer
+              default_diel: morning
+              postprocess:
+                mode: target_call_detection_timeline
+                bandpass_hz: [2100, 4100]
+                detector: cuckoo_descending_ridge_detector_v1
+                pre_buffer_s: 0.14
+                post_buffer_s: 0.18
+                min_score: 0.68
+                min_contrast_score: 0.7
+            spotted_nightjar:
+              species_common_name: "Spotted Nightjar"
+              event_type: spotted_nightjar
+              source_checkpoint: model/candidates/burger/layer-c-sa3-spotted-nightjar-core30-human-bandpass-step1200/lora_checkpoints/epoch=39-step=1200.ckpt
+              checkpoint_step: 1200
+              prompt: "low pulsing Spotted Nightjar churring bird call, narrow low frequency nocturnal call, isolated foreground wildlife sound"
+              duration_s: 5.0
+              sampling_cfg_scale: 4.0
+              sampling_steps: 50
+              default_season: summer
+              default_diel: night
+              postprocess:
+                mode: s3a_tight_tailcrop335
+                bandpass_hz: [550, 950]
+                spectral_gate_strength: 0.3
+                target_rms: 0.035
+                fade_ms: 120
+                crop_end_s: 3.35
+        notes:
+          - Runs actual SA3 LoRA inference at request time; first response may be slow.
+          - Requires Stable Audio 3 dependencies, model access, and CUDA on the worker.
+          - Expected samples are real audited bird-call references, one per species.
+          - This is the single Layer C SA3 generative route; runtime species selection switches checkpoints and post-processing.
 
   layer_d:
     label: "Layer D — Mixer"
@@ -300,6 +526,36 @@ layers:
           - Combines A+B+C outputs into final WAV + explanation JSON.
           - Current preferred listening configuration is local mix attempt v5.
           - Handler accepts upstream WAV bytes from a generation orchestrator.
+
+      songke__mvp_2__multi_clip_mix:
+        label: "Multi-clip timeline mix"
+        author: songke
+        stage: mvp_2
+        status: implemented_not_default
+        checkpoint: null
+        description: |
+          Handler-level Layer D multi-clip mixer for the next generation
+          pipeline. Accepts one Layer A ambient bed plus zero or more Layer B
+          weather clips and Layer C event clips, supports continuous weather
+          beds, discrete placed weather clips, multiple event clips, explicit
+          onset lists, seeded random onset fallback, per-clip gain overrides,
+          peak protection, and reviewer-facing placed-clip metadata. Registered
+          and routable through the generation orchestrator when selected, but
+          not the Layer D default until real A/B/C listening checks are
+          complete.
+        params:
+          default_duration_s: 30.0
+          weather_gain_db: -2.0
+          event_gain_db: -8.0
+          event_activity_envelope: true
+          event_boundary_fade_s: 1.0
+          event_bandpass_hz: [500.0, 8000.0]
+          peak_ceiling: 0.95
+          placement_seed_default: 42
+        notes:
+          - Handler-level multi-clip contract is implemented and covered by tests.
+          - Backward-compatible with the mvp_1 single-stem handler parameters while the orchestrator catches up.
+          - Do not promote to layer_d default until real A/B/C listening checks are complete.
 
   layer_e:
     label: "Layer E — Analysis"

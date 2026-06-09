@@ -10,7 +10,7 @@ Skills (per-job instruction sets) live as separate files in skills/ and are
 loaded as the system message; job data is the user message (plan §2.1).
 
 Decision record + rationale: .claude/context/ai/llm_layer_config.md
-Build plan: .claude/context/ai/llm_layer_implementation_plan.md
+Build plan: llm_layer_implementation_plan.md (in this directory)
 
 Public API:
 

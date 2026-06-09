@@ -3,10 +3,12 @@ import {
   fetchAttemptSamples,
   fetchLayerRegistry,
   generateAttempt,
+  generateSoundscape,
   sampleWavUrl,
 } from "../lib/api.js";
 
 const DEFAULT_SEED = 42;
+const DEFAULT_LAYER_C_SPECIES = "Horsfield's Bronze-cuckoo";
 const WEATHER_TYPE_OPTIONS = [
   { value: "rain", label: "rain" },
   { value: "wind", label: "wind" },
@@ -17,6 +19,21 @@ const WEATHER_INTENSITY_OPTIONS = [
   { value: "medium", label: "medium" },
   { value: "heavy", label: "heavy" },
 ];
+const RAIN_INTENSITY_OPTIONS = [
+  { value: "light", label: "light" },
+  { value: "heavy", label: "heavy" },
+];
+const SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"]
+  .map((value) => ({ value, label: value }));
+const DIEL_OPTIONS = ["dawn", "morning", "afternoon", "night"]
+  .map((value) => ({ value, label: value }));
+const WEATHER_STEM_SELECTOR_ATTEMPT = "murphy__mvp_1__weather_stem_selector";
+const WIND_GENERATOR_ATTEMPTS = new Set([
+  "murphy__mvp_1__wind_intensity_bank",
+]);
+const RAIN_GENERATOR_ATTEMPTS = new Set([
+  "murphy__mvp_1__rain_intensity_seed_pool",
+]);
 
 const GENERATION_LAYER_IDS = ["layer_a", "layer_b", "layer_c", "layer_d"];
 const ANALYSIS_LAYER_IDS   = ["layer_e"];
@@ -44,7 +61,16 @@ export default function LayerATestPage({
   const [diel,     setDiel]     = useState("");        // bank attempts only
   const [weatherType, setWeatherType] = useState("rain");
   const [weatherIntensity, setWeatherIntensity] = useState("medium");
+  const [windIntensity, setWindIntensity] = useState("medium");
+  const [rainIntensity, setRainIntensity] = useState("light");
   const [weatherDuration, setWeatherDuration] = useState(10);
+  const [layerDIncludeWeather, setLayerDIncludeWeather] = useState(true);
+  const [layerDIncludeEvents, setLayerDIncludeEvents] = useState(true);
+  const [layerDAttempts, setLayerDAttempts] = useState({
+    layer_a: "",
+    layer_b: "",
+    layer_c: "",
+  });
   const [status,   setStatus]   = useState("idle");   // idle | loading | done | error
   const [result,   setResult]   = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -54,6 +80,7 @@ export default function LayerATestPage({
   const [samples,    setSamples]    = useState(null);  // {expected:[…], showcase:[…], canonical_seed}
   const [samplesErr, setSamplesErr] = useState("");
   const [expectedKey, setExpectedKey] = useState(""); // "<tier>/<stem>"
+  const [selectedSpecies, setSelectedSpecies] = useState("");
 
   // Load the layer registry once on mount.
   useEffect(() => {
@@ -91,6 +118,7 @@ export default function LayerATestPage({
     setSamples(null);
     setSamplesErr("");
     setExpectedKey("");
+    setSelectedSpecies("");
     fetchAttemptSamples(layerId, attemptId)
       .then((doc) => {
         setSamples(doc);
@@ -107,10 +135,75 @@ export default function LayerATestPage({
     () => currentLayer?.attempts.find((a) => a.id === attemptId),
     [currentLayer, attemptId],
   );
+  const generationLayersById = useMemo(() => {
+    const byId = {};
+    for (const layer of registry?.layers || []) {
+      byId[layer.id] = layer;
+    }
+    return byId;
+  }, [registry]);
+
+  useEffect(() => {
+    if (!registry) return;
+    setLayerDAttempts((current) => {
+      const next = { ...current };
+      for (const layerKey of ["layer_a", "layer_b", "layer_c"]) {
+        const layer = generationLayersById[layerKey];
+        const attempts = layer?.attempts || [];
+        if (!attempts.length) continue;
+        if (!attempts.some((attempt) => attempt.id === next[layerKey])) {
+          next[layerKey] = layer.default || attempts[0].id;
+        }
+      }
+      return next;
+    });
+  }, [registry, generationLayersById]);
   const usesSeed = currentAttempt?.uses_seed === true;
   const usesCells = currentAttempt?.uses_cells === true;
   const usesWeatherControls = currentAttempt?.uses_weather_controls === true;
+  const usesWeatherStemControls = usesWeatherControls || (layerId === "layer_b" && attemptId === WEATHER_STEM_SELECTOR_ATTEMPT);
+  const usesWindGeneratorControls = layerId === "layer_b" && WIND_GENERATOR_ATTEMPTS.has(attemptId);
+  const usesRainGeneratorControls = layerId === "layer_b" && RAIN_GENERATOR_ATTEMPTS.has(attemptId);
+  const usesLayerBControls = usesWeatherStemControls || usesWindGeneratorControls || usesRainGeneratorControls;
+  const isWindIntensityBank = layerId === "layer_b" && attemptId === "murphy__mvp_1__wind_intensity_bank";
+  const isLayerD = layerId === "layer_d";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
+  const speciesOptions = useMemo(() => {
+    if (currentAttempt?.species_options?.length) {
+      return currentAttempt.species_options
+        .map((option) => ({
+          value: option.value || option.label,
+          label: option.label || option.value,
+          slug: option.slug || "",
+          scientificName: option.scientific_name || "",
+        }))
+        .filter((option) => option.value && option.label)
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }
+    if (!samples?.expected?.length) return [];
+    const bySpecies = new Map();
+    for (const sample of samples.expected) {
+      const metadata = sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      if (!species) continue;
+      bySpecies.set(species, {
+        value: species,
+        label: species,
+        slug: metadata.species_slug || sample.stem,
+      });
+    }
+    return [...bySpecies.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [currentAttempt, samples]);
+
+  useEffect(() => {
+    if (!speciesOptions.length) {
+      setSelectedSpecies("");
+      return;
+    }
+    if (speciesOptions.some((option) => option.value === selectedSpecies)) return;
+    const defaultSpecies = speciesOptions.find((option) => option.value === DEFAULT_LAYER_C_SPECIES);
+    setSelectedSpecies((defaultSpecies || speciesOptions[0]).value);
+  }, [speciesOptions, selectedSpecies]);
 
   // Derive the season / diel axes from the cell list (handles partial banks).
   const seasonOptions = useMemo(() => {
@@ -127,6 +220,11 @@ export default function LayerATestPage({
   // When the attempt changes, seed the (season, diel) selectors from the
   // attempt's default_cell (or the first available cell).
   useEffect(() => {
+    if (isLayerD) {
+      setSeason("summer");
+      setDiel("morning");
+      return;
+    }
     if (!usesCells || !cells.length) {
       setSeason("");
       setDiel("");
@@ -138,10 +236,11 @@ export default function LayerATestPage({
     const [s, d] = base.split("_");
     setSeason(s);
     setDiel(d);
-  }, [usesCells, cells, currentAttempt]);
+  }, [usesCells, cells, currentAttempt, isLayerD]);
 
   // Keep diel valid when season changes (pick the first diel for that season).
   useEffect(() => {
+    if (isLayerD) return;
     if (!usesCells || !season) return;
     if (!cells.includes(`${season}_${diel}`)) {
       const firstDiel = dielOptions[0]?.value || "";
@@ -160,7 +259,7 @@ export default function LayerATestPage({
       { tier: "expected", entries: samples.expected || [] },
       { tier: "showcase", entries: samples.showcase || [] },
     ];
-    return tiers.flatMap((t) =>
+    const cellEntries = tiers.flatMap((t) =>
       t.entries
         .filter((s) => {
           if (!activeCell) return true;
@@ -174,7 +273,24 @@ export default function LayerATestPage({
           key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
         })),
     );
-  }, [samples, usesCells, season, diel]);
+
+    if (!selectedSpecies) return cellEntries;
+    const speciesEntries = cellEntries.filter((entry) => {
+      const metadata = entry.sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      return species === selectedSpecies;
+    });
+    return speciesEntries.length ? speciesEntries : cellEntries;
+  }, [samples, usesCells, season, diel, selectedSpecies]);
+
+  const expectedHasSelectedSpecies = useMemo(() => {
+    if (!selectedSpecies || !expectedEntries.length) return false;
+    return expectedEntries.some((entry) => {
+      const metadata = entry.sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      return species === selectedSpecies;
+    });
+  }, [expectedEntries, selectedSpecies]);
 
   // Auto-select the first expected sample when entries change.
   useEffect(() => {
@@ -220,19 +336,50 @@ export default function LayerATestPage({
     try {
       const runParams = {};
       if (usesSeed) {
-        if (usesWeatherControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
+        if (usesWeatherStemControls) runParams.retrieval_seed = Number(seed) || DEFAULT_SEED;
         else runParams.seed = Number(seed) || DEFAULT_SEED;
       }
       if (usesCells && season && diel) {
         runParams.season = season;
         runParams.diel = diel;
       }
-      if (usesWeatherControls) {
+      if (usesWeatherStemControls) {
         runParams.weather_type = weatherType;
         runParams.intensity = weatherIntensity;
         runParams.duration_s = Number(weatherDuration) || 10;
       }
-      const data = await generateAttempt(layerId, attemptId, runParams);
+      if (usesWindGeneratorControls) {
+        runParams.weather_type = "wind";
+        if (isWindIntensityBank) {
+          runParams.intensity = windIntensity;
+          runParams.wind_intensity = windIntensity;
+        }
+      }
+      if (usesRainGeneratorControls) {
+        runParams.weather_type = "rain";
+        runParams.intensity = rainIntensity;
+        runParams.rain_intensity = rainIntensity;
+      }
+      if (selectedSpecies) {
+        runParams.species_common_name = selectedSpecies;
+      }
+      const data = isLayerD
+        ? await generateSoundscape({
+            seed: Number(seed) || DEFAULT_SEED,
+            duration_s: Number(weatherDuration) || 10,
+            season: season || "summer",
+            diel: diel || "morning",
+            weather_type: weatherType,
+            intensity: weatherIntensity,
+            include_weather: layerDIncludeWeather,
+            include_events: layerDIncludeEvents,
+            include_stems: true,
+            layer_a_attempt: layerDAttempts.layer_a,
+            layer_b_attempt: layerDAttempts.layer_b,
+            layer_c_attempt: layerDAttempts.layer_c,
+            layer_d_attempt: attemptId,
+          })
+        : await generateAttempt(layerId, attemptId, runParams);
       setResult(data);
       setStatus("done");
     } catch (err) {
@@ -260,7 +407,14 @@ export default function LayerATestPage({
 
   const isLoading = status === "loading";
   const isDone    = status === "done";
-  const tag       = `${layerId}__${attemptId}${usesCells && season && diel ? `__${season}_${diel}` : ""}${usesWeatherControls ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s` : ""}__${usesWeatherControls ? "retrieval_seed" : "seed"}${seed || DEFAULT_SEED}`;
+  const layerBTag = usesWeatherStemControls
+    ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__retrieval_seed`
+    : usesWindGeneratorControls
+      ? `__wind${isWindIntensityBank ? `_${windIntensity}` : ""}__seed`
+      : usesRainGeneratorControls
+        ? `__rain_${rainIntensity}__seed_pool_entropy`
+      : "__seed";
+  const tag       = `${layerId}__${attemptId}${(usesCells || isLayerD) && season && diel ? `__${season}_${diel}` : ""}${isLayerD ? `__${weatherType}_${weatherIntensity}_${weatherDuration}s__seed` : usesLayerBControls ? layerBTag : "__seed"}${seed || DEFAULT_SEED}`;
   const progressText = getProgressText(progress, status);
 
   const registryReady = Boolean(registry);
@@ -347,10 +501,10 @@ export default function LayerATestPage({
                 )}
               </section>
 
-              {usesCells && (
+              {(usesCells || isLayerD) && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
-                    Scene
+                    {isLayerD ? "Upstream scene" : "Scene"}
                     {season && diel && (
                       <span className="dev-controls-section-pill">
                         {season} · {diel}
@@ -362,22 +516,43 @@ export default function LayerATestPage({
                       label="Season"
                       value={season}
                       onChange={setSeason}
-                      options={seasonOptions}
+                      options={isLayerD ? SEASON_OPTIONS : seasonOptions}
                     />
                     <LabeledSelect
                       label="Time of day"
                       value={diel}
                       onChange={setDiel}
-                      options={dielOptions}
+                      options={isLayerD ? DIEL_OPTIONS : dielOptions}
                     />
                   </div>
                 </section>
               )}
 
-              {usesWeatherControls && (
+              {!isLayerD && speciesOptions.length > 1 && (
                 <section className="dev-controls-section">
                   <p className="dev-controls-section-label">
-                    Weather stem
+                    Target bird
+                    {selectedSpecies && (
+                      <span className="dev-controls-section-pill">
+                        {selectedSpecies}
+                      </span>
+                    )}
+                  </p>
+                  <div className="dev-controls-section-grid">
+                    <LabeledSelect
+                      label="Species"
+                      value={selectedSpecies}
+                      onChange={setSelectedSpecies}
+                      options={speciesOptions}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {(usesWeatherStemControls || isLayerD) && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    {isLayerD ? "Upstream weather" : "Weather stem"}
                     <span className="dev-controls-section-pill">
                       {weatherType} · {weatherIntensity}
                     </span>
@@ -408,17 +583,142 @@ export default function LayerATestPage({
                 </section>
               )}
 
+              {usesWindGeneratorControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Wind generator
+                    <span className="dev-controls-section-pill">
+                      wind{isWindIntensityBank ? ` · ${windIntensity}` : " · locked profile"}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="wind" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Wind intensity"
+                      value={windIntensity}
+                      onChange={setWindIntensity}
+                      options={WEATHER_INTENSITY_OPTIONS}
+                      disabled={!isWindIntensityBank}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Duration</span>
+                      <input
+                        className="layer-a-input"
+                        type="text"
+                        value={currentAttempt?.params?.audio_length_in_s ? `${currentAttempt.params.audio_length_in_s}s` : "server locked"}
+                        disabled
+                      />
+                      <small>Owned by registry / handler.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
+              {usesRainGeneratorControls && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">
+                    Rain generator
+                    <span className="dev-controls-section-pill">
+                      rain · {rainIntensity}
+                    </span>
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <label className="layer-a-field is-disabled">
+                      <span>Weather type</span>
+                      <input className="layer-a-input" type="text" value="rain" disabled />
+                      <small>Fixed for this Layer B generate path.</small>
+                    </label>
+                    <LabeledSelect
+                      label="Rain intensity"
+                      value={rainIntensity}
+                      onChange={setRainIntensity}
+                      options={RAIN_INTENSITY_OPTIONS}
+                    />
+                    <label className="layer-a-field is-disabled">
+                      <span>Seed mode</span>
+                      <input className="layer-a-input" type="text" value="curated pool" disabled />
+                      <small>Seed chooses from reviewed good rain seeds.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
+              {isLayerD && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">Upstream models</p>
+                  <p className="dev-controls-section-help">
+                    Select one upstream attempt per layer. Multi-clip behavior comes from the selected Layer B/C attempt output, not from selecting multiple attempts.
+                  </p>
+                  <div className="dev-controls-section-grid three-col">
+                    <LabeledSelect
+                      label="Layer A attempt"
+                      value={layerDAttempts.layer_a}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_a: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_a)}
+                    />
+                    <LabeledSelect
+                      label="Layer B attempt"
+                      value={layerDAttempts.layer_b}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_b: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_b)}
+                    />
+                    <LabeledSelect
+                      label="Layer C attempt"
+                      value={layerDAttempts.layer_c}
+                      onChange={(value) => setLayerDAttempts((current) => ({ ...current, layer_c: value }))}
+                      options={attemptOptionsForLayer(generationLayersById.layer_c)}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {isLayerD && (
+                <section className="dev-controls-section">
+                  <p className="dev-controls-section-label">Mixer inputs</p>
+                  <div className="dev-controls-section-grid two-col">
+                    <label className="layer-a-field">
+                      <span>Include weather stem</span>
+                      <input
+                        type="checkbox"
+                        checked={layerDIncludeWeather}
+                        onChange={(e) => setLayerDIncludeWeather(e.target.checked)}
+                      />
+                      <small>Generate Layer B and pass it to Layer D.</small>
+                    </label>
+                    <label className="layer-a-field">
+                      <span>Include event stem</span>
+                      <input
+                        type="checkbox"
+                        checked={layerDIncludeEvents}
+                        onChange={(e) => setLayerDIncludeEvents(e.target.checked)}
+                      />
+                      <small>Generate Layer C and pass it to Layer D.</small>
+                    </label>
+                  </div>
+                </section>
+              )}
+
               <section className="dev-controls-section dev-controls-section-run">
                 <p className="dev-controls-section-label">Run</p>
                 <div className="dev-controls-run-grid">
                   <SeedField
-                    label={usesWeatherControls ? "Retrieval seed" : "Seed"}
+                    label={usesWeatherStemControls ? "Retrieval seed" : usesRainGeneratorControls ? "Seed entropy" : "Seed"}
                     value={seed}
                     onChange={setSeed}
-                    disabled={!usesSeed}
+                    disabled={!usesSeed && !isLayerD}
                     hint={
-                      usesWeatherControls
-                        ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                      isLayerD
+                        ? "Same seed + same orchestration settings should reproduce the upstream choices."
+                        : usesWeatherStemControls
+                          ? "Same retrieval_seed + same weather settings = same selected asset and start offset."
+                        : usesWindGeneratorControls
+                          ? "Same seed + same wind generator settings = same model sample."
+                        : usesRainGeneratorControls
+                          ? "Seed maps deterministically into the reviewed rain seed pool for the selected intensity."
                         : usesSeed
                           ? "Same seed + same attempt = same audio."
                         : "This model does not use a seed."
@@ -435,7 +735,7 @@ export default function LayerATestPage({
                         : undefined
                     }
                   >
-                    {isLoading ? "Generating..." : "▶ Generate"}
+                    {isLoading ? "Generating..." : isLayerD ? "Run ABC->D Mix" : "▶ Generate"}
                   </button>
                 </div>
               </section>
@@ -509,9 +809,13 @@ export default function LayerATestPage({
           <div className="generation-card-head">
             <h2>Expected Results</h2>
             <p>
-              {samples?.canonical_seed != null
-                ? `Cached samples · canonical seed ${samples.canonical_seed}`
-                : "Cached expected / showcase samples"}
+              {selectedSpecies
+                ? expectedHasSelectedSpecies
+                  ? `${selectedSpecies} · layer C only expected sample`
+                  : `${selectedSpecies} · cached references for this attempt`
+                : samples?.canonical_seed != null
+                  ? `Cached samples · canonical seed ${samples.canonical_seed}`
+                  : "Cached expected / showcase samples"}
             </p>
           </div>
 
@@ -545,14 +849,18 @@ export default function LayerATestPage({
               </div>
             )}
 
-            <ExpectedSample
-              layerId={layerId}
-              attemptId={attemptId}
-              tier={expectedSelected?.tier}
-              sample={expectedSelected?.sample}
-              loading={!samplesErr && !samples}
-              empty={!samplesErr && samples && expectedEntries.length === 0}
-            />
+            {isLayerD ? (
+              <LayerDExpectedNote />
+            ) : (
+              <ExpectedSample
+                layerId={layerId}
+                attemptId={attemptId}
+                tier={expectedSelected?.tier}
+                sample={expectedSelected?.sample}
+                loading={!samplesErr && !samples}
+                empty={!samplesErr && samples && expectedEntries.length === 0}
+              />
+            )}
           </div>
         </main>
 
@@ -564,6 +872,16 @@ export default function LayerATestPage({
           </div>
 
           <div className="dev-result-body">
+            {isLayerD && isDone && result?.stems && (
+              <ReviewSection title="ABC Upstream Stems">
+                <div className="dev-layer-d-stem-grid">
+                  <LayerDStemCard title="Layer A - Ambient" stem={result.stems.layer_a} />
+                  <LayerDStemCard title="Layer B - Weather" stem={result.stems.layer_b} />
+                  <LayerDStemCard title="Layer C - Events" stem={result.stems.layer_c} />
+                </div>
+              </ReviewSection>
+            )}
+
             <ReviewSection title="♪ Audio">
               {isDone && result?.audio_b64 ? (
                 <>
@@ -572,14 +890,18 @@ export default function LayerATestPage({
                          style={{ width: "100%" }} />
                   <p style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
                     {result.sample_rate} Hz · {result.duration_s?.toFixed?.(1) ?? result.duration_s} s ·{" "}
-                    {usesWeatherControls
+                    {usesWeatherStemControls
                       ? `retrieval_seed ${result.metadata?.retrieval_seed ?? result.metadata?.seed ?? seed}`
                       : `seed ${result.metadata?.seed ?? seed}`}
                   </p>
                 </>
               ) : (
                 <Placeholder kind="audio" loading={isLoading}>
-                  {isLoading ? "Generating audio…" : "Click Generate to run the handler."}
+                  {isLoading
+                    ? "Generating upstream stems and final mix..."
+                    : isLayerD
+                      ? "Click Run ABC->D Mix to generate upstream stems and final mix."
+                      : "Click Generate to run the handler."}
                 </Placeholder>
               )}
             </ReviewSection>
@@ -655,6 +977,8 @@ function ExpectedSample({ layerId, attemptId, tier, sample, loading, empty }) {
       ? "No cached samples on disk for this attempt yet."
       : !hasSample
         ? "Select a cached sample to preview."
+        : sample.wav_dvc
+          ? "WAV is DVC-tracked and not present locally. Run dvc pull for this sample to preview audio."
         : "WAV not present locally — generate or run dvc pull.";
 
   const spectrogramCaption = loading
@@ -714,6 +1038,62 @@ function ExpectedSample({ layerId, attemptId, tier, sample, loading, empty }) {
         )}
       </ReviewSection>
     </>
+  );
+}
+
+function LayerDExpectedNote() {
+  return (
+    <div className="dev-layer-d-expected-note">
+      <h3>Layer D expects upstream stems</h3>
+      <p>
+        The mixer does not own cached expected samples by itself. Use Generated
+        Results to inspect the Layer A ambient stem, Layer B weather stem,
+        Layer C event stem, and the final Layer D mix for the current run.
+      </p>
+    </div>
+  );
+}
+
+function LayerDStemCard({ title, stem }) {
+  const attempt = stem?.metadata?.attempt || {};
+  if (!stem) {
+    return (
+      <article className="dev-layer-d-stem-card">
+        <h4>{title}</h4>
+        <Placeholder kind="audio">Stem disabled for this run.</Placeholder>
+      </article>
+    );
+  }
+  return (
+    <article className="dev-layer-d-stem-card">
+      <h4>{title}</h4>
+      <div className="dev-layer-d-model-line">
+        <span>{attempt.label || attempt.id || "Unknown attempt"}</span>
+        {attempt.author && <small>by {attempt.author}</small>}
+      </div>
+      <div className="dev-layer-d-chip-row">
+        {attempt.id && <code>{attempt.id}</code>}
+        {attempt.stage && <code>{attempt.stage}</code>}
+        {attempt.status && <code>{attempt.status}</code>}
+      </div>
+      {stem.audio_b64 ? (
+        <audio controls src={`data:audio/wav;base64,${stem.audio_b64}`} style={{ width: "100%" }} />
+      ) : (
+        <Placeholder kind="audio">No stem audio returned.</Placeholder>
+      )}
+      {stem.image_b64 ? (
+        <img
+          src={`data:image/png;base64,${stem.image_b64}`}
+          alt={`${title} spectrogram`}
+          className="gen-spectrogram-img layer-a-spectrogram-img"
+        />
+      ) : (
+        <Placeholder kind="image">No stem spectrogram returned.</Placeholder>
+      )}
+      <pre className="layer-a-json">
+        {JSON.stringify(stem.metadata || {}, null, 2)}
+      </pre>
+    </article>
   );
 }
 
@@ -791,12 +1171,13 @@ function LabeledNumber({ label, value, min, max, step = 1, hint, onChange, disab
   );
 }
 
-function LabeledSelect({ label, value, options, onChange }) {
+function LabeledSelect({ label, value, options, onChange, disabled = false }) {
   return (
-    <label className="layer-a-field">
+    <label className={`layer-a-field${disabled ? " is-disabled" : ""}`}>
       <span>{label}</span>
       <select className="layer-a-input"
               value={value}
+              disabled={disabled}
               onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -804,6 +1185,14 @@ function LabeledSelect({ label, value, options, onChange }) {
       </select>
     </label>
   );
+}
+
+function attemptOptionsForLayer(layer) {
+  const attempts = layer?.attempts || [];
+  return attempts.map((attempt) => ({
+    value: attempt.id,
+    label: `${attempt.label} (${attempt.stage}, ${attempt.status})`,
+  }));
 }
 
 function getProgressText(progress, status) {

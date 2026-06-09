@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { createImmersive } from "../immersive/engine.js";
 import ImmersiveControls from "../components/ImmersiveControls.jsx";
 import AudioPlayer from "../components/AudioPlayer.jsx";
-import ToneToggle from "../components/ToneToggle.jsx";
+import { sceneStateFromAnalysis } from "../lib/analysisScene.js";
 import "../immersive/immersive.css";
 
 /* The eco-acoustic immersive experience screen — a procedural Three.js woodland
@@ -23,9 +23,11 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const location = useLocation();
   const navigate = useNavigate();
 
+  const analysisInitial = sceneStateFromAnalysis(location.state);
   const isFromDemo = Boolean(location.state?.fromDemo);
-  const activeInitial = location.state?.resolved || initial;
-  const activeShowDevPanel = isFromDemo ? false : showDevPanel;
+  const isFromAnalysis = Boolean(location.state?.fromAnalysis);
+  const activeInitial = location.state?.resolved || analysisInitial || initial;
+  const activeShowDevPanel = isFromDemo || isFromAnalysis ? false : showDevPanel;
 
   const sceneRef = useRef(null);
   const boltRef = useRef(null);
@@ -42,6 +44,10 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
   const [wind, setWind] = useState(() => activeInitial?.wind ?? 0);
   const [audioSrc, setAudioSrc] = useState(() => activeInitial?.audioUrl || "");
   const [audioLabel, setAudioLabel] = useState(() => activeInitial?.resolvedPrompt || activeInitial?.prompt || "Soundscape");
+  // Toggle for the supplementary metadata overlays (analytical narration +
+  // source caption + models-used). The center caption always shows the
+  // immersive register; this just reveals/hides the analytical detail.
+  const [showDetails, setShowDetails] = useState(true);
 
   useEffect(() => {
     const instance = createImmersive({
@@ -54,9 +60,13 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     });
     setApi(instance);
 
-    // If there is an audioUrl, attempt autoplay once Three.js and WebAudio are bootstrapped
-    if (activeInitial?.audioUrl && audioRef.current) {
-      const playPromise = audioRef.current.play();
+    // Ensure the audio element loads the source (blob URLs need an explicit
+    // load() call when set before the element is connected to the DOM).
+    const a = audioRef.current;
+    if (a && activeInitial?.audioUrl) {
+      a.src = activeInitial.audioUrl;
+      a.load();
+      const playPromise = a.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => setPlaying(true))
@@ -69,6 +79,9 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     return () => {
       setApi(null);
       instance.dispose();
+      // Do NOT revoke blob URLs here — React StrictMode double-mounts effects
+      // in dev, so the first cleanup would kill the URL before the second mount
+      // can use it. The browser GCs blob URLs when the document unloads.
     };
     // activeInitial is read once at mount; remounting for a new scene is the caller's job.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,7 +160,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
 
   const activeOverlay = overlay || (
     <>
-      {isFromDemo && (
+      {(isFromDemo || isFromAnalysis) && (
         <button
           type="button"
           className={`demo-reset ${audioSrc ? "has-audio" : ""}`}
@@ -164,16 +177,48 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
     </>
   );
 
+  const analyticalText = activeInitial?.narratives?.analytical || "";
+  const hasDetails = Boolean(
+    analyticalText || activeInitial?.sourceCaption || activeInitial?.generation?.attempts
+  );
+
   return (
     <div className="immersive-page">
       <div className="immersive-scene" ref={sceneRef} />
       <div className="immersive-scrim" ref={titleScrimRef} />
 
-      {activeInitial?.sourceCaption && (
-        <p className="immersive-source-caption">
-          <span className="immersive-source-tag">Source recording</span>
-          {activeInitial.sourceCaption}
-        </p>
+      {hasDetails && (
+        <button
+          type="button"
+          className={`immersive-details-toggle ${showDetails ? "is-on" : ""}`}
+          aria-pressed={showDetails}
+          onClick={() => setShowDetails((v) => !v)}
+        >
+          {showDetails ? "Hide details" : "Show details"}
+        </button>
+      )}
+
+      {showDetails && analyticalText && (
+        <aside className="immersive-analytical" aria-label="Analytical narration">
+          <span className="immersive-analytical-tag">Analytical</span>
+          <p>{renderNarrative(analyticalText)}</p>
+        </aside>
+      )}
+
+      {showDetails && (activeInitial?.sourceCaption || activeInitial?.generation?.attempts) && (
+        <div className="immersive-meta-stack">
+          {activeInitial?.sourceCaption && (
+            <p className="immersive-source-caption">
+              <span className="immersive-source-tag">
+                {activeInitial.generatedAudio ? "Generated audio" : "Source recording"}
+              </span>
+              {activeInitial.sourceCaption}
+            </p>
+          )}
+          {activeInitial?.generation?.attempts && (
+            <GenerationModelLine attempts={activeInitial.generation.attempts} />
+          )}
+        </div>
       )}
       <div className="immersive-title">
         <div className="immersive-title-words" ref={titleWordsRef} />
@@ -200,7 +245,7 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
       )}
       {activeOverlay}
 
-      <audio ref={audioRef} src={activeInitial?.audioUrl} loop crossOrigin="anonymous" />
+      <audio ref={audioRef} src={audioSrc} loop crossOrigin={audioSrc && !audioSrc.startsWith("blob:") ? "anonymous" : undefined} />
 
       {audioSrc && (
         <AudioPlayer
@@ -209,15 +254,47 @@ export default function ImmersivePage({ initial = null, showDevPanel = true, ove
           audioRef={audioRef}
         />
       )}
-
-      {/* Top-center tone toggle (plan §3.5). Renders only when an analysis
-          report is present in page state; switches the narrative register via
-          the LLM-OSS report writer without re-running detectors. */}
-      <ToneToggle
-        report={activeInitial?.report}
-        defaultRegister="immersive"
-        initialText={activeInitial?.narration}
-      />
     </div>
+  );
+}
+
+/* Render the report writer's light markdown (bold + blockquote markers) as React
+   nodes for the analytical panel: strip blockquote/heading markers and turn
+   **bold** into <strong>. */
+function renderNarrative(md) {
+  const clean = (md || "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    .trim();
+  return clean
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, i) => {
+      const m = part.match(/^\*\*([^*]+)\*\*$/);
+      return m ? <strong key={i}>{m[1]}</strong> : <span key={i}>{part}</span>;
+    });
+}
+
+function GenerationModelLine({ attempts }) {
+  const rows = [
+    ["A", "Ambient", attempts.layer_a],
+    ["B", "Weather", attempts.layer_b],
+    ["C", "Events", attempts.layer_c],
+    ["D", "Mixer", attempts.layer_d],
+  ].filter(([, , attempt]) => attempt);
+  if (!rows.length) return null;
+  return (
+    <aside className="immersive-model-line" aria-label="Generation models used">
+      <strong>Models used</strong>
+      <div>
+        {rows.map(([letter, label, attempt]) => (
+          <span key={letter}>
+            <b>Layer {letter}</b>
+            <em>{label}</em>
+            <code>{attempt}</code>
+          </span>
+        ))}
+      </div>
+    </aside>
   );
 }

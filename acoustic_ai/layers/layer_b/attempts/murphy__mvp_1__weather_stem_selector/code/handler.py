@@ -8,8 +8,8 @@ for frontend preview / Layer D handoff.
 
 from __future__ import annotations
 
-import csv
 import io
+import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,12 +54,22 @@ class WeatherStemState:
 
 
 def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -> WeatherStemState:
-    del checkpoint_dir, extra
+    del extra
+    if checkpoint_dir is not None:
+        assets = _load_json_bank(Path(checkpoint_dir))
+        return WeatherStemState(assets=assets, params=dict(params))
+
+    legacy_asset_bank = str(params.get("asset_bank", "")).strip()
+    if legacy_asset_bank:
+        assets = _load_json_bank(_resolve_path(legacy_asset_bank))
+        return WeatherStemState(assets=assets, params=dict(params))
+
     index_path = _resolve_path(str(params.get("asset_index", "")))
     if not index_path.is_file():
         raise FileNotFoundError(f"Layer B asset index not found: {index_path}")
 
     assets: list[WeatherAsset] = []
+    import csv
     with index_path.open("r", encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
             if row.get("layer_d_use") == "reject":
@@ -73,6 +83,29 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
     if not assets:
         raise FileNotFoundError(f"No materialized Layer B audio assets found in {index_path}")
     return WeatherStemState(assets=assets, params=dict(params))
+
+
+def _load_json_bank(bank_root: Path) -> list[WeatherAsset]:
+    index_path = bank_root / "index.json"
+    if not index_path.is_file():
+        raise FileNotFoundError(f"Layer B asset bank index not found: {index_path}")
+
+    with index_path.open("r", encoding="utf-8") as fh:
+        doc = json.load(fh)
+
+    assets: list[WeatherAsset] = []
+    for item in doc.get("assets", []):
+        audio_path = str(item.get("audio_path", ""))
+        row = dict(item.get("attributes") or {})
+        row["asset_id"] = str(item.get("id", row.get("asset_id", "")))
+        row["clip_path"] = audio_path
+        path = (bank_root / audio_path).resolve()
+        if path.is_file():
+            assets.append(WeatherAsset(row=row, path=path))
+
+    if not assets:
+        raise FileNotFoundError(f"No materialized Layer B audio assets found in {index_path}")
+    return assets
 
 
 def generate(state: WeatherStemState, seed: int | None = None, **runtime_params) -> dict:

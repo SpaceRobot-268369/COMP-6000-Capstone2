@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { resolvePrompt } from "../demo/resolvePrompt.js";
-import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
+import { analyseAudio, renderBothNarratives } from "../lib/api.js";
 
 /* The presets are real Bowra dry-woodland recordings (Layer A `expected/` bank),
    served by the backend straight from the repo checkout. Each card analyses a
    genuine site recording for its season×diel cell — no placeholder audio. The
    `audioUrl` + `sourceCaption` come from the sample catalog so the immersive
    scene plays the real clip and shows where it came from. */
-function buildPreset({ title, tags, season, time, events }) {
+function buildPreset({ title, tags, season, time }) {
   const sample = ambientForCell(season, time);
   return {
     title,
     tags,
     audioUrl: sample.audioUrl,
     sourceCaption: sample.sourceCaption,
-    resolved: { season, time, rain: false, rainAmount: 0, thunder: false, events },
   };
 }
 
@@ -26,28 +24,24 @@ const PRESET_SAMPLES = [
     tags: "Mild Air • Dry Woodland • Dawn Chorus",
     season: "autumn",
     time: "dawn",
-    events: ["birdsong"],
   }),
   buildPreset({
     title: "Summer Night",
     tags: "Warm Night • Dry Air • Insects",
     season: "summer",
     time: "night",
-    events: ["insects", "crickets"],
   }),
   buildPreset({
     title: "Spring Afternoon",
     tags: "Warm Light • Light Breeze • Birdsong",
     season: "spring",
     time: "afternoon",
-    events: ["birdsong"],
   }),
   buildPreset({
     title: "Winter Morning",
     tags: "Cold Air • Bare Branches • Sparse Calls",
     season: "winter",
     time: "morning",
-    events: ["birdsong"],
   }),
 ];
 
@@ -70,14 +64,21 @@ export default function HomePage() {
   const [stageIndex, setStageIndex] = useState(0);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState("");
 
   // Audio preview controls
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
 
+  function clearAnalysisTimers() {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current.forEach(clearInterval);
+    timersRef.current = [];
+  }
+
   useEffect(() => {
     return () => {
-      timersRef.current.forEach(clearTimeout);
+      clearAnalysisTimers();
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
       }
@@ -116,21 +117,28 @@ export default function HomePage() {
     }
   }
 
-  function handleSelectPreset(preset) {
+  async function handleSelectPreset(preset) {
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
       setPreviewPlaying(false);
     }
 
-    const narration = composeNarration(preset.resolved);
-    const resolvedState = {
-      ...preset.resolved,
-      narration,
-      audioUrl: preset.audioUrl,
-      sourceCaption: preset.sourceCaption,
-    };
-
-    startAnalysis(resolvedState);
+    try {
+      const presetRes = await fetch(preset.audioUrl, { credentials: "include" });
+      if (!presetRes.ok) {
+        throw new Error(`Could not load preset audio (${presetRes.status})`);
+      }
+      const blob = await presetRes.blob();
+      const analysisFile = new File([blob], "preset.wav", {
+        type: blob.type || "audio/wav",
+      });
+      await startAnalysis(analysisFile, {
+        audioUrl: preset.audioUrl,
+        sourceCaption: preset.sourceCaption,
+      });
+    } catch (e) {
+      setError(e?.message || "Could not load preset audio.");
+    }
   }
 
   function handleFileChange(e) {
@@ -147,7 +155,7 @@ export default function HomePage() {
     }
   }
 
-  function handleAnalyzeUploadedFile() {
+  async function handleAnalyzeUploadedFile() {
     if (!file) return;
 
     if (previewAudioRef.current) {
@@ -156,50 +164,57 @@ export default function HomePage() {
     }
 
     const audioUrl = URL.createObjectURL(file);
-    // Parse the file name for environmental keywords
-    const params = resolvePrompt(file.name);
-    const narration = composeNarration(params);
-    const resolvedState = {
-      ...params,
-      narration,
-      audioUrl,
-    };
-
-    startAnalysis(resolvedState);
+    await startAnalysis(file, { audioUrl, sourceCaption: file.name });
   }
 
-  function startAnalysis(resolvedState) {
+  async function startAnalysis(analysisFile, { audioUrl = "", sourceCaption = "" } = {}) {
     setStageIndex(0);
     setPhase("analyzing");
+    setError("");
 
-    // Clear any active timers
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
+    clearAnalysisTimers();
 
-    // Cycle through analysis steps
-    STAGES.forEach((_, i) => {
-      if (i === 0) return;
-      timersRef.current.push(
-        setTimeout(() => setStageIndex(i), STAGE_MS * i)
-      );
-    });
+    const stageTimer = setInterval(() => {
+      setStageIndex((idx) => (idx + 1) % STAGES.length);
+    }, STAGE_MS);
+    timersRef.current.push(stageTimer);
 
-    // Navigate to immersive scene once finished
-    timersRef.current.push(
-      setTimeout(() => {
-        const performNavigation = () => {
-          navigate("/immersive", {
-            state: { resolved: resolvedState, fromDemo: true, backPath: "/generation" },
-          });
-        };
+    try {
+      const data = await analyseAudio(analysisFile, {}, "immersive");
+      if (!data?.ok) {
+        throw new Error(data?.detail || "Analysis did not complete.");
+      }
+      // Analysis returns the immersive narrative inline; pre-render the
+      // analytical register too so the scene's tone toggle switches instantly.
+      const narratives = await renderBothNarratives(data.report, {
+        immersive: data.narrative?.text || "",
+      });
+      clearAnalysisTimers();
+      const performNavigation = () => {
+        navigate("/immersive", {
+          state: {
+            report: data.report,
+            narrative: data.narrative,
+            narratives,
+            register: data.narrative?.register || "immersive",
+            audioUrl,
+            sourceCaption,
+            fromAnalysis: true,
+            backPath: "/analysis",
+          },
+        });
+      };
 
-        if (document.startViewTransition) {
-          document.startViewTransition(performNavigation);
-        } else {
-          performNavigation();
-        }
-      }, STAGE_MS * STAGES.length + 300)
-    );
+      if (document.startViewTransition) {
+        document.startViewTransition(performNavigation);
+      } else {
+        performNavigation();
+      }
+    } catch (e) {
+      clearAnalysisTimers();
+      setPhase("idle");
+      setError(e?.message || "Analysis failed.");
+    }
   }
 
   const isAnalyzing = phase === "analyzing";
@@ -228,6 +243,13 @@ export default function HomePage() {
           </div>
         ) : (
           <>
+            {error && (
+              <div className="demo-transcript" role="alert">
+                <div className="demo-bubble assistant">
+                  <span className="demo-status">{error}</span>
+                </div>
+              </div>
+            )}
             {/* Audio Presets Grid */}
             <div className="analysis-presets-container">
               <p className="analysis-presets-label">Select a Preset Nature Recording</p>
@@ -320,11 +342,10 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Hidden audio element for previewing preset tracks */}
       <audio
         ref={previewAudioRef}
         onEnded={() => setPreviewPlaying(false)}
-        crossOrigin="anonymous"
+        crossOrigin={previewUrl?.startsWith("blob:") ? undefined : "anonymous"}
       />
     </div>
   );

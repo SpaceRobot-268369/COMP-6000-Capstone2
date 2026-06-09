@@ -197,11 +197,11 @@ export default function App() {
                 <span>How it works</span>
               </NavLink>
               <NavLink to="/generation" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
-                <span className="nav-icon">◫</span>
+                <span className="nav-icon">✦</span>
                 <span>Generation</span>
               </NavLink>
               <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
-                <span className="nav-icon">✦</span>
+                <span className="nav-icon">◫</span>
                 <span>Analysis</span>
               </NavLink>
             </div>
