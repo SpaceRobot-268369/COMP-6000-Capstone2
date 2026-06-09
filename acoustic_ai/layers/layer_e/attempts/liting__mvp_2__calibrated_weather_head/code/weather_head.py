@@ -129,4 +129,3 @@ def _predict_component(x: np.ndarray, head: dict[str, Any], classes: tuple[str, 
         "confidence": round(float(probs[idx]), 3),
         "probabilities": {label: round(float(probs[i]), 4) for i, label in enumerate(classes)},
     }
-

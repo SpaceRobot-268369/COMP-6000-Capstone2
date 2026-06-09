@@ -47,4 +47,3 @@ single-component cases.
   matrix, and limitations.
 - PANNs backbone remains frozen.
 - Thunder is not claimed from Site257 unless separately validated.
-

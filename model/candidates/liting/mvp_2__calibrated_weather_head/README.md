@@ -43,4 +43,3 @@ weather_head.pt      # DVC-tracked checkpoint
 metrics.json         # git-tracked validation metrics
 params.yaml          # git-tracked training parameters
 ```
-
