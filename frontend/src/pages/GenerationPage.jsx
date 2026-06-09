@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PromptChat from "../components/PromptChat.jsx";
 import {
+  fetchModelConfig,
   generateSoundscape,
   parseGenerationPrompt,
   renderBothNarratives,
@@ -10,6 +11,7 @@ import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
 import { reportFromGeneration } from "../lib/generationReport.js";
+import { speciesForLayerC } from "../demo/layerCSpecies.js";
 
 const USER_GENERATION_LAYER_D_ATTEMPT = "songke__mvp_2__multi_clip_mix";
 
@@ -201,6 +203,9 @@ export default function GenerationPage() {
   const [confirmSummary, setConfirmSummary] = useState("");
   // For rejection: the rejection note from the parser
   const [rejectionNote, setRejectionNote] = useState("");
+  // The species rail must match the Layer C model selected on /dev/settings —
+  // a model can only voice the species it was built for.
+  const [layerCAttempt, setLayerCAttempt] = useState("");
   const timersRef = useRef([]);
 
   function clearTimers() {
@@ -212,6 +217,25 @@ export default function GenerationPage() {
       clearTimers();
     };
   }, []);
+  // Load the active Layer C attempt so the species rail reflects the model that
+  // will actually generate. When no slot override is set, generation uses the
+  // registry default (carried in the response's `layers`), so resolve to that —
+  // never the broad fallback, which could offer species the default can't voice.
+  useEffect(() => {
+    let active = true;
+    fetchModelConfig()
+      .then((data) => {
+        if (!active) return;
+        const layerCDefault =
+          (data.layers || []).find((l) => l.id === "layer_c")?.default || "";
+        setLayerCAttempt(data.slots?.layer_c || layerCDefault);
+      })
+      .catch(() => { /* keep fallback species */ });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const species = speciesForLayerC(layerCAttempt);
 
   function registerTimer(t) {
     timersRef.current.push(t);
@@ -340,6 +364,7 @@ export default function GenerationPage() {
       onConfirm={handleConfirm}
       onCancel={handleCancel}
       onDismissRejection={handleDismissRejection}
+      species={species}
     />
   );
 }

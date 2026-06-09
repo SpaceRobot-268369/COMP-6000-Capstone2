@@ -89,7 +89,7 @@ function titleCase(s) {
 
 /* Turn the current selections into a natural-language prompt that mirrors the
    preset style ("Cold winter dawn, light drizzle, a southern boobook owl"). */
-function composeSelections(sel) {
+function composeSelections(sel, speciesList = SPECIES) {
   const parts = [];
 
   if (sel.season || sel.time) {
@@ -102,7 +102,7 @@ function composeSelections(sel) {
   if (sel.wind) parts.push("wind");
 
   for (const key of sel.species) {
-    const sp = SPECIES.find((s) => s.key === key);
+    const sp = speciesList.find((s) => s.key === key);
     if (sp) parts.push(sp.phrase);
   }
 
@@ -133,6 +133,7 @@ export default function PromptChat({
   onConfirm,
   onCancel,
   onDismissRejection,
+  species = SPECIES,
 }) {
   const [value, setValue] = useState("");
   const [sel, setSel] = useState(EMPTY_SEL);
@@ -143,10 +144,23 @@ export default function PromptChat({
     if (phase === "prompt") inputRef.current?.focus();
   }, [phase]);
 
+  // The species set changes with the active Layer C model (chosen on
+  // /dev/settings); drop any picked species the new model can't voice so the
+  // composed prompt stays coherent.
+  useEffect(() => {
+    setSel((prev) => {
+      const allowed = prev.species.filter((k) => species.some((s) => s.key === k));
+      if (allowed.length === prev.species.length) return prev;
+      const next = { ...prev, species: allowed };
+      setValue(composeSelections(next, species));
+      return next;
+    });
+  }, [species]);
+
   // Apply a selection change and push the rebuilt prompt into the composer.
   function applySel(next) {
     setSel(next);
-    setValue(composeSelections(next));
+    setValue(composeSelections(next, species));
   }
 
   function setSeason(season) {
@@ -344,13 +358,14 @@ export default function PromptChat({
                 <div className="demo-rail-group">
                   <p className="demo-rail-label">
                     Species
+                    <span className="demo-rail-count"> · {species.length} available</span>
                     {sel.species.length > 0 && (
-                      <span className="demo-rail-count"> · {sel.species.length}</span>
+                      <span className="demo-rail-count"> · {sel.species.length} chosen</span>
                     )}
                   </p>
                   <div className="demo-species-scroll">
                     <div className="demo-opt-grid">
-                      {SPECIES.map((s) => (
+                      {species.map((s) => (
                         <button
                           key={s.key}
                           type="button"
