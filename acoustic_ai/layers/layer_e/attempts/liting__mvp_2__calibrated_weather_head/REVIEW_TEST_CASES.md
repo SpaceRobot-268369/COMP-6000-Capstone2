@@ -20,6 +20,7 @@ Generated evidence files:
 ```text
 acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_site257_fixed_review_matrix.csv
 acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_rain_pool_fullstack_cross_check.csv
 ```
 
 Latest cross-attempt reviewer evidence:
@@ -39,6 +40,32 @@ The current audited Site257 index still only contains one `light_rain` row and
 one `heavy_rain` row, so the two-case reviewer bar is met for moderate rain,
 mixed rain/wind, breezing wind, and strong wind, but not yet for light rain or
 heavy rain without expanding the audited Site257 rain pool.
+
+Additional independent rain cross-check evidence was run after the fixed matrix:
+
+| Item | Value |
+|---|---:|
+| External cross-check source | Murphy's Site257 human-audited rain generation pool |
+| Cross-check role | Validation only; not used as Liting MVP1-MVP5 training data |
+| E-B backend | Murphy E-B full stack on Server B: CLAP + PANNs + AST + gate fusion |
+| Total cross-check WAVs | 72 |
+| E-B rain-positive results | 72 |
+| E-B `rain` results | 68 |
+| E-B `rain+wind` results | 4 |
+| E-B light-rain results with wind=none | 9 |
+| E-B heavy-rain results with wind=none | 57 |
+
+The cross-check CSV records each filename, original Site257 S3 URI, Murphy pool
+label, and E-B result:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_rain_pool_fullstack_cross_check.csv
+```
+
+These examples are not claimed as Liting training data. They are included only
+to answer the reviewer request for additional sample clips/results and to show
+that the E-B weather output behaves consistently on independent Site257 rain
+examples.
 
 Thunder is no longer part of the default E-B acceptance scope. The current
 Site257 pool has only backup/uncertain thunder candidates, so E-B should not
