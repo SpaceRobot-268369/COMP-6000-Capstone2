@@ -169,6 +169,17 @@ export default function LayerATestPage({
   const isLayerD = layerId === "layer_d";
   const cells = useMemo(() => currentAttempt?.cells || [], [currentAttempt]);
   const speciesOptions = useMemo(() => {
+    if (currentAttempt?.species_options?.length) {
+      return currentAttempt.species_options
+        .map((option) => ({
+          value: option.value || option.label,
+          label: option.label || option.value,
+          slug: option.slug || "",
+          scientificName: option.scientific_name || "",
+        }))
+        .filter((option) => option.value && option.label)
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }
     if (!samples?.expected?.length) return [];
     const bySpecies = new Map();
     for (const sample of samples.expected) {
@@ -182,7 +193,7 @@ export default function LayerATestPage({
       });
     }
     return [...bySpecies.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [samples]);
+  }, [currentAttempt, samples]);
 
   useEffect(() => {
     if (!speciesOptions.length) {
@@ -248,13 +259,9 @@ export default function LayerATestPage({
       { tier: "expected", entries: samples.expected || [] },
       { tier: "showcase", entries: samples.showcase || [] },
     ];
-    return tiers.flatMap((t) =>
+    const cellEntries = tiers.flatMap((t) =>
       t.entries
         .filter((s) => {
-          if (selectedSpecies) {
-            const species = s.metadata?.species_common_name || s.metadata?.species || "";
-            if (species !== selectedSpecies) return false;
-          }
           if (!activeCell) return true;
           // Cell-grouped entries match the active cell; cell-less entries
           // (e.g. legacy flat samples) are kept as-is.
@@ -266,7 +273,24 @@ export default function LayerATestPage({
           key: `${t.tier}/${s.cell ? `${s.cell}/` : ""}${s.stem}`,
         })),
     );
+
+    if (!selectedSpecies) return cellEntries;
+    const speciesEntries = cellEntries.filter((entry) => {
+      const metadata = entry.sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      return species === selectedSpecies;
+    });
+    return speciesEntries.length ? speciesEntries : cellEntries;
   }, [samples, usesCells, season, diel, selectedSpecies]);
+
+  const expectedHasSelectedSpecies = useMemo(() => {
+    if (!selectedSpecies || !expectedEntries.length) return false;
+    return expectedEntries.some((entry) => {
+      const metadata = entry.sample.metadata || {};
+      const species = metadata.species_common_name || metadata.species || "";
+      return species === selectedSpecies;
+    });
+  }, [expectedEntries, selectedSpecies]);
 
   // Auto-select the first expected sample when entries change.
   useEffect(() => {
@@ -786,7 +810,9 @@ export default function LayerATestPage({
             <h2>Expected Results</h2>
             <p>
               {selectedSpecies
-                ? `${selectedSpecies} · layer C only expected sample`
+                ? expectedHasSelectedSpecies
+                  ? `${selectedSpecies} · layer C only expected sample`
+                  : `${selectedSpecies} · cached references for this attempt`
                 : samples?.canonical_seed != null
                   ? `Cached samples · canonical seed ${samples.canonical_seed}`
                   : "Cached expected / showcase samples"}
@@ -951,6 +977,8 @@ function ExpectedSample({ layerId, attemptId, tier, sample, loading, empty }) {
       ? "No cached samples on disk for this attempt yet."
       : !hasSample
         ? "Select a cached sample to preview."
+        : sample.wav_dvc
+          ? "WAV is DVC-tracked and not present locally. Run dvc pull for this sample to preview audio."
         : "WAV not present locally — generate or run dvc pull.";
 
   const spectrogramCaption = loading

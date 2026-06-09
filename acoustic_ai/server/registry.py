@@ -271,6 +271,37 @@ def _asset_bank_availability(bank_dir: Path | None) -> dict:
     return {"available": True, "reason": None, "missing": []}
 
 
+def _asset_bank_species_options(bank_dir: Path | None) -> list[dict[str, str]]:
+    """Return unique retrieval species from an asset bank index.
+
+    Cached expected samples are intentionally tiny and should not define the UI
+    species selector for a larger retrieval library.
+    """
+    if bank_dir is None:
+        return []
+    index_path = bank_dir / "index.json"
+    if not index_path.is_file():
+        return []
+    try:
+        doc = json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 - registry payload should degrade gently
+        return []
+
+    by_name: dict[str, dict[str, str]] = {}
+    for asset in doc.get("assets", []):
+        attrs = asset.get("attributes") or {}
+        name = attrs.get("species_common_name")
+        if not name:
+            continue
+        by_name[str(name)] = {
+            "value": str(name),
+            "label": str(name),
+            "slug": str(attrs.get("event_type") or attrs.get("species_slug") or ""),
+            "scientific_name": str(attrs.get("species_scientific_name") or ""),
+        }
+    return [by_name[name] for name in sorted(by_name)]
+
+
 def list_layers() -> list[dict]:
     """Return the dropdown payload — one entry per layer, with attempt list."""
     out: list[dict] = []
@@ -306,6 +337,11 @@ def list_layers() -> list[dict]:
                 "uses_weather_controls": bool(att.get("uses_weather_controls", False)),
                 "cells":            cells,
                 "default_cell":     params.get("default_cell"),
+                "species_options": (
+                    _asset_bank_species_options(asset_bank)
+                    if kind == "retrieval"
+                    else []
+                ),
             })
         out.append({
             "id":      layer_id,
@@ -410,8 +446,9 @@ def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
     per conventions.md §2.6). Reads audio.wav / .wav.dvc, spectrogram.png /
     .png.dvc and metadata.json / .json.dvc.
 
-    `wav_url` mirrors the on-disk path so the frontend doesn't have to know
-    the layout — it just resolves the returned URL.
+    `wav_url` is returned only when the real WAV exists locally. A DVC pointer
+    sets `wav_dvc` so clients can show a pull hint without rendering a broken
+    audio element.
     """
     import base64 as _b64
     import json as _json
@@ -425,17 +462,20 @@ def _read_case_dir(layer_id: str, attempt_id: str, tier: str,
     entry = {
         "stem":    case.name,
         "cell":    cell,
-        "has_wav": False, "has_png": False, "has_json": False,
+        "has_wav": False, "wav_dvc": False,
+        "has_png": False, "has_json": False,
         "png_b64": None, "metadata": None, "wav_url": None,
     }
 
     audio_wav = case / "audio.wav"
     audio_dvc = case / "audio.wav.dvc"
-    if audio_wav.is_file() or audio_dvc.is_file():
+    if audio_wav.is_file():
         entry["has_wav"] = True
         entry["wav_url"] = (
             f"/layers/{layer_id}/attempts/{attempt_id}/samples/{rel_wav}"
         )
+    elif audio_dvc.is_file():
+        entry["wav_dvc"] = True
 
     png = case / "spectrogram.png"
     if png.is_file():
@@ -479,7 +519,8 @@ def _read_flat_entries(layer_id: str, attempt_id: str, tier: str, d: Path) -> li
         e = entries.setdefault(stem, {
             "stem":    stem,
             "cell":    None,
-            "has_wav": False, "has_png": False, "has_json": False,
+            "has_wav": False, "wav_dvc": False,
+            "has_png": False, "has_json": False,
             "png_b64": None, "metadata": None, "wav_url": None,
         })
         n = f.name
@@ -503,14 +544,127 @@ def _read_flat_entries(layer_id: str, attempt_id: str, tier: str, d: Path) -> li
         elif n.endswith(".png.dvc"):
             e["has_png"] = True
         elif n.endswith(".wav.dvc"):
-            e["has_wav"] = True
-            if not e["wav_url"]:
-                e["wav_url"] = (
-                    f"/layers/{layer_id}/attempts/{attempt_id}/samples/{tier}/{stem}.wav"
-                )
+            e["wav_dvc"] = True
         elif n.endswith(".metadata.json.dvc"):
             e["has_json"] = True
     return list(entries.values())
+
+
+_ASSET_BANK_PREFIX = "__asset_bank__"
+
+
+def _safe_asset_path(root: Path, rel_path: str) -> Path | None:
+    parts = [p for p in rel_path.replace("\\", "/").split("/") if p not in {"", "."}]
+    if any(p == ".." for p in parts):
+        return None
+    full = (root.joinpath(*parts)).resolve()
+    try:
+        full.relative_to(root.resolve())
+    except ValueError:
+        return None
+    return full
+
+
+def _asset_bank_mel_path(audio_path: str) -> str:
+    audio = Path(audio_path)
+    if audio.name == "crop_bandpass.wav":
+        return str(audio.with_name("mel_bandpass.png"))
+    if audio.suffix == ".wav":
+        return str(audio.with_suffix(".png"))
+    return str(audio.parent / "mel_bandpass.png")
+
+
+def _read_asset_bank_expected(spec: AttemptSpec) -> list[dict]:
+    """Expose one retrieval reference per species from an attempt asset bank.
+
+    Retrieval attempts keep their full DVC-backed references under
+    ``model/candidates/.../media_asset_bank`` rather than under the lightweight
+    ``acoustic_ai/layers/.../expected`` preview directory.
+    """
+    import base64 as _b64
+
+    bank = spec.asset_bank
+    if bank is None:
+        return []
+    index = bank / "index.json"
+    if not index.is_file():
+        return []
+    try:
+        doc = json.loads(index.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+    by_species: dict[str, tuple[dict, dict, str, str]] = {}
+    for asset in doc.get("assets", []):
+        attrs = asset.get("attributes") or {}
+        slug = attrs.get("event_type") or attrs.get("species_slug")
+        common = attrs.get("species_common_name")
+        audio_path = asset.get("audio_path")
+        if not slug or not common or not audio_path or slug in by_species:
+            continue
+        by_species[str(slug)] = (asset, attrs, str(slug), str(common))
+
+    entries: list[dict] = []
+    for _, (asset, attrs, slug, common) in sorted(
+        by_species.items(),
+        key=lambda item: item[1][3],
+    ):
+        audio_path = str(asset["audio_path"])
+        audio_full = _safe_asset_path(bank, audio_path)
+        png_rel = _asset_bank_mel_path(audio_path)
+        png_full = _safe_asset_path(bank, png_rel)
+        metadata_rel = str(Path(audio_path).parent / "metadata.json")
+        metadata_full = _safe_asset_path(bank, metadata_rel)
+        stem = str(asset.get("id") or f"{slug}_reference")
+        rel_wav = "/".join([_ASSET_BANK_PREFIX] + [
+            p for p in audio_path.replace("\\", "/").split("/") if p
+        ])
+
+        metadata = {
+            **attrs,
+            "species_common_name": common,
+            "species_scientific_name": attrs.get("species_scientific_name") or "",
+            "species_slug": slug,
+            "expected_source": "retrieval_asset_bank",
+            "expected_item": asset.get("id") or stem,
+            "display_title": f"{common} · retrieval reference",
+            "display_audio": Path(audio_path).name,
+            "display_spectrogram": Path(png_rel).name,
+            "asset_bank_audio_path": audio_path,
+        }
+        if metadata_full and metadata_full.is_file():
+            try:
+                metadata.update(json.loads(metadata_full.read_text(encoding="utf-8")))
+                metadata["species_common_name"] = common
+                metadata["species_scientific_name"] = (
+                    attrs.get("species_scientific_name") or ""
+                )
+                metadata["species_slug"] = slug
+            except (OSError, ValueError):
+                pass
+
+        entry = {
+            "stem": stem,
+            "cell": None,
+            "has_wav": bool(audio_full and audio_full.is_file()),
+            "wav_dvc": not bool(audio_full and audio_full.is_file()),
+            "has_png": bool((png_full and png_full.is_file()) or png_rel),
+            "has_json": True,
+            "png_b64": None,
+            "metadata": metadata,
+            "wav_url": None,
+        }
+        if entry["has_wav"]:
+            entry["wav_url"] = (
+                f"/layers/{spec.layer}/attempts/{spec.id}/samples/expected/{rel_wav}"
+            )
+        if png_full and png_full.is_file():
+            try:
+                entry["png_b64"] = _b64.b64encode(png_full.read_bytes()).decode("ascii")
+            except OSError:
+                pass
+        entries.append(entry)
+    return entries
 
 
 def list_samples(layer_id: str, attempt_id: str) -> dict:
@@ -521,9 +675,9 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
       tier/<cell>/<case>/{audio.wav, spectrogram.png, metadata.json}       ← bank (uses_cells)
       tier/<stem>.{wav,png,metadata.json}                                  ← legacy flat
 
-    PNG/JSON contents are inlined (small). `wav_url` is built to match the
-    actual on-disk path so the frontend can play it without knowing the
-    layout.
+    PNG/JSON contents are inlined (small). `wav_url` is returned only when the
+    actual WAV is materialised locally; otherwise `wav_dvc` marks a pullable
+    DVC pointer.
     """
     spec = get_attempt(layer_id, attempt_id)
     root = _samples_root(spec)
@@ -558,11 +712,16 @@ def list_samples(layer_id: str, attempt_id: str) -> dict:
             entries.extend(_read_flat_entries(layer_id, attempt_id, tier, d))
         return entries
 
+    expected = _scan("expected")
+    asset_bank_expected = _read_asset_bank_expected(spec)
+    if asset_bank_expected:
+        expected = asset_bank_expected
+
     return {
         "attempt":        attempt_id,
         "layer":          layer_id,
         "canonical_seed": seed,
-        "expected":       _scan("expected"),
+        "expected":       expected,
         "showcase":       _scan("showcase"),
     }
 
@@ -577,6 +736,13 @@ def sample_wav_path(layer_id: str, attempt_id: str, tier: str, rel_path: str) ->
     parts = [p for p in rel_path.replace("\\", "/").split("/") if p not in {"", "."}]
     if any(p == ".." for p in parts):
         raise ValueError(f"illegal path: {rel_path!r}")
+    if tier == "expected" and parts and parts[0] == _ASSET_BANK_PREFIX:
+        if spec.asset_bank is None:
+            raise ValueError(f"attempt has no asset bank: {attempt_id}")
+        path = _safe_asset_path(spec.asset_bank, "/".join(parts[1:]))
+        if path is None:
+            raise ValueError(f"illegal path: {rel_path!r}")
+        return path
     return (_samples_root(spec) / tier).joinpath(*parts)
 
 

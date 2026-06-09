@@ -665,9 +665,10 @@ def _format_layer_c_axes(
 
     method = (metadata or {}).get("method") if isinstance(metadata, dict) else None
     is_generative_event = isinstance(method, str) and method.startswith("sa3_lora_generative")
-    target_duration = duration_s if is_generative_event else max(60.0, duration_s)
+    is_retrieval_clip = method == "retrieval_clip"
+    target_duration = duration_s if (is_generative_event or is_retrieval_clip) else max(60.0, duration_s)
     ax.set_xlim(0, target_duration)
-    if is_generative_event:
+    if is_generative_event or is_retrieval_clip:
         tick_step = 0.5 if target_duration <= 6.0 else 1.0
         x_ticks = np.arange(0, target_duration + 1e-6, tick_step)
         if len(x_ticks) < 2:
