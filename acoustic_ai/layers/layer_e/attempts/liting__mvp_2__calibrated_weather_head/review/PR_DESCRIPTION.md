@@ -31,6 +31,7 @@ Main evidence files:
 - `acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/MVP1_TO_MVP5_REVIEW_EVIDENCE.md`
 - `acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_site257_fixed_review_matrix.csv`
 - `acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/mvp1_to_mvp5_cross_review_results.json`
+- `acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_rain_pool_fullstack_cross_check.csv`
 
 The fixed reviewer matrix uses Murphy's audited Site257 Layer B weather asset index:
 
@@ -51,6 +52,47 @@ The fixed reviewer matrix uses Murphy's audited Site257 Layer B weather asset in
 | `strong_wind` | 2 | Two selected from Site257 strong-wind rows. |
 
 Total: 10/10 default review samples are locally runnable after DVC materialisation.
+
+## Additional Rain Cross-Check
+
+I also reran E-B on Murphy's Site257 human-audited rain generation pool as an
+independent validation set. These clips are **not** claimed as Liting MVP1-MVP5
+training data; they are included only as external cross-check evidence for E-B
+rain output behaviour.
+
+Run setup:
+
+- Environment: Server B (`shinypokemon`)
+- Backend: Murphy E-B full stack (`CLAP + PANNs + AST + gate fusion`)
+- Cross-check samples: 72 Site257 WAV clips
+- Result CSV:
+  `acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_rain_pool_fullstack_cross_check.csv`
+
+Cross-check summary:
+
+| Result | Count |
+|---|---:|
+| E-B `rain` | 68 |
+| E-B `rain+wind` | 4 |
+| E-B rain present | 72 |
+| E-B wind present | 4 |
+| E-B thunder present | 0 |
+| E-B light rain, wind none | 9 |
+| E-B heavy rain, wind none | 57 |
+
+Example added light-rain validation rows:
+
+| Clip | E-B result |
+|---|---|
+| `002__rec_214659__clip_023__win_00__rain.wav` | rain=light, wind=none |
+| `003__rec_214659__clip_023__win_01__rain.wav` | rain=light, wind=none |
+
+Example added heavy-rain validation rows:
+
+| Clip | E-B result |
+|---|---|
+| `005__rec_214665__clip_008__win_00__rain.wav` | rain=heavy, wind=none |
+| `006__rec_214665__clip_008__win_01__rain.wav` | rain=heavy, wind=none |
 
 ## Sample Results
 
@@ -96,13 +138,17 @@ s3://eco-acoustic-data.store.adelaideuni.cloud/dataset/original/site_257_bowra-d
 
 ## Known Data Limitation
 
-The requested two-case bar for every rain intensity is still data-blocked:
+The fixed 10-case MVP1-MVP5 matrix is still constrained by the current Layer B
+weather asset index:
 
 - Current Murphy-audited Site257 index has one true light-rain row.
 - Current Murphy-audited Site257 index has one true heavy-rain row.
 - Previously scouted local pure-rain folders are not promoted as true-rain evidence because Murphy rejected that batch as not pure rain.
 
-This PR does not fake additional light/heavy rain examples. Expanding those scenes requires new audited Site257 rain clips before production promotion.
+This PR does not fake additional light/heavy rain rows inside the fixed matrix.
+Instead, it documents the separate 72-clip Murphy rain-pool cross-check as
+external validation evidence. Expanding production training coverage still
+requires a larger audited Site257 rain pool.
 
 ## Thunder Scope
 

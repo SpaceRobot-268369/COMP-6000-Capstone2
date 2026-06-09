@@ -5,6 +5,10 @@ Owner: `liting`
 This review set is built from Murphy's audited Site257 Layer B weather asset index.
 It answers PR #34 reviewer questions about exact sample clips and sample results.
 
+An additional 72-clip rain-only cross-check was run after the fixed matrix using
+Murphy's Site257 human-audited rain generation pool. That pool is not claimed as
+Liting training data; it is external validation evidence for E-B rain behaviour.
+
 Thunder is intentionally excluded from the default E-B acceptance matrix because the current Site257 pool only has backup/uncertain thunder evidence. E-B now reports rain/wind weather layers; thunder can be reopened later if a validated Site257 thunder pool exists.
 
 ## Source
@@ -24,6 +28,59 @@ Thunder is intentionally excluded from the default E-B acceptance matrix because
 | `mixed_rain_wind` | 2 | 2 | Two hard mixed-weather cases; MVP5 passes both. |
 | `breezing_light_wind` | 2 | 2 | Two selected from three available light-wind rows. |
 | `strong_wind` | 2 | 2 | Two selected from strong Site257 wind rows. |
+
+## External Rain Cross-Check
+
+This cross-check uses Murphy's Site257 rain generation training pool as
+independent validation samples. It was run on Server B with Murphy E-B full
+stack enabled:
+
+```text
+CLAP + PANNs + AST + gate fusion
+```
+
+Evidence file:
+
+```text
+acoustic_ai/layers/layer_e/attempts/liting__mvp_2__calibrated_weather_head/review/murphy_rain_pool_fullstack_cross_check.csv
+```
+
+Summary:
+
+| Metric | Value |
+|---|---:|
+| Total Site257 WAVs | 72 |
+| Murphy pool label: `rain` | 68 |
+| Murphy pool label: `rain+wind` | 4 |
+| E-B result: `rain` | 68 |
+| E-B result: `rain+wind` | 4 |
+| E-B rain present | 72 |
+| E-B wind present | 4 |
+| E-B thunder present | 0 |
+| E-B light rain, wind none | 9 |
+| E-B heavy rain, wind none | 57 |
+
+Representative additional light-rain validation cases:
+
+| Filename | E-B result | Rain confidence | Wind result | Source |
+|---|---|---:|---|---|
+| `002__rec_214659__clip_023__win_00__rain.wav` | rain=light | 0.428503 | wind=none | Site257 S3 URI in cross-check CSV |
+| `003__rec_214659__clip_023__win_01__rain.wav` | rain=light | 0.423160 | wind=none | Site257 S3 URI in cross-check CSV |
+| `007__rec_214665__clip_008__win_02__rain.wav` | rain=light | 0.582077 | wind=none | Site257 S3 URI in cross-check CSV |
+| `009__rec_216095__clip_020__win_01__rain.wav` | rain=light | 0.587258 | wind=none | Site257 S3 URI in cross-check CSV |
+
+Representative additional heavy-rain validation cases:
+
+| Filename | E-B result | Rain confidence | Wind result | Source |
+|---|---|---:|---|---|
+| `005__rec_214665__clip_008__win_00__rain.wav` | rain=heavy | 0.591543 | wind=none | Site257 S3 URI in cross-check CSV |
+| `006__rec_214665__clip_008__win_01__rain.wav` | rain=heavy | 0.587007 | wind=none | Site257 S3 URI in cross-check CSV |
+| `010__rec_216095__clip_020__win_02__rain.wav` | rain=heavy | 0.597191 | wind=none | Site257 S3 URI in cross-check CSV |
+| `011__rec_216095__clip_021__win_00__rain.wav` | rain=heavy | 0.597430 | wind=none | Site257 S3 URI in cross-check CSV |
+
+The cross-check does not change the fixed 10-case MVP1-MVP5 matrix. It adds
+reviewer-facing evidence that additional Site257 rain samples can be analysed
+with the expected E-B schema and rain/wind separation.
 
 ## Attempt Checkpoint State
 
@@ -67,4 +124,4 @@ Thunder is intentionally excluded from the default E-B acceptance matrix because
 - MVP5 is the strongest fixed-matrix result: 10 exact passes, 0 partials, and 0 failures.
 - MVP5 improves mixed rain+wind classification: both selected mixed rain+wind cases pass as rain=moderate and wind=moderate.
 - MVP2 remains the safest current frontend/integration candidate because it is already wired for demo output and has the stable checkpoint path.
-- The reviewer bar is still data-blocked for two true light-rain and two true heavy-rain cases: the current Murphy-audited Site257 index has only one of each. The previously scouted local pure-rain folders are not promoted as true-rain evidence because Murphy rejected that batch as not pure rain.
+- The fixed 10-case matrix still has one light-rain and one heavy-rain case because it is constrained to the current Layer B weather asset index. The separate Murphy rain-pool cross-check adds additional independent Site257 light/heavy rain validation samples, but those clips are documented as external validation samples rather than Liting training data.
