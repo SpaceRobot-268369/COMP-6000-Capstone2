@@ -296,6 +296,10 @@ async def orchestrated_analysis(
     weather_attempt: str | None = Form(default=None),
     events_attempt: str | None = Form(default=None),
     aggregator_attempt: str | None = Form(default=None),
+    ambient_override: Optional[str] = None,
+    weather_override: Optional[str] = None,
+    events_override: Optional[str] = None,
+    aggregator_override: Optional[str] = None,
 ) -> dict:
     """Run the full Layer E analysis stack over one uploaded audio clip."""
     suffix = Path(file.filename or "upload.wav").suffix or ".wav"
@@ -335,10 +339,10 @@ async def orchestrated_analysis(
             analysis_path = converted_path
         result = registry.orchestrate_analysis(
             analysis_path,
-            ambient_attempt=_clean_form_value(ambient_attempt),
-            weather_attempt=_clean_form_value(weather_attempt),
-            events_attempt=_clean_form_value(events_attempt),
-            aggregator_attempt=_clean_form_value(aggregator_attempt),
+            ambient_attempt=_clean_form_value(ambient_override or ambient_attempt),
+            weather_attempt=_clean_form_value(weather_override or weather_attempt),
+            events_attempt=_clean_form_value(events_override or events_attempt),
+            aggregator_attempt=_clean_form_value(aggregator_override or aggregator_attempt),
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

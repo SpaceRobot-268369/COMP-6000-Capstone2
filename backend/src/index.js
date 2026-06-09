@@ -9,6 +9,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 
 import { listSamples, resolveSampleWavPath } from "./samples.js";
+import { getActiveConfig, setSlots } from "./modelConfig.js";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -820,6 +821,51 @@ app.get("/api/layers", requireAuth, async (_req, res) => {
   }
 });
 
+// Model Configuration - settings page
+app.get("/api/model-config", requireAuth, async (_req, res) => {
+  const operation = "get model config";
+  try {
+    const r = await fetchAi("/layers", {}, operation);
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+    
+    const { slots } = await getActiveConfig(pool);
+    res.json({
+      ok: true,
+      slots,
+      layers: body.layers,
+    });
+  } catch (err) {
+    sendAiProxyError(res, err, operation);
+  }
+});
+
+app.put("/api/model-config", requireAuth, async (req, res) => {
+  const operation = "update model config";
+  try {
+    const r = await fetchAi("/layers", {}, operation);
+    const body = await readAiJson(r, operation);
+    if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
+
+    const slots = req.body?.slots || {};
+    const result = await setSlots(pool, slots, body.layers);
+    res.json({
+      ok: true,
+      slots: result.slots,
+    });
+  } catch (err) {
+    if (err.status === 400) {
+      return res.status(400).json({
+        ok: false,
+        message: err.message,
+        errors: err.errors,
+      });
+    }
+    console.error("Failed to update model config:", err);
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
 // Cached samples for an attempt — drives the "Expected Results" preview in the
 // frontend. Served straight from the repo checkout (AI_LAYERS_ROOT), NOT the
 // AI worker: these are static artefacts with no model dependency, so serverB
@@ -959,6 +1005,12 @@ app.post("/api/generation", requireAuth, async (req, res) => {
       payload.intensity = intensity;
     }
 
+    const { slots } = await getActiveConfig(pool);
+    if (slots.layer_a) payload.layer_a_attempt = slots.layer_a;
+    if (slots.layer_b) payload.layer_b_attempt = slots.layer_b;
+    if (slots.layer_c) payload.layer_c_attempt = slots.layer_c;
+    if (slots.layer_d) payload.layer_d_attempt = slots.layer_d;
+
     const r = await fetchAi(
       "/generation/render",
       {
@@ -1005,8 +1057,18 @@ app.post("/api/generation/parse", requireAuth, async (req, res) => {
 app.post("/api/analysis", requireAuth, async (req, res) => {
   const operation = "orchestrated analysis";
   try {
+    const { slots } = await getActiveConfig(pool);
+    const queryParams = new URLSearchParams();
+    if (slots.layer_e_ambient) queryParams.set("ambient_override", slots.layer_e_ambient);
+    if (slots.layer_e_weather) queryParams.set("weather_override", slots.layer_e_weather);
+    if (slots.layer_e_events) queryParams.set("events_override", slots.layer_e_events);
+    if (slots.layer_e_aggregator) queryParams.set("aggregator_override", slots.layer_e_aggregator);
+    
+    const queryString = queryParams.toString();
+    const path = queryString ? `/analysis/run?${queryString}` : "/analysis/run";
+
     const r = await fetchAi(
-      "/analysis/run",
+      path,
       {
         method: "POST",
         headers: { "content-type": req.headers["content-type"] || "application/octet-stream" },

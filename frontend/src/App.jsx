@@ -7,6 +7,7 @@ import GenerationPage from "./pages/GenerationPage.jsx";
 import PipelinePage from "./pages/PipelinePage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
 import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
 import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
@@ -56,9 +57,9 @@ export default function App() {
   useEffect(() => {
     const path = location.pathname;
     document.body.classList.remove("theme-analysis", "theme-generation");
-    if (path === "/generation" || path === "/dev/analysis") {
+    if (path === "/analysis" || path === "/dev/analysis" || path === "/dev/settings") {
       document.body.classList.add("theme-analysis");
-    } else if (path === "/analysis" || path === "/dev/layers") {
+    } else if (path === "/generation" || path === "/dev/layers") {
       document.body.classList.add("theme-generation");
     }
     return () => {
@@ -195,11 +196,11 @@ export default function App() {
                 <span className="nav-icon">⌥</span>
                 <span>How it works</span>
               </NavLink>
-              <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+              <NavLink to="/generation" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 <span className="nav-icon">◫</span>
                 <span>Generation</span>
               </NavLink>
-              <NavLink to="/generation" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
+              <NavLink to="/analysis" className={navbarLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 <span className="nav-icon">✦</span>
                 <span>Analysis</span>
               </NavLink>
@@ -229,6 +230,10 @@ export default function App() {
                   <NavLink to="/dev/analysis" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
                     <span className="nav-icon">◉</span>
                     <span>Dev — Analysis</span>
+                  </NavLink>
+                  <NavLink to="/dev/settings" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                    <span className="nav-icon">⚙️</span>
+                    <span>Model Settings</span>
                   </NavLink>
                   <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
                     <span className="nav-icon">❂</span>
@@ -304,8 +309,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/about" replace />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how-it-works" element={<PipelinePage />} />
-          <Route path="/analysis" element={<GenerationPage />} />
-          <Route path="/generation" element={<HomePage />} />
+          <Route path="/generation" element={<GenerationPage />} />
+          <Route path="/analysis" element={<HomePage />} />
           {/* Transformation is out of scope for the demo — redirect any stale links. */}
           <Route path="/transformation" element={<Navigate to="/about" replace />} />
           <Route path="/immersive" element={<ImmersivePage />} />
@@ -320,6 +325,7 @@ export default function App() {
             }
           />
           <Route path="/dev/analysis" element={<DevAnalysisPage />} />
+          <Route path="/dev/settings" element={<SettingsPage />} />
           <Route
             path="/server-b"
             element={

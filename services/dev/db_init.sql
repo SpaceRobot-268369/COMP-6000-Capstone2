@@ -53,3 +53,32 @@ VALUES (
     '67eb8ad9c110d329032388a788d9c382:4cb0c31056573c14a5f6dc47b6f8e04d3622672029c8960da2862ae77d64ca2d4e5b84f3937be7c7914f7628b3f99db0b61455fea0e93ac53e0c09108a9c074c'
 )
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- Model Selection Settings
+-- ============================================================
+CREATE TABLE IF NOT EXISTS model_configs (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER     REFERENCES users(id) ON DELETE CASCADE,  -- NULL = global
+    name        TEXT        NOT NULL DEFAULT 'default',
+    is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS model_config_slots (
+    id          SERIAL PRIMARY KEY,
+    config_id   INTEGER NOT NULL REFERENCES model_configs(id) ON DELETE CASCADE,
+    slot        TEXT    NOT NULL,   -- 'layer_a' | … | 'layer_e_aggregator'
+    attempt_id  TEXT    NOT NULL,
+    UNIQUE (config_id, slot)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_active_global_config
+    ON model_configs (is_active)
+    WHERE user_id IS NULL AND is_active;
+
+CREATE OR REPLACE TRIGGER trg_model_configs_updated_at
+    BEFORE UPDATE ON model_configs
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+

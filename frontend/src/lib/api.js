@@ -44,6 +44,43 @@ export async function fetchLayerRegistry() {
   return res.json();
 }
 
+// ─── Model-selection config (Settings page) ──────────────────────────────────
+
+/**
+ * Fetch the saved model-config slots merged with the live layer registry.
+ * @returns {Promise<{ok:boolean, slots:Object, layers:Array}>}
+ */
+export async function fetchModelConfig() {
+  const res = await fetch(`${API_BASE}/api/model-config`, { credentials: "include" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Failed to load model config (${res.status})`));
+  }
+  return res.json();
+}
+
+/**
+ * Persist the chosen slots. On a 400 the rejected response carries per-slot
+ * `errors`; we surface them on the thrown error so the UI can render them.
+ * @param {Object} slots  slot id → attempt id ("" = registry default)
+ * @returns {Promise<{ok:boolean, slots:Object}>}
+ */
+export async function saveModelConfig(slots) {
+  const res = await fetch(`${API_BASE}/api/model-config`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slots }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(apiErrorMessage(data, `Failed to save model config (${res.status})`));
+    if (data.errors) err.errors = data.errors;
+    throw err;
+  }
+  return data;
+}
+
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
@@ -174,6 +211,35 @@ export async function narrateReport(report, register = "analytical") {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(apiErrorMessage(err, `Narrative failed (${res.status})`));
+  }
+  return res.json();
+}
+
+/**
+ * Run a raw prompt through the LLM-OSS Prompt Parser validity gate
+ * (POST /api/generation/parse → FastAPI /generation/parse). Generates no audio;
+ * returns the parse-result contract (prompt_parser_policy.md §5).
+ *
+ * @param {string} prompt  raw natural-language prompt
+ * @returns {Promise<{
+ *   status: "ok"|"corrected"|"rejected",
+ *   note: string,
+ *   filled_defaults: string[],
+ *   layer_a: ?{season:?string, diel:?string},
+ *   layer_b: ?{weather_type:string, intensity:string, duration_s:number},
+ *   layer_c: ?{species:string[], density:string}
+ * }>}
+ */
+export async function parsePrompt(prompt) {
+  const res = await fetch(`${API_BASE}/api/generation/parse`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Prompt parse failed (${res.status})`));
   }
   return res.json();
 }

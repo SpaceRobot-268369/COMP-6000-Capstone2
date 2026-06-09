@@ -1,15 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 
+/* Preset prompts. `tag` marks demo intent so we (and an audience) know a chip
+   is deliberately crafted:
+     - "safe"    : built only from species BOTH Layer C models share
+                   (Bronze-cuckoo / Nightjar), so it generates on either model.
+                   The two safe chips differ in EVENT FREQUENCY (sparse vs
+                   frequent) to show off event-density control.
+     - "partial" : partly voiceable — a real site species plus an element the
+                   site/models can't produce (ocean). Kept on a shared species
+                   so it stays "partial" regardless of the selected model.
+     - "invalid" : nothing the remote dry-woodland site or our models can voice
+                   (urban scene, no site fauna) — a deliberate rejection demo.
+   Untagged chips are ordinary free-form examples. */
 const PRESET_PROMPTS = [
-  "Windy spring afternoon, distant birdsong",
-  "Still summer night, crickets and a boobook owl",
-  "Cold winter dawn, light drizzle",
-  "Summer dawn, kookaburra chorus",
-  "Gusty autumn morning, rain on the wind",
-  "Frosty winter afternoon, gusting wind",
-  "Heavy autumn downpour at night, thunder",
-  "Warm spring dusk, insects and a breeze",
+  { text: "Summer night, a lone Spotted Nightjar churring every so often", tag: "safe" },
+  { text: "Summer morning, restless Horsfield's Bronze-cuckoo whistling over and over", tag: "safe" },
+  { text: "Summer night, a Spotted Nightjar calling, with ocean waves breaking on a beach", tag: "partial" },
+  { text: "Midday city traffic downtown, car horns, sirens and a passing subway train", tag: "invalid" },
+  { text: "Windy spring afternoon, distant birdsong" },
+  { text: "Cold winter dawn, light drizzle" },
+  { text: "Gusty autumn morning, rain on the wind" },
+  { text: "Warm spring dusk, insects and a breeze" },
 ];
+
+// Short badge label + class suffix per tag. Untagged presets render no badge.
+const PRESET_TAGS = {
+  safe: { label: "Safe", className: "safe" },
+  partial: { label: "Partial", className: "partial" },
+  invalid: { label: "Invalid demo", className: "invalid" },
+};
 
 /* ---- Guided option selectors ----
    The rails let users build a prompt by choosing rather than typing. Each
@@ -35,44 +54,10 @@ const WEATHERS = [
   { key: "downpour", label: "Heavy downpour", phrase: "heavy downpour" },
 ];
 
-// Layer C — species checklist (retrieval set), multi-select.
-// Known-to-resolvePrompt species keep their matching keyword so the demo
-// narration still fires; the wider set is carried through as prompt text.
-const SPECIES = [
-  { key: "boobook", label: "Southern boobook", phrase: "a southern boobook owl" },
-  { key: "kookaburra", label: "Laughing kookaburra", phrase: "a laughing kookaburra" },
-  { key: "magpie", label: "Australian magpie", phrase: "an Australian magpie" },
-  { key: "butcherbird", label: "Pied butcherbird", phrase: "a pied butcherbird" },
-  { key: "shrikethrush", label: "Grey shrike-thrush", phrase: "a grey shrike-thrush" },
-  { key: "williewagtail", label: "Willie wagtail", phrase: "a willie wagtail" },
-  { key: "magpielark", label: "Magpie-lark", phrase: "a magpie-lark" },
-  { key: "galah", label: "Galah", phrase: "a galah" },
-  { key: "corella", label: "Little corella", phrase: "a little corella" },
-  { key: "cockatoo", label: "Sulphur-crested cockatoo", phrase: "a sulphur-crested cockatoo" },
-  { key: "cockatiel", label: "Cockatiel", phrase: "a cockatiel" },
-  { key: "budgerigar", label: "Budgerigar", phrase: "budgerigars" },
-  { key: "apostlebird", label: "Apostlebird", phrase: "apostlebirds" },
-  { key: "babbler", label: "Grey-crowned babbler", phrase: "a grey-crowned babbler" },
-  { key: "noisyminer", label: "Noisy miner", phrase: "a noisy miner" },
-  { key: "honeyeater", label: "Spiny-cheeked honeyeater", phrase: "a spiny-cheeked honeyeater" },
-  { key: "whistler", label: "Rufous whistler", phrase: "a rufous whistler" },
-  { key: "bellbird", label: "Crested bellbird", phrase: "a crested bellbird" },
-  { key: "raven", label: "Australian raven", phrase: "an Australian raven" },
-  { key: "crow", label: "Torresian crow", phrase: "a Torresian crow" },
-  { key: "zebrafinch", label: "Zebra finch", phrase: "zebra finches" },
-  { key: "redrumpedparrot", label: "Red-rumped parrot", phrase: "a red-rumped parrot" },
-  { key: "mulgaparrot", label: "Mulga parrot", phrase: "a mulga parrot" },
-  { key: "bronzewing", label: "Common bronzewing", phrase: "a common bronzewing" },
-  { key: "pallidcuckoo", label: "Pallid cuckoo", phrase: "a pallid cuckoo" },
-  { key: "frogmouth", label: "Tawny frogmouth", phrase: "a tawny frogmouth" },
-  { key: "barkingowl", label: "Barking owl", phrase: "a barking owl" },
-  { key: "emu", label: "Emu", phrase: "an emu" },
-  { key: "birdsong", label: "Distant birdsong", phrase: "distant birdsong" },
-  { key: "frogs", label: "Frogs", phrase: "frogs" },
-  { key: "cicadas", label: "Cicadas", phrase: "cicadas" },
-  { key: "crickets", label: "Crickets", phrase: "crickets" },
-  { key: "insects", label: "Insects", phrase: "insects" },
-];
+// Layer C — species checklist. The list is supplied by the parent (it depends
+// on the Layer C model selected on /dev/settings — see demo/layerCSpecies.js);
+// `DEFAULT_SPECIES` is only a fallback for standalone rendering.
+const DEFAULT_SPECIES = [];
 
 const EMPTY_SEL = {
   season: null,
@@ -89,7 +74,7 @@ function titleCase(s) {
 
 /* Turn the current selections into a natural-language prompt that mirrors the
    preset style ("Cold winter dawn, light drizzle, a southern boobook owl"). */
-function composeSelections(sel) {
+function composeSelections(sel, speciesList) {
   const parts = [];
 
   if (sel.season || sel.time) {
@@ -102,7 +87,7 @@ function composeSelections(sel) {
   if (sel.wind) parts.push("wind");
 
   for (const key of sel.species) {
-    const sp = SPECIES.find((s) => s.key === key);
+    const sp = speciesList.find((s) => s.key === key);
     if (sp) parts.push(sp.phrase);
   }
 
@@ -114,7 +99,7 @@ function composeSelections(sel) {
    "prompt") that becomes a thinking transcript while the scene resolves
    (phase "generating"). Presentational — DemoPage owns the phase, the echoed
    user message, and the staged status line. */
-export default function PromptChat({ phase, userMessage, statusLine, onSubmit }) {
+export default function PromptChat({ phase, userMessage, statusLine, species = DEFAULT_SPECIES, notice = null, onSubmit }) {
   const [value, setValue] = useState("");
   const [sel, setSel] = useState(EMPTY_SEL);
   const inputRef = useRef(null);
@@ -124,10 +109,22 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
     if (phase === "prompt") inputRef.current?.focus();
   }, [phase]);
 
+  // The species set can change when the active Layer C model changes; drop any
+  // chosen species that the new model can't voice so the prompt stays coherent.
+  useEffect(() => {
+    setSel((prev) => {
+      const allowed = prev.species.filter((k) => species.some((s) => s.key === k));
+      if (allowed.length === prev.species.length) return prev;
+      const next = { ...prev, species: allowed };
+      setValue(composeSelections(next, species));
+      return next;
+    });
+  }, [species]);
+
   // Apply a selection change and push the rebuilt prompt into the composer.
   function applySel(next) {
     setSel(next);
-    setValue(composeSelections(next));
+    setValue(composeSelections(next, species));
   }
 
   function setSeason(season) {
@@ -189,6 +186,11 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
             <div className="demo-bubble assistant thinking">
               <span className="demo-dots" aria-hidden="true"><i /><i /><i /></span>
               <span className="demo-status">{statusLine}</span>
+            </div>
+          )}
+          {notice && (
+            <div className={`demo-bubble assistant notice ${notice.kind}`} role="status">
+              <span>{notice.text}</span>
             </div>
           )}
         </div>
@@ -265,13 +267,14 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
                 <div className="demo-rail-group">
                   <p className="demo-rail-label">
                     Species
+                    <span className="demo-rail-count"> · {species.length} available</span>
                     {sel.species.length > 0 && (
-                      <span className="demo-rail-count"> · {sel.species.length}</span>
+                      <span className="demo-rail-count"> · {sel.species.length} chosen</span>
                     )}
                   </p>
                   <div className="demo-species-scroll">
                     <div className="demo-opt-grid">
-                      {SPECIES.map((s) => (
+                      {species.map((s) => (
                         <button
                           key={s.key}
                           type="button"
@@ -289,16 +292,20 @@ export default function PromptChat({ phase, userMessage, statusLine, onSubmit })
 
             <div className="demo-center">
               <div className="demo-presets">
-              {PRESET_PROMPTS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`demo-preset-chip${value === s ? " selected" : ""}`}
-                  onClick={() => { setSel(EMPTY_SEL); setValue(s); inputRef.current?.focus(); }}
-                >
-                  {s}
-                </button>
-              ))}
+              {PRESET_PROMPTS.map((p) => {
+                const tag = p.tag ? PRESET_TAGS[p.tag] : null;
+                return (
+                  <button
+                    key={p.text}
+                    type="button"
+                    className={`demo-preset-chip${tag ? ` tagged ${tag.className}` : ""}${value === p.text ? " selected" : ""}`}
+                    onClick={() => { setSel(EMPTY_SEL); setValue(p.text); inputRef.current?.focus(); }}
+                  >
+                    {tag && <span className={`demo-preset-tag ${tag.className}`}>{tag.label}</span>}
+                    {p.text}
+                  </button>
+                );
+              })}
               </div>
             </div>
 
