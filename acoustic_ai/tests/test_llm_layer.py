@@ -50,6 +50,27 @@ class GateTest(unittest.TestCase):
     def test_clean_prompt_has_no_findings(self):
         self.assertEqual(gate_findings("a quiet autumn dawn"), [])
 
+    def test_saturated_prompt_blocks(self):
+        findings = gate_findings(
+            "Midday city traffic downtown, car horns, sirens and a passing subway train")
+        self.assertTrue(any(f.get("type") == "dominant_out_of_domain" for f in findings))
+        self.assertTrue(all(f["action"] == "block"
+                            for f in findings if f["type"] == "out_of_domain"))
+
+    def test_few_elements_swap_not_block(self):
+        findings = gate_findings("autumn dawn in the city with light rain")
+        self.assertTrue(findings)
+        self.assertTrue(all(f["action"] == "swap" for f in findings))
+        self.assertFalse(any(f["type"] == "dominant_out_of_domain" for f in findings))
+
+    def test_negated_mentions_not_flagged(self):
+        self.assertEqual(gate_findings("a still autumn dawn, no traffic, no cars"), [])
+
+    def test_concept_synonyms_counted_once(self):
+        # car + cars is one concept, so this stays under the block threshold.
+        findings = gate_findings("a dawn with cars and a car")
+        self.assertTrue(all(f["action"] == "swap" for f in findings))
+
 
 class FaithfulnessTest(unittest.TestCase):
     def test_pass_when_species_observed(self):
@@ -152,6 +173,21 @@ class ParserTest(unittest.TestCase):
         r = parse_prompt("a heavy metal concert downtown")
         self.assertEqual(r["status"], "rejected")
         self.assertIsNone(r["layer_a"])
+
+    def test_saturated_prompt_rejected_even_if_model_corrects(self):
+        # Fake LLM tries to "correct" into a default bed; the deterministic
+        # block must override and reject, nulling all layers.
+        svc_mod._service = _FakeService(json_out={
+            "status": "corrected", "note": "dropped the city",
+            "layer_a": {"season": None, "diel": None},
+            "layer_b": None, "layer_c": {"species": [], "density": "sparse"},
+        })
+        r = parse_prompt(
+            "Midday city traffic downtown, car horns, sirens and a passing subway train")
+        self.assertEqual(r["status"], "rejected")
+        self.assertIsNone(r["layer_a"])
+        self.assertIsNone(r["layer_b"])
+        self.assertIsNone(r["layer_c"])
 
 
 class ReportTest(unittest.TestCase):
