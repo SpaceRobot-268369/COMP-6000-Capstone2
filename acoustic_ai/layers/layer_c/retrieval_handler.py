@@ -135,15 +135,12 @@ def generate(
     duration_s: float | None = None,
     **_: object,
 ) -> dict:
-    """Generate a frontend-ready 60s Layer C retrieval demo."""
+    """Generate a frontend-ready Layer C retrieval clip."""
 
     params = state.params
     run_seed = int(seed if seed is not None else params.get("seed", 42))
     species = str(species_common_name or params["species_common_name"])
-    duration_s = float(
-        duration_s if duration_s is not None else params.get("duration_s", 60.0)
-    )
-    count = int(params.get("count", 10))
+    requested_duration_s = duration_s
     season = season or params.get("default_season", "summer")
     diel = diel or params.get("default_diel", "morning")
 
@@ -152,74 +149,76 @@ def generate(
         species=species,
         diel_bin=diel,
         season=season,
-        count=count,
+        count=1,
         seed=run_seed,
     )
-    layer_c = _render_events(
-        _schedule(
-            selected,
-            target_duration_s=duration_s,
-            seed=run_seed,
-            enable_variation=bool(params.get("enable_variation", False)),
-            ecological_mode=bool(params.get("ecological_mode", True)),
-        ),
-        target_duration_s=duration_s,
-        bank_root=state.bank_root,
-    )
+    chosen = selected[0]
+    snippet = chosen.snippet
+    clip = _load_audio(Path(snippet.audio_path), base_root=state.bank_root)
 
     events_gain_db = float(params.get("events_gain_db", -1.0))
-    layer_c_only = bool(params.get("layer_c_only", False))
-    if layer_c_only:
-        mix = layer_c.audio * _gain_to_amp(events_gain_db)
-    else:
-        ambient = _procedural_ambient(SR, duration_s, seed=run_seed + 10_000)
-        mix = (
-            ambient * _gain_to_amp(float(params.get("ambient_gain_db", -26.0)))
-            + layer_c.audio * _gain_to_amp(events_gain_db)
-        )
+    mix = clip * _gain_to_amp(events_gain_db)
+    output_duration_s = len(mix) / SR if len(mix) else 0.0
     peak = float(np.max(np.abs(mix))) if mix.size else 0.0
     if peak > 0.98:
         mix = mix * (0.98 / peak)
         peak = 0.98
+    event = {
+        "snippet_id": snippet.snippet_id,
+        "label": snippet.species_common_name,
+        "event_type": snippet.event_type,
+        "audio_event_id": snippet.audio_event_id,
+        "snippet_path": snippet.audio_path,
+        "source_recording": snippet.recording_id,
+        "onset_s": 0.0,
+        "offset_s": round(output_duration_s, 3),
+        "gain_db": events_gain_db,
+        "pitch_shift_semitones": 0.0,
+        "time_stretch_rate": 1.0,
+        "fade_s": 0.0,
+        "confidence": round(snippet.score, 4),
+        "retrieval_score": round(chosen.retrieval_score, 4),
+        "diel_bin": snippet.diel_bin,
+        "season": snippet.season,
+        "selection_reason": chosen.selection_reason,
+    }
 
     metadata = {
         "layer": "layer_c",
-        "method": "retrieval_baseline_layer_c_only" if layer_c_only else "retrieval_baseline",
+        "method": "retrieval_clip",
         "species": species,
         "request": {
             "seed": run_seed,
             "season": season,
             "diel": diel,
-            "duration_s": duration_s,
-            "count_requested": count,
+            "duration_s": requested_duration_s,
+            "duration_s_ignored": True,
+            "count_requested": 1,
         },
         "audio": {
             "sample_rate": SR,
-            "duration_s": duration_s,
+            "duration_s": output_duration_s,
             "peak": peak,
             "rms": float(np.sqrt(np.mean(np.square(mix)))) if mix.size else 0.0,
-            "contains_ambient_bed": not layer_c_only,
+            "contains_ambient_bed": False,
         },
         "retrieval": {
             "index_path": str(state.index_path.relative_to(REPO_ROOT)),
-            "selected_count": len(layer_c.metadata["events"]),
+            "selected_count": 1,
             "library_source": "audited real bird-call snippets only",
+            "selected_snippet": event,
         },
         "mix": {
-            "ambient_kind": "none" if layer_c_only else "procedural_debug_bed",
-            "ambient_gain_db": float(params.get("ambient_gain_db", -26.0)),
+            "ambient_kind": "none",
+            "ambient_gain_db": None,
             "events_gain_db": events_gain_db,
-            "variation_enabled": bool(params.get("enable_variation", False)),
+            "variation_enabled": False,
             "limitations": [
-                (
-                    "This frontend demo is Layer C only; Layer D mixing is separate."
-                    if layer_c_only
-                    else "This frontend demo is an A+C retrieval presentation mix, not full Layer D."
-                ),
+                "This frontend demo is a single retrieved Layer C clip; Layer D mixing is separate.",
                 "Layer C events are real audited retrieval snippets, not from-scratch generated calls.",
             ],
         },
-        "events": layer_c.metadata["events"],
+        "events": [event],
     }
 
     return {
