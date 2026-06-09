@@ -21,15 +21,28 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Root of the attempts tree. In Docker the acoustic_ai dir is mounted read-only
 // (see services/dev/docker-compose.yml); on a native host point this at the
 // repo checkout's acoustic_ai/layers. Some local stacks provide the acoustic_ai
 // root instead, so accept both shapes.
-const RAW_LAYERS_ROOT = process.env.AI_LAYERS_ROOT || "/acoustic_ai/layers";
-const LAYERS_ROOT = path.basename(RAW_LAYERS_ROOT) === "layers"
-  ? RAW_LAYERS_ROOT
-  : path.join(RAW_LAYERS_ROOT, "layers");
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_LAYERS_ROOT = path.resolve(MODULE_DIR, "../../acoustic_ai/layers");
+
+function normalizeLayersRoot(root) {
+  return path.basename(root) === "layers" ? root : path.join(root, "layers");
+}
+
+function resolveLayersRoot() {
+  if (process.env.AI_LAYERS_ROOT) {
+    return normalizeLayersRoot(process.env.AI_LAYERS_ROOT);
+  }
+  if (fs.existsSync(REPO_LAYERS_ROOT)) return REPO_LAYERS_ROOT;
+  return "/acoustic_ai/layers";
+}
+
+const LAYERS_ROOT = resolveLayersRoot();
 
 const TIERS = ["expected", "showcase"];
 const CANONICAL_SEED_DEFAULT = 42;

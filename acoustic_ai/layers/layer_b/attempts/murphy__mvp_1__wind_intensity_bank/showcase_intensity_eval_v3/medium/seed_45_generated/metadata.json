@@ -1,0 +1,106 @@
+{
+  "generator": "audioldm2_lora_layer_b_wind_intensity_bank",
+  "prompt_locked": true,
+  "prompt": "steady wind through dry eucalyptus woodland, gentle natural breeze, Bowra, Australia",
+  "negative_prompt": "hiss, static noise, background hum, tape noise, insects, low quality, distortion",
+  "base_model": "cvssp/audioldm2",
+  "seed": 45,
+  "num_inference_steps": 200,
+  "audio_length_in_s": 8.0,
+  "guidance_scale": 3.0,
+  "weather_type": "wind",
+  "requested_intensity": null,
+  "requested_wind_intensity": "medium",
+  "resolved_intensity": "medium",
+  "adapter": "medium",
+  "derived": false,
+  "audio": {
+    "sample_rate": 16000,
+    "duration_s": 8.0,
+    "min": -0.21188832819461823,
+    "max": 0.23637519776821136,
+    "mean": 3.4699030493356986e-07,
+    "rms": 0.047999996691942215,
+    "peak": 0.23637519776821136,
+    "clip_pct": 0.0
+  },
+  "postprocess": {
+    "highpass_hz": 80.0,
+    "lowpass_hz": null,
+    "output_target_rms": 0.048,
+    "before": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.37255859375,
+      "max": 0.3994140625,
+      "mean": 0.0003117414889857173,
+      "rms": 0.07616531848907471,
+      "peak": 0.3994140625,
+      "clip_pct": 0.0
+    },
+    "after_highpass": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.19930250942707062,
+      "max": 0.21970100700855255,
+      "mean": -1.043162865244085e-05,
+      "rms": 0.045076049864292145,
+      "peak": 0.21970100700855255,
+      "clip_pct": 0.0
+    },
+    "after_lowpass": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.19930250942707062,
+      "max": 0.21970100700855255,
+      "mean": -1.043162865244085e-05,
+      "rms": 0.045076049864292145,
+      "peak": 0.21970100700855255,
+      "clip_pct": 0.0
+    },
+    "denoise": {
+      "enabled": true,
+      "strength": 0.19,
+      "noise_quantile": 0.2,
+      "floor_ratio": 0.38,
+      "hop_length": 512,
+      "after_denoise": {
+        "sample_rate": 16000,
+        "duration_s": 8.0,
+        "min": -0.18002764880657196,
+        "max": 0.2008325457572937,
+        "mean": -9.84680991678033e-06,
+        "rms": 0.04103241115808487,
+        "peak": 0.2008325457572937,
+        "clip_pct": 0.0
+      }
+    },
+    "fade_ms": 80.0,
+    "after_fade": {
+      "sample_rate": 16000,
+      "duration_s": 8.0,
+      "min": -0.18002764880657196,
+      "max": 0.2008325457572937,
+      "mean": 2.9480969487849507e-07,
+      "rms": 0.04078245908021927,
+      "peak": 0.2008325457572937,
+      "clip_pct": 0.0
+    }
+  },
+  "layer_b": {
+    "weather_type": "wind",
+    "mode": "generate",
+    "attempt": "murphy__mvp_1__wind_intensity_bank"
+  },
+  "intensity_profile_version": "v3",
+  "attempt": {
+    "layer": "layer_b",
+    "id": "murphy__mvp_1__wind_intensity_bank",
+    "label": "Wind intensity bank (generate, medium/heavy + derived light)",
+    "stage": "mvp_1",
+    "head": null,
+    "author": "murphy",
+    "status": "mvp_candidate",
+    "checkpoint": "/home/ubuntu/murphy/COMP-6000-Capstone2/model/candidates/murphy/mvp_1__wind_intensity_bank"
+  }
+}

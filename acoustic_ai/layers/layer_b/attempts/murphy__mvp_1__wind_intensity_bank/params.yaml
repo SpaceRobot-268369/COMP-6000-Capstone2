@@ -1,0 +1,68 @@
+training:
+  base_model: cvssp/audioldm2
+  manifest: acoustic_ai/layers/layer_b/attempts/murphy__mvp_1__wind_intensity_bank/data/wind_manifest_heavy.csv
+  num_epochs: 6
+  batch_size: 4
+  learning_rate: 1.0e-5
+  lr_scheduler: constant
+  lr_warmup_steps: 100
+  mixed_precision: fp16
+  max_duration_s: 10.0
+  input_sample_rate: 16000
+  normalize_audio: false
+  target_rms: 0.005
+  seed: 42
+  lora:
+    r: 8
+    alpha: 32
+    dropout: 0.1
+    target_modules: [to_q, to_k, to_v, to_out.0]
+
+inference_defaults:
+  intensity_profile_version: sealed
+  guidance_scale: 3.0
+  num_inference_steps: 200
+  audio_length_in_s: 8.0
+  output_target_rms: 0.06
+  highpass_hz: 80.0
+  denoise_enabled: true
+  denoise_strength: 0.15
+  denoise_noise_quantile: 0.2
+  denoise_floor_ratio: 0.40
+  denoise_hop_length: 512
+  fade_ms: 80.0
+  negative_prompt: >-
+    hiss, static noise, background hum, tape noise, insects, low quality, distortion
+
+intensity_profiles:
+  heavy:
+    adapter: heavy
+    prompt: >-
+      loud roaring blustery wind through dry eucalyptus woodland, intense strong gusts,
+      Bowra, Australia
+    guidance_scale: 3.4
+    output_target_rms: 0.09
+    highpass_hz: 80.0
+    denoise_strength: 0.15
+    denoise_floor_ratio: 0.40
+  medium:
+    adapter: medium
+    prompt: >-
+      steady wind through dry eucalyptus woodland, gentle natural breeze,
+      Bowra, Australia
+    guidance_scale: 3.0
+    output_target_rms: 0.048
+    highpass_hz: 80.0
+    denoise_strength: 0.19
+    denoise_floor_ratio: 0.38
+  light:
+    derived_from: medium
+    prompt: >-
+      gentle light breeze through dry eucalyptus woodland, soft faint airflow,
+      Bowra, Australia
+    guidance_scale: 2.5
+    output_target_rms: 0.045
+    highpass_hz: 80.0
+    lowpass_hz: 6000.0
+    denoise_strength: 0.22
+    denoise_floor_ratio: 0.30

@@ -4,10 +4,14 @@ import PromptChat from "../components/PromptChat.jsx";
 import {
   generateSoundscape,
   parseGenerationPrompt,
+  renderBothNarratives,
 } from "../lib/api.js";
 import { resolvePrompt } from "../demo/resolvePrompt.js";
 import { composeNarration } from "../demo/composeNarration.js";
 import { ambientForCell } from "../demo/sampleCatalog.js";
+import { reportFromGeneration } from "../lib/generationReport.js";
+
+const USER_GENERATION_LAYER_D_ATTEMPT = "songke__mvp_2__multi_clip_mix";
 
 function generatedWavUrl(audioB64) {
   if (!audioB64) return "";
@@ -105,6 +109,7 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
       layer_c: layerC,
       include_weather: Boolean(layerB),
       include_events: Boolean(layerC?.species?.length),
+      layer_d_attempt: USER_GENERATION_LAYER_D_ATTEMPT,
     });
   } finally {
     clearTimeout(genTimer1);
@@ -123,9 +128,26 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
     season: layerA.season,
     time: layerA.time,
   };
+
+  // Pre-render BOTH tone registers from a report synthesized off the generation
+  // contract (ground truth of what we composed), so the immersive scene's tone
+  // toggle switches instantly without a per-click LLM call. The crafted
+  // composeNarration line stays the title reveal; these feed only the toggle.
+  onStatus("Writing the scene narration...");
+  const report = reportFromGeneration(localParams, parseResult);
+  const composed = composeGenerationNarration(resolved);
+  const rendered = await renderBothNarratives(report);
+  const narratives = {
+    immersive: rendered.immersive || composed,
+    analytical: rendered.analytical || "",
+  };
+
   return {
     ...resolved,
-    narration: composeGenerationNarration(resolved),
+    narration: composed,
+    narratives,
+    register: "immersive",
+    report,
     audioUrl,
     generatedAudio: true,
     resolvedPrompt: summarizeParsedScene(parseResult) || `${layerA.season} ${layerA.time} Layer D mix`,

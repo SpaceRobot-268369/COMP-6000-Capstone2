@@ -1,0 +1,40 @@
+retrieval:
+  bank_id: murphy__mvp_1__weather_stem_selector
+  asset_bank: model/candidates/murphy/mvp_1__weather_stem_selector
+  index: model/candidates/murphy/mvp_1__weather_stem_selector/index.json
+  audio_path_root: media_asset_bank
+  source_site: site_257_bowra_dry_woodland
+  asset_count: 113
+  seed_behavior: deterministic_asset_and_offset_selection
+
+runtime:
+  default_weather_type: rain
+  exposed_weather_types: [rain, wind, rain+wind]
+  backup_weather_types_not_exposed: [thunder, storm]
+  default_intensity: medium
+  intensities: [light, medium, heavy]
+  default_duration_s: 10.0
+  max_duration_s: 30.0
+  retrieval_seed_default: 42
+  target_rms:
+    light: 0.035
+    medium: 0.050
+    heavy: 0.070
+  peak_ceiling: 0.95
+
+fallback_policy:
+  intensity_fallbacks:
+    light: [light, medium, heavy]
+    medium: [medium, light, heavy]
+    heavy: [heavy, medium, light]
+  prefer_exact_weather: true
+  prefer_primary_layer_d_use: true
+  prefer_site_only_when_at_least: 3
+  mixed_weather_fallback: true
+
+validation:
+  index_asset_count: 113
+  required_materialized_paths:
+    - model/candidates/murphy/mvp_1__weather_stem_selector/index.json
+    - model/candidates/murphy/mvp_1__weather_stem_selector/media_asset_bank/
+  smoke_weather_types: [rain, wind, rain+wind]

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ambientForCell } from "../demo/sampleCatalog.js";
-import { analyseAudio } from "../lib/api.js";
+import { analyseAudio, renderBothNarratives } from "../lib/api.js";
 
 /* The presets are real Bowra dry-woodland recordings (Layer A `expected/` bank),
    served by the backend straight from the repo checkout. Each card analyses a
@@ -184,12 +184,18 @@ export default function HomePage() {
       if (!data?.ok) {
         throw new Error(data?.detail || "Analysis did not complete.");
       }
+      // Analysis returns the immersive narrative inline; pre-render the
+      // analytical register too so the scene's tone toggle switches instantly.
+      const narratives = await renderBothNarratives(data.report, {
+        immersive: data.narrative?.text || "",
+      });
       clearAnalysisTimers();
       const performNavigation = () => {
         navigate("/immersive", {
           state: {
             report: data.report,
             narrative: data.narrative,
+            narratives,
             register: data.narrative?.register || "immersive",
             audioUrl,
             sourceCaption,

@@ -230,6 +230,20 @@ const aiRequestTimeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS || DEFAULT_A
 const AI_REQUEST_TIMEOUT_MS = Number.isFinite(aiRequestTimeoutMs) && aiRequestTimeoutMs > 0
   ? aiRequestTimeoutMs
   : DEFAULT_AI_REQUEST_TIMEOUT_MS;
+const LAYER_B_GENERATE_SERVER = (process.env.LAYER_B_GENERATE_SERVER_URL || "").replace(/\/+$/, "");
+const LAYER_B_GENERATE_ATTEMPTS = new Set(
+  (process.env.LAYER_B_GENERATE_ATTEMPTS ||
+    "murphy__mvp_1__wind_intensity_bank,murphy__mvp_1__rain_intensity_seed_pool")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+const LAYER_B_GENERATE_UNAVAILABLE_ATTEMPTS = new Set(
+  (process.env.LAYER_B_GENERATE_UNAVAILABLE_ATTEMPTS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
 let aiReconnectInFlight = false;
 
 class AiProxyError extends Error {
@@ -255,24 +269,67 @@ function aiServerLabelFromUrl(value) {
   }
 }
 
-function aiServerBaseUrl() {
+function aiServerBaseUrl(value = AI_SERVER) {
   try {
-    return new URL(AI_SERVER);
+    return new URL(value);
   } catch (err) {
     throw new AiProxyError({
       message: "AI_SERVER_URL is invalid, so the backend cannot determine which AI server to use.",
       stage: "ai-config",
       status: 500,
-      detail: `AI_SERVER_URL="${AI_SERVER}" is not a valid URL.`,
+      detail: `AI server URL "${value}" is not a valid URL.`,
       hints: ["Check AI_SERVER_URL in services/dev/.env, for example http://ai-tunnel:8000."],
       cause: err,
     });
   }
 }
 
-function aiServerEndpoint(path) {
-  const base = aiServerBaseUrl();
+function aiServerEndpoint(path, serverUrl = AI_SERVER) {
+  const base = aiServerBaseUrl(serverUrl);
   return new URL(path, `${base.origin}/`);
+}
+
+function generationServerFor(layer, attempt) {
+  if (layer === "layer_b" && LAYER_B_GENERATE_SERVER && LAYER_B_GENERATE_ATTEMPTS.has(attempt)) {
+    return LAYER_B_GENERATE_SERVER;
+  }
+  return AI_SERVER;
+}
+
+function mergeLayerBGenerateAttempts(primaryRegistry, generateRegistry) {
+  if (!generateRegistry?.layers?.length) return primaryRegistry;
+
+  const generateLayerB = generateRegistry.layers.find((layer) => layer.id === "layer_b");
+  if (!generateLayerB?.attempts?.length) return primaryRegistry;
+
+  const generateAttempts = generateLayerB.attempts
+    .filter((attempt) => LAYER_B_GENERATE_ATTEMPTS.has(attempt.id))
+    .map((attempt) => {
+      if (!LAYER_B_GENERATE_UNAVAILABLE_ATTEMPTS.has(attempt.id)) return attempt;
+      return {
+        ...attempt,
+        available: false,
+        unavailable_reason:
+          "This Layer B generate attempt is not available on the configured generation server.",
+      };
+    });
+  if (!generateAttempts.length) return primaryRegistry;
+
+  return {
+    ...primaryRegistry,
+    layers: (primaryRegistry.layers || []).map((layer) => {
+      if (layer.id !== "layer_b") return layer;
+      const existingIds = new Set((layer.attempts || []).map((attempt) => attempt.id));
+      const mergedAttempts = [
+        ...generateAttempts.filter((attempt) => !existingIds.has(attempt.id)),
+        ...(layer.attempts || []),
+      ];
+      return {
+        ...layer,
+        attempts: mergedAttempts,
+      };
+    }),
+  };
 }
 
 function aiConnectionHints(port) {
@@ -390,8 +447,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchAi(path, options = {}, operation = "AI request", timeoutMs = AI_REQUEST_TIMEOUT_MS) {
-  const targetUrl = aiServerEndpoint(path);
+async function fetchAi(
+  path,
+  options = {},
+  operation = "AI request",
+  timeoutMs = AI_REQUEST_TIMEOUT_MS,
+  serverUrl = AI_SERVER,
+) {
+  const targetUrl = aiServerEndpoint(path, serverUrl);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -773,6 +836,11 @@ function sendAiUpstreamError(res, response, body, operation) {
 }
 
 console.log(`[AI proxy] forwarding AI requests to ${AI_SERVER_LABEL} at ${AI_SERVER} (${AI_CONNECTION_MODE})`);
+if (LAYER_B_GENERATE_SERVER) {
+  console.log(
+    `[AI proxy] forwarding Layer B generate attempts ${[...LAYER_B_GENERATE_ATTEMPTS].join(", ")} to ${LAYER_B_GENERATE_SERVER}`,
+  );
+}
 
 app.get("/api/ai/health", async (_req, res) => {
   const operation = "AI health check";
@@ -814,7 +882,25 @@ app.get("/api/layers", requireAuth, async (_req, res) => {
     const r = await fetchAi("/layers", {}, operation);
     const body = await readAiJson(r, operation);
     if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
-    res.status(r.status).json(body);
+
+    if (!LAYER_B_GENERATE_SERVER) {
+      res.status(r.status).json(body);
+      return;
+    }
+
+    const generateOperation = "list Layer B generate registry";
+    const generateResponse = await fetchAi(
+      "/layers",
+      {},
+      generateOperation,
+      AI_REQUEST_TIMEOUT_MS,
+      LAYER_B_GENERATE_SERVER,
+    );
+    const generateBody = await readAiJson(generateResponse, generateOperation);
+    if (!generateResponse.ok) {
+      return sendAiUpstreamError(res, generateResponse, generateBody, generateOperation);
+    }
+    res.status(r.status).json(mergeLayerBGenerateAttempts(body, generateBody));
   } catch (err) {
     sendAiProxyError(res, err, operation);
   }
@@ -860,9 +946,8 @@ app.get("/api/layers/:layer/attempts/:attempt/samples/:tier/*", requireAuth, (re
 });
 
 // Per-attempt generation. Forwarded runtime params: `seed` / `retrieval_seed`,
-// optional
-// `(season, diel)` for bank attempts, Layer B weather-stem controls, and a
-// Layer C species selector.
+// optional `(season, diel)` for bank attempts, Layer B weather-stem controls,
+// and the Layer C species selector.
 // The handler picks up every other parameter from the attempt's registry entry.
 const ALLOWED_SEASONS = new Set(["spring", "summer", "autumn", "winter"]);
 const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
@@ -870,6 +955,7 @@ const ALLOWED_DIELS = new Set(["dawn", "morning", "afternoon", "night"]);
 const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind"]);
 
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
+const ALLOWED_WIND_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
@@ -900,12 +986,18 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
     const intensity = typeof req.body?.intensity === "string"
       ? req.body.intensity.toLowerCase()
       : null;
+    const windIntensity = typeof req.body?.wind_intensity === "string"
+      ? req.body.wind_intensity.toLowerCase()
+      : null;
     const requestedDuration = Number(req.body?.duration_s);
     if (ALLOWED_WEATHER_TYPES.has(weatherType)) {
       payload.weather_type = weatherType;
     }
     if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
       payload.intensity = intensity;
+    }
+    if (ALLOWED_WIND_INTENSITIES.has(windIntensity)) {
+      payload.wind_intensity = windIntensity;
     }
     if (Number.isFinite(requestedDuration) && requestedDuration > 0 && requestedDuration <= 30) {
       payload.duration_s = requestedDuration;
@@ -925,6 +1017,8 @@ app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (re
         body: JSON.stringify(payload),
       },
       operation,
+      AI_REQUEST_TIMEOUT_MS,
+      generationServerFor(layer, attempt),
     );
     const body = await readAiJson(r, operation);
     if (!r.ok) return sendAiUpstreamError(res, r, body, operation);
