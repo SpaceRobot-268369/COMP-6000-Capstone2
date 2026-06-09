@@ -41,7 +41,6 @@ def generate(
 ) -> dict:
     """Mix upstream A/B/C WAV bytes into the final Layer D output."""
 
-    del seed
     if ambient_wav_bytes is None:
         raise ValueError("Layer D requires ambient_wav_bytes from Layer A")
 
@@ -55,16 +54,18 @@ def generate(
         if weather_wav_bytes is not None
         else None
     )
-    events = (
-        (
-            EventPlacement(
-                stem=_decode_stem(event_wav_bytes, role="event", source_id="layer_c"),
-                start_s=float(event_start_s),
-            ),
+    if event_wav_bytes is not None:
+        event_stem = _decode_stem(event_wav_bytes, role="event", source_id="layer_c")
+        start_s = _resolve_event_start_s(
+            params,
+            seed=seed,
+            event_stem=event_stem,
+            duration_s=resolved_duration_s,
+            explicit_start_s=event_start_s,
         )
-        if event_wav_bytes is not None
-        else ()
-    )
+        events = (EventPlacement(stem=event_stem, start_s=start_s),)
+    else:
+        events = ()
     bandpass = params.get("event_bandpass_hz")
     event_bandpass_hz = (
         (float(bandpass[0]), float(bandpass[1]))
@@ -99,6 +100,43 @@ def generate(
             "layer_d": result.explanation,
         },
     }
+
+
+def _resolve_event_start_s(
+    params: dict[str, Any],
+    *,
+    seed: int | None,
+    event_stem: LayerStem,
+    duration_s: float,
+    explicit_start_s: float,
+) -> float:
+    """Decide where the event lands on the final timeline.
+
+    ``event_placement: "random"`` (default) draws a seeded onset inside
+    ``event_start_window_s`` (default [2, 10]), clamped so the event still fits
+    before ``duration_s`` (no end-trim). ``"fixed"`` honors ``explicit_start_s``.
+    Seeding off the shared run seed keeps placement reproducible: same seed +
+    same inputs -> same onset.
+    """
+
+    mode = str(params.get("event_placement", "random")).lower()
+    if mode != "random":
+        return max(0.0, float(explicit_start_s))
+
+    window = params.get("event_start_window_s", [2.0, 10.0])
+    try:
+        lo, hi = float(window[0]), float(window[1])
+    except (TypeError, IndexError, ValueError):
+        lo, hi = 2.0, 10.0
+
+    event_len_s = event_stem.audio.shape[0] / float(event_stem.sample_rate)
+    # Latest start that still lets the whole event play before the end.
+    latest_start = max(0.0, duration_s - event_len_s)
+    hi = min(hi, latest_start)
+    lo = min(max(0.0, lo), hi)
+
+    rng = np.random.default_rng(seed)
+    return float(rng.uniform(lo, hi))
 
 
 def _decode_stem(wav_bytes: bytes, *, role: str, source_id: str) -> LayerStem:

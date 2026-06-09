@@ -23,6 +23,7 @@ Handler interface (each attempt's ``handler.py`` must expose these):
 from __future__ import annotations
 
 import importlib
+import secrets
 import sys
 import threading
 from dataclasses import dataclass
@@ -549,6 +550,12 @@ def orchestrate_generation(
     duration_s = float(duration_s)
     if not 0.0 < duration_s <= 30.0:
         raise ValueError("duration_s must be greater than 0 and at most 30 seconds")
+
+    # No seed supplied -> draw a fresh random one so each run differs. The
+    # resolved value is shared across A/B/C/D and echoed in metadata so the
+    # user can pin it to reproduce a run.
+    if seed is None:
+        seed = secrets.randbelow(2_147_483_648)  # [0, 2147483647]
     attempts = {
         "layer_a": layer_a_attempt or default_attempt_id("layer_a"),
         "layer_b": layer_b_attempt or default_attempt_id("layer_b"),
@@ -590,7 +597,7 @@ def orchestrate_generation(
     final = generate(
         "layer_d",
         attempts["layer_d"],
-        seed=None,
+        seed=seed,
         ambient_wav_bytes=layer_a.get("wav_bytes"),
         weather_wav_bytes=layer_b.get("wav_bytes") if layer_b else None,
         event_wav_bytes=layer_c.get("wav_bytes") if layer_c else None,
@@ -610,7 +617,7 @@ def orchestrate_generation(
             "layer_a": ["seed", "season", "diel"],
             "layer_b": ["seed", "weather_type", "intensity", "duration_s"],
             "layer_c": ["seed", "season", "diel", "duration_s"],
-            "layer_d": ["ambient_wav_bytes", "weather_wav_bytes", "event_wav_bytes", "duration_s"],
+            "layer_d": ["seed", "ambient_wav_bytes", "weather_wav_bytes", "event_wav_bytes", "duration_s"],
         },
         "upstream": {
             "layer_a": layer_a.get("metadata", {}),

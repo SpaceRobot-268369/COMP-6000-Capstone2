@@ -111,6 +111,9 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 .claude/
 ├── settings.local.json
 ├── commands/                              # Custom slash-command definitions
+├── plans/                                 # Implementation plans
+│   ├── model_selection_settings.md
+│   └── random_event_placement.md
 ├── skills/                                # Reusable agent skills
 │   ├── commit_changes.md
 │   ├── draft_pr.md

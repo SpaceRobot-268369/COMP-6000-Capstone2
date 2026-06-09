@@ -187,7 +187,6 @@ export async function generateSoundscape(conditions = {}) {
       ? "medium"
       : "light";
   const payload = {
-    seed: 42,
     duration_s: Number(conditions.duration_s) || 30,
     season: conditions.season,
     diel: conditions.sample_bin,
@@ -196,6 +195,12 @@ export async function generateSoundscape(conditions = {}) {
     include_weather: true,
     include_events: true,
   };
+  // Only pin a seed when the caller explicitly supplies a valid one; otherwise
+  // omit it so the server draws a fresh random seed (different result each run).
+  const requestedSeed = Number(conditions.seed);
+  if (Number.isInteger(requestedSeed) && requestedSeed >= 0) {
+    payload.seed = requestedSeed;
+  }
   const res = await fetch(`${API_BASE}/api/generation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
