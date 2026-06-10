@@ -187,6 +187,7 @@ class OrchestratedGenerationRequest(BaseModel):
     include_weather: bool = True
     include_events: bool = True
     species_common_name: Optional[str] = None
+    density: Optional[str] = None
     layer_a_attempt: Optional[str] = None
     layer_b_attempt: Optional[str] = None
     layer_c_attempt: Optional[str] = None

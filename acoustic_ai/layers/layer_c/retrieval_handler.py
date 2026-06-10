@@ -126,6 +126,33 @@ def load(checkpoint_dir: Path | None, params: dict, extra: dict | None = None) -
     )
 
 
+# Density -> how many distinct calls to place. A seeded draw from each tuple
+# lets a sparse scene land on 0 ("no call this render"), 1, or 2 calls, while
+# denser prompts pack more. The schedule still caps placements by duration, so
+# these are upper intents, not guarantees.
+_DENSITY_CALL_CHOICES: dict[str, tuple[int, ...]] = {
+    "sparse": (0, 1, 1, 2),
+    "medium": (2, 3, 3, 4),
+    "dense": (4, 5, 6, 7),
+}
+
+
+def _target_call_count(density: str, rng: random.Random) -> int:
+    """Seeded number of calls to attempt for the requested density."""
+
+    choices = _DENSITY_CALL_CHOICES.get(density, _DENSITY_CALL_CHOICES["sparse"])
+    return int(rng.choice(choices))
+
+
+# Inter-call gaps shrink as density rises so the requested number of calls
+# actually fits the timeline (sparse keeps the natural, spread-out spacing).
+_DENSITY_GAP_SCALE: dict[str, float] = {
+    "sparse": 1.0,
+    "medium": 0.5,
+    "dense": 0.3,
+}
+
+
 def generate(
     state: RetrievalState,
     seed: int | None = None,
@@ -133,67 +160,113 @@ def generate(
     diel: str | None = None,
     species_common_name: str | None = None,
     duration_s: float | None = None,
+    density: str | None = None,
     **_: object,
 ) -> dict:
-    """Generate a frontend-ready Layer C retrieval clip."""
+    """Generate a Layer C event timeline of N distinct, scheduled calls.
+
+    N is a seeded draw from the requested density (0 is possible for sparse),
+    each call is a distinct retrieved snippet placed at its own onset across
+    the target duration. Returns the combined stem (``wav_bytes``) plus a
+    top-level ``event_clips`` list (raw snippet wav + onset per call) that the
+    multi-clip Layer D mixer consumes — kept out of ``metadata`` so the JSON
+    response stays bytes-free.
+    """
 
     params = state.params
     run_seed = int(seed if seed is not None else params.get("seed", 42))
     species = str(species_common_name or params["species_common_name"])
-    requested_duration_s = duration_s
     season = season or params.get("default_season", "summer")
     diel = diel or params.get("default_diel", "morning")
-
-    selected = _retrieve(
-        snippets=state.snippets,
-        species=species,
-        diel_bin=diel,
-        season=season,
-        count=1,
-        seed=run_seed,
+    target_duration_s = (
+        float(duration_s)
+        if duration_s is not None and float(duration_s) > 0
+        else float(params.get("default_duration_s", 30.0))
     )
-    chosen = selected[0]
-    snippet = chosen.snippet
-    clip = _load_audio(Path(snippet.audio_path), base_root=state.bank_root)
+    density = str(density or params.get("default_density", "sparse")).lower()
 
     events_gain_db = float(params.get("events_gain_db", -1.0))
-    mix = clip * _gain_to_amp(events_gain_db)
+    enable_variation = bool(params.get("events_enable_variation", False))
+    ecological_mode = bool(params.get("events_ecological_mode", True))
+
+    n_calls = _target_call_count(density, random.Random(run_seed))
+
+    scheduled: list[ScheduledEvent] = []
+    if n_calls > 0:
+        selected = _retrieve(
+            snippets=state.snippets,
+            species=species,
+            diel_bin=diel,
+            season=season,
+            count=n_calls,
+            seed=run_seed,
+        )
+        scheduled = _schedule(
+            selected,
+            target_duration_s=target_duration_s,
+            seed=run_seed,
+            enable_variation=enable_variation,
+            ecological_mode=ecological_mode,
+            gap_scale=_DENSITY_GAP_SCALE.get(density, 1.0),
+        )
+
+    # Combined stem (legacy single-stem Layer D path + dev UI display).
+    rendered = _render_events(
+        scheduled, target_duration_s=target_duration_s, bank_root=state.bank_root
+    )
+    mix = rendered.audio
     output_duration_s = len(mix) / SR if len(mix) else 0.0
     peak = float(np.max(np.abs(mix))) if mix.size else 0.0
-    if peak > 0.98:
-        mix = mix * (0.98 / peak)
-        peak = 0.98
-    event = {
-        "snippet_id": snippet.snippet_id,
-        "label": snippet.species_common_name,
-        "event_type": snippet.event_type,
-        "audio_event_id": snippet.audio_event_id,
-        "snippet_path": snippet.audio_path,
-        "source_recording": snippet.recording_id,
-        "onset_s": 0.0,
-        "offset_s": round(output_duration_s, 3),
-        "gain_db": events_gain_db,
-        "pitch_shift_semitones": 0.0,
-        "time_stretch_rate": 1.0,
-        "fade_s": 0.0,
-        "confidence": round(snippet.score, 4),
-        "retrieval_score": round(chosen.retrieval_score, 4),
-        "diel_bin": snippet.diel_bin,
-        "season": snippet.season,
-        "selection_reason": chosen.selection_reason,
-    }
+
+    # Per-call clips for the multi-clip Layer D contract: each entry carries the
+    # raw snippet audio and the single onset where the mixer should place it.
+    event_clips: list[dict] = []
+    events_meta: list[dict] = []
+    for placed in scheduled:
+        snippet = placed.retrieved.snippet
+        clip_audio = _load_audio(Path(snippet.audio_path), base_root=state.bank_root)
+        event_clips.append(
+            {
+                "wav": _wav_bytes(clip_audio, SR),
+                "species": snippet.species_common_name,
+                "onsets_s": [placed.onset_s],
+                # None -> mixer applies its layer-default event gain.
+                "gain_db": None,
+            }
+        )
+        events_meta.append(
+            {
+                "snippet_id": snippet.snippet_id,
+                "label": snippet.species_common_name,
+                "event_type": snippet.event_type,
+                "audio_event_id": snippet.audio_event_id,
+                "snippet_path": snippet.audio_path,
+                "source_recording": snippet.recording_id,
+                "onset_s": placed.onset_s,
+                "offset_s": placed.offset_s,
+                "gain_db": placed.gain_db,
+                "pitch_shift_semitones": placed.pitch_shift_semitones,
+                "time_stretch_rate": placed.time_stretch_rate,
+                "fade_s": placed.fade_s,
+                "confidence": round(snippet.score, 4),
+                "retrieval_score": round(placed.retrieved.retrieval_score, 4),
+                "diel_bin": snippet.diel_bin,
+                "season": snippet.season,
+                "selection_reason": placed.retrieved.selection_reason,
+            }
+        )
 
     metadata = {
         "layer": "layer_c",
-        "method": "retrieval_clip",
+        "method": "retrieval_event_timeline",
         "species": species,
         "request": {
             "seed": run_seed,
             "season": season,
             "diel": diel,
-            "duration_s": requested_duration_s,
-            "duration_s_ignored": True,
-            "count_requested": 1,
+            "duration_s": duration_s,
+            "density": density,
+            "count_requested": n_calls,
         },
         "audio": {
             "sample_rate": SR,
@@ -204,27 +277,30 @@ def generate(
         },
         "retrieval": {
             "index_path": str(state.index_path.relative_to(REPO_ROOT)),
-            "selected_count": 1,
+            "selected_count": len(scheduled),
             "library_source": "audited real bird-call snippets only",
-            "selected_snippet": event,
+            "selected_snippets": events_meta,
         },
         "mix": {
             "ambient_kind": "none",
             "ambient_gain_db": None,
             "events_gain_db": events_gain_db,
-            "variation_enabled": False,
+            "variation_enabled": enable_variation,
             "limitations": [
-                "This frontend demo is a single retrieved Layer C clip; Layer D mixing is separate.",
                 "Layer C events are real audited retrieval snippets, not from-scratch generated calls.",
+                "Final placement/gain is owned by the multi-clip Layer D mixer; this stem is the Layer C contribution only.",
             ],
         },
-        "events": [event],
+        "events": events_meta,
     }
 
     return {
         "wav_bytes": _wav_bytes(mix, SR),
         "mel_db": _mel_db(mix, SR),
         "metadata": metadata,
+        # Top-level (not in metadata): wav-bearing clips for the Layer D mixer.
+        # Excluded from the JSON response, which only serializes `metadata`.
+        "event_clips": event_clips,
     }
 
 
@@ -412,13 +488,23 @@ def _schedule(
     seed: int,
     enable_variation: bool,
     ecological_mode: bool,
+    gap_scale: float = 1.0,
 ) -> list[ScheduledEvent]:
     if not snippets:
         return []
     rng = random.Random(seed)
     profile = _profile_for(snippets[0].snippet.event_type) if ecological_mode else _default_profile()
+    # gap_scale (< 1.0 for denser scenes) shrinks the inter-call gaps so the
+    # requested number of calls actually fits in the target duration; the
+    # ecological gap *shape* is preserved, just compressed.
+    gap_scale = max(0.05, float(gap_scale))
+
+    def _gap(key: str) -> float:
+        lo, hi = profile[key]
+        return rng.uniform(lo, hi) * gap_scale
+
     events: list[ScheduledEvent] = []
-    cursor = rng.uniform(*profile["start_window_s"])
+    cursor = rng.uniform(*profile["start_window_s"]) * gap_scale
     pool = list(snippets)
     last_recording = ""
 
@@ -451,7 +537,7 @@ def _schedule(
             last_recording = item.snippet.recording_id
             placed_in_bout += 1
             gap_key = "within_bout_gap_s" if placed_in_bout < bout_size else "between_bout_gap_s"
-            cursor += rendered_duration + rng.uniform(*profile[gap_key])
+            cursor += rendered_duration + _gap(gap_key)
     return events
 
 

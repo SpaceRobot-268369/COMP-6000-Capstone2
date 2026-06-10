@@ -56,3 +56,18 @@ To materialize the audited retrieval package for local generation testing:
 ```bash
 dvc pull model/candidates/burger/mvp_2__retrieval_v2_library/media_asset_bank/review_package_full_v2_final_human_bandpass.dvc
 ```
+
+### Event count & placement
+
+`generate()` places a **variable number of distinct calls**, not a single clip:
+
+- The call count is a seeded draw from the request `density`
+  (`sparse` → 0–2, `medium` → 2–4, `dense` → 4–7); sparse can legitimately
+  land on **zero** calls. Inter-call gaps shrink with density so the calls fit
+  the target duration.
+- Each call is a **distinct** retrieved snippet (deduped/diversified by source
+  recording) scheduled at its own onset across the full `duration_s` timeline.
+- Output: the combined Layer C stem (`wav_bytes`) **plus** a top-level
+  `event_clips` list (raw snippet wav + onset per call) that the multi-clip
+  Layer D mixer consumes. `event_clips` is intentionally kept out of `metadata`
+  so the JSON response stays bytes-free.
