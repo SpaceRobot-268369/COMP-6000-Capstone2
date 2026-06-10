@@ -66,6 +66,7 @@ COMP-6000-Capstone2/
 ├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
 ├── services/dev/            # local docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
 ├── services/server-a/       # Server A deployment compose + env template
+├── services/migrations/     # incremental SQL migrations applied on top of db_init.sql (e.g. model_configs)
 │
 ├── acoustic_ai/             # Python AI module (FastAPI app runs natively on serverB for inference)
 │   ├── server/              # registry.py + server.py — registry-driven FastAPI app on :8000
