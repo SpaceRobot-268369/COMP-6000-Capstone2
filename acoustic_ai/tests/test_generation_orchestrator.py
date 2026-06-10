@@ -80,7 +80,7 @@ class GenerationOrchestratorTest(unittest.TestCase):
         )
         self.assertEqual(
             set(calls["layer_c"]),
-            {"seed", "season", "diel", "duration_s", "species_common_name"},
+            {"seed", "season", "diel", "duration_s", "species_common_name", "density"},
         )
         self.assertEqual(
             set(calls["layer_d"]),

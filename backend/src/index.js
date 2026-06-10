@@ -1003,6 +1003,8 @@ const ALLOWED_WEATHER_TYPES = new Set(["rain", "wind", "rain+wind"]);
 const ALLOWED_WEATHER_INTENSITIES = new Set(["light", "medium", "heavy"]);
 const ALLOWED_WIND_INTENSITIES = new Set(["light", "medium", "heavy"]);
 
+const ALLOWED_EVENT_DENSITIES = new Set(["sparse", "medium", "dense"]);
+
 app.post("/api/layers/:layer/attempts/:attempt/generate", requireAuth, async (req, res) => {
   const { layer, attempt } = req.params;
   const operation = `generate ${layer}/${attempt}`;
@@ -1113,6 +1115,14 @@ app.post("/api/generation", requireAuth, async (req, res) => {
       : "";
     if (speciesCommonName) {
       payload.species_common_name = speciesCommonName;
+    }
+    // Layer C event density (parsed from the prompt) drives how many distinct
+    // calls are placed. Absent/invalid -> the AI server falls back to its default.
+    const density = typeof req.body?.density === "string"
+      ? req.body.density.toLowerCase()
+      : null;
+    if (ALLOWED_EVENT_DENSITIES.has(density)) {
+      payload.density = density;
     }
     for (const key of ["layer_a_attempt", "layer_b_attempt", "layer_c_attempt", "layer_d_attempt"]) {
       if (typeof req.body?.[key] === "string" && req.body[key].trim()) {

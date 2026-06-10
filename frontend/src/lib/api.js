@@ -314,6 +314,12 @@ export async function generateSoundscape(conditions = {}) {
   if (typeof speciesCommonName === "string" && speciesCommonName.trim()) {
     payload.species_common_name = speciesCommonName.trim();
   }
+  // Event density (parsed from the prompt) controls how many distinct calls
+  // Layer C places — sparse may even land on none.
+  const density = conditions.density ?? layerC?.density;
+  if (typeof density === "string" && density.trim()) {
+    payload.density = density.trim().toLowerCase();
+  }
   // Only pin a seed when the caller explicitly supplies a valid one; otherwise
   // omit it so the server draws a fresh random seed (different result each run).
   const requestedSeed = Number(conditions.seed);
