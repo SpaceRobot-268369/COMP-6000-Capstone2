@@ -152,7 +152,9 @@ class GenerationOrchestratorTest(unittest.TestCase):
                 {
                     "wav": b"event_wav",
                     "species": "Splendid Fairywren",
-                    "onsets_s": [0.0],
+                    # None -> Layer D scatters the event at a seeded random
+                    # onset rather than pinning it to the timeline start.
+                    "onsets_s": None,
                     "gain_db": None,
                 }
             ],

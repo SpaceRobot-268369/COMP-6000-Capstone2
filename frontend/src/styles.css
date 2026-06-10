@@ -5304,6 +5304,78 @@ textarea {
   outline: none;
   border-color: rgba(120, 200, 230, 0.55);
 }
+
+/* ─── Settings page (model-config slots) ──────────────────────────────────── */
+.settings-row {
+  display: grid;
+  gap: 24px;
+}
+.settings-status {
+  display: grid;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 10px;
+}
+.settings-status strong {
+  font-size: 14px;
+}
+.settings-status span {
+  font-size: 13px;
+  opacity: 0.82;
+  line-height: 1.45;
+}
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 22px 8px;
+}
+.settings-slot {
+  display: grid;
+  gap: 8px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.settings-slot:first-child {
+  border-top: none;
+}
+.settings-slot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.settings-slot-name {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+}
+.settings-slot-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.6;
+}
+.settings-slot .layer-a-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 2px;
+}
+.settings-slot .analysis-error {
+  margin: 0;
+  font-size: 12px;
+}
+.settings-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 40px;
+}
+[data-theme="light"] .settings-slot {
+  border-top-color: rgba(0, 90, 130, 0.12);
+}
+
 .layer-a-json {
   margin: 0;
   box-sizing: border-box;
@@ -5795,6 +5867,19 @@ body.theme-generation .main-panel:has(.demo-chat) {
   border: 1px solid rgba(255,255,255,0.09);
   display: flex; align-items: center; gap: 12px;
 }
+/* Parser feedback bubble: a swap/correction note (info) or a rejection (warning). */
+.demo-bubble.assistant.notice { display: block; }
+.demo-bubble.assistant.notice.corrected {
+  color: #e7ddb8;
+  background: rgba(205, 191, 154, 0.10);
+  border: 1px solid rgba(205, 191, 154, 0.30);
+}
+.demo-bubble.assistant.notice.rejected {
+  color: #f0cbb0;
+  background: rgba(214, 122, 78, 0.12);
+  border: 1px solid rgba(214, 122, 78, 0.38);
+}
+
 .demo-status { letter-spacing: 0.02em; }
 .demo-dots { display: inline-flex; gap: 4px; }
 .demo-dots i {
@@ -5969,6 +6054,23 @@ body.theme-generation .main-panel:has(.demo-chat) {
   border-color: rgba(236, 229, 214, 0.52);
   box-shadow: 0 0 16px rgba(236, 229, 214, 0.12), inset 0 0 0 1px rgba(236, 229, 214, 0.08);
 }
+
+/* Tagged presets — deliberate demo chips (safe / partial / invalid). The badge
+   marks intent so an audience knows the chip is crafted on purpose. */
+.demo-preset-chip.tagged {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.demo-preset-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; line-height: 1.4;
+  border: 1px solid currentColor;
+}
+.demo-preset-tag.safe { color: #6ee7a8; background: rgba(110, 231, 168, 0.12); }
+.demo-preset-tag.partial { color: #f4c560; background: rgba(244, 197, 96, 0.12); }
+.demo-preset-tag.invalid { color: #f08a8a; background: rgba(240, 138, 138, 0.12); }
+.demo-preset-chip.tagged.safe { border-color: rgba(110, 231, 168, 0.4); }
+.demo-preset-chip.tagged.partial { border-color: rgba(244, 197, 96, 0.4); }
+.demo-preset-chip.tagged.invalid { border-color: rgba(240, 138, 138, 0.4); }
 
 /* ---- composer ---- */
 .demo-composer {

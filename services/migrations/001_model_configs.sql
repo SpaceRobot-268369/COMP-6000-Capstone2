@@ -1,23 +1,12 @@
--- Production db_init.sql
--- Runs once on first PostgreSQL container start.
--- Skipped automatically if the data directory already exists.
+-- Migration: Model Selection Settings
+-- To run manually:
+--   psql -d capstone2 -f services/migrations/001_model_configs.sql
+-- Or inside the Docker postgres container:
+--   docker exec -it services-db-1 psql -U postgres -d capstone2 -f /workspace/services/migrations/001_model_configs.sql
 
 -- ============================================================
--- Users
+-- Helper Function (in case it wasn't created yet)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS users (
-    id            SERIAL PRIMARY KEY,
-    username      TEXT        NOT NULL UNIQUE,
-    email         TEXT        NOT NULL UNIQUE,
-    password_hash TEXT        NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_users_email    ON users (email);
-CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
-
--- Auto-update updated_at on every row change
 CREATE OR REPLACE FUNCTION fn_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -25,23 +14,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER trg_users_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-
--- ============================================================
--- Sessions  (connect-pg-simple schema)
--- Stores server-side cookie sessions. Rows expire automatically
--- via the session store's pruning job.
--- ============================================================
-CREATE TABLE IF NOT EXISTS sessions (
-    sid    VARCHAR      NOT NULL COLLATE "default" PRIMARY KEY,
-    sess   JSON         NOT NULL,
-    expire TIMESTAMP(6) NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions (expire);
 
 -- ============================================================
 -- Model Selection Settings
@@ -70,4 +42,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_active_global_config
 CREATE OR REPLACE TRIGGER trg_model_configs_updated_at
     BEFORE UPDATE ON model_configs
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-

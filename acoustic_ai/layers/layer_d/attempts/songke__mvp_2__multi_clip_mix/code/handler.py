@@ -77,6 +77,7 @@ def generate(
         duration_s=resolved_duration_s,
         placement_seed=resolved_placement_seed,
         layer_gain_db=float(params.get("event_gain_db", -8.0)),
+        edge_buffer_s=float(params.get("event_edge_buffer_s", 2.0)),
     )
     bandpass = params.get("event_bandpass_hz")
     event_bandpass_hz = (
@@ -298,6 +299,7 @@ def _resolve_event_input(
     duration_s: float,
     placement_seed: int,
     layer_gain_db: float,
+    edge_buffer_s: float = 0.0,
 ) -> tuple[tuple[EventPlacement, ...], dict[str, Any]]:
     if event_clips is not None:
         rng = np.random.default_rng(placement_seed)
@@ -327,6 +329,7 @@ def _resolve_event_input(
                         rng,
                         duration_s=duration_s,
                         clip_duration_s=stem.audio.shape[0] / stem.sample_rate,
+                        edge_buffer_s=edge_buffer_s,
                     )
                 ]
             else:
@@ -493,11 +496,20 @@ def _random_onset_s(
     *,
     duration_s: float,
     clip_duration_s: float,
+    edge_buffer_s: float = 0.0,
 ) -> float:
     latest_start_s = max(0.0, duration_s - clip_duration_s)
     if latest_start_s == 0.0:
         return 0.0
-    return float(rng.uniform(0.0, latest_start_s))
+    # Keep a lead-in / trailing margin so the clip doesn't sit flush against the
+    # very start or end. If the buffered window collapses (clip nearly as long
+    # as the timeline), fall back to the full [0, latest_start_s] range.
+    buffer_s = max(0.0, edge_buffer_s)
+    lo = min(buffer_s, latest_start_s)
+    hi = max(0.0, latest_start_s - buffer_s)
+    if hi <= lo:
+        lo, hi = 0.0, latest_start_s
+    return float(rng.uniform(lo, hi))
 
 
 def _duration_to_frames(duration_s: float) -> int:

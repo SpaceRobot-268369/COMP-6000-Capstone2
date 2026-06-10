@@ -7,6 +7,7 @@ import GenerationPage from "./pages/GenerationPage.jsx";
 import PipelinePage from "./pages/PipelinePage.jsx";
 import LayerATestPage from "./pages/LayerATestPage.jsx";
 import DevAnalysisPage from "./pages/DevAnalysisPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
 import ServerBStatusPage from "./pages/ServerBStatusPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
@@ -56,7 +57,7 @@ export default function App() {
   useEffect(() => {
     const path = location.pathname;
     document.body.classList.remove("theme-analysis", "theme-generation");
-    if (path === "/analysis" || path === "/dev/analysis") {
+    if (path === "/analysis" || path === "/dev/analysis" || path === "/dev/settings") {
       document.body.classList.add("theme-analysis");
     } else if (path === "/generation" || path === "/dev/layers") {
       document.body.classList.add("theme-generation");
@@ -230,6 +231,10 @@ export default function App() {
                     <span className="nav-icon">◉</span>
                     <span>Dev — Analysis</span>
                   </NavLink>
+                  <NavLink to="/dev/settings" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
+                    <span className="nav-icon">⚙️</span>
+                    <span>Model Settings</span>
+                  </NavLink>
                   <NavLink to="/immersive" className={navbarDropdownItemClass} onClick={() => { setDevDropdownOpen(false); setMobileMenuOpen(false); }}>
                     <span className="nav-icon">❂</span>
                     <span>Immersive</span>
@@ -320,6 +325,7 @@ export default function App() {
             }
           />
           <Route path="/dev/analysis" element={<DevAnalysisPage />} />
+          <Route path="/dev/settings" element={<SettingsPage />} />
           <Route
             path="/server-b"
             element={

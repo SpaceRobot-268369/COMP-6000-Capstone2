@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import secrets
 import sys
 import threading
 from dataclasses import dataclass
@@ -844,6 +845,12 @@ def orchestrate_generation(
     duration_s = float(duration_s)
     if not 0.0 < duration_s <= 30.0:
         raise ValueError("duration_s must be greater than 0 and at most 30 seconds")
+
+    # No seed supplied -> draw a fresh random one so each run differs. The
+    # resolved value is shared across A/B/C/D and echoed in metadata so the
+    # user can pin it to reproduce a run.
+    if seed is None:
+        seed = secrets.randbelow(2_147_483_648)  # [0, 2147483647]
     attempts = {
         "layer_a": layer_a_attempt or default_attempt_id("layer_a"),
         "layer_b": layer_b_attempt or default_attempt_id("layer_b"),
@@ -994,7 +1001,9 @@ def _event_clips_for_layer_d(layer_c: dict | None) -> list[dict[str, Any]]:
         {
             "wav": wav,
             "species": metadata.get("species") or "layer_c_events",
-            "onsets_s": [0.0],
+            # None -> Layer D scatters the event at a seeded random onset
+            # (placement_seed) instead of pinning it to the start.
+            "onsets_s": None,
             "gain_db": None,
         }
     ]

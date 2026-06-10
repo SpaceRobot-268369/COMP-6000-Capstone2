@@ -36,10 +36,15 @@ Record every default you applied in `filled_defaults` (e.g. `"weather:none"`,
 `"events:empty"`).
 
 ### 2. Validity / coherence gate (correct-and-continue, never silently fail)
-- Apply each `gate_finding`. `out_of_domain` (city, traffic, machinery, music,
-  crowds…) → remove that element and keep the rest. `implausible_weather`
-  (snow, hail at this arid site) → swap for the suggested analogue (heavy rain
-  or dust-laden wind).
+- Apply each `gate_finding`. An `out_of_domain` finding with `action:"swap"`
+  (city, traffic, machinery, music, crowds…) → remove that element and keep the
+  rest. `implausible_weather` (snow, hail at this arid site) → swap for the
+  suggested analogue (heavy rain or dust-laden wind).
+- An `out_of_domain` finding with `action:"block"`, or a
+  `dominant_out_of_domain` finding, means the prompt is saturated with
+  out-of-domain content with no in-domain scene to keep → set `status` =
+  "rejected", put a suggested in-domain prompt in `note`, and null all three
+  layers. (The orchestrator enforces this deterministically too.)
 - **Surgical, not destructive: only remove/replace the flagged element.** Keep
   everything else the user asked for. If they said "city dawn with light rain",
   drop the city but KEEP the light rain.

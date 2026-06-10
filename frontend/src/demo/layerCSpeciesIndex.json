@@ -1,0 +1,276 @@
+{
+  "_generated_by": "acoustic_ai/scripts/build_layer_c_species_index.py",
+  "_note": "Derived artifact — do not edit by hand; rerun the script.",
+  "attempts": {
+    "burger__mvp_2__retrieval_v2_library": {
+      "kind": "retrieval",
+      "species": [
+        {
+          "key": "australian_raven",
+          "label": "Australian Raven"
+        },
+        {
+          "key": "australian_ringneck",
+          "label": "Australian Ringneck"
+        },
+        {
+          "key": "banded_lapwing",
+          "label": "Banded Lapwing"
+        },
+        {
+          "key": "barn_owl",
+          "label": "Barn Owl"
+        },
+        {
+          "key": "black_eared_cuckoo",
+          "label": "Black-eared Cuckoo"
+        },
+        {
+          "key": "black_faced_cuckooshrike",
+          "label": "Black-faced Cuckooshrike"
+        },
+        {
+          "key": "black_honeyeater",
+          "label": "Black Honeyeater"
+        },
+        {
+          "key": "brown_falcon",
+          "label": "Brown Falcon"
+        },
+        {
+          "key": "budgerigar",
+          "label": "Budgerigar"
+        },
+        {
+          "key": "chestnut_breasted_quail_thrush",
+          "label": "Chestnut-breasted Quail-thrush"
+        },
+        {
+          "key": "chestnut_crowned_babbler",
+          "label": "Chestnut-crowned Babbler"
+        },
+        {
+          "key": "chestnut_rumped_thornbill",
+          "label": "Chestnut-rumped Thornbill"
+        },
+        {
+          "key": "cockatiel",
+          "label": "Cockatiel"
+        },
+        {
+          "key": "common_bronzewing",
+          "label": "Common Bronzewing"
+        },
+        {
+          "key": "common_greenshank",
+          "label": "Common Greenshank"
+        },
+        {
+          "key": "common_sandpiper",
+          "label": "Common Sandpiper"
+        },
+        {
+          "key": "crested_bellbird",
+          "label": "Crested Bellbird"
+        },
+        {
+          "key": "crimson_chat",
+          "label": "Crimson Chat"
+        },
+        {
+          "key": "eastern_spinebill",
+          "label": "Eastern Spinebill"
+        },
+        {
+          "key": "eurasian_coot",
+          "label": "Eurasian Coot"
+        },
+        {
+          "key": "gilberts_whistler",
+          "label": "Gilbert's Whistler"
+        },
+        {
+          "key": "gray_butcherbird",
+          "label": "Gray Butcherbird"
+        },
+        {
+          "key": "gray_fantail",
+          "label": "Gray Fantail"
+        },
+        {
+          "key": "gray_shrikethrush",
+          "label": "Gray Shrikethrush"
+        },
+        {
+          "key": "horsfields_bronze_cuckoo",
+          "label": "Horsfield's Bronze-cuckoo"
+        },
+        {
+          "key": "inland_thornbill",
+          "label": "Inland Thornbill"
+        },
+        {
+          "key": "masked_woodswallow",
+          "label": "Masked Woodswallow"
+        },
+        {
+          "key": "mulga_parrot",
+          "label": "Mulga Parrot"
+        },
+        {
+          "key": "osprey",
+          "label": "Osprey"
+        },
+        {
+          "key": "pacific_swift",
+          "label": "Pacific Swift"
+        },
+        {
+          "key": "pallid_cuckoo",
+          "label": "Pallid Cuckoo"
+        },
+        {
+          "key": "pied_honeyeater",
+          "label": "Pied Honeyeater"
+        },
+        {
+          "key": "pink_cockatoo",
+          "label": "Pink Cockatoo"
+        },
+        {
+          "key": "purple_backed_fairywren",
+          "label": "Purple-backed Fairywren"
+        },
+        {
+          "key": "red_backed_fairywren",
+          "label": "Red-backed Fairywren"
+        },
+        {
+          "key": "red_browed_firetail",
+          "label": "Red-browed Firetail"
+        },
+        {
+          "key": "red_browed_pardalote",
+          "label": "Red-browed Pardalote"
+        },
+        {
+          "key": "red_capped_robin",
+          "label": "Red-capped Robin"
+        },
+        {
+          "key": "red_winged_parrot",
+          "label": "Red-winged Parrot"
+        },
+        {
+          "key": "restless_flycatcher",
+          "label": "Restless Flycatcher"
+        },
+        {
+          "key": "rufous_songlark",
+          "label": "Rufous Songlark"
+        },
+        {
+          "key": "scarlet_myzomela",
+          "label": "Scarlet Myzomela"
+        },
+        {
+          "key": "singing_honeyeater",
+          "label": "Singing Honeyeater"
+        },
+        {
+          "key": "southern_scrub_robin",
+          "label": "Southern Scrub-Robin"
+        },
+        {
+          "key": "spiny_cheeked_honeyeater",
+          "label": "Spiny-cheeked Honeyeater"
+        },
+        {
+          "key": "splendid_fairywren",
+          "label": "Splendid Fairywren"
+        },
+        {
+          "key": "spotted_dove",
+          "label": "Spotted Dove"
+        },
+        {
+          "key": "spotted_nightjar",
+          "label": "Spotted Nightjar"
+        },
+        {
+          "key": "spotted_quail_thrush",
+          "label": "Spotted Quail-thrush"
+        },
+        {
+          "key": "superb_fairywren",
+          "label": "Superb Fairywren"
+        },
+        {
+          "key": "tawny_frogmouth",
+          "label": "Tawny Frogmouth"
+        },
+        {
+          "key": "weebill",
+          "label": "Weebill"
+        },
+        {
+          "key": "whimbrel",
+          "label": "Whimbrel"
+        },
+        {
+          "key": "white_breasted_woodswallow",
+          "label": "White-breasted Woodswallow"
+        },
+        {
+          "key": "white_browed_woodswallow",
+          "label": "White-browed Woodswallow"
+        },
+        {
+          "key": "white_throated_nightjar",
+          "label": "White-throated Nightjar"
+        },
+        {
+          "key": "white_winged_fairywren",
+          "label": "White-winged Fairywren"
+        },
+        {
+          "key": "white_winged_triller",
+          "label": "White-winged Triller"
+        },
+        {
+          "key": "willie_wagtail",
+          "label": "Willie Wagtail"
+        },
+        {
+          "key": "wood_sandpiper",
+          "label": "Wood Sandpiper"
+        },
+        {
+          "key": "yellow_rumped_thornbill",
+          "label": "Yellow-rumped Thornbill"
+        },
+        {
+          "key": "yellow_throated_miner",
+          "label": "Yellow-throated Miner"
+        },
+        {
+          "key": "zebra_finch",
+          "label": "Zebra Finch"
+        }
+      ]
+    },
+    "burger__mvp_3__sa3_generative_live": {
+      "kind": "generative",
+      "species": [
+        {
+          "key": "horsfields_bronze_cuckoo",
+          "label": "Horsfield's Bronze-cuckoo"
+        },
+        {
+          "key": "spotted_nightjar",
+          "label": "Spotted Nightjar"
+        }
+      ]
+    }
+  }
+}

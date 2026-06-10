@@ -43,6 +43,20 @@ def _user_message(prompt: str, findings: list[dict]) -> str:
     return json.dumps({"prompt": prompt, "gate_findings": findings}, ensure_ascii=False)
 
 
+def _blocking_finding(findings: list[dict]) -> Optional[dict]:
+    """The first gate finding that demands an outright reject, if any.
+
+    A block decision is deterministic (gate.py owns it), not left to the small
+    model — so a saturated out-of-domain prompt is rejected even if the LLM
+    tries to 'correct' it into a default empty bed."""
+    return next((f for f in findings if f.get("action") == "block"), None)
+
+
+def _rejected(note: str) -> dict:
+    return {"status": "rejected", "note": note, "filled_defaults": [],
+            "layer_a": None, "layer_b": None, "layer_c": None}
+
+
 # Deterministic weather detection — a backstop so an explicitly-requested,
 # climatically-plausible weather is never dropped by a small model's slip
 # (validation showed a 3B writing the right note but nulling layer_b). Weather
@@ -137,6 +151,18 @@ def parse_prompt(prompt: str) -> dict:
     """Parse a raw NL prompt into the parse-result contract. Raises if the LLM
     service is unavailable (the endpoint maps that to 503)."""
     findings = gate_findings(prompt)
+
+    # Deterministic block: a prompt saturated with out-of-domain content has no
+    # in-domain scene to correct into, so reject up front without spending an
+    # LLM call (and without trusting a small model to reject on its own).
+    blocking = _blocking_finding(findings)
+    if blocking is not None:
+        return _rejected(
+            "This is a remote dry-woodland soundscape — it can't voice a city/"
+            "machinery scene, and there's nothing in-domain left to keep. "
+            "Try something like 'a still autumn dawn with distant birds'."
+        )
+
     messages = [
         {"role": "system", "content": load_skill("parser")},
         {"role": "user", "content": _user_message(prompt, findings)},

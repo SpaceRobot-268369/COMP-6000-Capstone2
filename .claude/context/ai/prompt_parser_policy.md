@@ -79,7 +79,13 @@ Gate checks (non-exhaustive; the policy is the live list):
 
 - **Out-of-domain content** — dense city traffic, sirens, machinery, music,
   crowds. None of these belong in a remote dry-woodland soundscape and none
-  are covered by our layers. → **block**, suggest the nearest in-domain scene.
+  are covered by our layers. Severity scales with saturation: **one or two**
+  stray anthropic elements over an otherwise in-domain scene are **swapped**
+  out (correct-and-continue, keep the rest); a prompt **saturated** with
+  out-of-domain content (≥ `OUT_OF_DOMAIN_BLOCK_THRESHOLD` distinct concepts,
+  nothing in-domain left to keep) is **blocked → rejected** with the nearest
+  in-domain scene suggested. The deterministic gate owns this decision
+  (`gate.py`); negated mentions ("no traffic") are not counted.
 - **Phenologically implausible fauna** — a species that does not occur at the
   site, or not in the requested `(season, diel)`. Cross-check against the
   species phenology table in

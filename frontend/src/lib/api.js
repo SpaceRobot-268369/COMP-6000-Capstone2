@@ -44,6 +44,43 @@ export async function fetchLayerRegistry() {
   return res.json();
 }
 
+// ─── Model-selection config (Settings page) ──────────────────────────────────
+
+/**
+ * Fetch the saved model-config slots merged with the live layer registry.
+ * @returns {Promise<{ok:boolean, slots:Object, layers:Array}>}
+ */
+export async function fetchModelConfig() {
+  const res = await fetch(`${API_BASE}/api/model-config`, { credentials: "include" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(apiErrorMessage(err, `Failed to load model config (${res.status})`));
+  }
+  return res.json();
+}
+
+/**
+ * Persist the chosen slots. On a 400 the rejected response carries per-slot
+ * `errors`; we surface them on the thrown error so the UI can render them.
+ * @param {Object} slots  slot id → attempt id ("" = registry default)
+ * @returns {Promise<{ok:boolean, slots:Object}>}
+ */
+export async function saveModelConfig(slots) {
+  const res = await fetch(`${API_BASE}/api/model-config`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slots }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(apiErrorMessage(data, `Failed to save model config (${res.status})`));
+    if (data.errors) err.errors = data.errors;
+    throw err;
+  }
+  return data;
+}
+
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
@@ -255,7 +292,6 @@ export async function generateSoundscape(conditions = {}) {
   const includeEvents = conditions.include_events ??
     (hasExplicitLayerContracts ? hasParsedEvents : true);
   const payload = {
-    seed: Number.isInteger(conditions.seed) ? conditions.seed : 42,
     duration_s: Number(conditions.duration_s ?? layerB?.duration_s) || 30,
     season: conditions.season ?? layerA.season,
     diel: conditions.diel ?? conditions.sample_bin ?? conditions.time ?? layerA.diel,
@@ -269,6 +305,12 @@ export async function generateSoundscape(conditions = {}) {
     layer_c_attempt: conditions.layer_c_attempt,
     layer_d_attempt: conditions.layer_d_attempt,
   };
+  // Only pin a seed when the caller explicitly supplies a valid one; otherwise
+  // omit it so the server draws a fresh random seed (different result each run).
+  const requestedSeed = Number(conditions.seed);
+  if (Number.isInteger(requestedSeed) && requestedSeed >= 0) {
+    payload.seed = requestedSeed;
+  }
   const res = await fetch(`${API_BASE}/api/generation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
