@@ -353,7 +353,16 @@ def _retrieve(
         for snippet in candidates
     ]
     scored.sort(key=lambda item: item.retrieval_score, reverse=True)
-    top_pool = scored[: max(count * 3, count)]
+
+    # Diversify by source recording before sampling. A flat _score gives every
+    # snippet in the same (diel, season) bin near-identical points, so a plain
+    # top-k pool collapses onto whatever single recording happens to have the
+    # most high-confidence cuts — every seed then returns the same call. Round-
+    # robin across recordings (best cut of each first, then second-best, ...)
+    # so the pool spans many distinct sources while still front-loading quality.
+    diversified = _diversify_by_recording(scored)
+    pool_size = max(count * 8, 12)
+    top_pool = diversified[:pool_size]
     rng.shuffle(top_pool)
 
     selected: list[RetrievedSnippet] = []
@@ -367,6 +376,33 @@ def _retrieve(
         selected.append(item)
         last_recording = item.snippet.recording_id
     return selected
+
+
+def _diversify_by_recording(scored: list[RetrievedSnippet]) -> list[RetrievedSnippet]:
+    """Reorder a score-sorted list so source recordings are interleaved.
+
+    Groups by ``recording_id`` (insertion order preserves descending score),
+    then emits the best cut of each recording, then the second-best of each,
+    and so on. The result keeps quality near the front while guaranteeing the
+    leading entries span as many distinct recordings as exist.
+    """
+
+    groups: dict[str, list[RetrievedSnippet]] = {}
+    for item in scored:
+        groups.setdefault(item.snippet.recording_id, []).append(item)
+
+    diversified: list[RetrievedSnippet] = []
+    rank = 0
+    while len(diversified) < len(scored):
+        added = False
+        for cuts in groups.values():
+            if rank < len(cuts):
+                diversified.append(cuts[rank])
+                added = True
+        if not added:
+            break
+        rank += 1
+    return diversified
 
 
 def _schedule(

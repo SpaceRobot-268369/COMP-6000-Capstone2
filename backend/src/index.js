@@ -1106,6 +1106,14 @@ app.post("/api/generation", requireAuth, async (req, res) => {
     if (ALLOWED_WEATHER_INTENSITIES.has(intensity)) {
       payload.intensity = intensity;
     }
+    // Layer C species selector (parsed from the prompt). When absent, the AI
+    // server falls back to the Layer C attempt's default species.
+    const speciesCommonName = typeof req.body?.species_common_name === "string"
+      ? req.body.species_common_name.trim()
+      : "";
+    if (speciesCommonName) {
+      payload.species_common_name = speciesCommonName;
+    }
     for (const key of ["layer_a_attempt", "layer_b_attempt", "layer_c_attempt", "layer_d_attempt"]) {
       if (typeof req.body?.[key] === "string" && req.body[key].trim()) {
         payload[key] = req.body[key].trim();

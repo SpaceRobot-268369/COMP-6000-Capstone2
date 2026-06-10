@@ -305,6 +305,15 @@ export async function generateSoundscape(conditions = {}) {
     layer_c_attempt: conditions.layer_c_attempt,
     layer_d_attempt: conditions.layer_d_attempt,
   };
+  // Forward the parsed Layer C species so the events layer voices what the
+  // prompt asked for. Without this the AI server falls back to the Layer C
+  // attempt's default species. The retrieval/generative handlers take a single
+  // species_common_name, so send the first of the parsed checklist.
+  const speciesCommonName = conditions.species_common_name
+    ?? (Array.isArray(layerC?.species) ? layerC.species[0] : undefined);
+  if (typeof speciesCommonName === "string" && speciesCommonName.trim()) {
+    payload.species_common_name = speciesCommonName.trim();
+  }
   // Only pin a seed when the caller explicitly supplies a valid one; otherwise
   // omit it so the server draws a fresh random seed (different result each run).
   const requestedSeed = Number(conditions.seed);
