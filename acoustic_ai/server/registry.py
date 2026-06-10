@@ -1001,7 +1001,9 @@ def _event_clips_for_layer_d(layer_c: dict | None) -> list[dict[str, Any]]:
         {
             "wav": wav,
             "species": metadata.get("species") or "layer_c_events",
-            "onsets_s": [0.0],
+            # None -> Layer D scatters the event at a seeded random onset
+            # (placement_seed) instead of pinning it to the start.
+            "onsets_s": None,
             "gain_db": None,
         }
     ]

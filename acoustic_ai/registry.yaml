@@ -552,6 +552,7 @@ layers:
           event_bandpass_hz: [500.0, 8000.0]
           peak_ceiling: 0.95
           placement_seed_default: 42
+          event_edge_buffer_s: 2.0
         notes:
           - Handler-level multi-clip contract is implemented and covered by tests.
           - Backward-compatible with the mvp_1 single-stem handler parameters while the orchestrator catches up.

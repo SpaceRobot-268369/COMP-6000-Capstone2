@@ -17,3 +17,6 @@ inference:
   peak_ceiling: 0.95
   max_duration_s: 30.0
   placement_seed_default: 42
+  # Lead-in / trailing margin (s) kept clear when an event onset is drawn
+  # randomly (onsets_s is null). Matches the single-stem mvp_1 edge buffer.
+  event_edge_buffer_s: 2.0
