@@ -292,7 +292,6 @@ export async function generateSoundscape(conditions = {}) {
   const includeEvents = conditions.include_events ??
     (hasExplicitLayerContracts ? hasParsedEvents : true);
   const payload = {
-    seed: Number.isInteger(conditions.seed) ? conditions.seed : 42,
     duration_s: Number(conditions.duration_s ?? layerB?.duration_s) || 30,
     season: conditions.season ?? layerA.season,
     diel: conditions.diel ?? conditions.sample_bin ?? conditions.time ?? layerA.diel,
