@@ -95,6 +95,24 @@ class GateTest(unittest.TestCase):
         findings = gate_findings("a dawn with cars and a car")
         self.assertTrue(all(f["action"] == "swap" for f in findings))
 
+    def test_off_site_coast_is_a_recoverable_swap(self):
+        # The "partial" preset: an in-domain scene + an off-biome (coastal)
+        # element -> a single coastal swap finding, so the parser corrects
+        # (drops the coast) rather than accepting as-is or rejecting.
+        findings = gate_findings(
+            "Summer night, a Spotted Nightjar calling, with ocean waves breaking on a beach")
+        off = [f for f in findings if f["type"] == "off_biome"]
+        self.assertEqual(len(off), 1)
+        self.assertEqual(off[0]["action"], "swap")
+        self.assertFalse(any(f["type"] == "dominant_out_of_domain" for f in findings))
+
+    def test_inland_scene_has_no_off_biome_finding(self):
+        self.assertEqual(
+            [f for f in gate_findings("a still autumn dawn with distant birdsong")
+             if f["type"] == "off_biome"],
+            [],
+        )
+
 
 class FaithfulnessTest(unittest.TestCase):
     def test_pass_when_species_observed(self):

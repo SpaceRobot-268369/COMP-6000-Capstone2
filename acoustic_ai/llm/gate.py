@@ -19,9 +19,10 @@ The swap/block split is a distinct-concept count (`OUT_OF_DOMAIN_BLOCK_THRESHOLD
 so a single concept written with several words ("car horns") and negated
 mentions ("no traffic") do not push a recoverable prompt over the edge.
 
-Scope today: out-of-domain content + climatically-implausible weather for an
-arid inland site. The fauna-phenology check is a STUB pending the species
-phenology table (analysis_synthesis_policy.md §7) — see plan §10.
+Scope today: out-of-domain anthropogenic content, off-site natural biomes
+(coast/ocean), and climatically-implausible weather for an arid inland site.
+The fauna-phenology check is a STUB pending the species phenology table
+(analysis_synthesis_policy.md §7) — see plan §10.
 """
 
 from __future__ import annotations
@@ -55,6 +56,22 @@ OUT_OF_DOMAIN = sorted({term for terms in OUT_OF_DOMAIN_GROUPS.values() for term
 
 # Climatically implausible for arid inland Bowra.
 IMPLAUSIBLE_WEATHER = ["snow", "snowy", "snowfall", "blizzard", "hail", "sleet", "frost storm"]
+
+# Off-site natural elements: real sounds, but from a biome the inland dry-
+# woodland site cannot host (the coast). Unlike anthropogenic content these are
+# always recoverable — strip the off-biome element and keep the in-domain scene
+# (correct-and-continue) — so each is a `swap` and is NOT counted toward the
+# anthropogenic saturation block. Grouped by concept like OUT_OF_DOMAIN_GROUPS,
+# so "ocean waves breaking on a beach" is one `coastal` concept, not three.
+# "waves" is deliberately omitted: too ambiguous (heat/sound waves) to flag on
+# its own — ocean/beach/surf/etc. already anchor the coastal case.
+OFF_BIOME_GROUPS: dict[str, tuple[str, ...]] = {
+    "coastal": (
+        "ocean", "oceans", "sea", "seas", "seaside", "seashore", "shore",
+        "shoreline", "beach", "beaches", "coast", "coastal", "surf", "tide",
+        "tides", "lagoon",
+    ),
+}
 
 # At/above this many DISTINCT out-of-domain concepts the prompt is treated as
 # saturated (unrecoverable) and blocked. Below it, each concept is a swap and
@@ -130,6 +147,18 @@ def gate_findings(prompt: str) -> list[dict]:
                 "suggestion": "substitute a plausible analogue (heavy rain or dust-laden wind)",
             })
 
+    # Off-site biome elements (coast/ocean): always a recoverable swap, never a
+    # block, so a prompt like "...Nightjar calling, with ocean waves" is
+    # corrected (drop the coast) rather than accepted as-is or rejected.
+    for name, terms in OFF_BIOME_GROUPS.items():
+        if _hit_concept(text, terms):
+            findings.append({
+                "type": "off_biome",
+                "term": name,
+                "action": "swap",
+                "suggestion": "remove the coastal/marine element; keep a remote inland dry-woodland scene",
+            })
+
     # TODO(phenology): fauna-plausibility check needs the species phenology
     # table (analysis_synthesis_policy.md §7). Until it exists, fauna requests
     # pass through unchecked here and rely on the LLM's coarse knowledge.
@@ -143,4 +172,5 @@ __all__ = [
     "OUT_OF_DOMAIN_GROUPS",
     "OUT_OF_DOMAIN_BLOCK_THRESHOLD",
     "IMPLAUSIBLE_WEATHER",
+    "OFF_BIOME_GROUPS",
 ]
