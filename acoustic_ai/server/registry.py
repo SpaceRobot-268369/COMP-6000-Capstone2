@@ -834,6 +834,7 @@ def orchestrate_generation(
     intensity: str = "light",
     include_weather: bool = True,
     include_events: bool = True,
+    species_common_name: str | None = None,
     layer_a_attempt: str | None = None,
     layer_b_attempt: str | None = None,
     layer_c_attempt: str | None = None,
@@ -885,6 +886,7 @@ def orchestrate_generation(
             season=season,
             diel=diel,
             duration_s=duration_s,
+            species_common_name=species_common_name,
         )
         if include_events
         else None
@@ -916,7 +918,7 @@ def orchestrate_generation(
         "parameter_routing": {
             "layer_a": ["seed", "season", "diel"],
             "layer_b": ["seed", "weather_type", "intensity", "duration_s"],
-            "layer_c": ["seed", "season", "diel", "duration_s"],
+            "layer_c": ["seed", "season", "diel", "duration_s", "species_common_name"],
             "layer_d": list(layer_d_params.keys()),
         },
         "upstream": {
