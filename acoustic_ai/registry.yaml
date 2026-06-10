@@ -363,7 +363,7 @@ layers:
 
   layer_c:
     label: "Layer C — Events"
-    default: burger__mvp_3__sa3_generative_live
+    default: burger__mvp_2__retrieval_v2_library
     attempts:
       lucas__smoke_1__audiogen_boobook:
         label: "Boobook owl (AudioGen LoRA)"
