@@ -22,6 +22,7 @@ service_log="${SERVER_B_SERVICE_LOG:-/tmp/shiny-pikachu-ai.log}"
 service_pidfile="${SERVER_B_SERVICE_PIDFILE:-/tmp/shiny-pikachu-ai.pid}"
 venv_python="${SERVER_B_VENV_PYTHON:-$deploy_dir/acoustic_ai/.venv/bin/python}"
 restart_enabled="${SERVER_B_RESTART:-1}"
+service_unit="${SERVER_B_SERVICE_UNIT:-shiny-pikachu-ai.service}"
 
 log() {
   printf '[server-b-sync] %s\n' "$*"
@@ -237,14 +238,47 @@ find_listener_pid() {
   printf '%s' "$pid"
 }
 
+systemd_unit_installed() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  systemctl list-unit-files "$service_unit" >/dev/null 2>&1
+}
+
+restart_service_systemd() {
+  log "Restarting AI service via systemd unit '$service_unit' (interrupts any in-flight job)"
+  sudo systemctl restart "$service_unit" || fail "systemctl restart $service_unit failed"
+
+  sleep 3
+  if systemctl is-active --quiet "$service_unit"; then
+    log "Unit $service_unit is active; pre-warm runs in the background (journalctl -u $service_unit -f)"
+  else
+    warn "Unit $service_unit is not active after restart; check 'systemctl status $service_unit'"
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    log "Health probe (best effort):"
+    curl -fsS --max-time 10 "http://${service_host}:${service_port}/health" \
+      || warn "Health probe failed (service may still be starting / warming models)"
+    printf '\n'
+  fi
+}
+
 restart_service() {
   if [ "$restart_enabled" = "0" ]; then
     log "SERVER_B_RESTART=0 — skipping restart (sync-only). New code/models load on the next manual start."
     return 0
   fi
 
+  # Prefer the systemd unit when it is installed: it is the boot-time owner of
+  # the service, so a nohup relaunch here would race it for port
+  # ${service_port}. Fall back to the legacy nohup path only when no unit
+  # exists (e.g. an older serverB that has not been migrated yet).
+  if systemd_unit_installed; then
+    restart_service_systemd
+    return 0
+  fi
+
   [ -x "$venv_python" ] || fail "venv python not found: $venv_python"
-  log "Restarting AI service on ${service_host}:${service_port}"
+  log "No systemd unit '$service_unit' found; using legacy nohup restart on ${service_host}:${service_port}"
 
   # Stop the current listener (pidfile first, then a port lookup as fallback).
   old_pid=""

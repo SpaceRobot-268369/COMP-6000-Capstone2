@@ -449,19 +449,19 @@ python -m pip install -r requirements.txt
 python -m uvicorn server.server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-On serverB the MVP runs `uvicorn` under `nohup` (no systemd unit yet):
+On serverB the service runs under **systemd** as `shiny-pikachu-ai.service`
+(enabled, so it **auto-starts on boot**):
 
 ```bash
-# start
-ssh shinypokemon 'cd ~/shiny-pikachu && \
-  nohup ./acoustic_ai/.venv/bin/python -m uvicorn \
-    acoustic_ai.server.server:app --host 127.0.0.1 --port 8000 \
-    > /tmp/shiny-pikachu-ai.log 2>&1 & echo $! > /tmp/shiny-pikachu-ai.pid'
+# start  ·  stop  ·  restart
+ssh shinypokemon 'sudo systemctl start shiny-pikachu-ai'
+ssh shinypokemon 'sudo systemctl stop shiny-pikachu-ai'
+ssh shinypokemon 'sudo systemctl restart shiny-pikachu-ai'
 
-# health  ·  stop  ·  logs
+# health  ·  status  ·  logs
 ssh shinypokemon 'curl -s http://127.0.0.1:8000/health'
-ssh shinypokemon 'kill $(cat /tmp/shiny-pikachu-ai.pid)'
-ssh shinypokemon 'tail -f /tmp/shiny-pikachu-ai.log'
+ssh shinypokemon 'systemctl status shiny-pikachu-ai'
+ssh shinypokemon 'journalctl -u shiny-pikachu-ai -f'
 ```
 
 The Docker backend reaches it from Server A through the `ai-tunnel` Compose
