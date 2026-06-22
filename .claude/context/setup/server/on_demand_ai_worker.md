@@ -250,9 +250,8 @@ Rules:
     git pull && \
     ./acoustic_ai/.venv/bin/pip install -r acoustic_ai/requirements.txt && \
     dvc pull && \
-    kill $(cat /tmp/shiny-pikachu-ai.pid) 2>/dev/null; sleep 2'
-  # then re-run the start command below — the restart is what loads the new
-  # code/models and re-runs pre-warm.
+    sudo systemctl restart shiny-pikachu-ai'
+  # the systemd restart is what loads the new code/models and re-runs pre-warm.
   ```
 
   To run the exact CICD path by hand, invoke the deploy script directly
@@ -269,26 +268,41 @@ Rules:
   `.dvc/cache` is heavy. Current dev setup symlinks
   `~/shiny-pikachu/.dvc/cache -> ~/lucano/COMP-6000-Capstone2/.dvc/cache`.
 
-### Starting / stopping the service (current dev state)
+### Starting / stopping the service
 
-The MVP runs `uvicorn` directly under `nohup`; no systemd unit yet.
+The service runs under **systemd** as the system unit
+`shiny-pikachu-ai.service` (`/etc/systemd/system/shiny-pikachu-ai.service`,
+`User=ubuntu`, `Environment=AI_PREWARM=all`, `Restart=on-failure`). It is
+`enable`d, so it **starts automatically on every boot** — power the instance
+on from RONIN and the worker comes up on its own; no manual start step.
 
 ```bash
-# start
-ssh shinypokemon 'cd ~/shiny-pikachu && \
-  nohup ./acoustic_ai/.venv/bin/python -m uvicorn \
-    acoustic_ai.server.server:app --host 127.0.0.1 --port 8000 \
-    > /tmp/shiny-pikachu-ai.log 2>&1 & echo $! > /tmp/shiny-pikachu-ai.pid'
+# start / stop / restart (boot-time owner of the service)
+ssh shinypokemon 'sudo systemctl start shiny-pikachu-ai'
+ssh shinypokemon 'sudo systemctl stop shiny-pikachu-ai'
+ssh shinypokemon 'sudo systemctl restart shiny-pikachu-ai'
 
-# health (inside serverB)
+# enable / disable auto-start on boot (already enabled)
+ssh shinypokemon 'sudo systemctl enable shiny-pikachu-ai'
+ssh shinypokemon 'sudo systemctl disable shiny-pikachu-ai'
+
+# status + health (inside serverB)
+ssh shinypokemon 'systemctl status shiny-pikachu-ai'
 ssh shinypokemon 'curl -s http://127.0.0.1:8000/health'
 
-# stop
-ssh shinypokemon 'kill $(cat /tmp/shiny-pikachu-ai.pid)'
-
-# logs
-ssh shinypokemon 'tail -f /tmp/shiny-pikachu-ai.log'
+# logs (journald — survives reboots; /tmp logs do not)
+ssh shinypokemon 'journalctl -u shiny-pikachu-ai -f'
 ```
+
+Stopping the unit (or `sudo shutdown` for the idle-shutdown path) is the
+clean way to take the worker down; the unit comes back on next boot. Only
+`disable` it if you want it to stay down across reboots.
+
+Legacy note: earlier dev state ran `uvicorn` directly under `nohup` with a
+`/tmp/shiny-pikachu-ai.pid` pidfile and `/tmp/shiny-pikachu-ai.log`. The
+deploy script ([sync_server_b_models.sh](../../../../script/deploy/sync_server_b_models.sh))
+still falls back to that path if the systemd unit is absent, but on the live
+serverB the unit is the owner.
 
 The server must bind `127.0.0.1` only — public ingress is denied by design
 (see Network Topology). Reach it from server A through the

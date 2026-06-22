@@ -511,29 +511,32 @@ Per-member experiment clones should remain separate, for example:
 
 Future deployment flow:
 
+The service is owned by the systemd unit `shiny-pikachu-ai.service`, so a
+deploy syncs the checkout and then asks systemd to restart (never spawns its
+own process — that would race the boot-time unit for port 8000):
+
 ```bash
 ssh shinypokemon '
   cd ~/shiny-pikachu &&
   git pull --ff-only origin main &&
   ./acoustic_ai/.venv/bin/python -m pip install -r acoustic_ai/requirements.txt &&
   ./acoustic_ai/.venv/bin/python -m compileall acoustic_ai/server acoustic_ai/layers &&
-  if [ -f /tmp/shiny-pikachu-ai.pid ]; then
-    kill "$(cat /tmp/shiny-pikachu-ai.pid)" || true
-  fi &&
-  nohup ./acoustic_ai/.venv/bin/python -m uvicorn acoustic_ai.server.server:app \
-    --host 127.0.0.1 --port 8000 \
-    > /tmp/shiny-pikachu-ai.log 2>&1 &
-  echo $! > /tmp/shiny-pikachu-ai.pid &&
+  sudo systemctl restart shiny-pikachu-ai &&
   curl -fsS http://127.0.0.1:8000/health
 '
 ```
+
+The real deploy runs through
+[script/deploy/sync_server_b_models.sh](../../../../script/deploy/sync_server_b_models.sh),
+whose `restart_service` prefers `systemctl restart` when the unit is present
+and only falls back to the legacy `nohup` path on a serverB without the unit.
 
 Server B post-deploy checks:
 
 - `curl http://127.0.0.1:8000/health` works on Server B.
 - Server A can reach Server B through `ai-tunnel`.
 - health response includes registry metadata and does not require model loading.
-- logs are available at `/tmp/shiny-pikachu-ai.log`.
+- `systemctl status shiny-pikachu-ai` is `active`; logs via `journalctl -u shiny-pikachu-ai`.
 
 ## Secrets
 
