@@ -11,6 +11,20 @@ The deployment checkout stores Compose files and environment configuration.
 Docker images are pulled from GHCR into Docker's own image store; they are not
 stored inside this repository directory.
 
+## Boot auto-start
+
+Every service in `docker-compose.yml` (`ai-tunnel`, `postgres`, `backend`,
+`frontend`) plus `nginx` in `docker-compose.override.yml` declares
+`restart: unless-stopped`. The Docker daemon is enabled on boot
+(`systemctl is-enabled docker`), so after a reboot or a power-cycle the whole
+stack comes back automatically — no manual `docker compose up`. `unless-stopped`
+(rather than `always`) means an explicit `docker compose down` / `docker stop`
+stays down until you bring it back, so taking the host offline deliberately is
+not fought by the restart policy.
+
+To take the stack down and keep it down across reboots, `docker compose down`;
+to bring it back, `docker compose up -d` from the deploy checkout.
+
 The production database init script creates schema only. It does not seed the
 development `test@test.com / test1234` account.
 

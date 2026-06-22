@@ -2,6 +2,7 @@ services:
   ai-tunnel:
     container_name: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-server-a}
     image: ${AI_TUNNEL_IMAGE:-ghcr.io/spacerobot-268369/eco-ai-tunnel:${IMAGE_TAG:-main}}
+    restart: unless-stopped
     environment:
       AI_SERVER_LABEL: ${AI_SERVER_LABEL:-shinypokemon}
       AI_SSH_USER: ${AI_SSH_USER:-ubuntu}
@@ -28,6 +29,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -49,6 +51,7 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/spacerobot-268369/eco-backend:${IMAGE_TAG:-main}}
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -79,6 +82,7 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/spacerobot-268369/eco-frontend:${IMAGE_TAG:-main}}
+    restart: unless-stopped
     env_file:
       - .env
     environment:
