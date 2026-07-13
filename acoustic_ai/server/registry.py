@@ -398,13 +398,20 @@ def default_layer_e_head_attempt(head: str) -> str:
     """Return the default attempt for one Layer E analysis head.
 
     The layer-level default is the ambient head. For weather/events/aggregator
-    we select the first registered attempt whose `head:` field matches.
+    we first honor explicit per-head defaults, then fall back to the first
+    registered attempt whose `head:` field matches.
     """
     layers = _registry_doc().get("layers", {})
     layer = layers.get("layer_e")
     if not layer:
         raise KeyError("unknown layer: 'layer_e'")
     attempts = layer.get("attempts", {})
+    head_defaults = layer.get("default_heads") or {}
+    head_default = head_defaults.get(head)
+    if head_default:
+        attempt = attempts.get(head_default)
+        if attempt and attempt.get("head") == head:
+            return str(head_default)
     layer_default = layer.get("default")
     if layer_default and attempts.get(layer_default, {}).get("head") == head:
         return str(layer_default)

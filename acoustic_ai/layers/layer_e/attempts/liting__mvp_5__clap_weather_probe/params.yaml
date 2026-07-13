@@ -1,0 +1,25 @@
+seed: 42
+training:
+  epochs: 800
+  lr: 0.003
+  rain_lr: 0.003
+  wind_lr: 0.05
+  weight_decay: 0.0003
+  rain_weight_decay: 0.0003
+  wind_weight_decay: 0.0001
+  model_type: mlp
+  rain_model_type: mlp
+  wind_model_type: linear
+  balance_mode: weighted
+  hidden_dim: 8
+  dropout: 0.0
+  val_frac: 0.25
+  site_only: true
+feature_extraction:
+  backbone: laion/clap-htsat-unfused
+  target_sample_rate: 48000
+  window_seconds: 10
+  include_dsp_features: true
+outputs:
+  checkpoint: model/candidates/liting/mvp_5__clap_weather_probe/weather_head.pt
+  metrics: model/candidates/liting/mvp_5__clap_weather_probe/metrics.json

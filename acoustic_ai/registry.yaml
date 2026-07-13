@@ -561,6 +561,8 @@ layers:
   layer_e:
     label: "Layer E — Analysis"
     default: lucas__mvp_2__clap_knn_probe_enlarged
+    default_heads:
+      weather: liting__mvp_2__calibrated_weather_head
     # Analysis runs three independent detector heads on the raw mixture
     # (pipeline_design.md § Analysis Mode): E-A ambient context, E-B weather,
     # E-C events. Each attempt declares which head it serves via `head:`
@@ -617,6 +619,100 @@ layers:
         notes:
           - Parked baseline trained on the original 1,982-segment pool.
           - Probe did not beat the k-NN season baseline on v0 data.
+
+      liting__smoke_1__e_b_weather_analysis:
+        label: "Weather detector — Site257 spectral smoke"
+        author: liting
+        stage: smoke_1
+        head: weather
+        status: smoke_baseline
+        checkpoint: null
+        params: {}
+        notes:
+          - E-B weather smoke detector calibrated on Murphy's Server A CLAP-first site257 promoted assets.
+          - No neural model is trained in this smoke attempt; it is a spectral calibration baseline.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      liting__mvp_1__panns_weather_baseline:
+        label: "Weather detector — PANNs CNN14 baseline"
+        author: liting
+        stage: mvp_1
+        head: weather
+        status: mvp_candidate
+        checkpoint: null
+        params: {}
+        notes:
+          - E-B MVP path from pipeline_design.md: PANNs CNN14 AudioSet weather logits as primary signal.
+          - Uses Site257 / Murphy weather assets and spectral features as calibration and explainability support.
+          - Falls back to the smoke spectral detector when PANNs dependencies or checkpoint are unavailable.
+          - Serves the E-B head of the Analysis dev page via POST /layers/layer_e/attempts/{id}/analyze.
+
+      liting__mvp_2__calibrated_weather_head:
+        label: "Weather detector — calibrated Site257 head"
+        author: liting
+        stage: mvp_2
+        head: weather
+        status: mvp_candidate
+        checkpoint: model/candidates/liting/mvp_2__calibrated_weather_head
+        params:
+          panns_device: auto
+        notes:
+          - E-B MVP2 small calibrated weather head trained on 101 materialised Site257 clips.
+          - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
+          - Server B run: 75 train / 26 validation, rain val acc 0.769, wind val acc 0.731, actual head training 1.36 seconds.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
+
+      liting__mvp_3__balanced_weather_head:
+        label: "Weather detector — hybrid Site257 head"
+        author: liting
+        stage: mvp_3
+        head: weather
+        status: iteration_checkpoint
+        checkpoint: model/candidates/liting/mvp_3__balanced_weather_head
+        params:
+          panns_device: auto
+        notes:
+          - E-B MVP3 hybrid weather head trained on the same 101 materialised Site257 clips as MVP2.
+          - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
+          - Rain uses a weighted MLP head; wind keeps the more stable weighted linear head.
+          - Server B run improved rain/joint over MVP2 but missed the overall wind gate; keep MVP2 as the safer integration default.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
+
+      liting__mvp_4__data_expanded_weather_head:
+        label: "Weather detector — data-expanded Site257 head"
+        author: liting
+        stage: mvp_4
+        head: weather
+        status: iteration_checkpoint
+        checkpoint: model/candidates/liting/mvp_4__data_expanded_weather_head
+        params:
+          panns_device: auto
+        notes:
+          - E-B MVP4 keeps validation on audited Site257 weather assets while adding pseudo-labelled Site257 audio to training only.
+          - Uses frozen PANNs CNN14 evidence plus DSP weather features; the PANNs backbone is not fine-tuned.
+          - Server B result with conservative pseudo expansion: rain val acc 0.846, wind val acc 0.615, joint val acc 0.615; this did not beat MVP2/MVP3.
+          - Conclusion: pseudo-labelled expansion needs stricter selection or manual audit before it can replace the safer MVP2 integration candidate.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
+
+      liting__mvp_5__clap_weather_probe:
+        label: "Weather detector — CLAP weather probe"
+        author: liting
+        stage: mvp_5
+        head: weather
+        status: iteration_checkpoint
+        checkpoint: model/candidates/liting/mvp_5__clap_weather_probe
+        params:
+          backbone: laion/clap-htsat-unfused
+        notes:
+          - E-B MVP5 tests frozen LAION-CLAP audio embeddings plus DSP features as the weather representation.
+          - Uses the same audited Site257 validation anchor as MVP2-MVP4 and no pseudo-labelled expansion.
+          - Server B result: rain val acc 0.808, wind val acc 0.692, joint val acc 0.615; close to MVP3 but below MVP2 wind.
+          - Conclusion: CLAP is viable as a representation, but this audited-only probe is not the final integration candidate.
+          - Thunder remains suppressed until Site257 thunder evidence is validated.
+          - Serves the E-B weather head via POST /layers/layer_e/attempts/{id}/analyze.
 
       songke__prod_1__e_c_species_event_detector:
         label: "Known species event detector - PRODUCTION"

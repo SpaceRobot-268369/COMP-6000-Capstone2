@@ -1,0 +1,11 @@
+# Track the dev-artifacts-self-testing/ folder if added, but never commit contents.
+/dev-artifacts-self-testing/*
+!/dev-artifacts-self-testing/.gitkeep
+
+# Layer E is analysis-only; any local audio examples are DVC or local scratch.
+*.wav
+*.mp3
+*.flac
+*.webm
+
+.DS_Store
