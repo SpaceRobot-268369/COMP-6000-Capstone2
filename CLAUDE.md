@@ -348,6 +348,12 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 
 ## Running services
 
+> **`demo` branch:** AI services are excluded here. `services/dev/docker-compose.yml`
+> starts only frontend + backend + PostgreSQL — no `ai-tunnel` sidecar, no serverB
+> SSH secret, no Docker-socket mount; the backend runs `AI_CONNECTION_MODE=direct`
+> against an optional host-local `AI_SERVER_URL`. The two AI rows below describe
+> `main`. See [services/dev/README.md](services/dev/README.md).
+
 | Service | How | URL |
 |---------|-----|-----|
 | Frontend | Docker | `http://localhost:5173` |

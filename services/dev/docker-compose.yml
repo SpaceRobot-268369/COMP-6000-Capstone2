@@ -1,33 +1,11 @@
+# DEMO stack — AI services excluded.
+#
+# This branch (`demo`) runs the project for a quick walkthrough without any
+# AI worker: no ai-tunnel sidecar, no SSH key/secret, no serverB dependency.
+# Only postgres + backend + frontend come up. The backend still exposes its
+# AI proxy routes, but they point at an optional host-local FastAPI server
+# (AI_SERVER_URL) and simply fail fast if nothing is listening there.
 services:
-  ai-tunnel:
-    container_name: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-dev}
-    build:
-      context: ./ai-tunnel
-      dockerfile: Dockerfile
-    environment:
-      AI_SERVER_LABEL: ${AI_SERVER_LABEL:-shinypokemon}
-      AI_SSH_USER: ${AI_SSH_USER:-ubuntu}
-      AI_SSH_HOST: ${AI_SSH_HOST:-shinypokemon.adelaideuni.cloud}
-      AI_SSH_KEY_PATH: /run/secrets/shinypokemon.pem
-      AI_TUNNEL_BIND_HOST: 0.0.0.0
-      AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
-      AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
-      AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
-      AI_SERVICE_START_COMMAND: ${AI_SERVICE_START_COMMAND:-}
-      AI_SERVICE_START_TIMEOUT_SEC: ${AI_SERVICE_START_TIMEOUT_SEC:-60}
-      AI_SERVICE_START_POLL_SEC: ${AI_SERVICE_START_POLL_SEC:-3}
-    secrets:
-      - source: shinypokemon_pem
-        target: shinypokemon.pem
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${AI_TUNNEL_LOCAL_PORT:-8000}/health >/dev/null"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-    networks:
-      - app_net
-
   postgres:
     image: postgres:16-alpine
     env_file:
@@ -58,17 +36,15 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: ${BACKEND_PORT}
-      AI_CONNECTION_MODE: ssh_tunnel
-      AI_SERVER_URL: http://ai-tunnel:8000
-      AI_SERVER_LABEL: ${AI_SERVER_LABEL:-shinypokemon}
+      # No tunnel in the demo stack: talk directly to whatever (if anything)
+      # is serving the AI API on the host. Override AI_SERVER_URL in .env to
+      # attach a locally running FastAPI server.
+      AI_CONNECTION_MODE: direct
+      AI_SERVER_URL: ${AI_SERVER_URL:-http://host.docker.internal:8000}
+      AI_SERVER_LABEL: ${AI_SERVER_LABEL:-local}
       AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-540000}
       LAYER_B_GENERATE_SERVER_URL: ${LAYER_B_GENERATE_SERVER_URL:-}
       LAYER_B_GENERATE_ATTEMPTS: ${LAYER_B_GENERATE_ATTEMPTS:-murphy__mvp_1__wind_intensity_bank,murphy__mvp_1__rain_intensity_seed_pool}
-      AI_TUNNEL_LOCAL_PORT: ${AI_TUNNEL_LOCAL_PORT:-8000}
-      AI_TUNNEL_REMOTE_HOST: ${AI_TUNNEL_REMOTE_HOST:-127.0.0.1}
-      AI_TUNNEL_REMOTE_PORT: ${AI_TUNNEL_REMOTE_PORT:-8000}
-      AI_RECONNECT_MODE: docker-container
-      AI_RECONNECT_CONTAINER: ${AI_TUNNEL_CONTAINER_NAME:-eco-ai-tunnel-dev}
       # Cached expected/showcase samples are served straight from the repo
       # checkout (no AI-worker round-trip). Mount point matches the volume below.
       AI_LAYERS_ROOT: /acoustic_ai/layers
@@ -77,17 +53,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      ai-tunnel:
-        condition: service_healthy
     volumes:
       - ../../backend:/app
       - backend_node_modules:/app/node_modules
       # Read-only mount of the attempts tree so Express can serve cached
-      # expected/showcase artefacts (PNG/JSON/WAV) without waking serverB.
+      # expected/showcase artefacts (PNG/JSON/WAV) without any AI worker.
       - ../../acoustic_ai:/acoustic_ai:ro
-      # Allows the backend reconnect endpoint to restart only the configured
-      # ai-tunnel container through Docker's API.
-      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app_net
 
@@ -109,10 +82,6 @@ services:
     networks:
       - app_net
 
-  # acoustic_ai and acoustic_ai_server are intentionally removed.
-  # The AI server runs on serverB, outside this Compose stack, and is reached
-  # through the ai-tunnel sidecar service.
-
 networks:
   app_net:
     driver: bridge
@@ -120,7 +89,3 @@ networks:
 volumes:
   backend_node_modules:
   frontend_node_modules:
-
-secrets:
-  shinypokemon_pem:
-    file: ${HOME}/.ssh/itds-eap/shinypokemon.pem

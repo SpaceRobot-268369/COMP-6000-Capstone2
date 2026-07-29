@@ -1,5 +1,23 @@
 # Dev Services
 
+> **`demo` branch:** this stack ships **without AI services**. `docker compose`
+> here brings up only `postgres`, `backend`, and `frontend` — there is no
+> `ai-tunnel` sidecar, no serverB SSH key/secret, and no Docker-socket mount.
+> Anything below about the tunnel applies to `main`, not to this branch.
+>
+> ```bash
+> docker compose up -d
+> ```
+>
+> The backend keeps its AI proxy routes but runs in `AI_CONNECTION_MODE=direct`
+> against `AI_SERVER_URL` (default `http://host.docker.internal:8000`). With no
+> AI server listening there, AI-dependent pages fail fast; everything else
+> (auth, cached `expected/`/`showcase/` artefacts served from the read-only
+> `acoustic_ai` mount) works. If you *do* run a native FastAPI server on the
+> host, set `AI_SERVER_URL=http://host.docker.internal:8000` in
+> `services/dev/.env` — `localhost` there resolves inside the container, not on
+> your Mac.
+
 ## SSH Key Convention
 
 Do not store `.pem` files in this repository or bake them into Docker images.
