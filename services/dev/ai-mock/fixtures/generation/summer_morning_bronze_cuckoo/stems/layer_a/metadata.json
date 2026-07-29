@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "summer_morning_bronze_cuckoo",
+  "prompt": "Summer morning, restless Horsfield's Bronze-cuckoo whistling over and over",
+  "prompt_locked": true,
+  "cell": "summer_morning",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.463266,
+    "rms": 0.081909,
+    "max": 0.463266,
+    "min": -0.404685,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_a",
+    "id": "lucas__prod_1__per_cell_loras",
+    "label": "layer_a demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

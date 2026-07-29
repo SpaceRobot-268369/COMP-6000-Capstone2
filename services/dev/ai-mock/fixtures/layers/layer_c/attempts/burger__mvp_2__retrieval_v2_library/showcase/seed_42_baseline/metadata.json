@@ -1,0 +1,141 @@
+{
+  "tier": "showcase",
+  "case_id": "seed_42_baseline",
+  "layer": "layer_c",
+  "attempt": "burger__mvp_2__retrieval_v2_library",
+  "method": "deterministic_retrieval_showcase_layer_c_only",
+  "seed": 42,
+  "retrieval_seed": 42,
+  "species_common_name": "Splendid Fairywren",
+  "season": "summer",
+  "diel": "morning",
+  "duration_s": 60.0,
+  "sample_rate": 22050,
+  "asset_bank": "model/candidates/burger/mvp_2__retrieval_v2_library",
+  "source_expected_case": "real_splendid_fairywren_v2_001_13490756",
+  "selected_asset_ids": [
+    "splendid_fairywren_v2_001_13490756"
+  ],
+  "events": [
+    {
+      "event_index": 1,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 2.0,
+      "offset_s": 6.0,
+      "gain": 0.8822
+    },
+    {
+      "event_index": 2,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 6.727,
+      "offset_s": 10.727,
+      "gain": 0.7817
+    },
+    {
+      "event_index": 3,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 11.455,
+      "offset_s": 15.455,
+      "gain": 0.9076
+    },
+    {
+      "event_index": 4,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 16.182,
+      "offset_s": 20.182,
+      "gain": 0.8592
+    },
+    {
+      "event_index": 5,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 20.909,
+      "offset_s": 24.909,
+      "gain": 0.6783
+    },
+    {
+      "event_index": 6,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 25.636,
+      "offset_s": 29.636,
+      "gain": 0.9427
+    },
+    {
+      "event_index": 7,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 30.364,
+      "offset_s": 34.364,
+      "gain": 0.8783
+    },
+    {
+      "event_index": 8,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 35.091,
+      "offset_s": 39.091,
+      "gain": 0.8858
+    },
+    {
+      "event_index": 9,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 39.818,
+      "offset_s": 43.818,
+      "gain": 0.6884
+    },
+    {
+      "event_index": 10,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 44.545,
+      "offset_s": 48.545,
+      "gain": 0.7851
+    },
+    {
+      "event_index": 11,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 49.273,
+      "offset_s": 53.273,
+      "gain": 0.7612
+    },
+    {
+      "event_index": 12,
+      "asset_id": "splendid_fairywren_v2_001_13490756",
+      "audio_event_id": "13490756",
+      "species_common_name": "Splendid Fairywren",
+      "onset_s": 54.0,
+      "offset_s": 58.0,
+      "gain": 0.928
+    }
+  ],
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 60.0,
+    "peak": 0.3295433223247528,
+    "rms": 0.029923152178525925,
+    "contains_ambient_bed": false
+  },
+  "tracking": {
+    "audio": "DVC via audio.wav.dvc",
+    "spectrogram": "DVC via spectrogram.png.dvc",
+    "metadata": "DVC via metadata.json.dvc"
+  }
+}

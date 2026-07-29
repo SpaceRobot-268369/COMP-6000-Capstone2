@@ -1,0 +1,724 @@
+{
+  "cell": "spring_afternoon",
+  "report": {
+    "schema_version": "analysis_aggregator.v1",
+    "mode": "analysis",
+    "mock": true,
+    "observations": {
+      "ambient": {
+        "similar_clips": [
+          {
+            "segment_id": "spring_afternoon_seg_00001",
+            "source_clip": "spring_afternoon_clip001",
+            "similarity": 0.68
+          },
+          {
+            "segment_id": "spring_afternoon_seg_00002",
+            "source_clip": "spring_afternoon_clip002",
+            "similarity": 0.62
+          },
+          {
+            "segment_id": "spring_afternoon_seg_00003",
+            "source_clip": "spring_afternoon_clip003",
+            "similarity": 0.56
+          },
+          {
+            "segment_id": "spring_afternoon_seg_00004",
+            "source_clip": "spring_afternoon_clip004",
+            "similarity": 0.5
+          },
+          {
+            "segment_id": "spring_afternoon_seg_00005",
+            "source_clip": "spring_afternoon_clip005",
+            "similarity": 0.44
+          }
+        ],
+        "estimated_conditions": {
+          "season": "spring",
+          "diel_bin": "dawn",
+          "hour": 5.6,
+          "month": 10.2
+        },
+        "confidence": 0.38,
+        "season_confidence": 0.52,
+        "ood_flag": false
+      },
+      "weather": {
+        "wind": {
+          "summary": {
+            "intensity": 0.52,
+            "variability": 0.36,
+            "coverage": 0.77,
+            "label": "moderate",
+            "confidence": 0.79
+          }
+        },
+        "rain": {
+          "summary": {
+            "intensity": 0.0,
+            "variability": 0.58,
+            "coverage": 0.0,
+            "label": "none",
+            "confidence": 0.88
+          }
+        },
+        "thunder": {
+          "summary": {
+            "intensity": 0.0,
+            "variability": 0.0,
+            "coverage": 0.0,
+            "label": "none",
+            "confidence": 0.92
+          },
+          "events": [],
+          "mean_interval_s": null
+        },
+        "confidence": 0.81,
+        "derived_label": "wind",
+        "warnings": [
+          "Weather head runs on the raw mixture; faint rain can hide under wind."
+        ]
+      },
+      "events": [
+        {
+          "label": "willie_wagtail",
+          "common_name": "Willie Wagtail",
+          "scientific_name": "Rhipidura leucophrys",
+          "confidence": 0.91,
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "phenology": {
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.55,
+            "season_signal": "weak",
+            "season_confidence": 0.15,
+            "habitat_signal": "woodland/open woodland"
+          }
+        },
+        {
+          "label": "zebra_finch",
+          "common_name": "Zebra Finch",
+          "scientific_name": "Taeniopygia guttata",
+          "confidence": 0.78,
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "phenology": {
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.61,
+            "season_signal": "weak",
+            "season_confidence": 0.19,
+            "habitat_signal": "woodland/open woodland"
+          }
+        }
+      ]
+    },
+    "inferred_context": {
+      "diel": {
+        "estimate": "afternoon",
+        "posterior": 0.86,
+        "distribution": {
+          "dawn": 0.07,
+          "morning": 0.042,
+          "afternoon": 0.86,
+          "night": 0.028
+        },
+        "primary_evidence": "E-C: Willie Wagtail has a afternoon activity signal",
+        "evidence": [
+          {
+            "source_head": "events",
+            "value": "afternoon",
+            "weight": 0.74,
+            "reason": "Willie Wagtail detected with high confidence"
+          },
+          {
+            "source_head": "ambient",
+            "value": "dawn",
+            "weight": 0.14,
+            "reason": "Ambient head estimate carried low confidence"
+          }
+        ]
+      },
+      "season": {
+        "estimate": "spring",
+        "posterior": 0.57,
+        "distribution": {
+          "spring": 0.57,
+          "summer": 0.215,
+          "autumn": 0.129,
+          "winter": 0.086
+        },
+        "primary_evidence": "Ambient texture and env cues lean this way; no strongly seasonal species",
+        "evidence": [
+          {
+            "source_head": "ambient",
+            "value": "spring",
+            "weight": 0.42,
+            "reason": "Nearest training clips share this season"
+          }
+        ]
+      }
+    },
+    "decision": {
+      "schema_version": "analysis_decision.v1",
+      "time_of_day": {
+        "value": "afternoon",
+        "confidence": 0.86,
+        "distribution": {
+          "dawn": 0.07,
+          "morning": 0.042,
+          "afternoon": 0.86,
+          "night": 0.028
+        },
+        "evidence": "E-C: Willie Wagtail supports afternoon"
+      },
+      "season": {
+        "value": "spring",
+        "confidence": 0.57,
+        "distribution": {
+          "spring": 0.57,
+          "summer": 0.215,
+          "autumn": 0.129,
+          "winter": 0.086
+        },
+        "evidence": "E-A: ambient bed most consistent with spring"
+      },
+      "weather": {
+        "label": "wind",
+        "confidence": 0.81,
+        "rain": {
+          "label": "none",
+          "intensity": 0.0,
+          "coverage": 0.0,
+          "confidence": 0.88
+        },
+        "wind": {
+          "label": "moderate",
+          "intensity": 0.52,
+          "coverage": 0.77,
+          "confidence": 0.79
+        },
+        "thunder": {
+          "label": "none",
+          "intensity": 0.0,
+          "coverage": 0.0,
+          "confidence": 0.92,
+          "events": [],
+          "mean_interval_s": null
+        },
+        "warnings": []
+      },
+      "detected_calls": [
+        {
+          "label": "willie_wagtail",
+          "common_name": "Willie Wagtail",
+          "scientific_name": "Rhipidura leucophrys",
+          "confidence": 0.91,
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "diel_signal": "afternoon",
+          "diel_confidence": 0.55,
+          "season_signal": "weak",
+          "season_confidence": 0.15,
+          "habitat_signal": "woodland/open woodland"
+        },
+        {
+          "label": "zebra_finch",
+          "common_name": "Zebra Finch",
+          "scientific_name": "Taeniopygia guttata",
+          "confidence": 0.78,
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "diel_signal": "afternoon",
+          "diel_confidence": 0.61,
+          "season_signal": "weak",
+          "season_confidence": 0.19,
+          "habitat_signal": "woodland/open woodland"
+        }
+      ],
+      "disagreements": [
+        {
+          "field": "diel",
+          "ambient": "dawn",
+          "events": "afternoon",
+          "resolution": "events_preferred",
+          "reason": "Willie Wagtail is a stronger time-of-day cue than ambient texture."
+        },
+        {
+          "field": "season",
+          "ambient": "spring",
+          "events": "inconclusive",
+          "resolution": "low_confidence_range_reported",
+          "reason": "Season evidence was present but too weak for a confident estimate."
+        }
+      ],
+      "overall_confidence": 0.72,
+      "limitations": [
+        "Season is hard to infer from a single short clip at this site.",
+        "Ambient context is a weak prior, not a ground-truth label.",
+        "Demo build: this report is a pre-authored fixture, not live inference."
+      ]
+    },
+    "narration": {
+      "schema_version": "analysis_narration.v1",
+      "source": "deterministic_fallback",
+      "summary": "The recording reads as afternoon, most consistent with spring, with moderate wind. Detected call evidence includes Willie Wagtail, Zebra Finch.",
+      "bullets": [
+        "Time of day: afternoon (86%)",
+        "Season: spring (56%)",
+        "Weather: wind (81%)",
+        "Detected calls: Willie Wagtail, Zebra Finch"
+      ],
+      "caveats": [
+        "Demo fixture: these values are pre-authored, not model output."
+      ]
+    },
+    "llm_input": {
+      "schema_version": "analysis_llm_input.v1",
+      "task": "Render this ecoacoustic analysis decision JSON as immersive, third-person perspective narration with an analytical tone. Narrate only the provided observations, inferred context, disagreements, limitations, timestamps, and confidence values; do not invent species, season, time of day, weather, certainty, or causes beyond the JSON.",
+      "decision": {
+        "schema_version": "analysis_decision.v1",
+        "time_of_day": {
+          "value": "afternoon",
+          "confidence": 0.86,
+          "distribution": {
+            "dawn": 0.07,
+            "morning": 0.042,
+            "afternoon": 0.86,
+            "night": 0.028
+          },
+          "evidence": "E-C: Willie Wagtail supports afternoon"
+        },
+        "season": {
+          "value": "spring",
+          "confidence": 0.57,
+          "distribution": {
+            "spring": 0.57,
+            "summer": 0.215,
+            "autumn": 0.129,
+            "winter": 0.086
+          },
+          "evidence": "E-A: ambient bed most consistent with spring"
+        },
+        "weather": {
+          "label": "wind",
+          "confidence": 0.81,
+          "rain": {
+            "label": "none",
+            "intensity": 0.0,
+            "coverage": 0.0,
+            "confidence": 0.88
+          },
+          "wind": {
+            "label": "moderate",
+            "intensity": 0.52,
+            "coverage": 0.77,
+            "confidence": 0.79
+          },
+          "thunder": {
+            "label": "none",
+            "intensity": 0.0,
+            "coverage": 0.0,
+            "confidence": 0.92,
+            "events": [],
+            "mean_interval_s": null
+          },
+          "warnings": []
+        },
+        "detected_calls": [
+          {
+            "label": "willie_wagtail",
+            "common_name": "Willie Wagtail",
+            "scientific_name": "Rhipidura leucophrys",
+            "confidence": 0.91,
+            "onset_s": 3.4,
+            "offset_s": 8.0,
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.55,
+            "season_signal": "weak",
+            "season_confidence": 0.15,
+            "habitat_signal": "woodland/open woodland"
+          },
+          {
+            "label": "zebra_finch",
+            "common_name": "Zebra Finch",
+            "scientific_name": "Taeniopygia guttata",
+            "confidence": 0.78,
+            "onset_s": 12.1,
+            "offset_s": 16.7,
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.61,
+            "season_signal": "weak",
+            "season_confidence": 0.19,
+            "habitat_signal": "woodland/open woodland"
+          }
+        ],
+        "disagreements": [
+          {
+            "field": "diel",
+            "ambient": "dawn",
+            "events": "afternoon",
+            "resolution": "events_preferred",
+            "reason": "Willie Wagtail is a stronger time-of-day cue than ambient texture."
+          },
+          {
+            "field": "season",
+            "ambient": "spring",
+            "events": "inconclusive",
+            "resolution": "low_confidence_range_reported",
+            "reason": "Season evidence was present but too weak for a confident estimate."
+          }
+        ],
+        "overall_confidence": 0.72,
+        "limitations": []
+      }
+    },
+    "model_lineage": {
+      "ambient": {
+        "id": "lucas__mvp_2__clap_knn_probe_enlarged",
+        "label": "CLAP k-NN ambient probe (enlarged)",
+        "layer": "layer_e",
+        "head": "ambient",
+        "stage": "mvp_2",
+        "author": "lucas",
+        "status": "candidate"
+      },
+      "weather": {
+        "id": "murphy__mvp_1__weather_direct_detection",
+        "label": "Direct weather detection",
+        "layer": "layer_e",
+        "head": "weather",
+        "stage": "mvp_1",
+        "author": "murphy",
+        "status": "mvp"
+      },
+      "events": {
+        "id": "songke__prod_1__e_c_species_event_detector",
+        "label": "Species event detector",
+        "layer": "layer_e",
+        "head": "events",
+        "stage": "prod_1",
+        "author": "songke",
+        "status": "production"
+      },
+      "aggregator": {
+        "id": "songke__smoke_3__analysis_aggregator",
+        "label": "Analysis aggregator v1",
+        "layer": "layer_e",
+        "head": "aggregator",
+        "stage": "smoke_3",
+        "author": "songke",
+        "status": "smoke_test"
+      }
+    },
+    "disagreements": [
+      {
+        "field": "diel",
+        "ambient": "dawn",
+        "events": "afternoon",
+        "resolution": "events_preferred",
+        "reason": "Willie Wagtail is a stronger time-of-day cue than ambient texture."
+      },
+      {
+        "field": "season",
+        "ambient": "spring",
+        "events": "inconclusive",
+        "resolution": "low_confidence_range_reported",
+        "reason": "Season evidence was present but too weak for a confident estimate."
+      }
+    ],
+    "overall_confidence": 0.72,
+    "limitations": [
+      "Season is hard to infer from a single short clip at this site.",
+      "Ambient context is a weak prior, not a ground-truth label.",
+      "Demo build: this report is a pre-authored fixture, not live inference."
+    ]
+  },
+  "attempts": {
+    "ambient": {
+      "id": "lucas__mvp_2__clap_knn_probe_enlarged",
+      "label": "CLAP k-NN ambient probe (enlarged)",
+      "layer": "layer_e",
+      "head": "ambient",
+      "stage": "mvp_2",
+      "author": "lucas",
+      "status": "candidate"
+    },
+    "weather": {
+      "id": "murphy__mvp_1__weather_direct_detection",
+      "label": "Direct weather detection",
+      "layer": "layer_e",
+      "head": "weather",
+      "stage": "mvp_1",
+      "author": "murphy",
+      "status": "mvp"
+    },
+    "events": {
+      "id": "songke__prod_1__e_c_species_event_detector",
+      "label": "Species event detector",
+      "layer": "layer_e",
+      "head": "events",
+      "stage": "prod_1",
+      "author": "songke",
+      "status": "production"
+    },
+    "aggregator": {
+      "id": "songke__smoke_3__analysis_aggregator",
+      "label": "Analysis aggregator v1",
+      "layer": "layer_e",
+      "head": "aggregator",
+      "stage": "smoke_3",
+      "author": "songke",
+      "status": "smoke_test"
+    }
+  },
+  "head_reports": {
+    "ambient": {
+      "estimated_conditions": {
+        "season": "spring",
+        "diel_bin": "dawn",
+        "hour": 5.6,
+        "month": 10.2
+      },
+      "similar_clips": [
+        {
+          "segment_id": "spring_afternoon_seg_00001",
+          "source_clip": "spring_afternoon_clip001",
+          "similarity": 0.68
+        },
+        {
+          "segment_id": "spring_afternoon_seg_00002",
+          "source_clip": "spring_afternoon_clip002",
+          "similarity": 0.62
+        },
+        {
+          "segment_id": "spring_afternoon_seg_00003",
+          "source_clip": "spring_afternoon_clip003",
+          "similarity": 0.56
+        },
+        {
+          "segment_id": "spring_afternoon_seg_00004",
+          "source_clip": "spring_afternoon_clip004",
+          "similarity": 0.5
+        },
+        {
+          "segment_id": "spring_afternoon_seg_00005",
+          "source_clip": "spring_afternoon_clip005",
+          "similarity": 0.44
+        }
+      ],
+      "confidence": 0.38,
+      "season_confidence": 0.52,
+      "head_agreement": 0.6,
+      "ood_flag": false,
+      "k": 5,
+      "tau": 0.1
+    },
+    "weather": {
+      "observations": {
+        "weather": {
+          "wind": {
+            "summary": {
+              "intensity": 0.52,
+              "variability": 0.36,
+              "coverage": 0.77,
+              "label": "moderate",
+              "confidence": 0.79
+            }
+          },
+          "rain": {
+            "summary": {
+              "intensity": 0.0,
+              "variability": 0.58,
+              "coverage": 0.0,
+              "label": "none",
+              "confidence": 0.88
+            }
+          },
+          "thunder": {
+            "summary": {
+              "intensity": 0.0,
+              "variability": 0.0,
+              "coverage": 0.0,
+              "label": "none",
+              "confidence": 0.92
+            },
+            "events": [],
+            "mean_interval_s": null
+          },
+          "confidence": 0.81,
+          "derived_label": "wind",
+          "warnings": [
+            "Weather head runs on the raw mixture; faint rain can hide under wind."
+          ]
+        }
+      }
+    },
+    "events": {
+      "num_events": 2,
+      "num_detected_windows": 10,
+      "num_windows": 26,
+      "known_species": [
+        "willie_wagtail",
+        "zebra_finch"
+      ],
+      "threshold": 0.55,
+      "events": [
+        {
+          "label": "willie_wagtail",
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "confidence_mean": 0.86,
+          "confidence_max": 0.91,
+          "window_count": 4,
+          "species_matches": [
+            {
+              "label": "Willie Wagtail",
+              "score": 0.91
+            },
+            {
+              "label": "Gray Shrikethrush",
+              "score": 0.382
+            },
+            {
+              "label": "Willie Wagtail",
+              "score": 0.246
+            }
+          ],
+          "phenology": {
+            "common_name": "Willie Wagtail",
+            "scientific_name": "Rhipidura leucophrys",
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.55,
+            "season_signal": "weak",
+            "season_confidence": 0.15,
+            "habitat_signal": "woodland/open woodland",
+            "inference_notes": "Calls concentrated in the afternoon bin at this site."
+          }
+        },
+        {
+          "label": "zebra_finch",
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "confidence_mean": 0.73,
+          "confidence_max": 0.78,
+          "window_count": 4,
+          "species_matches": [
+            {
+              "label": "Zebra Finch",
+              "score": 0.78
+            },
+            {
+              "label": "Gray Shrikethrush",
+              "score": 0.328
+            },
+            {
+              "label": "Willie Wagtail",
+              "score": 0.211
+            }
+          ],
+          "phenology": {
+            "common_name": "Zebra Finch",
+            "scientific_name": "Taeniopygia guttata",
+            "diel_signal": "afternoon",
+            "diel_confidence": 0.61,
+            "season_signal": "weak",
+            "season_confidence": 0.19,
+            "habitat_signal": "woodland/open woodland",
+            "inference_notes": "Calls concentrated in the afternoon bin at this site."
+          }
+        }
+      ],
+      "diagnostics": {
+        "detected_windows": [
+          {
+            "start_s": 3.4,
+            "end_s": 4.4,
+            "confidence": 0.87,
+            "top_label": "willie_wagtail"
+          },
+          {
+            "start_s": 4.4,
+            "end_s": 5.4,
+            "confidence": 0.87,
+            "top_label": "willie_wagtail"
+          },
+          {
+            "start_s": 5.4,
+            "end_s": 6.4,
+            "confidence": 0.87,
+            "top_label": "willie_wagtail"
+          },
+          {
+            "start_s": 6.4,
+            "end_s": 7.4,
+            "confidence": 0.87,
+            "top_label": "willie_wagtail"
+          },
+          {
+            "start_s": 7.4,
+            "end_s": 8.0,
+            "confidence": 0.87,
+            "top_label": "willie_wagtail"
+          },
+          {
+            "start_s": 12.1,
+            "end_s": 13.1,
+            "confidence": 0.74,
+            "top_label": "zebra_finch"
+          },
+          {
+            "start_s": 13.1,
+            "end_s": 14.1,
+            "confidence": 0.74,
+            "top_label": "zebra_finch"
+          },
+          {
+            "start_s": 14.1,
+            "end_s": 15.1,
+            "confidence": 0.74,
+            "top_label": "zebra_finch"
+          },
+          {
+            "start_s": 15.1,
+            "end_s": 16.1,
+            "confidence": 0.74,
+            "top_label": "zebra_finch"
+          },
+          {
+            "start_s": 16.1,
+            "end_s": 16.7,
+            "confidence": 0.74,
+            "top_label": "zebra_finch"
+          }
+        ]
+      },
+      "analysis_report": {
+        "observations": [
+          {
+            "type": "species",
+            "value": "Willie Wagtail",
+            "confidence": 0.91
+          },
+          {
+            "type": "species",
+            "value": "Zebra Finch",
+            "confidence": 0.78
+          }
+        ],
+        "inferred_context": [
+          {
+            "type": "diel",
+            "value": "afternoon",
+            "confidence": 0.55
+          },
+          {
+            "type": "habitat",
+            "value": "woodland/open woodland",
+            "confidence": 0.66
+          }
+        ],
+        "disagreements": []
+      }
+    }
+  }
+}

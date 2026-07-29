@@ -1,0 +1,31 @@
+{
+  "audio": {
+    "duration_s": 10.9134375,
+    "peak": 0.00909423828125,
+    "rms": 0.002472951775416732,
+    "sample_rate": 16000
+  },
+  "cell": "spring_dawn",
+  "selection_reason": "top-recording_id pick for cell spring_dawn (recording_id=4881)",
+  "source": "real_audio",
+  "source_clip_id": "0575_4881_clip001_s000",
+  "source_kind": "clip_dir",
+  "source_manifest": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/cell_spring_dawn.csv",
+  "source_metadata": {
+    "caption": "dawn spring ambient soundscape, Bowra dry woodland, Australia, mild (18C), dry air, moderate wind, recorded 2019-10-04, no music, no machinery",
+    "clip_id": "0575_4881_clip001_s000",
+    "diel_bin": "dawn",
+    "duration_s": 10.913,
+    "env": {
+      "humidity_pct": 33.1,
+      "temperature_c": 17.74,
+      "wind_speed_ms": 2.1
+    },
+    "recording_date": "2019-10-04",
+    "recording_id": "4881",
+    "season": "spring",
+    "segment_id": "4881_clip001_s000",
+    "source_clip": "resources/site_257_bowra-dry-a/mvp2_per_cell_dataset/clips/0575_4881_clip001_s000/audio.wav"
+  },
+  "tier": "expected"
+}

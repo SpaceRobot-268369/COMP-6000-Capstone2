@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "winter_dawn_rain_light",
+  "prompt": "Cold winter dawn, light drizzle",
+  "prompt_locked": true,
+  "cell": "winter_dawn",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.380137,
+    "rms": 0.083299,
+    "max": 0.367532,
+    "min": -0.380137,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_a",
+    "id": "lucas__prod_1__per_cell_loras",
+    "label": "layer_a demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

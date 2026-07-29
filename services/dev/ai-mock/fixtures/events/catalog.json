@@ -1,0 +1,632 @@
+{
+  "australian_raven": {
+    "asset_id": "australian_raven_v2_001_20185901",
+    "species_common_name": "Australian Raven",
+    "species_scientific_name": "Corvus coronoides",
+    "audio_event_id": "20185901",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "australian_raven.wav"
+  },
+  "australian_ringneck": {
+    "asset_id": "australian_ringneck_v2_002_22805778",
+    "species_common_name": "Australian Ringneck",
+    "species_scientific_name": "Barnardius zonarius",
+    "audio_event_id": "22805778",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "spring",
+    "file": "australian_ringneck.wav"
+  },
+  "banded_lapwing": {
+    "asset_id": "banded_lapwing_v2_001_5100236",
+    "species_common_name": "Banded Lapwing",
+    "species_scientific_name": "Vanellus tricolor",
+    "audio_event_id": "5100236",
+    "duration_s": 3.576,
+    "diel_bin": "night",
+    "season": "summer",
+    "file": "banded_lapwing.wav"
+  },
+  "barn_owl": {
+    "asset_id": "barn_owl_v2_001_1454168",
+    "species_common_name": "Barn Owl",
+    "species_scientific_name": "Tyto alba",
+    "audio_event_id": "1454168",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "barn_owl.wav"
+  },
+  "black_eared_cuckoo": {
+    "asset_id": "black_eared_cuckoo_v2_002_24019206",
+    "species_common_name": "Black-eared Cuckoo",
+    "species_scientific_name": "Chrysococcyx osculans",
+    "audio_event_id": "24019206",
+    "duration_s": 3.599,
+    "diel_bin": "morning",
+    "season": "winter",
+    "file": "black_eared_cuckoo.wav"
+  },
+  "black_faced_cuckooshrike": {
+    "asset_id": "black_faced_cuckooshrike_v2_001_4925930",
+    "species_common_name": "Black-faced Cuckooshrike",
+    "species_scientific_name": "Coracina novaehollandiae",
+    "audio_event_id": "4925930",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "winter",
+    "file": "black_faced_cuckooshrike.wav"
+  },
+  "black_honeyeater": {
+    "asset_id": "black_honeyeater_v2_001_16574784",
+    "species_common_name": "Black Honeyeater",
+    "species_scientific_name": "Sugomel nigrum",
+    "audio_event_id": "16574784",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "winter",
+    "file": "black_honeyeater.wav"
+  },
+  "brown_falcon": {
+    "asset_id": "brown_falcon_v2_001_17160128",
+    "species_common_name": "Brown Falcon",
+    "species_scientific_name": "Falco berigora",
+    "audio_event_id": "17160128",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "spring",
+    "file": "brown_falcon.wav"
+  },
+  "budgerigar": {
+    "asset_id": "budgerigar_v2_001_10765114",
+    "species_common_name": "Budgerigar",
+    "species_scientific_name": "Melopsittacus undulatus",
+    "audio_event_id": "10765114",
+    "duration_s": 3.564,
+    "diel_bin": "dawn",
+    "season": "summer",
+    "file": "budgerigar.wav"
+  },
+  "chestnut_breasted_quail_thrush": {
+    "asset_id": "chestnut_breasted_quail_thrush_v2_001_19855067",
+    "species_common_name": "Chestnut-breasted Quail-thrush",
+    "species_scientific_name": "Cinclosoma castaneothorax",
+    "audio_event_id": "19855067",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "chestnut_breasted_quail_thrush.wav"
+  },
+  "chestnut_crowned_babbler": {
+    "asset_id": "chestnut_crowned_babbler_v2_002_22162129",
+    "species_common_name": "Chestnut-crowned Babbler",
+    "species_scientific_name": "Pomatostomus ruficeps",
+    "audio_event_id": "22162129",
+    "duration_s": 3.587,
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "file": "chestnut_crowned_babbler.wav"
+  },
+  "chestnut_rumped_thornbill": {
+    "asset_id": "chestnut_rumped_thornbill_v2_036_1696597",
+    "species_common_name": "Chestnut-rumped Thornbill",
+    "species_scientific_name": "Acanthiza uropygialis",
+    "audio_event_id": "1696597",
+    "duration_s": 3.587,
+    "diel_bin": "night",
+    "season": "spring",
+    "file": "chestnut_rumped_thornbill.wav"
+  },
+  "cockatiel": {
+    "asset_id": "cockatiel_v2_001_6514193",
+    "species_common_name": "Cockatiel",
+    "species_scientific_name": "Nymphicus hollandicus",
+    "audio_event_id": "6514193",
+    "duration_s": 3.587,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "cockatiel.wav"
+  },
+  "common_bronzewing": {
+    "asset_id": "common_bronzewing_v2_001_16248599",
+    "species_common_name": "Common Bronzewing",
+    "species_scientific_name": "Phaps chalcoptera",
+    "audio_event_id": "16248599",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "common_bronzewing.wav"
+  },
+  "common_greenshank": {
+    "asset_id": "common_greenshank_v2_001_9074589",
+    "species_common_name": "Common Greenshank",
+    "species_scientific_name": "Tringa nebularia",
+    "audio_event_id": "9074589",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "spring",
+    "file": "common_greenshank.wav"
+  },
+  "common_sandpiper": {
+    "asset_id": "common_sandpiper_v2_001_5887907",
+    "species_common_name": "Common Sandpiper",
+    "species_scientific_name": "Actitis hypoleucos",
+    "audio_event_id": "5887907",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "spring",
+    "file": "common_sandpiper.wav"
+  },
+  "crested_bellbird": {
+    "asset_id": "crested_bellbird_v2_036_17277913",
+    "species_common_name": "Crested Bellbird",
+    "species_scientific_name": "Oreoica gutturalis",
+    "audio_event_id": "17277913",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "autumn",
+    "file": "crested_bellbird.wav"
+  },
+  "crimson_chat": {
+    "asset_id": "crimson_chat_v2_001_15251410",
+    "species_common_name": "Crimson Chat",
+    "species_scientific_name": "Epthianura tricolor",
+    "audio_event_id": "15251410",
+    "duration_s": 3.587,
+    "diel_bin": "night",
+    "season": "summer",
+    "file": "crimson_chat.wav"
+  },
+  "eastern_spinebill": {
+    "asset_id": "eastern_spinebill_v2_001_5121292",
+    "species_common_name": "Eastern Spinebill",
+    "species_scientific_name": "Acanthorhynchus tenuirostris",
+    "audio_event_id": "5121292",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "spring",
+    "file": "eastern_spinebill.wav"
+  },
+  "eurasian_coot": {
+    "asset_id": "eurasian_coot_v2_001_17042636",
+    "species_common_name": "Eurasian Coot",
+    "species_scientific_name": "Fulica atra",
+    "audio_event_id": "17042636",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "spring",
+    "file": "eurasian_coot.wav"
+  },
+  "gilberts_whistler": {
+    "asset_id": "gilberts_whistler_v2_001_9762285",
+    "species_common_name": "Gilbert's Whistler",
+    "species_scientific_name": "Pachycephala inornata",
+    "audio_event_id": "9762285",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "file": "gilberts_whistler.wav"
+  },
+  "gray_butcherbird": {
+    "asset_id": "gray_butcherbird_v2_001_592657",
+    "species_common_name": "Gray Butcherbird",
+    "species_scientific_name": "Cracticus torquatus",
+    "audio_event_id": "592657",
+    "duration_s": 3.599,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "gray_butcherbird.wav"
+  },
+  "gray_fantail": {
+    "asset_id": "gray_fantail_v2_001_15578974",
+    "species_common_name": "Gray Fantail",
+    "species_scientific_name": "Rhipidura albiscapa",
+    "audio_event_id": "15578974",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "gray_fantail.wav"
+  },
+  "gray_shrikethrush": {
+    "asset_id": "gray_shrikethrush_v2_001_8086252",
+    "species_common_name": "Gray Shrikethrush",
+    "species_scientific_name": "Colluricincla harmonica",
+    "audio_event_id": "8086252",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "winter",
+    "file": "gray_shrikethrush.wav"
+  },
+  "horsfields_bronze_cuckoo": {
+    "asset_id": "horsfields_bronze_cuckoo_v2_002_18696395",
+    "species_common_name": "Horsfield's Bronze-cuckoo",
+    "species_scientific_name": "Chrysococcyx basalis",
+    "audio_event_id": "18696395",
+    "duration_s": 4.0,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "horsfields_bronze_cuckoo.wav"
+  },
+  "inland_thornbill": {
+    "asset_id": "inland_thornbill_v2_001_23682797",
+    "species_common_name": "Inland Thornbill",
+    "species_scientific_name": "Acanthiza apicalis",
+    "audio_event_id": "23682797",
+    "duration_s": 3.587,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "inland_thornbill.wav"
+  },
+  "masked_woodswallow": {
+    "asset_id": "masked_woodswallow_v2_001_7458566",
+    "species_common_name": "Masked Woodswallow",
+    "species_scientific_name": "Artamus personatus",
+    "audio_event_id": "7458566",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "summer",
+    "file": "masked_woodswallow.wav"
+  },
+  "mulga_parrot": {
+    "asset_id": "mulga_parrot_v2_001_6904675",
+    "species_common_name": "Mulga Parrot",
+    "species_scientific_name": "Psephotus varius",
+    "audio_event_id": "6904675",
+    "duration_s": 3.587,
+    "diel_bin": "dawn",
+    "season": "summer",
+    "file": "mulga_parrot.wav"
+  },
+  "osprey": {
+    "asset_id": "osprey_v2_001_24106936",
+    "species_common_name": "Osprey",
+    "species_scientific_name": "Pandion haliaetus",
+    "audio_event_id": "24106936",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "osprey.wav"
+  },
+  "pacific_swift": {
+    "asset_id": "pacific_swift_v2_001_18680797",
+    "species_common_name": "Pacific Swift",
+    "species_scientific_name": "Apus pacificus",
+    "audio_event_id": "18680797",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "autumn",
+    "file": "pacific_swift.wav"
+  },
+  "pallid_cuckoo": {
+    "asset_id": "pallid_cuckoo_v2_001_1272193",
+    "species_common_name": "Pallid Cuckoo",
+    "species_scientific_name": "Cacomantis pallidus",
+    "audio_event_id": "1272193",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "winter",
+    "file": "pallid_cuckoo.wav"
+  },
+  "pied_honeyeater": {
+    "asset_id": "pied_honeyeater_v2_001_6385859",
+    "species_common_name": "Pied Honeyeater",
+    "species_scientific_name": "Certhionyx variegatus",
+    "audio_event_id": "6385859",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "pied_honeyeater.wav"
+  },
+  "pink_cockatoo": {
+    "asset_id": "pink_cockatoo_v2_001_7311347",
+    "species_common_name": "Pink Cockatoo",
+    "species_scientific_name": "Lophochroa leadbeateri",
+    "audio_event_id": "7311347",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "pink_cockatoo.wav"
+  },
+  "purple_backed_fairywren": {
+    "asset_id": "purple_backed_fairywren_v2_001_6295202",
+    "species_common_name": "Purple-backed Fairywren",
+    "species_scientific_name": "Malurus assimilis",
+    "audio_event_id": "6295202",
+    "duration_s": 3.582,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "purple_backed_fairywren.wav"
+  },
+  "red_backed_fairywren": {
+    "asset_id": "red_backed_fairywren_v2_001_11536209",
+    "species_common_name": "Red-backed Fairywren",
+    "species_scientific_name": "Malurus melanocephalus",
+    "audio_event_id": "11536209",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "autumn",
+    "file": "red_backed_fairywren.wav"
+  },
+  "red_browed_firetail": {
+    "asset_id": "red_browed_firetail_v2_001_7247663",
+    "species_common_name": "Red-browed Firetail",
+    "species_scientific_name": "Neochmia temporalis",
+    "audio_event_id": "7247663",
+    "duration_s": 3.587,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "red_browed_firetail.wav"
+  },
+  "red_browed_pardalote": {
+    "asset_id": "red_browed_pardalote_v2_001_5804663",
+    "species_common_name": "Red-browed Pardalote",
+    "species_scientific_name": "Pardalotus rubricatus",
+    "audio_event_id": "5804663",
+    "duration_s": 3.587,
+    "diel_bin": "morning",
+    "season": "spring",
+    "file": "red_browed_pardalote.wav"
+  },
+  "red_capped_robin": {
+    "asset_id": "red_capped_robin_v2_036_11641398",
+    "species_common_name": "Red-capped Robin",
+    "species_scientific_name": "Petroica goodenovii",
+    "audio_event_id": "11641398",
+    "duration_s": 3.587,
+    "diel_bin": "dawn",
+    "season": "spring",
+    "file": "red_capped_robin.wav"
+  },
+  "red_winged_parrot": {
+    "asset_id": "red_winged_parrot_v2_001_5460528",
+    "species_common_name": "Red-winged Parrot",
+    "species_scientific_name": "Aprosmictus erythropterus",
+    "audio_event_id": "5460528",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "summer",
+    "file": "red_winged_parrot.wav"
+  },
+  "restless_flycatcher": {
+    "asset_id": "restless_flycatcher_v2_001_4326785",
+    "species_common_name": "Restless Flycatcher",
+    "species_scientific_name": "Myiagra inquieta",
+    "audio_event_id": "4326785",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "spring",
+    "file": "restless_flycatcher.wav"
+  },
+  "rufous_songlark": {
+    "asset_id": "rufous_songlark_v2_001_18702800",
+    "species_common_name": "Rufous Songlark",
+    "species_scientific_name": "Cincloramphus mathewsi",
+    "audio_event_id": "18702800",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "winter",
+    "file": "rufous_songlark.wav"
+  },
+  "scarlet_myzomela": {
+    "asset_id": "scarlet_myzomela_v2_001_7956264",
+    "species_common_name": "Scarlet Myzomela",
+    "species_scientific_name": "Myzomela sanguinolenta",
+    "audio_event_id": "7956264",
+    "duration_s": 3.564,
+    "diel_bin": "dawn",
+    "season": "autumn",
+    "file": "scarlet_myzomela.wav"
+  },
+  "singing_honeyeater": {
+    "asset_id": "singing_honeyeater_v2_001_22991106",
+    "species_common_name": "Singing Honeyeater",
+    "species_scientific_name": "Gavicalis virescens",
+    "audio_event_id": "22991106",
+    "duration_s": 3.564,
+    "diel_bin": "morning",
+    "season": "winter",
+    "file": "singing_honeyeater.wav"
+  },
+  "southern_scrub_robin": {
+    "asset_id": "southern_scrub_robin_v2_001_18696432",
+    "species_common_name": "Southern Scrub-Robin",
+    "species_scientific_name": "Drymodes brunneopygia",
+    "audio_event_id": "18696432",
+    "duration_s": 3.611,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "southern_scrub_robin.wav"
+  },
+  "spiny_cheeked_honeyeater": {
+    "asset_id": "spiny_cheeked_honeyeater_v2_001_4494096",
+    "species_common_name": "Spiny-cheeked Honeyeater",
+    "species_scientific_name": "Acanthagenys rufogularis",
+    "audio_event_id": "4494096",
+    "duration_s": 3.587,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "spiny_cheeked_honeyeater.wav"
+  },
+  "splendid_fairywren": {
+    "asset_id": "splendid_fairywren_v2_001_13490756",
+    "species_common_name": "Splendid Fairywren",
+    "species_scientific_name": "Malurus splendens",
+    "audio_event_id": "13490756",
+    "duration_s": 4.0,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "splendid_fairywren.wav"
+  },
+  "spotted_dove": {
+    "asset_id": "spotted_dove_v2_001_13173465",
+    "species_common_name": "Spotted Dove",
+    "species_scientific_name": "Streptopelia chinensis",
+    "audio_event_id": "13173465",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "summer",
+    "file": "spotted_dove.wav"
+  },
+  "spotted_nightjar": {
+    "asset_id": "spotted_nightjar_v2_001_16899701",
+    "species_common_name": "Spotted Nightjar",
+    "species_scientific_name": "Eurostopodus argus",
+    "audio_event_id": "16899701",
+    "duration_s": 3.576,
+    "diel_bin": "night",
+    "season": "autumn",
+    "file": "spotted_nightjar.wav"
+  },
+  "spotted_quail_thrush": {
+    "asset_id": "spotted_quail_thrush_v2_001_13181092",
+    "species_common_name": "Spotted Quail-thrush",
+    "species_scientific_name": "Cinclosoma punctatum",
+    "audio_event_id": "13181092",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "winter",
+    "file": "spotted_quail_thrush.wav"
+  },
+  "superb_fairywren": {
+    "asset_id": "superb_fairywren_v2_036_18811500",
+    "species_common_name": "Superb Fairywren",
+    "species_scientific_name": "Malurus cyaneus",
+    "audio_event_id": "18811500",
+    "duration_s": 3.582,
+    "diel_bin": "afternoon",
+    "season": "autumn",
+    "file": "superb_fairywren.wav"
+  },
+  "tawny_frogmouth": {
+    "asset_id": "tawny_frogmouth_v2_002_17307196",
+    "species_common_name": "Tawny Frogmouth",
+    "species_scientific_name": "Podargus strigoides",
+    "audio_event_id": "17307196",
+    "duration_s": 3.576,
+    "diel_bin": "night",
+    "season": "autumn",
+    "file": "tawny_frogmouth.wav"
+  },
+  "weebill": {
+    "asset_id": "weebill_v2_001_12085835",
+    "species_common_name": "Weebill",
+    "species_scientific_name": "Smicrornis brevirostris",
+    "audio_event_id": "12085835",
+    "duration_s": 3.587,
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "file": "weebill.wav"
+  },
+  "whimbrel": {
+    "asset_id": "whimbrel_v2_001_16234571",
+    "species_common_name": "Whimbrel",
+    "species_scientific_name": "Numenius phaeopus",
+    "audio_event_id": "16234571",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "winter",
+    "file": "whimbrel.wav"
+  },
+  "white_breasted_woodswallow": {
+    "asset_id": "white_breasted_woodswallow_v2_001_20252441",
+    "species_common_name": "White-breasted Woodswallow",
+    "species_scientific_name": "Artamus leucorynchus",
+    "audio_event_id": "20252441",
+    "duration_s": 3.564,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "white_breasted_woodswallow.wav"
+  },
+  "white_browed_woodswallow": {
+    "asset_id": "white_browed_woodswallow_v2_036_3292826",
+    "species_common_name": "White-browed Woodswallow",
+    "species_scientific_name": "Artamus superciliosus",
+    "audio_event_id": "3292826",
+    "duration_s": 3.587,
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "file": "white_browed_woodswallow.wav"
+  },
+  "white_throated_nightjar": {
+    "asset_id": "white_throated_nightjar_v2_001_10855114",
+    "species_common_name": "White-throated Nightjar",
+    "species_scientific_name": "Eurostopodus mystacalis",
+    "audio_event_id": "10855114",
+    "duration_s": 3.576,
+    "diel_bin": "night",
+    "season": "autumn",
+    "file": "white_throated_nightjar.wav"
+  },
+  "white_winged_fairywren": {
+    "asset_id": "white_winged_fairywren_v2_002_14431434",
+    "species_common_name": "White-winged Fairywren",
+    "species_scientific_name": "Malurus leucopterus",
+    "audio_event_id": "14431434",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "winter",
+    "file": "white_winged_fairywren.wav"
+  },
+  "white_winged_triller": {
+    "asset_id": "white_winged_triller_v2_001_18241736",
+    "species_common_name": "White-winged Triller",
+    "species_scientific_name": "Lalage tricolor",
+    "audio_event_id": "18241736",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "summer",
+    "file": "white_winged_triller.wav"
+  },
+  "willie_wagtail": {
+    "asset_id": "willie_wagtail_v2_001_6606740",
+    "species_common_name": "Willie Wagtail",
+    "species_scientific_name": "Rhipidura leucophrys",
+    "audio_event_id": "6606740",
+    "duration_s": 3.576,
+    "diel_bin": "dawn",
+    "season": "summer",
+    "file": "willie_wagtail.wav"
+  },
+  "wood_sandpiper": {
+    "asset_id": "wood_sandpiper_v2_001_8345430",
+    "species_common_name": "Wood Sandpiper",
+    "species_scientific_name": "Tringa glareola",
+    "audio_event_id": "8345430",
+    "duration_s": 3.599,
+    "diel_bin": "dawn",
+    "season": "spring",
+    "file": "wood_sandpiper.wav"
+  },
+  "yellow_rumped_thornbill": {
+    "asset_id": "yellow_rumped_thornbill_v2_001_11995750",
+    "species_common_name": "Yellow-rumped Thornbill",
+    "species_scientific_name": "Acanthiza chrysorrhoa",
+    "audio_event_id": "11995750",
+    "duration_s": 3.576,
+    "diel_bin": "afternoon",
+    "season": "winter",
+    "file": "yellow_rumped_thornbill.wav"
+  },
+  "yellow_throated_miner": {
+    "asset_id": "yellow_throated_miner_v2_001_21662748",
+    "species_common_name": "Yellow-throated Miner",
+    "species_scientific_name": "Manorina flavigula",
+    "audio_event_id": "21662748",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "yellow_throated_miner.wav"
+  },
+  "zebra_finch": {
+    "asset_id": "zebra_finch_v2_001_3097142",
+    "species_common_name": "Zebra Finch",
+    "species_scientific_name": "Taeniopygia guttata",
+    "audio_event_id": "3097142",
+    "duration_s": 3.576,
+    "diel_bin": "morning",
+    "season": "autumn",
+    "file": "zebra_finch.wav"
+  }
+}

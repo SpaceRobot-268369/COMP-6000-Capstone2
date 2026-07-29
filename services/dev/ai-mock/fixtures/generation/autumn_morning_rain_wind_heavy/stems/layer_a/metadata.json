@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "autumn_morning_rain_wind_heavy",
+  "prompt": "Gusty autumn morning, rain on the wind",
+  "prompt_locked": true,
+  "cell": "autumn_morning",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.442274,
+    "rms": 0.08294,
+    "max": 0.33134,
+    "min": -0.442274,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_a",
+    "id": "lucas__prod_1__per_cell_loras",
+    "label": "layer_a demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

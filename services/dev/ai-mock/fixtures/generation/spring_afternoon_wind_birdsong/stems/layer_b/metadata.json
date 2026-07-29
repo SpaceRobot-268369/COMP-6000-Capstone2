@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "spring_afternoon_wind_birdsong",
+  "prompt": "Windy spring afternoon, distant birdsong",
+  "prompt_locked": true,
+  "cell": "spring_afternoon",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.478032,
+    "rms": 0.077895,
+    "max": 0.478032,
+    "min": -0.466483,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_b",
+    "id": "murphy__mvp_1__weather_stem_selector",
+    "label": "layer_b demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

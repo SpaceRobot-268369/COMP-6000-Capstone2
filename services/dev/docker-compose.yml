@@ -1,11 +1,38 @@
-# DEMO stack — AI services excluded.
+# DEMO stack — no real AI service.
 #
-# This branch (`demo`) runs the project for a quick walkthrough without any
-# AI worker: no ai-tunnel sidecar, no SSH key/secret, no serverB dependency.
-# Only postgres + backend + frontend come up. The backend still exposes its
-# AI proxy routes, but they point at an optional host-local FastAPI server
-# (AI_SERVER_URL) and simply fail fast if nothing is listening there.
+# This branch (`demo`) runs the project for a quick walkthrough without serverB:
+# no ai-tunnel sidecar, no SSH key/secret, no GPU. In its place, `ai-mock` speaks
+# the same HTTP contract and replays pre-baked fixtures, so backend and frontend
+# code are untouched. Nothing here is model output — see ai-mock/README.md.
 services:
+  ai-mock:
+    container_name: ${AI_MOCK_CONTAINER_NAME:-eco-ai-mock-dev}
+    build:
+      context: ./ai-mock
+      dockerfile: Dockerfile
+    environment:
+      MOCK_FIXTURES_ROOT: /fixtures
+      MOCK_REGISTRY_PATH: /registry.yaml
+      # Fake think-time, so the frontend's staged progress text has something to
+      # narrate instead of flashing past in a single frame.
+      MOCK_LATENCY_MS_PARSE: ${MOCK_LATENCY_MS_PARSE:-800}
+      MOCK_LATENCY_MS_GENERATE: ${MOCK_LATENCY_MS_GENERATE:-3000}
+      MOCK_LATENCY_MS_ANALYSIS: ${MOCK_LATENCY_MS_ANALYSIS:-1500}
+      MOCK_LATENCY_MS_NARRATIVE: ${MOCK_LATENCY_MS_NARRATIVE:-400}
+    volumes:
+      - ./ai-mock/fixtures:/fixtures:ro
+      # The registry is git-tracked, so /layers stays in step with the real
+      # attempt list even though none of the checkpoints exist here.
+      - ../../acoustic_ai/registry.yaml:/registry.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - app_net
+
   postgres:
     image: postgres:16-alpine
     env_file:
@@ -36,31 +63,31 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: ${BACKEND_PORT}
-      # No tunnel in the demo stack: talk directly to whatever (if anything)
-      # is serving the AI API on the host. Override AI_SERVER_URL in .env to
-      # attach a locally running FastAPI server.
+      # Hardcoded (not ${...}) on purpose: an inherited AI_SERVER_URL from a
+      # pre-demo .env would point the backend at a tunnel that no longer exists.
       AI_CONNECTION_MODE: direct
-      AI_SERVER_URL: ${AI_SERVER_URL:-http://host.docker.internal:8000}
-      AI_SERVER_LABEL: ${AI_SERVER_LABEL:-local}
+      AI_SERVER_URL: http://ai-mock:8000
+      AI_SERVER_LABEL: ai-mock
       AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-540000}
-      LAYER_B_GENERATE_SERVER_URL: ${LAYER_B_GENERATE_SERVER_URL:-}
-      LAYER_B_GENERATE_ATTEMPTS: ${LAYER_B_GENERATE_ATTEMPTS:-murphy__mvp_1__wind_intensity_bank,murphy__mvp_1__rain_intensity_seed_pool}
-      # Cached expected/showcase samples are served straight from the repo
-      # checkout (no AI-worker round-trip). Mount point matches the volume below.
-      AI_LAYERS_ROOT: /acoustic_ai/layers
+      # The mock serves every layer, including the Layer B wind generators, so
+      # there is no second server to split traffic to.
+      LAYER_B_GENERATE_SERVER_URL: ""
+      # Cached expected/showcase samples are served straight from the vendored
+      # fixture tree, so a fresh clone needs no `dvc pull` for the demo. The
+      # path must end in `layers` — backend/src/samples.js appends `/layers` to
+      # any root whose basename isn't already that.
+      AI_LAYERS_ROOT: /mock/layers
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
+      ai-mock:
+        condition: service_healthy
     volumes:
       - ../../backend:/app
       - backend_node_modules:/app/node_modules
-      # Read-only mount of the attempts tree so Express can serve cached
-      # expected/showcase artefacts (PNG/JSON/WAV) without any AI worker.
-      - ../../acoustic_ai:/acoustic_ai:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - ./ai-mock/fixtures/layers:/mock/layers:ro
     networks:
       - app_net
 
@@ -72,6 +99,10 @@ services:
       - .env
     environment:
       VITE_API_URL: http://localhost:${BACKEND_PORT}
+      # Vite's /api dev proxy runs inside this container, so it cannot use
+      # localhost to reach the backend. Only the relative sample-audio URLs go
+      # through it; everything else is an absolute VITE_API_URL call.
+      VITE_PROXY_TARGET: http://backend:${BACKEND_PORT}
     ports:
       - "${FRONTEND_PORT}:5173"
     depends_on:

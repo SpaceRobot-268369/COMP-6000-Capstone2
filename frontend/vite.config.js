@@ -14,7 +14,9 @@ export default defineConfig({
     watch: { usePolling: true },
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:4000",
+        // Inside Docker, 127.0.0.1 is this container, not the backend — the
+        // relative /api URLs (preset sample audio) 500 without an override.
+        target: process.env.VITE_PROXY_TARGET || "http://127.0.0.1:4000",
         changeOrigin: true,
       },
     },

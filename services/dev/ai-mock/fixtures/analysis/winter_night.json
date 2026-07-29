@@ -1,0 +1,724 @@
+{
+  "cell": "winter_night",
+  "report": {
+    "schema_version": "analysis_aggregator.v1",
+    "mode": "analysis",
+    "mock": true,
+    "observations": {
+      "ambient": {
+        "similar_clips": [
+          {
+            "segment_id": "winter_night_seg_00001",
+            "source_clip": "winter_night_clip001",
+            "similarity": 0.68
+          },
+          {
+            "segment_id": "winter_night_seg_00002",
+            "source_clip": "winter_night_clip002",
+            "similarity": 0.62
+          },
+          {
+            "segment_id": "winter_night_seg_00003",
+            "source_clip": "winter_night_clip003",
+            "similarity": 0.56
+          },
+          {
+            "segment_id": "winter_night_seg_00004",
+            "source_clip": "winter_night_clip004",
+            "similarity": 0.5
+          },
+          {
+            "segment_id": "winter_night_seg_00005",
+            "source_clip": "winter_night_clip005",
+            "similarity": 0.44
+          }
+        ],
+        "estimated_conditions": {
+          "season": "winter",
+          "diel_bin": "morning",
+          "hour": 8.4,
+          "month": 7.3
+        },
+        "confidence": 0.38,
+        "season_confidence": 0.52,
+        "ood_flag": false
+      },
+      "weather": {
+        "wind": {
+          "summary": {
+            "intensity": 0.09,
+            "variability": 0.36,
+            "coverage": 0.34,
+            "label": "light",
+            "confidence": 0.79
+          }
+        },
+        "rain": {
+          "summary": {
+            "intensity": 0.0,
+            "variability": 0.58,
+            "coverage": 0.0,
+            "label": "none",
+            "confidence": 0.88
+          }
+        },
+        "thunder": {
+          "summary": {
+            "intensity": 0.0,
+            "variability": 0.0,
+            "coverage": 0.0,
+            "label": "none",
+            "confidence": 0.92
+          },
+          "events": [],
+          "mean_interval_s": null
+        },
+        "confidence": 0.81,
+        "derived_label": "wind",
+        "warnings": [
+          "Weather head runs on the raw mixture; faint rain can hide under wind."
+        ]
+      },
+      "events": [
+        {
+          "label": "spotted_nightjar",
+          "common_name": "Spotted Nightjar",
+          "scientific_name": "Eurostopodus argus",
+          "confidence": 0.91,
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "phenology": {
+            "diel_signal": "night",
+            "diel_confidence": 0.88,
+            "season_signal": "summer",
+            "season_confidence": 0.41,
+            "habitat_signal": "woodland/open woodland"
+          }
+        },
+        {
+          "label": "barn_owl",
+          "common_name": "Barn Owl",
+          "scientific_name": "Tyto alba",
+          "confidence": 0.78,
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "phenology": {
+            "diel_signal": "night",
+            "diel_confidence": 0.83,
+            "season_signal": "weak",
+            "season_confidence": 0.17,
+            "habitat_signal": "woodland/open woodland"
+          }
+        }
+      ]
+    },
+    "inferred_context": {
+      "diel": {
+        "estimate": "night",
+        "posterior": 0.86,
+        "distribution": {
+          "dawn": 0.07,
+          "morning": 0.042,
+          "afternoon": 0.028,
+          "night": 0.86
+        },
+        "primary_evidence": "E-C: Spotted Nightjar has a night activity signal",
+        "evidence": [
+          {
+            "source_head": "events",
+            "value": "night",
+            "weight": 0.74,
+            "reason": "Spotted Nightjar detected with high confidence"
+          },
+          {
+            "source_head": "ambient",
+            "value": "morning",
+            "weight": 0.14,
+            "reason": "Ambient head estimate carried low confidence"
+          }
+        ]
+      },
+      "season": {
+        "estimate": "winter",
+        "posterior": 0.57,
+        "distribution": {
+          "spring": 0.215,
+          "summer": 0.129,
+          "autumn": 0.086,
+          "winter": 0.57
+        },
+        "primary_evidence": "Ambient texture and env cues lean this way; no strongly seasonal species",
+        "evidence": [
+          {
+            "source_head": "ambient",
+            "value": "winter",
+            "weight": 0.42,
+            "reason": "Nearest training clips share this season"
+          }
+        ]
+      }
+    },
+    "decision": {
+      "schema_version": "analysis_decision.v1",
+      "time_of_day": {
+        "value": "night",
+        "confidence": 0.86,
+        "distribution": {
+          "dawn": 0.07,
+          "morning": 0.042,
+          "afternoon": 0.028,
+          "night": 0.86
+        },
+        "evidence": "E-C: Spotted Nightjar supports night"
+      },
+      "season": {
+        "value": "winter",
+        "confidence": 0.57,
+        "distribution": {
+          "spring": 0.215,
+          "summer": 0.129,
+          "autumn": 0.086,
+          "winter": 0.57
+        },
+        "evidence": "E-A: ambient bed most consistent with winter"
+      },
+      "weather": {
+        "label": "wind",
+        "confidence": 0.81,
+        "rain": {
+          "label": "none",
+          "intensity": 0.0,
+          "coverage": 0.0,
+          "confidence": 0.88
+        },
+        "wind": {
+          "label": "light",
+          "intensity": 0.09,
+          "coverage": 0.34,
+          "confidence": 0.79
+        },
+        "thunder": {
+          "label": "none",
+          "intensity": 0.0,
+          "coverage": 0.0,
+          "confidence": 0.92,
+          "events": [],
+          "mean_interval_s": null
+        },
+        "warnings": []
+      },
+      "detected_calls": [
+        {
+          "label": "spotted_nightjar",
+          "common_name": "Spotted Nightjar",
+          "scientific_name": "Eurostopodus argus",
+          "confidence": 0.91,
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "diel_signal": "night",
+          "diel_confidence": 0.88,
+          "season_signal": "summer",
+          "season_confidence": 0.41,
+          "habitat_signal": "woodland/open woodland"
+        },
+        {
+          "label": "barn_owl",
+          "common_name": "Barn Owl",
+          "scientific_name": "Tyto alba",
+          "confidence": 0.78,
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "diel_signal": "night",
+          "diel_confidence": 0.83,
+          "season_signal": "weak",
+          "season_confidence": 0.17,
+          "habitat_signal": "woodland/open woodland"
+        }
+      ],
+      "disagreements": [
+        {
+          "field": "diel",
+          "ambient": "morning",
+          "events": "night",
+          "resolution": "events_preferred",
+          "reason": "Spotted Nightjar is a stronger time-of-day cue than ambient texture."
+        },
+        {
+          "field": "season",
+          "ambient": "winter",
+          "events": "inconclusive",
+          "resolution": "low_confidence_range_reported",
+          "reason": "Season evidence was present but too weak for a confident estimate."
+        }
+      ],
+      "overall_confidence": 0.72,
+      "limitations": [
+        "Season is hard to infer from a single short clip at this site.",
+        "Ambient context is a weak prior, not a ground-truth label.",
+        "Demo build: this report is a pre-authored fixture, not live inference."
+      ]
+    },
+    "narration": {
+      "schema_version": "analysis_narration.v1",
+      "source": "deterministic_fallback",
+      "summary": "The recording reads as night, most consistent with winter, with light wind. Detected call evidence includes Spotted Nightjar, Barn Owl.",
+      "bullets": [
+        "Time of day: night (86%)",
+        "Season: winter (56%)",
+        "Weather: wind (81%)",
+        "Detected calls: Spotted Nightjar, Barn Owl"
+      ],
+      "caveats": [
+        "Demo fixture: these values are pre-authored, not model output."
+      ]
+    },
+    "llm_input": {
+      "schema_version": "analysis_llm_input.v1",
+      "task": "Render this ecoacoustic analysis decision JSON as immersive, third-person perspective narration with an analytical tone. Narrate only the provided observations, inferred context, disagreements, limitations, timestamps, and confidence values; do not invent species, season, time of day, weather, certainty, or causes beyond the JSON.",
+      "decision": {
+        "schema_version": "analysis_decision.v1",
+        "time_of_day": {
+          "value": "night",
+          "confidence": 0.86,
+          "distribution": {
+            "dawn": 0.07,
+            "morning": 0.042,
+            "afternoon": 0.028,
+            "night": 0.86
+          },
+          "evidence": "E-C: Spotted Nightjar supports night"
+        },
+        "season": {
+          "value": "winter",
+          "confidence": 0.57,
+          "distribution": {
+            "spring": 0.215,
+            "summer": 0.129,
+            "autumn": 0.086,
+            "winter": 0.57
+          },
+          "evidence": "E-A: ambient bed most consistent with winter"
+        },
+        "weather": {
+          "label": "wind",
+          "confidence": 0.81,
+          "rain": {
+            "label": "none",
+            "intensity": 0.0,
+            "coverage": 0.0,
+            "confidence": 0.88
+          },
+          "wind": {
+            "label": "light",
+            "intensity": 0.09,
+            "coverage": 0.34,
+            "confidence": 0.79
+          },
+          "thunder": {
+            "label": "none",
+            "intensity": 0.0,
+            "coverage": 0.0,
+            "confidence": 0.92,
+            "events": [],
+            "mean_interval_s": null
+          },
+          "warnings": []
+        },
+        "detected_calls": [
+          {
+            "label": "spotted_nightjar",
+            "common_name": "Spotted Nightjar",
+            "scientific_name": "Eurostopodus argus",
+            "confidence": 0.91,
+            "onset_s": 3.4,
+            "offset_s": 8.0,
+            "diel_signal": "night",
+            "diel_confidence": 0.88,
+            "season_signal": "summer",
+            "season_confidence": 0.41,
+            "habitat_signal": "woodland/open woodland"
+          },
+          {
+            "label": "barn_owl",
+            "common_name": "Barn Owl",
+            "scientific_name": "Tyto alba",
+            "confidence": 0.78,
+            "onset_s": 12.1,
+            "offset_s": 16.7,
+            "diel_signal": "night",
+            "diel_confidence": 0.83,
+            "season_signal": "weak",
+            "season_confidence": 0.17,
+            "habitat_signal": "woodland/open woodland"
+          }
+        ],
+        "disagreements": [
+          {
+            "field": "diel",
+            "ambient": "morning",
+            "events": "night",
+            "resolution": "events_preferred",
+            "reason": "Spotted Nightjar is a stronger time-of-day cue than ambient texture."
+          },
+          {
+            "field": "season",
+            "ambient": "winter",
+            "events": "inconclusive",
+            "resolution": "low_confidence_range_reported",
+            "reason": "Season evidence was present but too weak for a confident estimate."
+          }
+        ],
+        "overall_confidence": 0.72,
+        "limitations": []
+      }
+    },
+    "model_lineage": {
+      "ambient": {
+        "id": "lucas__mvp_2__clap_knn_probe_enlarged",
+        "label": "CLAP k-NN ambient probe (enlarged)",
+        "layer": "layer_e",
+        "head": "ambient",
+        "stage": "mvp_2",
+        "author": "lucas",
+        "status": "candidate"
+      },
+      "weather": {
+        "id": "murphy__mvp_1__weather_direct_detection",
+        "label": "Direct weather detection",
+        "layer": "layer_e",
+        "head": "weather",
+        "stage": "mvp_1",
+        "author": "murphy",
+        "status": "mvp"
+      },
+      "events": {
+        "id": "songke__prod_1__e_c_species_event_detector",
+        "label": "Species event detector",
+        "layer": "layer_e",
+        "head": "events",
+        "stage": "prod_1",
+        "author": "songke",
+        "status": "production"
+      },
+      "aggregator": {
+        "id": "songke__smoke_3__analysis_aggregator",
+        "label": "Analysis aggregator v1",
+        "layer": "layer_e",
+        "head": "aggregator",
+        "stage": "smoke_3",
+        "author": "songke",
+        "status": "smoke_test"
+      }
+    },
+    "disagreements": [
+      {
+        "field": "diel",
+        "ambient": "morning",
+        "events": "night",
+        "resolution": "events_preferred",
+        "reason": "Spotted Nightjar is a stronger time-of-day cue than ambient texture."
+      },
+      {
+        "field": "season",
+        "ambient": "winter",
+        "events": "inconclusive",
+        "resolution": "low_confidence_range_reported",
+        "reason": "Season evidence was present but too weak for a confident estimate."
+      }
+    ],
+    "overall_confidence": 0.72,
+    "limitations": [
+      "Season is hard to infer from a single short clip at this site.",
+      "Ambient context is a weak prior, not a ground-truth label.",
+      "Demo build: this report is a pre-authored fixture, not live inference."
+    ]
+  },
+  "attempts": {
+    "ambient": {
+      "id": "lucas__mvp_2__clap_knn_probe_enlarged",
+      "label": "CLAP k-NN ambient probe (enlarged)",
+      "layer": "layer_e",
+      "head": "ambient",
+      "stage": "mvp_2",
+      "author": "lucas",
+      "status": "candidate"
+    },
+    "weather": {
+      "id": "murphy__mvp_1__weather_direct_detection",
+      "label": "Direct weather detection",
+      "layer": "layer_e",
+      "head": "weather",
+      "stage": "mvp_1",
+      "author": "murphy",
+      "status": "mvp"
+    },
+    "events": {
+      "id": "songke__prod_1__e_c_species_event_detector",
+      "label": "Species event detector",
+      "layer": "layer_e",
+      "head": "events",
+      "stage": "prod_1",
+      "author": "songke",
+      "status": "production"
+    },
+    "aggregator": {
+      "id": "songke__smoke_3__analysis_aggregator",
+      "label": "Analysis aggregator v1",
+      "layer": "layer_e",
+      "head": "aggregator",
+      "stage": "smoke_3",
+      "author": "songke",
+      "status": "smoke_test"
+    }
+  },
+  "head_reports": {
+    "ambient": {
+      "estimated_conditions": {
+        "season": "winter",
+        "diel_bin": "morning",
+        "hour": 8.4,
+        "month": 7.3
+      },
+      "similar_clips": [
+        {
+          "segment_id": "winter_night_seg_00001",
+          "source_clip": "winter_night_clip001",
+          "similarity": 0.68
+        },
+        {
+          "segment_id": "winter_night_seg_00002",
+          "source_clip": "winter_night_clip002",
+          "similarity": 0.62
+        },
+        {
+          "segment_id": "winter_night_seg_00003",
+          "source_clip": "winter_night_clip003",
+          "similarity": 0.56
+        },
+        {
+          "segment_id": "winter_night_seg_00004",
+          "source_clip": "winter_night_clip004",
+          "similarity": 0.5
+        },
+        {
+          "segment_id": "winter_night_seg_00005",
+          "source_clip": "winter_night_clip005",
+          "similarity": 0.44
+        }
+      ],
+      "confidence": 0.38,
+      "season_confidence": 0.52,
+      "head_agreement": 0.6,
+      "ood_flag": false,
+      "k": 5,
+      "tau": 0.1
+    },
+    "weather": {
+      "observations": {
+        "weather": {
+          "wind": {
+            "summary": {
+              "intensity": 0.09,
+              "variability": 0.36,
+              "coverage": 0.34,
+              "label": "light",
+              "confidence": 0.79
+            }
+          },
+          "rain": {
+            "summary": {
+              "intensity": 0.0,
+              "variability": 0.58,
+              "coverage": 0.0,
+              "label": "none",
+              "confidence": 0.88
+            }
+          },
+          "thunder": {
+            "summary": {
+              "intensity": 0.0,
+              "variability": 0.0,
+              "coverage": 0.0,
+              "label": "none",
+              "confidence": 0.92
+            },
+            "events": [],
+            "mean_interval_s": null
+          },
+          "confidence": 0.81,
+          "derived_label": "wind",
+          "warnings": [
+            "Weather head runs on the raw mixture; faint rain can hide under wind."
+          ]
+        }
+      }
+    },
+    "events": {
+      "num_events": 2,
+      "num_detected_windows": 10,
+      "num_windows": 26,
+      "known_species": [
+        "barn_owl",
+        "spotted_nightjar"
+      ],
+      "threshold": 0.55,
+      "events": [
+        {
+          "label": "spotted_nightjar",
+          "onset_s": 3.4,
+          "offset_s": 8.0,
+          "confidence_mean": 0.86,
+          "confidence_max": 0.91,
+          "window_count": 4,
+          "species_matches": [
+            {
+              "label": "Spotted Nightjar",
+              "score": 0.91
+            },
+            {
+              "label": "Gray Shrikethrush",
+              "score": 0.382
+            },
+            {
+              "label": "Willie Wagtail",
+              "score": 0.246
+            }
+          ],
+          "phenology": {
+            "common_name": "Spotted Nightjar",
+            "scientific_name": "Eurostopodus argus",
+            "diel_signal": "night",
+            "diel_confidence": 0.88,
+            "season_signal": "summer",
+            "season_confidence": 0.41,
+            "habitat_signal": "woodland/open woodland",
+            "inference_notes": "Calls concentrated in the night bin at this site."
+          }
+        },
+        {
+          "label": "barn_owl",
+          "onset_s": 12.1,
+          "offset_s": 16.7,
+          "confidence_mean": 0.73,
+          "confidence_max": 0.78,
+          "window_count": 4,
+          "species_matches": [
+            {
+              "label": "Barn Owl",
+              "score": 0.78
+            },
+            {
+              "label": "Gray Shrikethrush",
+              "score": 0.328
+            },
+            {
+              "label": "Willie Wagtail",
+              "score": 0.211
+            }
+          ],
+          "phenology": {
+            "common_name": "Barn Owl",
+            "scientific_name": "Tyto alba",
+            "diel_signal": "night",
+            "diel_confidence": 0.83,
+            "season_signal": "weak",
+            "season_confidence": 0.17,
+            "habitat_signal": "woodland/open woodland",
+            "inference_notes": "Calls concentrated in the night bin at this site."
+          }
+        }
+      ],
+      "diagnostics": {
+        "detected_windows": [
+          {
+            "start_s": 3.4,
+            "end_s": 4.4,
+            "confidence": 0.87,
+            "top_label": "spotted_nightjar"
+          },
+          {
+            "start_s": 4.4,
+            "end_s": 5.4,
+            "confidence": 0.87,
+            "top_label": "spotted_nightjar"
+          },
+          {
+            "start_s": 5.4,
+            "end_s": 6.4,
+            "confidence": 0.87,
+            "top_label": "spotted_nightjar"
+          },
+          {
+            "start_s": 6.4,
+            "end_s": 7.4,
+            "confidence": 0.87,
+            "top_label": "spotted_nightjar"
+          },
+          {
+            "start_s": 7.4,
+            "end_s": 8.0,
+            "confidence": 0.87,
+            "top_label": "spotted_nightjar"
+          },
+          {
+            "start_s": 12.1,
+            "end_s": 13.1,
+            "confidence": 0.74,
+            "top_label": "barn_owl"
+          },
+          {
+            "start_s": 13.1,
+            "end_s": 14.1,
+            "confidence": 0.74,
+            "top_label": "barn_owl"
+          },
+          {
+            "start_s": 14.1,
+            "end_s": 15.1,
+            "confidence": 0.74,
+            "top_label": "barn_owl"
+          },
+          {
+            "start_s": 15.1,
+            "end_s": 16.1,
+            "confidence": 0.74,
+            "top_label": "barn_owl"
+          },
+          {
+            "start_s": 16.1,
+            "end_s": 16.7,
+            "confidence": 0.74,
+            "top_label": "barn_owl"
+          }
+        ]
+      },
+      "analysis_report": {
+        "observations": [
+          {
+            "type": "species",
+            "value": "Spotted Nightjar",
+            "confidence": 0.91
+          },
+          {
+            "type": "species",
+            "value": "Barn Owl",
+            "confidence": 0.78
+          }
+        ],
+        "inferred_context": [
+          {
+            "type": "diel",
+            "value": "night",
+            "confidence": 0.88
+          },
+          {
+            "type": "habitat",
+            "value": "woodland/open woodland",
+            "confidence": 0.66
+          }
+        ],
+        "disagreements": []
+      }
+    }
+  }
+}

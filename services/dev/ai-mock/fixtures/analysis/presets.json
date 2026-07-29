@@ -1,0 +1,66 @@
+{
+  "9e59f241f2325b23c46d50d2825fc346": {
+    "cell": "autumn_afternoon",
+    "case": "real_0015_1313480_clip001_s000"
+  },
+  "ed72c8e56cf146ba517ce00b4546e18e": {
+    "cell": "autumn_dawn",
+    "case": "real_0182_216086_clip002_s000"
+  },
+  "87f8caa4b891d820a8ad78c2ce1e25b9": {
+    "cell": "autumn_morning",
+    "case": "real_0241_216088_clip002_s000"
+  },
+  "62ab73791511354fdce6d63b1b638148": {
+    "cell": "autumn_night",
+    "case": "real_0279_216473_clip006_s000"
+  },
+  "1a754f5f7c04896a4f1ba476be50ddf6": {
+    "cell": "spring_afternoon",
+    "case": "real_0500_1401567_clip001_s000"
+  },
+  "8d818b2fa75ca71ac629814c5cd908b1": {
+    "cell": "spring_dawn",
+    "case": "real_0575_4881_clip001_s000"
+  },
+  "74c4a63500a716d5414fc89312e736da": {
+    "cell": "spring_morning",
+    "case": "real_0682_4887_clip001_s000"
+  },
+  "0b017045049a9daa22e37e9a927671fa": {
+    "cell": "spring_night",
+    "case": "real_0771_5392_clip001_s000"
+  },
+  "22c661950121cc510c47d7d1f4351734": {
+    "cell": "summer_afternoon",
+    "case": "real_0978_215469_clip005_s000"
+  },
+  "1cc09bfe6a0c20d779ab98bd5710fc33": {
+    "cell": "summer_dawn",
+    "case": "real_1032_215467_clip001_s000"
+  },
+  "49836b2bd5dde5d9761c89f31ccb9529": {
+    "cell": "summer_morning",
+    "case": "real_1129_215185_clip002_s000"
+  },
+  "eebfe8cc5fd8a57f55a70445212bd817": {
+    "cell": "summer_night",
+    "case": "real_1164_215190_clip001_s000"
+  },
+  "1844cef6aad5b3856a345964430b479f": {
+    "cell": "winter_afternoon",
+    "case": "real_1331_1313831_clip011_s000"
+  },
+  "842f3a693910ca1628c54d6ca154a942": {
+    "cell": "winter_dawn",
+    "case": "real_1397_1313802_clip001_s000"
+  },
+  "3fdce454f68dc1b1651277420d8f3878": {
+    "cell": "winter_morning",
+    "case": "real_1467_5489_clip001_s000"
+  },
+  "c1b49ffc2ca16ca31875c72c50a9ba00": {
+    "cell": "winter_night",
+    "case": "real_1494_5486_clip001_s000"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "spring_afternoon_wind_birdsong",
+  "prompt": "Windy spring afternoon, distant birdsong",
+  "prompt_locked": true,
+  "cell": "spring_afternoon",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.349739,
+    "rms": 0.08323,
+    "max": 0.332352,
+    "min": -0.349739,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_a",
+    "id": "lucas__prod_1__per_cell_loras",
+    "label": "layer_a demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

@@ -1,22 +1,23 @@
 # Dev Services
 
-> **`demo` branch:** this stack ships **without AI services**. `docker compose`
-> here brings up only `postgres`, `backend`, and `frontend` — there is no
-> `ai-tunnel` sidecar, no serverB SSH key/secret, and no Docker-socket mount.
+> **`demo` branch:** this stack runs **no real AI service**. There is no
+> `ai-tunnel` sidecar, no serverB SSH key/secret, no Docker-socket mount, and no
+> GPU. In its place, an `ai-mock` container speaks the same HTTP contract and
+> replays pre-baked fixtures, so backend and frontend code are untouched.
 > Anything below about the tunnel applies to `main`, not to this branch.
 >
 > ```bash
-> docker compose up -d
+> docker compose up -d --build
 > ```
 >
-> The backend keeps its AI proxy routes but runs in `AI_CONNECTION_MODE=direct`
-> against `AI_SERVER_URL` (default `http://host.docker.internal:8000`). With no
-> AI server listening there, AI-dependent pages fail fast; everything else
-> (auth, cached `expected/`/`showcase/` artefacts served from the read-only
-> `acoustic_ai` mount) works. If you *do* run a native FastAPI server on the
-> host, set `AI_SERVER_URL=http://host.docker.internal:8000` in
-> `services/dev/.env` — `localhost` there resolves inside the container, not on
-> your Mac.
+> Four containers: `ai-mock`, `postgres`, `backend`, `frontend`. No `dvc pull`
+> needed — the demo's audio is committed under `ai-mock/fixtures/`, and
+> `AI_LAYERS_ROOT` points the backend's sample browser at that same tree.
+>
+> **Nothing the demo shows is model output**, and only the preset prompts and
+> preset recordings are faithful to their input. Read
+> [ai-mock/README.md](ai-mock/README.md) before demoing — especially the
+> "Known limits" section.
 
 ## SSH Key Convention
 

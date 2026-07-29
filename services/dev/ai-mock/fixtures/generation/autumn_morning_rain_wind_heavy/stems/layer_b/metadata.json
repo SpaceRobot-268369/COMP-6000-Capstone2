@@ -1,0 +1,26 @@
+{
+  "mock": true,
+  "preset_id": "autumn_morning_rain_wind_heavy",
+  "prompt": "Gusty autumn morning, rain on the wind",
+  "prompt_locked": true,
+  "cell": "autumn_morning",
+  "seed": 42,
+  "generator": "ai_mock_replay",
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.505896,
+    "rms": 0.081546,
+    "max": 0.463705,
+    "min": -0.505896,
+    "clip_pct": 0.0
+  },
+  "attempt": {
+    "layer": "layer_b",
+    "id": "murphy__mvp_1__weather_stem_selector",
+    "label": "layer_b demo stem",
+    "stage": "mvp",
+    "author": "demo",
+    "status": "demo_fixture"
+  }
+}

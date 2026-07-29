@@ -1,0 +1,65 @@
+{
+  "mock": true,
+  "mock_note": "Pre-baked demo fixture replayed by services/dev/ai-mock. Not model output.",
+  "preset_id": "spring_night_wind_light",
+  "prompt": "Warm spring dusk, insects and a breeze",
+  "prompt_locked": true,
+  "generator": "ai_mock_replay",
+  "cell": "spring_night",
+  "seed": 42,
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.462544,
+    "rms": 0.079209,
+    "max": 0.458013,
+    "min": -0.462544,
+    "clip_pct": 0.0
+  },
+  "audio_length_in_s": 30.0,
+  "orchestration": {
+    "seed": 42,
+    "duration_s": 30.0,
+    "season": "spring",
+    "diel": "night",
+    "weather_type": "wind",
+    "intensity": "light",
+    "include_weather": true,
+    "include_events": false,
+    "attempts": {
+      "layer_a": "lucas__prod_1__per_cell_loras",
+      "layer_b": "murphy__mvp_1__weather_stem_selector",
+      "layer_c": "burger__mvp_2__retrieval_v2_library",
+      "layer_d": "songke__mvp_2__multi_clip_mix"
+    },
+    "parameter_routing": {
+      "layer_a": [
+        "season",
+        "diel",
+        "seed"
+      ],
+      "layer_b": [
+        "weather_type",
+        "intensity",
+        "duration_s"
+      ],
+      "layer_c": [
+        "species_common_name",
+        "seed",
+        "duration_s"
+      ],
+      "layer_d": [
+        "duration_s"
+      ]
+    },
+    "events": []
+  },
+  "attempt": {
+    "layer": "layer_d",
+    "id": "songke__mvp_2__multi_clip_mix",
+    "label": "Multi-clip mix",
+    "stage": "mvp_2",
+    "author": "songke",
+    "status": "implemented_not_default"
+  }
+}

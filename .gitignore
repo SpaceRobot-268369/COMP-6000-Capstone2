@@ -114,6 +114,9 @@ acoustic_ai/hifigan_cache/
 # Debug and scratch output
 debug/
 *.wav
+# demo branch only: the fake AI service replays pre-baked audio, and the demo
+# must run from a fresh clone with no `dvc pull`, so these WAVs are committed.
+!services/dev/ai-mock/fixtures/**/*.wav
 acoustic_ai/=*
 
 # DVC internal

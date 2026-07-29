@@ -1,0 +1,111 @@
+{
+  "mock": true,
+  "mock_note": "Pre-baked demo fixture replayed by services/dev/ai-mock. Not model output.",
+  "preset_id": "spring_afternoon_wind_birdsong",
+  "prompt": "Windy spring afternoon, distant birdsong",
+  "prompt_locked": true,
+  "generator": "ai_mock_replay",
+  "cell": "spring_afternoon",
+  "seed": 42,
+  "audio": {
+    "sample_rate": 22050,
+    "duration_s": 30.0,
+    "peak": 0.475698,
+    "rms": 0.078563,
+    "max": 0.475698,
+    "min": -0.468028,
+    "clip_pct": 0.0
+  },
+  "audio_length_in_s": 30.0,
+  "orchestration": {
+    "seed": 42,
+    "duration_s": 30.0,
+    "season": "spring",
+    "diel": "afternoon",
+    "weather_type": "wind",
+    "intensity": "medium",
+    "include_weather": true,
+    "include_events": true,
+    "attempts": {
+      "layer_a": "lucas__prod_1__per_cell_loras",
+      "layer_b": "murphy__mvp_1__weather_stem_selector",
+      "layer_c": "burger__mvp_2__retrieval_v2_library",
+      "layer_d": "songke__mvp_2__multi_clip_mix"
+    },
+    "parameter_routing": {
+      "layer_a": [
+        "season",
+        "diel",
+        "seed"
+      ],
+      "layer_b": [
+        "weather_type",
+        "intensity",
+        "duration_s"
+      ],
+      "layer_c": [
+        "species_common_name",
+        "seed",
+        "duration_s"
+      ],
+      "layer_d": [
+        "duration_s"
+      ]
+    },
+    "events": [
+      {
+        "event_index": 0,
+        "species_common_name": "Yellow-throated Miner",
+        "species_slug": "yellow_throated_miner",
+        "asset_id": "yellow_throated_miner_v2_001_21662748",
+        "onset_s": 0.843,
+        "offset_s": 4.419,
+        "gain": 1.0
+      },
+      {
+        "event_index": 1,
+        "species_common_name": "Willie Wagtail",
+        "species_slug": "willie_wagtail",
+        "asset_id": "willie_wagtail_v2_001_6606740",
+        "onset_s": 8.063,
+        "offset_s": 11.639,
+        "gain": 1.0
+      },
+      {
+        "event_index": 2,
+        "species_common_name": "Yellow-throated Miner",
+        "species_slug": "yellow_throated_miner",
+        "asset_id": "yellow_throated_miner_v2_001_21662748",
+        "onset_s": 13.997,
+        "offset_s": 17.573,
+        "gain": 1.0
+      },
+      {
+        "event_index": 3,
+        "species_common_name": "Willie Wagtail",
+        "species_slug": "willie_wagtail",
+        "asset_id": "willie_wagtail_v2_001_6606740",
+        "onset_s": 19.777,
+        "offset_s": 23.353,
+        "gain": 1.0
+      },
+      {
+        "event_index": 4,
+        "species_common_name": "Yellow-throated Miner",
+        "species_slug": "yellow_throated_miner",
+        "asset_id": "yellow_throated_miner_v2_001_21662748",
+        "onset_s": 25.893,
+        "offset_s": 29.469,
+        "gain": 1.0
+      }
+    ]
+  },
+  "attempt": {
+    "layer": "layer_d",
+    "id": "songke__mvp_2__multi_clip_mix",
+    "label": "Multi-clip mix",
+    "stage": "mvp_2",
+    "author": "songke",
+    "status": "implemented_not_default"
+  }
+}
