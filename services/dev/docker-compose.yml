@@ -6,7 +6,9 @@
 # code are untouched. Nothing here is model output — see ai-mock/README.md.
 services:
   ai-mock:
-    container_name: ${AI_MOCK_CONTAINER_NAME:-eco-ai-mock-dev}
+    # No fixed container_name: unlike the ai-tunnel it replaces, nothing
+    # restarts it by name, and a fixed name stops two checkouts of this stack
+    # from running side by side.
     build:
       context: ./ai-mock
       dockerfile: Dockerfile
