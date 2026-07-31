@@ -45,12 +45,15 @@ const PRESET_SAMPLES = [
   }),
 ];
 
+/* Demo build: no detector runs. The upload is matched by content hash against
+   the preset recordings and a pre-authored report comes back, so these stages
+   describe that rather than the embedding/detection work they used to claim. */
 const STAGES = [
   "Reading audio signal...",
-  "Extracting 256-d acoustic embeddings...",
-  "Mapping environmental season & diel cues...",
-  "Detecting precipitation & event parameters...",
-  "Synthesizing immersive 3D woodland scene...",
+  "Matching the clip against the demo preset recordings...",
+  "Loading the stored season & diel estimate...",
+  "Loading the stored weather & event findings...",
+  "Building the immersive 3D woodland scene...",
 ];
 const STAGE_MS = 650;
 

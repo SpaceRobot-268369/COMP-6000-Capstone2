@@ -18,7 +18,12 @@
 
 .immersive-page {
   position: absolute;
-  inset: 0;
+  /* Top inset clears the fixed demo-build strip, so the scene and all of its
+     absolutely-positioned overlays shift down with the navbar and keep their
+     original relationship to it. Padding on .main-panel would not do this:
+     an absolute child's offsets resolve against the padding *box*, whose top
+     edge sits above the padding. */
+  inset: var(--demo-notice-h) 0 0 0;
   overflow: hidden;
   background: #000;
   --immersive-ui: 'Barlow Semi Condensed', system-ui, sans-serif;
@@ -65,7 +70,9 @@
    (analytical narration + source caption + models-used). Sits below the
    floating navbar pill so the two never collide. */
 .immersive-page .immersive-details-toggle {
-  position: fixed; top: 76px; right: 24px; z-index: 41;
+  /* Viewport-fixed, so it needs the demo-strip offset itself — the page's own
+     inset does not move it. */
+  position: fixed; top: calc(76px + var(--demo-notice-h)); right: 24px; z-index: 41;
   font-family: var(--immersive-ui, 'Barlow Semi Condensed', system-ui, sans-serif);
   font-size: 12px; letter-spacing: 0.06em;
   padding: 8px 14px; border-radius: 999px; cursor: pointer;
@@ -85,7 +92,7 @@
    The immersive register feeds the centre film-style caption; the analytical
    register is surfaced here as its own quiet panel, top-centre below the navbar. */
 .immersive-page .immersive-analytical {
-  position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: calc(76px + var(--demo-notice-h)); left: 50%; transform: translateX(-50%);
   z-index: 40; pointer-events: auto;
   width: max-content; max-width: min(46rem, 78vw);
   display: flex; flex-direction: column; gap: 6px;

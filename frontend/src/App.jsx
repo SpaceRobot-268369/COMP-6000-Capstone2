@@ -13,6 +13,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
 import ServerStatus from "./components/ServerStatus.jsx";
+import DemoNotice from "./components/DemoNotice.jsx";
 import {
   checkServerBStatus,
   createCheckingStatus,
@@ -162,6 +163,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <DemoNotice />
       <header className="navbar-container">
         <div className="navbar-body">
           {/* Brand Logo and Title */}

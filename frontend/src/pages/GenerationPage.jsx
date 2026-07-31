@@ -81,20 +81,23 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
   const layerB = parseResult?.layer_b || null;
   const layerC = parseResult?.layer_c || null;
 
-  onStatus("Generating A/B/C stems...");
+  // Demo build: no stems are synthesised — the mock matches this request to a
+  // pre-baked mix and returns it. The staged text says so rather than narrating
+  // inference that never runs.
+  onStatus("Matching the scene to a pre-baked demo mix...");
   const genTimer1 = registerTimer(
     setTimeout(() => {
-      onStatus("Generating A/B/C stems (running model inference, this takes time)...");
+      onStatus("Matching the scene to a pre-baked demo mix (demo build — no live inference)...");
     }, 3500)
   );
   const genTimer2 = registerTimer(
     setTimeout(() => {
-      onStatus("Mixing the final soundscape through Layer D...");
+      onStatus("Loading the stored Layer D mix...");
     }, 9000)
   );
   const genTimer3 = registerTimer(
     setTimeout(() => {
-      onStatus("Almost done, finalizing the audio render...");
+      onStatus("Almost done, decoding the stored audio...");
     }, 18000)
   );
 
@@ -135,7 +138,7 @@ async function generateFromParsed(parseResult, localParams, onStatus, registerTi
   // contract (ground truth of what we composed), so the immersive scene's tone
   // toggle switches instantly without a per-click LLM call. The crafted
   // composeNarration line stays the title reveal; these feed only the toggle.
-  onStatus("Writing the scene narration...");
+  onStatus("Filling in the scene narration from a template...");
   const report = reportFromGeneration(localParams, parseResult);
   const composed = composeGenerationNarration(resolved);
   const rendered = await renderBothNarratives(report);
