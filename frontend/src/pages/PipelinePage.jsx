@@ -507,6 +507,13 @@ export default function PipelinePage() {
         </div>
       </header>
 
+      {/* The stage specs below document the real pipeline and are worth keeping
+          verbatim; this scopes them to the branch the reader is actually on. */}
+      <p className="analysis-auth-notice">
+        This page documents the real pipeline. In this demo build every stage below is replayed
+        from pre-baked fixtures — none of the models named here is loaded.
+      </p>
+
       {/* ── Mode toggle + animated diagram ── */}
       <div className="pipeline-content">
         <main className="panel dev-result-card pipeline-diagram-card">

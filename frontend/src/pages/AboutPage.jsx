@@ -75,6 +75,14 @@ export default function AboutPage() {
             waveform — on 510 hours of field recordings from a single semi-arid site in
             Queensland, Australia.
           </p>
+          {/* The page describes the real system; this build does not run it. Scoping
+              the claims here is cheaper — and more useful to a reader — than rewriting
+              every layer description into the conditional. */}
+          <p className="analysis-auth-notice">
+            Everything on this page describes the real system. This is a demo build — its AI
+            service is mocked, so the statuses below reflect the project on <code>main</code>,
+            not what is running now.
+          </p>
           <div className="intro-hero-links">
             <Link to="/analysis" className="intro-cta-primary">Start Analysis →</Link>
             <Link to="/generation" className="intro-cta-ghost">Try Generation →</Link>
@@ -125,7 +133,10 @@ export default function AboutPage() {
       <section className="intro-section">
         <div className="intro-section-head">
           <p className="eyebrow">MODEL ARCHITECTURE</p>
-          <p className="intro-section-sub">Five-layer composition — frozen base models + LoRA adapters, not a single waveform.</p>
+          <p className="intro-section-sub">
+            Five-layer composition — frozen base models + LoRA adapters, not a single waveform.{" "}
+            <strong>Statuses describe the real system, not this demo build.</strong>
+          </p>
         </div>
         <div className="intro-pipeline panel">
           {layers.map((l) => {

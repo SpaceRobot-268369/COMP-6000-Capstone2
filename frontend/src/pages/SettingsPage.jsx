@@ -177,11 +177,19 @@ export default function SettingsPage() {
 
       <div className="settings-row">
 
+        {/* The dropdowns are real (the choice is persisted and forwarded), but nothing
+            downstream loads weights, and the mock reports every attempt as available —
+            so the usual "✗ Weights missing" signal can never appear here. */}
+        <p className="analysis-auth-notice">
+          Demo build — every attempt lists as available because the mock reports it so. Nothing
+          here loads weights.
+        </p>
+
         {/* Status Messages */}
         {success && (
           <div className="panel settings-status" style={{ borderLeft: "4px solid #10b981", background: "rgba(16, 185, 129, 0.05)" }}>
             <strong style={{ color: "#10b981" }}>✓ Settings Saved Successfully</strong>
-            <span>The active model configurations have been successfully updated in PostgreSQL and will take effect immediately on all subsequent runs.</span>
+            <span>The active model configurations were saved to PostgreSQL. In this demo build the selection is recorded and echoed back with each result, but every layer still replays the same fixtures.</span>
           </div>
         )}
 

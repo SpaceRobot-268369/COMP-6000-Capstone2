@@ -1,10 +1,13 @@
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 let statusLogSequence = 0;
+/* Demo build: there is no serverB and no ssh tunnel on this branch — the backend
+   talks to the `ai-mock` container. The labels name that; the keys are unchanged,
+   so status classification and the CSS variants keyed off them are unaffected. */
 const STATUS_LABELS = {
-  online: "ServerB connected",
-  degraded: "ServerB degraded",
-  offline: "ServerB unavailable",
-  checking: "Checking serverB",
+  online: "Mock AI service connected",
+  degraded: "Mock AI service degraded",
+  offline: "Mock AI service unavailable",
+  checking: "Checking mock AI service",
 };
 
 function normalizeStatusKey(value) {
@@ -24,12 +27,12 @@ export function createCheckingStatus(source = "auto") {
 
   return {
     key: "checking",
-    label: isReconnect ? "Reconnecting serverB" : "Checking serverB",
+    label: isReconnect ? "Reconnecting mock AI service" : "Checking mock AI service",
     detail: isReconnect
-      ? "Attempting to restore the AI tunnel"
+      ? "Attempting to restart the mock AI service"
       : source === "manual"
         ? "Manual health check in progress"
-        : "Pinging AI tunnel",
+        : "Pinging the mock AI service",
     stage: isReconnect ? "ai-reconnect-start" : "checking",
     checkedAt: new Date().toISOString(),
   };

@@ -20,8 +20,8 @@ export default function ServerBStatusPage({
 }) {
   const current = status || {
     key: "checking",
-    label: "Checking serverB",
-    detail: "Pinging AI tunnel",
+    label: "Checking mock AI service",
+    detail: "Pinging the mock AI service",
     stage: "checking",
   };
 
@@ -30,7 +30,7 @@ export default function ServerBStatusPage({
       <header className="topbar">
         <div>
           <p className="eyebrow">INFRASTRUCTURE STATUS</p>
-          <h1>SERVERB AI LINK</h1>
+          <h1>AI SERVICE LINK (MOCK)</h1>
           <div className="status-line">
             <span className={`status-accent status-accent--${current.key}`} />
             <p>{current.label} / {current.stage || "unknown"}</p>
