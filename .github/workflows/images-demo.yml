@@ -1,0 +1,92 @@
+# Builds the five self-contained demo images.
+#
+# Separate from `Images` (which builds the real app images from `main`) because
+# these are built off `demo` and must never take the `main` / `latest` tags.
+# Nothing downstream deploys them automatically — `Deploy Server A` triggers on
+# the `Images` workflow and `main` only. Demo deployment is manual, by design:
+# the target host is whatever machine is handy for the walkthrough.
+#
+# Each image uses a tiny main context (services/demo/images) plus named build
+# contexts for the directories it actually needs. That keeps the repo root — a
+# DVC checkout with resources/ and model/ in it — out of the build context.
+name: Demo images
+
+on:
+  push:
+    branches:
+      - demo
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: spacerobot-268369
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: eco-demo-frontend
+            dockerfile: services/demo/images/frontend.Dockerfile
+            contexts: |
+              app=frontend
+          - image: eco-demo-backend
+            dockerfile: services/demo/images/backend.Dockerfile
+            contexts: |
+              app=backend
+              fixtures=services/dev/ai-mock/fixtures/layers
+          - image: eco-demo-ai-mock
+            dockerfile: services/demo/images/ai-mock.Dockerfile
+            contexts: |
+              app=services/dev/ai-mock
+              registry=acoustic_ai
+          - image: eco-demo-postgres
+            dockerfile: services/demo/images/postgres.Dockerfile
+            contexts: |
+              sql=services/dev
+          - image: eco-demo-nginx
+            dockerfile: services/demo/images/nginx.Dockerfile
+            contexts: |
+              conf=services/demo/nginx
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          # `demo` is the moving tag the compose file defaults to; the sha tag
+          # is there so a walkthrough can be pinned to a build that worked.
+          tags: |
+            type=sha,format=short
+            type=raw,value=demo,enable=${{ github.ref == 'refs/heads/demo' }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/demo/images
+          file: ${{ matrix.dockerfile }}
+          build-contexts: ${{ matrix.contexts }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

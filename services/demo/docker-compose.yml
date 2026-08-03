@@ -1,0 +1,108 @@
+# DEMO deployment stack — images only, no repo checkout required.
+#
+# Everything this stack needs (schema, mock fixtures, nginx config, app source)
+# is baked into the images. To deploy, copy this file plus a filled-in `.env`
+# onto the host and `docker compose up -d`. See README.md.
+#
+# There is no AI here. `ai-mock` replays pre-baked fixtures over the same HTTP
+# contract as the real FastAPI worker — nothing it returns is model output.
+# See services/dev/ai-mock/README.md for what is and isn't faithful.
+services:
+  ai-mock:
+    image: ${AI_MOCK_IMAGE:-ghcr.io/spacerobot-268369/eco-demo-ai-mock:${IMAGE_TAG:-demo}}
+    environment:
+      MOCK_LATENCY_MS_PARSE: ${MOCK_LATENCY_MS_PARSE:-800}
+      MOCK_LATENCY_MS_GENERATE: ${MOCK_LATENCY_MS_GENERATE:-3000}
+      MOCK_LATENCY_MS_ANALYSIS: ${MOCK_LATENCY_MS_ANALYSIS:-1500}
+      MOCK_LATENCY_MS_NARRATIVE: ${MOCK_LATENCY_MS_NARRATIVE:-400}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - app_net
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-ghcr.io/spacerobot-268369/eco-demo-postgres:${IMAGE_TAG:-demo}}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Not published. Nothing outside this network needs the database, and a
+    # demo host is usually more exposed than Server A.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - app_net
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/spacerobot-268369/eco-demo-backend:${IMAGE_TAG:-demo}}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PORT: 4000
+      SESSION_SECRET: ${SESSION_SECRET}
+      # Exact-match CORS allowlist — must be the origin the browser shows.
+      FRONTEND_URL: ${FRONTEND_URL}
+      # Hardcoded, not ${...}: an inherited value from a pre-demo .env would
+      # point the backend at an ssh tunnel that does not exist in this stack.
+      AI_CONNECTION_MODE: direct
+      AI_SERVER_URL: http://ai-mock:8000
+      AI_SERVER_LABEL: ai-mock
+      AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-120000}
+      # The mock serves every layer, so there is no second server to split
+      # Layer B generation traffic to.
+      LAYER_B_GENERATE_SERVER_URL: ""
+      # No ai-tunnel container to restart, and no docker.sock mounted to do it
+      # with — keep the reconnect path off. (The mock always reports healthy,
+      # so it should never fire anyway.)
+      AI_RECONNECT_MODE: disabled
+      # AI_LAYERS_ROOT is baked into the image (/mock/layers).
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-mock:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app_net
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/spacerobot-268369/eco-demo-frontend:${IMAGE_TAG:-demo}}
+    environment:
+      # Empty on purpose: the app calls /api same-origin through nginx. An
+      # absolute base would break the moment the host is fronted by HTTPS
+      # (mixed content) or reached by any name other than the one baked here.
+      VITE_API_URL: ""
+      VITE_PROXY_TARGET: http://backend:4000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app_net
+
+  nginx:
+    image: ${NGINX_IMAGE:-ghcr.io/spacerobot-268369/eco-demo-nginx:${IMAGE_TAG:-demo}}
+    ports:
+      - "${PUBLIC_PORT:-80}:80"
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

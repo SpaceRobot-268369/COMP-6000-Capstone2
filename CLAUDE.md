@@ -65,6 +65,9 @@ COMP-6000-Capstone2/
 ├── frontend/                # React + Vite UI scaffold (Docker, port 5173)
 ├── backend/                 # Express.js + PostgreSQL (Docker, port 4000); /api/health, /api/register, /api/login
 ├── services/dev/            # local docker-compose.yml + db_init.sql + serverB SSH tunnel sidecar
+│                            #   (demo branch: + ai-mock/ — fake AI service + baked fixtures)
+├── services/demo/           # demo branch only — image-only deployment stack (5 self-contained
+│                            #   images, no checkout/DVC/GPU on the host); see services/demo/README.md
 ├── services/server-a/       # Server A deployment compose + env template
 ├── services/migrations/     # incremental SQL migrations applied on top of db_init.sql (e.g. model_configs)
 │
@@ -191,6 +194,7 @@ CLAUDE.md is the **structural index** for `.claude/`. The tree below is the sing
 | CI/CD design | [.claude/context/dev/cicd_design.md](.claude/context/dev/cicd_design.md) |
 | Local services + ports | [.claude/context/setup/local/services.md](.claude/context/setup/local/services.md) |
 | Server A deployment compose | [services/server-a/README.md](services/server-a/README.md) |
+| **Demo deployment** (image-only stack for the `demo` branch) | [services/demo/README.md](services/demo/README.md) |
 | On-demand AI worker topology | [.claude/context/setup/server/on_demand_ai_worker.md](.claude/context/setup/server/on_demand_ai_worker.md) |
 | Commit changes (git + DVC) skill | [.claude/skills/commit_changes.md](.claude/skills/commit_changes.md) |
 | Draft PR (repo PR standard) skill | [.claude/skills/draft_pr.md](.claude/skills/draft_pr.md) |
@@ -356,6 +360,12 @@ Large binaries never go to git — use DVC. Full "do not track" table (categorie
 > preset recordings are faithful to their input — see
 > [services/dev/ai-mock/README.md](services/dev/ai-mock/README.md). The two AI rows
 > below describe `main`.
+>
+> To put the demo on a **server**, use [services/demo/](services/demo/README.md)
+> instead — the same mock stack as five self-contained images (fixtures, schema
+> and nginx config baked in), so the host needs no checkout, no `dvc pull` and
+> no GPU. Built by the `Demo images` workflow on push to `demo`; deployment is
+> manual and never touches the Server A stack or its image tags.
 
 | Service | How | URL |
 |---------|-----|-----|
